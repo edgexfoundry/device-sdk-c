@@ -1,0 +1,57 @@
+[Service]
+  Host = "localhost"
+  Port = 49990
+  ConnectRetries = 3
+  HealthCheck = ""
+  Labels = [ "Hello", "You" ]
+  OpenMsg = "device simple started"
+  ReadMaxLimit = 256
+  Timeout = 5000
+
+[Consul]
+  Host = "localhost"
+  Port = 8500
+
+[Clients]
+  [Clients.Data]
+    Host = "localhost"
+    Port = 48080
+
+  [Clients.Metadata]
+    Host = "localhost"
+    Port = 48081
+
+[Devices]
+  DataTransform = true
+  Discovery = false
+  InitCmd = ""
+  InitCmdArgs = ""
+  MaxCmdOps = 128
+  MaxCmdResultLen = 256
+  RemoveCmd = ""
+  RemoveCmdArgs = ""
+  ProfilesDir = ""
+  SendReadingsOnChanged = true
+
+[Logging]
+  RemoteURL = ""
+  File = "./device-simple.log"
+
+[Schedules]
+  [Schedules.Schedule1]
+    Frequency = "PT60S"
+
+[ScheduleEvents]
+  [ScheduleEvents.ScheduleEventName1]
+    Schedule = "Schedule1"
+    Path = "/api/v1/discovery"
+
+[DeviceList]
+  [DeviceList.dev01]
+    Profile = "Proximity Sensor"
+    Description = "Test ProxSense Device"
+    Labels = [ "One", "Two", "Three" ]
+    [DeviceList.dev01.Addressable]
+      Address = "modbusgw01"
+      Port = 502
+      Protocol = "OTHER"

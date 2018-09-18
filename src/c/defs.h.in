@@ -1,0 +1,10 @@
+#ifndef _CSDK_DEFS_H_
+#define _CSDK_DEFS_H_
+
+#cmakedefine01 CSDK_BUILD_DEBUG
+
+#define CSDK_VERSION @CSDK_DOT_VERSION@
+#define CSDK_SYSTEM_NAME @CMAKE_SYSTEM_NAME@
+#define CSDK_@CMAKE_SYSTEM_NAME@ 1
+
+#endif
