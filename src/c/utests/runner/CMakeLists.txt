@@ -1,0 +1,5 @@
+add_executable (runner runner.c)
+target_include_directories (runner PRIVATE ../../../../include)
+target_link_libraries (runner PRIVATE cunit)
+target_link_libraries (runner PRIVATE utest_base64)
+target_link_libraries (runner PRIVATE csdk)
