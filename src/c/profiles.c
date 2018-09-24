@@ -14,6 +14,7 @@
 #include "errorlist.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <yaml.h>
 
 #define MAX_PATH_SIZE 256
@@ -59,6 +60,10 @@ static void generate_value_descriptors
       res->description,
       &err
     );
+    if (err.code)
+    {
+      iot_log_error (lc, "Unable to create ValueDescriptor for %s", res->name);
+    }
     edgex_valuedescriptor_free (vd);
   }
 }
@@ -67,7 +72,8 @@ void edgex_device_profiles_upload
 (
   iot_logging_client *lc,
   const char *confDir,
-  edgex_service_endpoints *endpoints
+  edgex_service_endpoints *endpoints,
+  edgex_error *err
 )
 {
   struct dirent **filenames = NULL;
@@ -80,10 +86,24 @@ void edgex_device_profiles_upload
   yaml_event_t event;
   bool lastWasName;
   edgex_deviceprofile *dp;
-  edgex_error err;
 
   n = scandir (confDir, &filenames, yamlselect, NULL);
-  while (n-- > 0)
+  if (n < 0)
+  {
+    if (errno == ENOENT || errno == ENOTDIR)
+    {
+       iot_log_error (lc, "No profiles directory found at %s", confDir);
+    }
+    else
+    {
+      iot_log_error
+        (lc, "Error scanning profiles directory: %s", strerror (errno));
+    }
+    *err = EDGEX_NO_CONF_FILE;
+    return;
+  }
+
+  while (n--)
   {
     profname = NULL;
 
@@ -91,6 +111,7 @@ void edgex_device_profiles_upload
     {
       iot_log_error
         (lc, "YAML parser did not initialize - DeviceProfile upload disabled");
+      *err = EDGEX_PROFILE_PARSE_ERROR;
       break;
     }
 
@@ -100,7 +121,8 @@ void edgex_device_profiles_upload
     {
       iot_log_error
         (lc, "%s: Pathname too long (max %d chars)", fname, MAX_PATH_SIZE - 1);
-      continue;
+      *err = EDGEX_PROFILE_PARSE_ERROR;
+      break;
     }
 
     handle = fopen (pathname, "r");
@@ -114,6 +136,7 @@ void edgex_device_profiles_upload
         {
           iot_log_error
             (lc, "Parser error %d for file %s", parser.error, fname);
+          *err = EDGEX_PROFILE_PARSE_ERROR;
           break;
         }
         if (event.type == YAML_SCALAR_EVENT)
@@ -141,12 +164,17 @@ void edgex_device_profiles_upload
       yaml_event_delete (&event);
 
       fclose (handle);
+      if (err->code)
+      {
+        break;
+      }
+
       if (profname)
       {
         iot_log_debug
           (lc, "Checking existence of DeviceProfile %s", profname);
         dp = edgex_metadata_client_get_deviceprofile
-          (lc, endpoints, profname, &err);
+          (lc, endpoints, profname, err);
         if (dp)
         {
           iot_log_debug
@@ -155,19 +183,20 @@ void edgex_device_profiles_upload
         }
         else
         {
-          err = EDGEX_OK;
+          *err = EDGEX_OK;
           iot_log_debug (lc, "Uploading deviceprofile from %s", pathname);
           free (edgex_metadata_client_create_deviceprofile_file
-                  (lc, endpoints, pathname, &err));
-          if (err.code)
+                  (lc, endpoints, pathname, err));
+          if (err->code)
           {
             iot_log_error (lc, "Error uploading device profile");
+            break;
           }
           else
           {
             iot_log_debug (lc, "Device profile upload successful");
             dp = edgex_metadata_client_get_deviceprofile
-              (lc, endpoints, profname, &err);
+              (lc, endpoints, profname, err);
             if (dp)
             {
               iot_log_debug
@@ -179,6 +208,11 @@ void edgex_device_profiles_upload
             {
               iot_log_error
                 (lc, "Failed to retrieve DeviceProfile %s", profname);
+              if (err->code == 0)
+              {
+                *err = EDGEX_PROFILE_PARSE_ERROR;
+              }
+              break;
             }
           }
         }
@@ -187,11 +221,15 @@ void edgex_device_profiles_upload
       else
       {
         iot_log_error (lc, "No device profile name found in %s", fname);
+        *err = EDGEX_PROFILE_PARSE_ERROR;
+        break;
       }
     }
     else
     {
       iot_log_error (lc, "Unable to open %s for reading", fname);
+      *err = EDGEX_PROFILE_PARSE_ERROR;
+      break;
     }
     free (filenames[n]);
     yaml_parser_delete (&parser);

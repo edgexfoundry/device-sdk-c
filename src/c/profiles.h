@@ -15,7 +15,8 @@ extern void edgex_device_profiles_upload
 (
   iot_logging_client *lc,
   const char *confDir,
-  edgex_service_endpoints *endpoints
+  edgex_service_endpoints *endpoints,
+  edgex_error *err
 );
 
 edgex_deviceprofile *edgex_deviceprofile_get

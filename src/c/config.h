@@ -104,6 +104,6 @@ void edgex_device_dumpConfig (edgex_device_service *svc);
 void edgex_device_freeConfig (edgex_device_service *svc);
 
 void edgex_device_process_configured_devices
-  (edgex_device_service *svc, toml_table_t *devtable);
+  (edgex_device_service *svc, toml_table_t *devtable, edgex_error *err);
 
 #endif

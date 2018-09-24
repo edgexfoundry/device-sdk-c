@@ -174,6 +174,7 @@ void edgex_device_service_start
   edgex_device_validateConfig (svc, err);
   if (err->code)
   {
+    toml_free (config);
     return;
   }
 
@@ -221,6 +222,7 @@ void edgex_device_service_start
   {
     iot_log_error (svc->logger, "core-data service not running");
     *err = EDGEX_REMOTE_SERVER_DOWN;
+    toml_free (config);
     return;
   }
 
@@ -235,6 +237,7 @@ void edgex_device_service_start
   {
     iot_log_error (svc->logger, "core-metadata service not running");
     *err = EDGEX_REMOTE_SERVER_DOWN;
+    toml_free (config);
     return;
   }
 
@@ -248,6 +251,7 @@ void edgex_device_service_start
   if (err->code)
   {
     iot_log_error (svc->logger, "get_deviceservice failed");
+    toml_free (config);
     return;
   }
 
@@ -259,6 +263,7 @@ void edgex_device_service_start
     if (err->code)
     {
       iot_log_error (svc->logger, "get_addressable failed");
+      toml_free (config);
       return;
     }
     if (addr == NULL)
@@ -278,6 +283,7 @@ void edgex_device_service_start
       if (err->code)
       {
         iot_log_error (svc->logger, "create_addressable failed");
+        toml_free (config);
         return;
       }
     }
@@ -302,7 +308,9 @@ void edgex_device_service_start
                                                          ds, err);
     if (err->code)
     {
-      iot_log_error (svc->logger, "create_deviceservice failed");
+      iot_log_error
+        (svc->logger, "Unable to create device service in metadata");
+      toml_free (config);
       return;
     }
   }
@@ -311,13 +319,24 @@ void edgex_device_service_start
   /* Load DeviceProfiles from files and register in metadata */
 
   edgex_device_profiles_upload
-    (svc->logger, svc->config.devices.profilesdir, &svc->config.endpoints);
+    (svc->logger, svc->config.devices.profilesdir, &svc->config.endpoints, err);
+  if (err->code)
+  {
+    toml_free (config);
+    return;
+  }
 
   /* Obtain Devices from metadata */
 
   edgex_device *devlist =
     edgex_metadata_client_get_devices
       (svc->logger, &svc->config.endpoints, svc->name, err);
+  if (err->code)
+  {
+    iot_log_error (svc->logger, "Unable to retrieve device list from metadata");
+    toml_free (config);
+    return;
+  }
   edgex_device *iter = devlist;
   pthread_rwlock_wrlock (&svc->deviceslock);
   while (iter)
@@ -354,15 +373,20 @@ void edgex_device_service_start
   }
 
   edgex_device_process_configured_devices
-    (svc, toml_table_in (config, "DeviceList"));
+    (svc, toml_table_in (config, "DeviceList"), err);
+  if (err->code)
+  {
+    toml_free (config);
+    return;
+  }
 
   /* Start REST server */
 
   svc->daemon = edgex_rest_server_create
     (svc->logger, svc->config.service.port, err);
-
   if (err->code)
   {
+    toml_free (config);
     return;
   }
 
@@ -392,6 +416,7 @@ void edgex_device_service_start
   {
     *err = EDGEX_DRIVER_UNSTART;
     iot_log_error (svc->logger, "Protocol driver initialization failed");
+    toml_free (config);
     return;
   }
   toml_free (config);
