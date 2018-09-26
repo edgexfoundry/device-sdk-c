@@ -580,11 +580,10 @@ void edgex_device_freeConfig (edgex_device_service *svc)
 }
 
 void edgex_device_process_configured_devices
-  (edgex_device_service *svc, toml_table_t *devtable)
+  (edgex_device_service *svc, toml_table_t *devtable, edgex_error *err)
 {
   if (devtable)
   {
-    edgex_error err;
     const char *key;
     const char *raw;
     edgex_device *existing;
@@ -663,23 +662,27 @@ void edgex_device_process_configured_devices
             }
           }
 
-          err = EDGEX_OK;
+          *err = EDGEX_OK;
           edgex_device_add_device
-            (svc, key, description, labels, profile_name, address, &err);
-          if (err.code)
-          {
-            iot_log_error
-              (svc->logger, "Error registering device %s", key);
-          }
+            (svc, key, description, labels, profile_name, address, err);
+
           edgex_strings_free (labels);
           edgex_addressable_free (address);
           free (profile_name);
           free (description);
+
+          if (err->code)
+          {
+            iot_log_error (svc->logger, "Error registering device %s", key);
+            break;
+          }
         }
         else
         {
           iot_log_error
             (svc->logger, "No Addressable section for device %s", key);
+          *err = EDGEX_BAD_CONFIG;
+          break;
         }
       }
     }
