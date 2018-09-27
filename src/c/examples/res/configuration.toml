@@ -21,7 +21,7 @@
     Host = "localhost"
     Port = 48081
 
-[Devices]
+[Device]
   DataTransform = true
   Discovery = false
   InitCmd = ""
@@ -37,21 +37,30 @@
   RemoteURL = ""
   File = "./device-simple.log"
 
-[Schedules]
-  [Schedules.Schedule1]
-    Frequency = "PT60S"
+[[Schedules]]
+  Name = "Schedule1"
+  Frequency = "PT60S"
 
-[ScheduleEvents]
-  [ScheduleEvents.ScheduleEventName1]
-    Schedule = "Schedule1"
-    Path = "/api/v1/discovery"
+[[Schedules]]
+  Name = "Schedule2"
+  Frequency = "P1D"
 
-[DeviceList]
-  [DeviceList.dev01]
-    Profile = "Proximity Sensor"
-    Description = "Test ProxSense Device"
-    Labels = [ "One", "Two", "Three" ]
-    [DeviceList.dev01.Addressable]
-      Address = "modbusgw01"
-      Port = 502
-      Protocol = "OTHER"
+[[ScheduleEvents]]
+  Name = "ScheduleEventName1"
+  Schedule = "Schedule1"
+  Path = "/api/v1/discovery"
+
+[[ScheduleEvents]]
+  Name = "SE2"
+  Schedule = "Schedule2"
+  Path = "/api/v1/device/name/dev01/OutputCurrent"
+
+[[DeviceList]]
+  Name = "dev01"
+  Profile = "Proximity Sensor"
+  Description = "Test ProxSense Device"
+  Labels = [ "One", "Two", "Three" ]
+  [DeviceList.Addressable]
+    Address = "modbusgw01"
+    Port = 502
+    Protocol = "OTHER"
