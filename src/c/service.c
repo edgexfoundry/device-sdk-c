@@ -167,7 +167,12 @@ void edgex_device_service_start
   {
     return;
   }
-  edgex_device_populateConfig (svc, config);
+  edgex_device_populateConfig (svc, config, err);
+  if (err->code)
+  {
+    toml_free (config);
+    return;
+  }
 
   /* TODO: if (useRegistry) get config from consul. Wait for it if need be. */
 
@@ -178,9 +183,9 @@ void edgex_device_service_start
     return;
   }
 
-  if (svc->config.devices.profilesdir == NULL)
+  if (svc->config.device.profilesdir == NULL)
   {
-    svc->config.devices.profilesdir = strdup (confDir);
+    svc->config.device.profilesdir = strdup (confDir);
   }
 
   if (svc->config.logging.file)
@@ -319,7 +324,7 @@ void edgex_device_service_start
   /* Load DeviceProfiles from files and register in metadata */
 
   edgex_device_profiles_upload
-    (svc->logger, svc->config.devices.profilesdir, &svc->config.endpoints, err);
+    (svc->logger, svc->config.device.profilesdir, &svc->config.endpoints, err);
   if (err->code)
   {
     toml_free (config);
@@ -373,7 +378,7 @@ void edgex_device_service_start
   }
 
   edgex_device_process_configured_devices
-    (svc, toml_table_in (config, "DeviceList"), err);
+    (svc, toml_array_in (config, "DeviceList"), err);
   if (err->code)
   {
     toml_free (config);

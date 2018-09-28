@@ -79,7 +79,7 @@ typedef struct edgex_device_config
 {
   edgex_device_serviceinfo service;
   edgex_service_endpoints endpoints;
-  edgex_device_deviceinfo devices;
+  edgex_device_deviceinfo device;
   edgex_device_logginginfo logging;
   edgex_map_int schedules;
   edgex_map_device_scheduleeventinfo scheduleevents;
@@ -95,7 +95,7 @@ toml_table_t *edgex_device_loadConfig
 );
 
 void edgex_device_populateConfig
-  (edgex_device_service *svc, toml_table_t *config);
+  (edgex_device_service *svc, toml_table_t *config, edgex_error *err);
 
 void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err);
 
@@ -104,6 +104,6 @@ void edgex_device_dumpConfig (edgex_device_service *svc);
 void edgex_device_freeConfig (edgex_device_service *svc);
 
 void edgex_device_process_configured_devices
-  (edgex_device_service *svc, toml_table_t *devtable, edgex_error *err);
+  (edgex_device_service *svc, toml_array_t *devs, edgex_error *err);
 
 #endif

@@ -179,10 +179,10 @@ if (raw) \
 }
 
 void edgex_device_populateConfig
-  (edgex_device_service *svc, toml_table_t *config)
+  (edgex_device_service *svc, toml_table_t *config, edgex_error *err)
 {
   const char *raw;
-  const char *key;
+  char *namestr;
   toml_table_t *table;
   toml_table_t *subtable;
   toml_array_t *arr;
@@ -237,19 +237,19 @@ void edgex_device_populateConfig
     }
   }
 
-  table = toml_table_in (config, "Devices");
+  table = toml_table_in (config, "Device");
   if (table)
   {
-    GET_CONFIG_BOOL(DataTransform, devices.datatransform);
-    GET_CONFIG_BOOL(Discovery, devices.discovery);
-    GET_CONFIG_STRING(InitCmd, devices.initcmd);
-    GET_CONFIG_STRING(InitCmdArgs, devices.initcmdargs);
-    GET_CONFIG_INT(MaxCmdOps, devices.maxcmdops);
-    GET_CONFIG_INT(MaxCmdResultLen, devices.maxcmdresultlen);
-    GET_CONFIG_STRING(RemoveCmd, devices.removecmd);
-    GET_CONFIG_STRING(RemoveCmdArgs, devices.removecmdargs);
-    GET_CONFIG_STRING(ProfilesDir, devices.profilesdir);
-    GET_CONFIG_BOOL(SendReadingsOnChanged, devices.sendreadingsonchanged);
+    GET_CONFIG_BOOL(DataTransform, device.datatransform);
+    GET_CONFIG_BOOL(Discovery, device.discovery);
+    GET_CONFIG_STRING(InitCmd, device.initcmd);
+    GET_CONFIG_STRING(InitCmdArgs, device.initcmdargs);
+    GET_CONFIG_INT(MaxCmdOps, device.maxcmdops);
+    GET_CONFIG_INT(MaxCmdResultLen, device.maxcmdresultlen);
+    GET_CONFIG_STRING(RemoveCmd, device.removecmd);
+    GET_CONFIG_STRING(RemoveCmdArgs, device.removecmdargs);
+    GET_CONFIG_STRING(ProfilesDir, device.profilesdir);
+    GET_CONFIG_BOOL(SendReadingsOnChanged, device.sendreadingsonchanged);
   }
 
   table = toml_table_in (config, "Logging");
@@ -259,109 +259,124 @@ void edgex_device_populateConfig
     GET_CONFIG_STRING(File, logging.file);
   }
 
-  table = toml_table_in (config, "Schedules");
-  if (table)
+  arr = toml_array_in (config, "Schedules");
+  if (arr)
   {
-    char *freqstr;
-    for (int i = 0; NULL != (key = toml_key_in (table, i)); i++)
+    int n = 0;
+    while ((table = toml_table_at (arr, n++)))
     {
-      subtable = toml_table_in (table, key);
-      freqstr = NULL;
-      raw = toml_raw_in (subtable, "Frequency");
+      char *freqstr = NULL;
+      namestr = NULL;
+      int interval = 0;
+      raw = toml_raw_in (table, "Frequency");
       toml_rtos2 (raw, &freqstr);
-      if (freqstr)
+      raw = toml_raw_in (table, "Name");
+      toml_rtos2 (raw, &namestr);
+      if (namestr && freqstr)
       {
-        int interval = 0;
-        const char *err = parse8601 (freqstr, &interval);
-        if (err)
+        const char *errmsg = parse8601 (freqstr, &interval);
+        if (errmsg)
         {
           iot_log_error
-            (svc->logger, "Parse error for schedule %s: %s", key, err);
+            (svc->logger, "Parse error for schedule %s: %s", namestr, err);
+          *err = EDGEX_BAD_CONFIG;
+          free (namestr);
         }
         else
         {
-          edgex_map_set (&svc->config.schedules, key, interval);
+          edgex_map_set (&svc->config.schedules, namestr, interval);
         }
-        free (freqstr);
       }
       else
       {
         iot_log_error
-          (svc->logger, "No frequency configured for schedule %s", key);
+          (svc->logger, "Parse error: Schedule requires Name and Frequency");
+        *err = EDGEX_BAD_CONFIG;
+        free (namestr);
       }
+      free (freqstr);
     }
   }
 
-  table = toml_table_in (config, "ScheduleEvents");
-  if (table)
+  arr = toml_array_in (config, "ScheduleEvents");
+  if (arr)
   {
-    edgex_device_scheduleeventinfo info;
-    for (int i = 0; NULL != (key = toml_key_in (table, i)); i++)
+    int n = 0;
+    while ((table = toml_table_at (arr, n++)))
     {
-      subtable = toml_table_in (table, key);
+      edgex_device_scheduleeventinfo info;
       info.schedule = NULL;
       info.path = NULL;
-      raw = toml_raw_in (subtable, "Schedule");
+      namestr = NULL;
+      raw = toml_raw_in (table, "Name");
+      toml_rtos2 (raw, &namestr);
+      raw = toml_raw_in (table, "Schedule");
       toml_rtos2 (raw, &info.schedule);
-      raw = toml_raw_in (subtable, "Path");
+      raw = toml_raw_in (table, "Path");
       toml_rtos2 (raw, &info.path);
-      if (info.schedule && info.path)
+
+      if (namestr && info.schedule && info.path)
       {
-        edgex_map_set (&svc->config.scheduleevents, key, info);
+        edgex_map_set (&svc->config.scheduleevents, namestr, info);
       }
       else
       {
+        free (namestr);
         free (info.schedule);
         free (info.path);
         iot_log_error
         (
           svc->logger,
-          "Schedule Event %s: Schedule and Path must be configured", key
+          "Parse error: ScheduleEvent requires Name, Schedule and Path"
         );
+        *err = EDGEX_BAD_CONFIG;
       }
     }
   }
 
-  table = toml_table_in (config, "Watchers");
-  if (table)
+  arr = toml_array_in (config, "Watchers");
+  if (arr)
   {
-    edgex_device_watcherinfo watcher;
-    for (int i = 0; NULL != (key = toml_key_in (table, i)); i++)
+    int n = 0;
+    while ((table = toml_table_at (arr, n++)))
     {
-      subtable = toml_table_in (table, key);
+      edgex_device_watcherinfo watcher;
       watcher.profile = NULL;
       watcher.key = NULL;
       watcher.matchstring = NULL;
-      raw = toml_raw_in (subtable, "DeviceProfile");
+      namestr = NULL;
+      raw = toml_raw_in (table, "Name");
+      toml_rtos2 (raw, &namestr);
+      raw = toml_raw_in (table, "DeviceProfile");
       toml_rtos2 (raw, &watcher.profile);
-      raw = toml_raw_in (subtable, "Key");
+      raw = toml_raw_in (table, "Key");
       toml_rtos2 (raw, &watcher.key);
-      raw = toml_raw_in (subtable, "MatchString");
+      raw = toml_raw_in (table, "MatchString");
       toml_rtos2 (raw, &watcher.matchstring);
       int n = 0;
-      arr = toml_array_in (subtable, "Identifiers");
-      if (arr)
+      toml_array_t *arr2 = toml_array_in (table, "Identifiers");
+      if (arr2)
       {
-        while (toml_raw_at (arr, n))
+        while (toml_raw_at (arr2, n))
         { n++; }
       }
       watcher.ids = malloc (sizeof (char *) * (n + 1));
       for (int j = 0; j < n; j++)
       {
-        raw = toml_raw_at (arr, j);
+        raw = toml_raw_at (arr2, j);
         toml_rtos2 (raw, &watcher.ids[j]);
       }
       watcher.ids[n] = NULL;
-      if (watcher.profile && watcher.key)
+      if (namestr && watcher.profile && watcher.key)
       {
-        edgex_map_set (&svc->config.watchers, key, watcher);
+        edgex_map_set (&svc->config.watchers, namestr, watcher);
       }
       else
       {
         iot_log_error
         (
           svc->logger,
-          "Watcher %s: DeviceProfile and Key must be configured", key
+          "Watcher: Name, DeviceProfile and Key must be configured"
         );
         free (watcher.profile);
         free (watcher.key);
@@ -374,6 +389,7 @@ void edgex_device_populateConfig
           }
           free (watcher.ids);
         }
+        *err = EDGEX_BAD_CONFIG;
       }
     }
   }
@@ -479,48 +495,48 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   DUMP_INT ("   ReadMaxLimit", service.readmaxlimit);
   DUMP_INT ("   Timeout", service.timeout);
   DUMP_ARR ("   Labels", service.labels);
-  DUMP_LIT ("[Devices]");
-  DUMP_BOO ("   DataTransform", devices.datatransform);
-  DUMP_BOO ("   Discovery", devices.discovery);
-  DUMP_STR ("   InitCmd", devices.initcmd);
-  DUMP_STR ("   InitCmdArgs", devices.initcmdargs);
-  DUMP_INT ("   MaxCmdOps", devices.maxcmdops);
-  DUMP_INT ("   MaxCmdResultLen", devices.maxcmdresultlen);
-  DUMP_STR ("   RemoveCmd", devices.removecmd);
-  DUMP_STR ("   RemoveCmdArgs", devices.removecmdargs);
-  DUMP_STR ("   ProfilesDir", devices.profilesdir);
-  DUMP_BOO ("   SendReadingsOnChanged", devices.sendreadingsonchanged);
+  DUMP_LIT ("[Device]");
+  DUMP_BOO ("   DataTransform", device.datatransform);
+  DUMP_BOO ("   Discovery", device.discovery);
+  DUMP_STR ("   InitCmd", device.initcmd);
+  DUMP_STR ("   InitCmdArgs", device.initcmdargs);
+  DUMP_INT ("   MaxCmdOps", device.maxcmdops);
+  DUMP_INT ("   MaxCmdResultLen", device.maxcmdresultlen);
+  DUMP_STR ("   RemoveCmd", device.removecmd);
+  DUMP_STR ("   RemoveCmdArgs", device.removecmdargs);
+  DUMP_STR ("   ProfilesDir", device.profilesdir);
+  DUMP_BOO ("   SendReadingsOnChanged", device.sendreadingsonchanged);
 
-  DUMP_LIT ("[Schedules]");
   edgex_map_iter i = edgex_map_iter (svc->config.schedules);
   while ((key = edgex_map_next (&svc->config.schedules, &i)))
   {
-    iot_log_debug (svc->logger, "   [%s]", key);
-    iot_log_debug (svc->logger, "      Period = %d seconds",
+    DUMP_LIT ("[[Schedules]]");
+    iot_log_debug (svc->logger, "  Name = \"%s\"", key);
+    iot_log_debug (svc->logger, "  Period = %d seconds",
                    *edgex_map_get (&svc->config.schedules, key));
   }
 
-  DUMP_LIT ("[ScheduleEvents]");
   i = edgex_map_iter (svc->config.scheduleevents);
   while ((key = edgex_map_next (&svc->config.scheduleevents, &i)))
   {
-    iot_log_debug (svc->logger, "   [%s]", key);
+    DUMP_LIT ("[[ScheduleEvents]]");
+    iot_log_debug (svc->logger, "  Name = \"%s\"", key);
     schedevt = edgex_map_get (&svc->config.scheduleevents, key);
-    iot_log_debug (svc->logger, "      Schedule = \"%s\"", schedevt->schedule);
-    iot_log_debug (svc->logger, "      Path = \"%s\"", schedevt->path);
+    iot_log_debug (svc->logger, "  Schedule = \"%s\"", schedevt->schedule);
+    iot_log_debug (svc->logger, "  Path = \"%s\"", schedevt->path);
   }
 
-  DUMP_LIT ("[Watchers]");
   i = edgex_map_iter (svc->config.watchers);
   while ((key = edgex_map_next (&svc->config.watchers, &i)))
   {
-    iot_log_debug (svc->logger, "   [%s]", key);
+    DUMP_LIT ("[[Watchers]]");
+    iot_log_debug (svc->logger, "  Name = \"%s\"", key);
     watcher = edgex_map_get (&svc->config.watchers, key);
-    iot_log_debug (svc->logger, "      DeviceProfile = \"%s\"",
+    iot_log_debug (svc->logger, "  DeviceProfile = \"%s\"",
                    watcher->profile);
-    iot_log_debug (svc->logger, "      Key = \"%s\"", watcher->key);
-    dumpArray (svc->logger, "      Identifiers", watcher->ids);
-    iot_log_debug (svc->logger, "      MatchString = \"%s\"",
+    iot_log_debug (svc->logger, "  Key = \"%s\"", watcher->key);
+    dumpArray (svc->logger, "  Identifiers", watcher->ids);
+    iot_log_debug (svc->logger, "  MatchString = \"%s\"",
                    watcher->matchstring);
   }
 }
@@ -540,11 +556,11 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   free (svc->config.service.host);
   free (svc->config.service.healthcheck);
   free (svc->config.service.openmsg);
-  free (svc->config.devices.initcmd);
-  free (svc->config.devices.initcmdargs);
-  free (svc->config.devices.removecmd);
-  free (svc->config.devices.removecmdargs);
-  free (svc->config.devices.profilesdir);
+  free (svc->config.device.initcmd);
+  free (svc->config.device.initcmdargs);
+  free (svc->config.device.removecmd);
+  free (svc->config.device.removecmdargs);
+  free (svc->config.device.profilesdir);
 
   for (int i = 0; svc->config.service.labels[i]; i++)
   {
@@ -580,11 +596,11 @@ void edgex_device_freeConfig (edgex_device_service *svc)
 }
 
 void edgex_device_process_configured_devices
-  (edgex_device_service *svc, toml_table_t *devtable, edgex_error *err)
+  (edgex_device_service *svc, toml_array_t *devs, edgex_error *err)
 {
-  if (devtable)
+  if (devs)
   {
-    const char *key;
+    char *devname;
     const char *raw;
     edgex_device *existing;
     char *profile_name;
@@ -592,22 +608,23 @@ void edgex_device_process_configured_devices
     edgex_addressable *address;
     edgex_strings *labels;
     edgex_strings *newlabel;
-    toml_table_t *subtable;
+    toml_table_t *table;
     toml_table_t *addtable;
     toml_array_t *arr;
+    int n = 0;
 
-    for (int i = 0; NULL != (key = toml_key_in (devtable, i)); i++)
+    while ((table = toml_table_at (devs, n++)))
     {
+      raw = toml_raw_in (table, "Name");
+      toml_rtos2 (raw, &devname);
       pthread_rwlock_rdlock (&svc->deviceslock);
-      existing = edgex_map_get (&svc->devices, key);
+      existing = edgex_map_get (&svc->devices, devname);
       pthread_rwlock_unlock (&svc->deviceslock);
       if (existing == NULL)
       {
-        subtable = toml_table_in (devtable, key);
-
         /* Addressable */
 
-        addtable = toml_table_in (subtable, "Addressable");
+        addtable = toml_table_in (table, "Addressable");
         if (addtable)
         {
           address = malloc (sizeof (edgex_addressable));
@@ -646,11 +663,11 @@ void edgex_device_process_configured_devices
           labels = NULL;
           profile_name = NULL;
           description = NULL;
-          raw = toml_raw_in (subtable, "Profile");
+          raw = toml_raw_in (table, "Profile");
           toml_rtos2 (raw, &profile_name);
-          raw = toml_raw_in (subtable, "Description");
+          raw = toml_raw_in (table, "Description");
           toml_rtos2 (raw, &description);
-          arr = toml_array_in (subtable, "Labels");
+          arr = toml_array_in (table, "Labels");
           if (arr)
           {
             for (int n = 0; (raw = toml_raw_at (arr, n)); n++)
@@ -664,7 +681,7 @@ void edgex_device_process_configured_devices
 
           *err = EDGEX_OK;
           edgex_device_add_device
-            (svc, key, description, labels, profile_name, address, err);
+            (svc, devname, description, labels, profile_name, address, err);
 
           edgex_strings_free (labels);
           edgex_addressable_free (address);
@@ -673,14 +690,14 @@ void edgex_device_process_configured_devices
 
           if (err->code)
           {
-            iot_log_error (svc->logger, "Error registering device %s", key);
+            iot_log_error (svc->logger, "Error registering device %s", devname);
             break;
           }
         }
         else
         {
           iot_log_error
-            (svc->logger, "No Addressable section for device %s", key);
+            (svc->logger, "No Addressable section for device %s", devname);
           *err = EDGEX_BAD_CONFIG;
           break;
         }

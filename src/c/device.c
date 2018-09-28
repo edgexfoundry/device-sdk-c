@@ -415,13 +415,13 @@ static int runOne
     }
     n++;
   }
-  if (n > svc->config.devices.maxcmdops)
+  if (n > svc->config.device.maxcmdops)
   {
     iot_log_error
     (
       svc->logger,
       "MaxCmdOps (%d) exceeded for dev: %s cmd: %s method: %s",
-      svc->config.devices.maxcmdops, dev->name, command->name,
+      svc->config.device.maxcmdops, dev->name, command->name,
       methStr (method)
     );
     return MHD_HTTP_INTERNAL_SERVER_ERROR;
