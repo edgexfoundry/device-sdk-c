@@ -515,14 +515,18 @@ void edgex_device_post_readings
   edgex_reading *rdgs = malloc (nreadings * sizeof (edgex_reading));
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    /* TODO: Transform & mapping for values[i] */
-
     rdgs[i].created = timenow;
     rdgs[i].modified = timenow;
     rdgs[i].pushed = timenow;
     rdgs[i].name = sources[i].devobj->name;
     rdgs[i].id = NULL;
-    rdgs[i].value = edgex_value_tostring (values[i].type, values[i].value);
+    rdgs[i].value = edgex_value_tostring
+    (
+      values[i].type,
+      values[i].value,
+      sources[i].devobj->properties->value,
+      sources[i].ro->mappings
+    );
     rdgs[i].origin = values[i].origin ? values[i].origin : timenow;
     rdgs[i].next = (i == nreadings - 1) ? NULL : rdgs + i + 1;
   }
