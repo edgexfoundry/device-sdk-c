@@ -122,10 +122,7 @@ static bool transformResult
       value->f64_result = (double)result;
       return true;
     }
-    else
-    {
-      return false;
-    }
+    return false;
   }
   if (vtype == Float32)
   {
@@ -134,10 +131,7 @@ static bool transformResult
       value->f32_result = (float)result;
       return true;
     }
-    else
-    {
-      return false;
-    }
+    return false;
   }
 
   if (result < LLONG_MIN || result > LLONG_MAX)
