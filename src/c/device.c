@@ -15,7 +15,12 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <errno.h>
 #include <microhttpd.h>
+#include <math.h>
+#include <limits.h>
+#include <float.h>
+#include <assert.h>
 
 #define ID_LEN 40
 
@@ -51,16 +56,187 @@ static const char *methStr (edgex_http_method method)
   }
 }
 
-char *edgex_value_tostring
-  (edgex_device_resulttype vtype, edgex_device_resultvalue value)
+static const char *checkMapping (const char *in, const edgex_nvpairs *map)
 {
-  char *res =
-    malloc ((vtype == String) ? strlen (value.string_result) + 1 : 32);
+  const edgex_nvpairs *pair = map;
+  while (pair)
+  {
+    if (strcmp (in, pair->name) == 0)
+    {
+      return pair->value;
+    }
+    pair = pair->next;
+  }
+  return in;
+}
+
+static void safeStrtold (const char *txt, long double *val)
+{
+  if (txt && *txt)
+  {
+    char *end;
+    errno = 0;
+    long double x = strtold (txt, &end);
+    if (errno == 0 && end == txt + strlen (txt))
+    {
+      *val = x;
+    }
+  }
+}
+
+#define SELECT(X,Y) case X: result = offset + scale * (base == 0.0 ? (Y) : powl (base, (Y))); break
+
+static bool transformResult
+(
+  edgex_device_resulttype vtype,
+  edgex_device_resultvalue *value,
+  long double base,
+  long double scale,
+  long double offset)
+{
+  long double result = 0.0;
+  errno = 0;
+  switch (vtype)
+  {
+    SELECT (Uint8, value->ui8_result);
+    SELECT (Uint16, value->ui16_result);
+    SELECT (Uint32, value->ui32_result);
+    SELECT (Uint64, value->ui64_result);
+    SELECT (Int8, value->i8_result);
+    SELECT (Int16, value->i16_result);
+    SELECT (Int32, value->i32_result);
+    SELECT (Int64, value->i64_result);
+    SELECT (Float32, value->f32_result);
+    SELECT (Float64, value->f64_result);
+    default: assert (0);
+  }
+  if (errno)
+  {
+    return false;
+  }
+
+  if (vtype == Float64)
+  {
+    if (result <= DBL_MAX && result >= -DBL_MAX)
+    {
+      value->f64_result = (double)result;
+      return true;
+    }
+    return false;
+  }
+  if (vtype == Float32)
+  {
+    if (result <= FLT_MAX && result >= -FLT_MAX)
+    {
+      value->f32_result = (float)result;
+      return true;
+    }
+    return false;
+  }
+
+  if (result < LLONG_MIN || result > LLONG_MAX)
+  {
+    return false;
+  }
+
+  long long int res = llrintl (result);
+
+  switch (vtype)
+  {
+    case Uint8:
+      if (res >= 0 && res <= UCHAR_MAX)
+      {
+        value->ui8_result = (uint8_t)res;
+        return true;
+      }
+      break;
+    case Uint16:
+      if (res >= 0 && res <= USHRT_MAX)
+      {
+        value->ui16_result = (uint16_t)res;
+        return true;
+      }
+      break;
+    case Uint32:
+      if (res >= 0 && res <= UINT_MAX)
+      {
+        value->ui32_result = (uint32_t)res;
+        return true;
+      }
+      break;
+    case Uint64:
+      if (res >= 0 && res <= ULLONG_MAX)
+      {
+        value->ui64_result = (uint64_t)res;
+        return true;
+      }
+      break;
+    case Int8:
+      if (res >= SCHAR_MIN && res <= SCHAR_MAX)
+      {
+        value->i8_result = (int8_t)res;
+        return true;
+      }
+      break;
+    case Int16:
+      if (res >= SHRT_MIN && res <= SHRT_MAX)
+      {
+        value->i16_result = (int16_t)res;
+        return true;
+      }
+      break;
+    case Int32:
+      if (res >= INT_MIN && res <= INT_MAX)
+      {
+        value->i32_result = (int32_t)res;
+        return true;
+      }
+      break;
+    case Int64:
+      value->i64_result = res;
+      break;
+    default:
+      assert (0);
+  }
+
+  return false;
+}
+
+char *edgex_value_tostring
+(
+  edgex_device_resulttype vtype,
+  edgex_device_resultvalue value,
+  edgex_propertyvalue *props,
+  edgex_nvpairs *mappings
+)
+{
+  char *res = NULL;
+
+  if (vtype != Bool && vtype != String)
+  {
+    long double offset = 0.0;
+    long double scale = 1.0;
+    long double base = 0.0;
+
+    safeStrtold (props->base, &base);
+    safeStrtold (props->scale, &scale);
+    safeStrtold (props->offset, &offset);
+
+    if (offset != 0.0 || scale != 1.0 || base != 0.0)
+    {
+      if (!transformResult (vtype, &value, base, scale, offset))
+      {
+        return strdup ("overflow");
+      }
+    }
+
+    res = malloc (32);
+  }
 
   switch (vtype)
   {
     case Bool:
-      sprintf (res, "%s", value.bool_result ? "true" : "false");
+      res = strdup (value.bool_result ? "true" : "false");
       break;
     case Uint8:
       sprintf (res, "%u", value.ui8_result);
@@ -93,7 +269,7 @@ char *edgex_value_tostring
       sprintf (res, "%.16e", value.f64_result);
       break;
     case String:
-      strcpy (res, value.string_result);
+      res = strdup (checkMapping (value.string_result, mappings));
       break;
   }
   return res;
@@ -318,7 +494,13 @@ static int runOneGet
       rdgs[i].pushed = timenow;
       rdgs[i].name = requests[i].devobj->name;
       rdgs[i].id = NULL;
-      rdgs[i].value = edgex_value_tostring (results[i].type, results[i].value);
+      rdgs[i].value = edgex_value_tostring
+      (
+        results[i].type,
+        results[i].value,
+        requests[i].devobj->properties->value,
+        requests[i].ro->mappings
+      );
       rdgs[i].origin = results[i].origin ? results[i].origin : timenow;
       rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
       json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);

@@ -4,8 +4,7 @@ TODO
 Consul integration - Read config settings. Upload new settings. Register as a
 service. Ensure that healthcheck mechanism is properly configured/implemented.
 
-Readings - Assertions, tramsforms and (post-Delhi) mappings. Binary encodings.
-base64 encoding of floating point numbers.
+Readings - Assertions. Binary encodings. b64 encoding of floating point numbers.
 
 Discovery endpoint - Only add new devices which match a provisionwatcher.
 These to be dynamically created according to configuration.
