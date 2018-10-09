@@ -17,8 +17,6 @@
 
 static void toml_rtos2 (const char *s, char **ret);
 
-static const char *parse8601 (const char *str, int *result);
-
 #define ERRBUFSZ 1024
 
 toml_table_t *edgex_device_loadConfig
@@ -97,7 +95,7 @@ static const pmap times[] =
   {0,   0}
 };
 
-const char *parse8601 (const char *str, int *result)
+const char *edgex_device_config_parse8601 (const char *str, int *result)
 {
   char *endptr;
   int component;
@@ -274,17 +272,17 @@ void edgex_device_populateConfig
       toml_rtos2 (raw, &namestr);
       if (namestr && freqstr)
       {
-        const char *errmsg = parse8601 (freqstr, &interval);
+        const char *errmsg = edgex_device_config_parse8601 (freqstr, &interval);
         if (errmsg)
         {
           iot_log_error
             (svc->logger, "Parse error for schedule %s: %s", namestr, err);
           *err = EDGEX_BAD_CONFIG;
-          free (namestr);
+          free (freqstr);
         }
         else
         {
-          edgex_map_set (&svc->config.schedules, namestr, interval);
+          edgex_map_set (&svc->config.schedules, namestr, freqstr);
         }
       }
       else
@@ -292,9 +290,9 @@ void edgex_device_populateConfig
         iot_log_error
           (svc->logger, "Parse error: Schedule requires Name and Frequency");
         *err = EDGEX_BAD_CONFIG;
-        free (namestr);
+        free (freqstr);
       }
-      free (freqstr);
+      free (namestr);
     }
   }
 
@@ -321,7 +319,6 @@ void edgex_device_populateConfig
       }
       else
       {
-        free (namestr);
         free (info.schedule);
         free (info.path);
         iot_log_error
@@ -331,6 +328,7 @@ void edgex_device_populateConfig
         );
         *err = EDGEX_BAD_CONFIG;
       }
+      free (namestr);
     }
   }
 
@@ -568,6 +566,11 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   }
   free (svc->config.service.labels);
 
+  iter = edgex_map_iter (svc->config.schedules);
+  while ((key = edgex_map_next (&svc->config.schedules, &iter)))
+  {
+    free (*edgex_map_get (&svc->config.schedules, key));
+  }
   edgex_map_deinit (&svc->config.schedules);
 
   iter = edgex_map_iter (svc->config.scheduleevents);
@@ -702,6 +705,7 @@ void edgex_device_process_configured_devices
           break;
         }
       }
+      free (devname);
     }
   }
 }

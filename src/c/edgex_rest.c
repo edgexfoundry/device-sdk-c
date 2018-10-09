@@ -1360,6 +1360,17 @@ char *edgex_scheduleevent_write (const edgex_scheduleevent *e, bool create)
   return result;
 }
 
+void edgex_scheduleevent_free (edgex_scheduleevent *e)
+{
+  free (e->name);
+  free (e->id);
+  free (e->schedule);
+  free (e->parameters);
+  free (e->service);
+  edgex_addressable_free (e->addressable);
+  free (e);
+}
+
 
 static edgex_schedule *schedule_read (const JSON_Object *obj)
 {
@@ -1429,6 +1440,18 @@ char *edgex_schedule_write (const edgex_schedule *e, bool create)
   json_value_free (val);
   return result;
 }
+
+void edgex_schedule_free (edgex_schedule *e)
+{
+  free (e->name);
+  free (e->id);
+  free (e->start);
+  free (e->end);
+  free (e->frequency);
+  free (e->cron);
+  free (e);
+}
+
 
 edgex_addressable *edgex_addressable_read (const char *json)
 {

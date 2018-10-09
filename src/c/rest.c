@@ -319,7 +319,12 @@ long edgex_http_post
    */
   curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &http_code);
 
-  if (http_code < 200 || http_code >= 300)
+  if (http_code == 409)
+  {
+    iot_log_info (lc, "HTTP response 409 - Conflict");
+    *err = EDGEX_HTTP_CONFLICT;
+  }
+  else if (http_code < 200 || http_code >= 300)
   {
     iot_log_error (lc, "HTTP response: %d\n", (int) http_code);
     *err = EDGEX_HTTP_POST_ERROR;

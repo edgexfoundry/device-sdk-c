@@ -26,4 +26,5 @@
 #define EDGEX_DRIVER_UNSTART (edgex_error){ .code = 14, .reason = "Protocol driver initialization failed" }
 #define EDGEX_REMOTE_SERVER_DOWN (edgex_error){ .code = 15, .reason = "Remote server unresponsive" }
 #define EDGEX_PROFILE_PARSE_ERROR (edgex_error){ .code = 16, .reason = "Error while parsing device profile" }
+#define EDGEX_HTTP_CONFLICT (edgex_error){ .code = 17, .reason = "HTTP 409 Conflict" }
 #endif
