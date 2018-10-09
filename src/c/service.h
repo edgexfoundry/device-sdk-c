@@ -23,6 +23,8 @@ typedef edgex_map(edgex_deviceprofile) edgex_map_profile;
 typedef edgex_map(edgex_reading) edgex_map_objectreading;
 typedef edgex_map(edgex_map_objectreading) edgex_map_reading;
 
+struct edgex_device_service_job;
+
 struct edgex_device_service
 {
   const char *name;
@@ -44,6 +46,7 @@ struct edgex_device_service
 
   threadpool thpool;
   iot_scheduler scheduler;
+  struct edgex_device_service_job *sjobs;
   pthread_mutex_t discolock;
 };
 
