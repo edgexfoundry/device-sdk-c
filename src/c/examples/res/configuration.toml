@@ -3,8 +3,8 @@
   Port = 49990
   ConnectRetries = 3
   HealthCheck = ""
-  Labels = [ "Hello", "You" ]
-  OpenMsg = "device simple started"
+  Labels = [ "Template" ]
+  OpenMsg = "Example template device started"
   ReadMaxLimit = 256
   Timeout = 5000
 
@@ -38,29 +38,25 @@
   File = "./device-simple.log"
 
 [[Schedules]]
-  Name = "Schedule1"
-  Frequency = "PT60S"
-
-[[Schedules]]
-  Name = "Schedule2"
-  Frequency = "P1D"
+  Name = "Schedule"
+  Frequency = "PT15S"
 
 [[ScheduleEvents]]
-  Name = "ScheduleEventName1"
-  Schedule = "Schedule1"
-  Path = "/api/v1/discovery"
+  Name = "SchedulePollSensor1"
+  Schedule = "Schedule"
+  Path = "/api/v1/device/all/SensorOne"
 
 [[ScheduleEvents]]
-  Name = "SE2"
-  Schedule = "Schedule2"
-  Path = "/api/v1/device/name/dev01/OutputCurrent"
+  Name = "SchedulePollSensor2"
+  Schedule = "Schedule"
+  Path = "/api/v1/device/all/SensorTwo"
 
 [[DeviceList]]
-  Name = "dev01"
-  Profile = "Proximity Sensor"
-  Description = "Test ProxSense Device"
+  Name = "TemplateDevice"
+  Profile = "Example Sensor"
+  Description = "An Example Template Device"
   Labels = [ "One", "Two", "Three" ]
   [DeviceList.Addressable]
-    Address = "modbusgw01"
+    Address = "someSensorEndpoint"
     Port = 502
     Protocol = "OTHER"
