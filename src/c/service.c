@@ -154,7 +154,6 @@ void edgex_device_service_start
 )
 {
   toml_table_t *config;
-  int ndevs = 0;
 
   *err = EDGEX_OK;
   if (confDir == NULL || *confDir == '\0')
@@ -324,8 +323,7 @@ void edgex_device_service_start
 
   /* Load DeviceProfiles from files and register in metadata */
 
-  edgex_device_profiles_upload
-    (svc->logger, svc->config.device.profilesdir, &svc->config.endpoints, err);
+  edgex_device_profiles_upload (svc, err);
   if (err->code)
   {
     toml_free (config);
@@ -334,49 +332,14 @@ void edgex_device_service_start
 
   /* Obtain Devices from metadata */
 
-  edgex_device *devlist =
-    edgex_metadata_client_get_devices
-      (svc->logger, &svc->config.endpoints, svc->name, err);
+  edgex_device_free (edgex_device_devices (svc, err));
   if (err->code)
   {
-    iot_log_error (svc->logger, "Unable to retrieve device list from metadata");
     toml_free (config);
     return;
   }
-  edgex_device *iter = devlist;
-  pthread_rwlock_wrlock (&svc->deviceslock);
-  while (iter)
-  {
-    edgex_map_set (&svc->devices, iter->id, *iter);
-    edgex_map_set (&svc->name_to_id, iter->name, iter->id);
-    iter = iter->next;
-    ndevs++;
-  }
-  pthread_rwlock_unlock (&svc->deviceslock);
-  iot_log_debug
-    (svc->logger, "%d devices retrieved from core-metadata", ndevs);
 
-  pthread_mutex_lock (&svc->profileslock);
-  for (iter = devlist; iter; iter = iter->next)
-  {
-    const char *pname = iter->profile->name;
-    if (edgex_map_get (&svc->profiles, pname) == NULL)
-    {
-      edgex_map_set (&svc->profiles, pname, *iter->profile);
-    }
-  }
-  pthread_mutex_unlock (&svc->profileslock);
-
-  if (devlist)
-  {
-    while (devlist->next)
-    {
-      iter = devlist->next;
-      free (devlist);
-      devlist = iter;
-    }
-    free (devlist);
-  }
+  /* Obtain Devices from configuration */
 
   edgex_device_process_configured_devices
     (svc, toml_array_in (config, "DeviceList"), err);
@@ -726,18 +689,16 @@ void edgex_device_service_stop
   const char *key;
   while ((key = edgex_map_next (&svc->devices, &i)))
   {
-    edgex_device *e = edgex_map_get (&svc->devices, key);
-    edgex_addressable_free (e->addressable);
-    free (e->adminState);
-    free (e->description);
-    free (e->id);
-    edgex_strings_free (e->labels);
-    free (e->name);
-    free (e->operatingState);
-    edgex_deviceprofile_free (e->profile);
-    edgex_deviceservice_free (e->service);
+    edgex_device **e = edgex_map_get (&svc->devices, key);
+    edgex_device_free (*e);
   }
   edgex_map_deinit (&svc->devices);
+  i = edgex_map_iter (svc->profiles);
+  while ((key = edgex_map_next (&svc->profiles, &i)))
+  {
+    edgex_deviceprofile **p = edgex_map_get (&svc->profiles, key);
+    edgex_deviceprofile_free (*p);
+  }
   edgex_map_deinit (&svc->profiles);
   free (svc);
 }

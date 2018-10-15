@@ -208,6 +208,122 @@ long edgex_http_get (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
 }
 
 /*
+ * This function uses libcurl to send a simple HTTP DELETE
+ * request with no Content-Type header.
+ * TLS peer verification is enabled, but not HTTP authentication.
+ * The parameters are:
+ *
+ * ctx: Ptr to edgex_ctx, which contains the server name
+ * url: URL to use for the DELETE request
+ * writefunc: Function pointer to handle writing the data
+ *            from the HTTP body received from the server.
+ *
+ * Return value is the HTTP status value from the server
+ *	    (e.g. 200 for HTTP OK)
+ */
+long edgex_http_delete (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
+                        void *writefunc, edgex_error *err)
+{
+  long http_code = 0;
+  CURL *hnd;
+  struct curl_slist *slist;
+  CURLcode rc;
+
+  slist = NULL;
+  /*
+   * Create the Authorization header if needed
+   */
+  slist = edgex_add_auth_hdr (lc, ctx, slist);
+
+  ctx->buff = malloc (1);
+  ctx->size = 0;
+
+  /*
+   * Setup Curl
+   */
+  hnd = curl_easy_init ();
+  curl_easy_setopt(hnd, CURLOPT_URL, url);
+  curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 1L);
+  curl_easy_setopt(hnd, CURLOPT_USERAGENT, "edgex");
+  curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "DELETE");
+  if (slist)
+  {
+    curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, slist);
+  }
+  if (ctx->verify_peer && ctx->cacerts_file)
+  {
+    curl_easy_setopt(hnd, CURLOPT_CAINFO, ctx->cacerts_file);
+    curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(hnd, CURLOPT_CERTINFO, 1L);
+  }
+  else
+  {
+    curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
+  }
+  curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+  if (ctx->tls_cert && ctx->tls_key)
+  {
+    curl_easy_setopt(hnd, CURLOPT_SSLCERTTYPE, "PEM");
+    curl_easy_setopt(hnd, CURLOPT_SSLCERT, ctx->tls_cert);
+    curl_easy_setopt(hnd, CURLOPT_SSLKEYTYPE, "PEM");
+    curl_easy_setopt(hnd, CURLOPT_SSLKEY, ctx->tls_key);
+  }
+  /*
+   * If the caller wants the HTTP data from the server
+   * set the callback function
+   */
+  if (writefunc)
+  {
+    curl_easy_setopt(hnd, CURLOPT_WRITEDATA, ctx);
+    curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, writefunc);
+  }
+
+  /*
+   * Send the HTTP DELETE request
+   */
+  rc = curl_easy_perform (hnd);
+  if (rc != CURLE_OK)
+  {
+    iot_log_error (lc, "curl_easy_perform returned: %d\n", (int) rc);
+    *err = EDGEX_HTTP_GET_ERROR;
+    return 0;
+  }
+
+  /*
+   * Get the cert info from the TLS peer
+   */
+  if (ctx->verify_peer)
+  {
+    edgex_log_peer_cert (lc, ctx, hnd);
+  }
+
+  /*
+   * Get the HTTP reponse status code from the server
+   */
+  curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &http_code);
+
+  if (http_code < 200 || http_code >= 300)
+  {
+    iot_log_info (lc, "HTTP response: %d\n", (int) http_code);
+    *err = EDGEX_HTTP_GET_ERROR;
+  }
+  else
+  {
+    *err = EDGEX_OK;
+  }
+
+  curl_easy_cleanup (hnd);
+  hnd = NULL;
+  if (slist)
+  {
+    curl_slist_free_all (slist);
+    slist = NULL;
+  }
+
+  return http_code;
+}
+
+/*
  * This function uses libcurl to send a simple HTTP POST
  * request with JSON data.
  * TLS peer verification is enabled, but not HTTP authentication.

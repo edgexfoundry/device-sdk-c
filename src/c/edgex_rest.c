@@ -1048,6 +1048,24 @@ static JSON_Value *deviceservice_write_name (const edgex_deviceservice *e)
   return result;
 }
 
+edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e)
+{
+  edgex_deviceservice *res = malloc (sizeof (edgex_deviceservice));
+  res->name = strdup (e->name);
+  res->id = strdup (e->id);
+  res->description = strdup (e->description);
+  res->labels = edgex_strings_dup (e->labels);
+  res->addressable = edgex_addressable_dup (e->addressable);
+  res->adminState = strdup (e->adminState);
+  res->operatingState = strdup (e->operatingState);
+  res->origin = e->origin;
+  res->created = e->created;
+  res->modified = e->modified;
+  res->lastConnected = e->lastConnected;
+  res->lastReported = e->lastReported;
+  return res;
+}
+
 void edgex_deviceservice_free (edgex_deviceservice *e)
 {
   if (e)
@@ -1204,6 +1222,27 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
   json_object_set_string (obj, "operatingState", e->operatingState);
   json_object_set_number (obj, "origin", e->origin);
 
+  return result;
+}
+
+edgex_device *edgex_device_dup (const edgex_device *e)
+{
+  edgex_device *result = malloc (sizeof (edgex_device));
+  result->name = strdup (e->name);
+  result->id = strdup (e->id);
+  result->description = strdup (e->description);
+  result->labels = edgex_strings_dup (e->labels);
+  result->addressable = edgex_addressable_dup (e->addressable);
+  result->adminState = strdup (e->adminState);
+  result->operatingState = strdup (e->operatingState);
+  result->origin = e->origin;
+  result->created = e->created;
+  result->modified = e->modified;
+  result->lastConnected = e->lastConnected;
+  result->lastReported = e->lastReported;
+  result->service = edgex_deviceservice_dup (e->service);
+  result->profile = edgex_deviceprofile_dup (e->profile);
+  result->next = NULL;
   return result;
 }
 

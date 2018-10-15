@@ -570,6 +570,60 @@ edgex_device *edgex_metadata_client_get_device
   return result;
 }
 
+void edgex_metadata_client_delete_device
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * deviceid,
+  edgex_error * err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/device/id/%s",
+    endpoints->metadata.host,
+    (uint16_t) endpoints->metadata.port,
+    deviceid
+  );
+
+  edgex_http_delete (lc, &ctx, url, write_cb, err);
+
+  free (ctx.buff);
+}
+
+void edgex_metadata_client_delete_device_byname
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * devicename,
+  edgex_error * err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/device/name/%s",
+    endpoints->metadata.host,
+    (uint16_t) endpoints->metadata.port,
+    devicename
+  );
+
+  edgex_http_delete (lc, &ctx, url, write_cb, err);
+
+  free (ctx.buff);
+}
+
 edgex_addressable *edgex_metadata_client_get_addressable
 (
   iot_logging_client *lc,
