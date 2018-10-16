@@ -44,7 +44,7 @@ int edgex_device_handler_callback
     {
       const char *id = json_object_get_string (jobj, "id");
       pthread_rwlock_rdlock (&svc->deviceslock);
-      edgex_device *ourdev = edgex_map_get (&svc->devices, id);
+      edgex_device **ourdev = edgex_map_get (&svc->devices, id);
       pthread_rwlock_unlock (&svc->deviceslock);
       if (ourdev)
       {
@@ -52,10 +52,10 @@ int edgex_device_handler_callback
           (svc->logger, &svc->config.endpoints, id, &err);
         if (newdev)
         {
-          if (strcmp (newdev->adminState, ourdev->adminState))
+          if (strcmp (newdev->adminState, (*ourdev)->adminState))
           {
-            free (ourdev->adminState);
-            ourdev->adminState = strdup (newdev->adminState);
+            free ((*ourdev)->adminState);
+            (*ourdev)->adminState = strdup (newdev->adminState);
           }
           else
           {

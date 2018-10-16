@@ -217,6 +217,22 @@ void edgex_device_post_readings
 );
 
 /**
+ * @brief Stop the event service. Any locally-scheduled events will be
+ *        cancelled, the rest api for the device will be shutdown, and
+ *        resources will be freed.
+ * @param svc The device service.
+ * @param force Force stop.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void edgex_device_service_stop
+(
+  edgex_device_service *svc,
+  bool force,
+  edgex_error *err
+);
+
+/**
  * @brief Add a device to the EdgeX system. This will generally be called in
  *        response to a request for device discovery.
  * @param svc The device service.
@@ -228,9 +244,11 @@ void edgex_device_post_readings
  *        in metadata. The address' name and origin timestamp will be generated
  *        if not set.
  * @param err Nonzero reason codes will be set here in the event of errors.
+ * @returns The id of the newly created or existing device, or NULL if an error
+ *          occurred.
  */
 
-void edgex_device_add_device
+char * edgex_device_add_device
 (
   edgex_device_service *svc,
   const char *name,
@@ -238,6 +256,52 @@ void edgex_device_add_device
   const edgex_strings *labels,
   const char *profile_name,
   edgex_addressable *address,
+  edgex_error *err
+);
+
+/**
+ * @brief Remove a device from EdgeX. The device will be deleted from the
+ *        device service and from core-metadata.
+ * @param svc The device service.
+ * @param id The id of the device to be removed.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void edgex_device_remove_device
+  (edgex_device_service *svc, const char *id, edgex_error *err);
+
+/**
+ * @brief Remove a device from EdgeX. The device will be deleted from the
+ *        device service and from core-metadata.
+ * @param svc The device service.
+ * @param name The name of the device to be removed.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void edgex_device_remove_device_byname
+  (edgex_device_service *svc, const char *name, edgex_error *err);
+
+void edgex_device_update_device
+(
+  edgex_device_service *svc,
+  const char *name,
+  const char *description,
+  const edgex_strings *labels,
+  edgex_addressable *address,
+  edgex_error *err
+);
+
+/**
+ * @brief Obtain a list of devices known to the system. This function calls
+ *        core-metadata to retrieve all devices associated with this device
+ *        service.
+ * @param svc The device service.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+edgex_device * edgex_device_devices
+(
+  edgex_device_service *svc,
   edgex_error *err
 );
 
@@ -254,22 +318,6 @@ void edgex_device_service_getprofiles
   edgex_device_service *svc,
   uint32_t *count,
   edgex_deviceprofile **profiles
-);
-
-/**
- * @brief Stop the event service. Any locally-scheduled events will be
- *        cancelled, the rest api for the device will be shutdown, and
- *        resources will be freed.
- * @param svc The device service.
- * @param force Force stop.
- * @param err Nonzero reason codes will be set here in the event of errors.
- */
-
-void edgex_device_service_stop
-(
-  edgex_device_service *svc,
-  bool force,
-  edgex_error *err
 );
 
 #endif

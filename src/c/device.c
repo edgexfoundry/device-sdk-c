@@ -661,7 +661,7 @@ static int allCommand
   edgex_map_iter iter = edgex_map_iter (svc->devices);
   while ((key = edgex_map_next (&svc->devices, &iter)))
   {
-    dev = edgex_map_get (&svc->devices, key);
+    dev = *edgex_map_get (&svc->devices, key);
     command = findCommand (cmd, dev->profile->commands);
     if (command)
     {
@@ -724,7 +724,7 @@ static int oneCommand
   );
 
   pthread_rwlock_rdlock (&svc->deviceslock);
-  edgex_device *dev = edgex_map_get (&svc->devices, id);
+  edgex_device **dev = edgex_map_get (&svc->devices, id);
   pthread_rwlock_unlock (&svc->deviceslock);
   if (dev == NULL)
   {
@@ -733,16 +733,16 @@ static int oneCommand
   }
   else
   {
-    const edgex_command *command = findCommand (cmd, dev->profile->commands);
+    const edgex_command *command = findCommand (cmd, (*dev)->profile->commands);
     if (command == NULL)
     {
       iot_log_error
-        (svc->logger, "Command %s not found for device %s", cmd, dev->name);
+        (svc->logger, "Command %s not found for device %s", cmd, (*dev)->name);
       return MHD_HTTP_NOT_FOUND;
     }
     JSON_Value *jreply = NULL;
     int result = runOne
-      (svc, dev, command, method, upload_data, upload_data_size, &jreply);
+      (svc, *dev, command, method, upload_data, upload_data_size, &jreply);
     if (jreply)
     {
       *reply = json_serialize_to_string (jreply);

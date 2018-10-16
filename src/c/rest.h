@@ -31,6 +31,14 @@ long edgex_http_get
   void *writefunc,
   edgex_error *err
 );
+long edgex_http_delete
+(
+  iot_logging_client *lc,
+  edgex_ctx *ctx,
+  const char *url,
+  void *writefunc,
+  edgex_error *err
+);
 long edgex_http_post
 (
   iot_logging_client *lc,
