@@ -510,7 +510,7 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   {
     DUMP_LIT ("[[Schedules]]");
     iot_log_debug (svc->logger, "  Name = \"%s\"", key);
-    iot_log_debug (svc->logger, "  Period = %d seconds",
+    iot_log_debug (svc->logger, "  Frequency = \"%s\"",
                    *edgex_map_get (&svc->config.schedules, key));
   }
 

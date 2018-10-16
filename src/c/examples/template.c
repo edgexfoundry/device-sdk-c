@@ -38,7 +38,7 @@ static bool template_init
 (
   void *impl,
   struct iot_logging_client *lc,
-  const toml_table_t *config
+  toml_table_t *config
 )
 {
   template_driver *driver = (template_driver *) impl;

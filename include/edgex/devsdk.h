@@ -69,7 +69,7 @@ typedef bool (*edgex_device_device_initialize)
 (
   void *impl,
   struct iot_logging_client *lc,
-  const toml_table_t *config
+  toml_table_t *config
 );
 
 /**

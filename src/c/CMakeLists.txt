@@ -28,7 +28,7 @@ configure_file ("defs.h.in" "${CMAKE_SOURCE_DIR}/../include/edgex/csdk-defs.h")
 
 add_library (csdk SHARED ${C_FILES} )
 target_include_directories (csdk PRIVATE ../../include)
-target_link_libraries (csdk PUBLIC ${LINK_LIBRARIES})
+target_link_libraries (csdk PUBLIC m ${LINK_LIBRARIES})
 set_target_properties (csdk PROPERTIES DEFINE_SYMBOL "CSDK_EXPORTS")
 
 # Build modules
