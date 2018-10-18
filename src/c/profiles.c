@@ -32,7 +32,7 @@ static void generate_value_descriptors
   const edgex_deviceprofile *dp
 )
 {
-  uint64_t timenow = time (NULL) * 1000UL;
+  uint64_t timenow = (uint64_t)time (NULL) * 1000;
 
   for (edgex_deviceobject *res = dp->device_resources; res; res = res->next)
   {

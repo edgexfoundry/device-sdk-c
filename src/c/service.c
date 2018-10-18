@@ -262,7 +262,7 @@ void edgex_device_service_start
 
   if (ds == NULL)
   {
-    uint64_t millis = time (NULL) * 1000;
+    uint64_t millis = (uint64_t)time (NULL) * 1000;
     edgex_addressable *addr = edgex_metadata_client_get_addressable
       (svc->logger, &svc->config.endpoints, svc->name, err);
     if (err->code)
@@ -629,9 +629,7 @@ void edgex_device_post_readings
   const edgex_device_commandresult *values
 )
 {
-  uint64_t timenow = time (NULL) * 1000UL;
-  uint64_t origin =
-    (nreadings == 1 && values[0].origin) ? values[0].origin : timenow;
+  uint64_t timenow = (uint64_t)time (NULL) * 1000;
   edgex_reading *rdgs = malloc (nreadings * sizeof (edgex_reading));
   for (uint32_t i = 0; i < nreadings; i++)
   {
@@ -647,13 +645,13 @@ void edgex_device_post_readings
       sources[i].devobj->properties->value,
       sources[i].ro->mappings
     );
-    rdgs[i].origin = values[i].origin ? values[i].origin : timenow;
+    rdgs[i].origin = values[i].origin;
     rdgs[i].next = (i == nreadings - 1) ? NULL : rdgs + i + 1;
   }
   postparams *pp = malloc (sizeof (postparams));
   pp->svc = svc;
   pp->name = device_name;
-  pp->origin = origin;
+  pp->origin = timenow;
   pp->readings = rdgs;
   thpool_add_work (svc->thpool, doPost, pp);
 }

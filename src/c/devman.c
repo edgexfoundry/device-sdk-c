@@ -65,7 +65,7 @@ char * edgex_device_add_device
   {
     if (newaddr->origin == 0)
     {
-      newaddr->origin = time (NULL) * 1000UL;
+      newaddr->origin = (uint64_t)time (NULL) * 1000;
     }
     newaddr->id = edgex_metadata_client_create_addressable
       (svc->logger, &svc->config.endpoints, newaddr, err);

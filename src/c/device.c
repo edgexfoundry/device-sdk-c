@@ -480,9 +480,7 @@ static int runOneGet
   )
   {
     edgex_error err = EDGEX_OK;
-    uint64_t timenow = time (NULL) * 1000UL;
-    uint64_t origin =
-      (nops == 1 && results[0].origin) ? results[0].origin : timenow;
+    uint64_t timenow = (uint64_t)time (NULL) * 1000;
     edgex_reading *rdgs = malloc (nops * sizeof (edgex_reading));
     *reply = json_value_init_object ();
     JSON_Object *jobj = json_value_get_object (*reply);
@@ -501,13 +499,13 @@ static int runOneGet
         requests[i].devobj->properties->value,
         requests[i].ro->mappings
       );
-      rdgs[i].origin = results[i].origin ? results[i].origin : timenow;
+      rdgs[i].origin = results[i].origin;
       rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
       json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);
     }
     edgex_event_free (edgex_data_client_add_event
-                        (svc->logger, &svc->config.endpoints, dev->name, origin,
-                         rdgs, &err));
+                        (svc->logger, &svc->config.endpoints, dev->name,
+                         timenow, rdgs, &err));
 
     for (uint32_t i = 0; i < nops; i++)
     {
