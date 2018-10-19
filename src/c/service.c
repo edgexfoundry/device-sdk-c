@@ -18,6 +18,7 @@
 #include "data.h"
 #include "rest.h"
 #include "edgex_rest.h"
+#include "edgex_time.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -262,7 +263,7 @@ void edgex_device_service_start
 
   if (ds == NULL)
   {
-    uint64_t millis = (uint64_t)time (NULL) * 1000;
+    uint64_t millis = edgex_device_millitime ();
     edgex_addressable *addr = edgex_metadata_client_get_addressable
       (svc->logger, &svc->config.endpoints, svc->name, err);
     if (err->code)
@@ -629,7 +630,7 @@ void edgex_device_post_readings
   const edgex_device_commandresult *values
 )
 {
-  uint64_t timenow = (uint64_t)time (NULL) * 1000;
+  uint64_t timenow = edgex_device_millitime ();
   edgex_reading *rdgs = malloc (nreadings * sizeof (edgex_reading));
   for (uint32_t i = 0; i < nreadings; i++)
   {

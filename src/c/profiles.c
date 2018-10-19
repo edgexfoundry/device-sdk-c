@@ -11,6 +11,7 @@
 #include "metadata.h"
 #include "data.h"
 #include "edgex_rest.h"
+#include "edgex_time.h"
 #include "errorlist.h"
 
 #include <dirent.h>
@@ -32,7 +33,7 @@ static void generate_value_descriptors
   const edgex_deviceprofile *dp
 )
 {
-  uint64_t timenow = (uint64_t)time (NULL) * 1000;
+  uint64_t timenow = edgex_device_millitime ();
 
   for (edgex_deviceobject *res = dp->device_resources; res; res = res->next)
   {

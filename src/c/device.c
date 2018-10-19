@@ -12,6 +12,7 @@
 #include "parson.h"
 #include "data.h"
 #include "edgex_rest.h"
+#include "edgex_time.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -480,7 +481,7 @@ static int runOneGet
   )
   {
     edgex_error err = EDGEX_OK;
-    uint64_t timenow = (uint64_t)time (NULL) * 1000;
+    uint64_t timenow = edgex_device_millitime ();
     edgex_reading *rdgs = malloc (nops * sizeof (edgex_reading));
     *reply = json_value_init_object ();
     JSON_Object *jobj = json_value_get_object (*reply);
