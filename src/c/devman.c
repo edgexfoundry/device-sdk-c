@@ -10,6 +10,7 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "edgex_rest.h"
+#include "edgex_time.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -65,7 +66,7 @@ char * edgex_device_add_device
   {
     if (newaddr->origin == 0)
     {
-      newaddr->origin = time (NULL) * 1000UL;
+      newaddr->origin = edgex_device_millitime ();
     }
     newaddr->id = edgex_metadata_client_create_addressable
       (svc->logger, &svc->config.endpoints, newaddr, err);
