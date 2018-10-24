@@ -185,6 +185,13 @@ void edgex_metadata_client_update_addressable
   const edgex_addressable * addressable,
   edgex_error * err
 );
+void edgex_metadata_client_delete_addressable
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * name,
+  edgex_error * err
+);
 bool edgex_metadata_client_ping
 (
   iot_logging_client * lc,
