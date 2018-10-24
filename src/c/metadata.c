@@ -570,6 +570,86 @@ edgex_device *edgex_metadata_client_get_device
   return result;
 }
 
+edgex_device *edgex_metadata_client_get_device_byname
+(
+  iot_logging_client *lc,
+  edgex_service_endpoints *endpoints,
+  const char *devicename,
+  edgex_error *err
+)
+{
+  edgex_ctx ctx;
+  edgex_device *result = 0;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/device/name/%s",
+    endpoints->metadata.host,
+    (uint16_t) endpoints->metadata.port,
+    devicename
+  );
+
+  edgex_http_get (lc, &ctx, url, write_cb, err);
+
+  if (err->code)
+  {
+    return 0;
+  }
+
+  result = edgex_device_read (ctx.buff);
+  free (ctx.buff);
+  *err = EDGEX_OK;
+  return result;
+}
+
+void edgex_metadata_client_update_device
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * name,
+  const char * id,
+  const char * description,
+  const edgex_strings * labels,
+  const char * profile_name,
+  edgex_error * err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  char *json;
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/device",
+    endpoints->metadata.host,
+    (uint16_t) endpoints->metadata.port
+  );
+
+  json = edgex_device_write_sparse
+    (name, id, description, labels, profile_name);
+
+  edgex_http_put (lc, &ctx, url, json, write_cb, err);
+  if (err->code != 0)
+  {
+    iot_log_info
+    (
+      lc,
+      "edgex_metadata_client_update_device: %s: %s",
+      err->reason,
+      ctx.buff
+    );
+  }
+  free (ctx.buff);
+  free (json);
+}
+
 void edgex_metadata_client_delete_device
 (
   iot_logging_client * lc,

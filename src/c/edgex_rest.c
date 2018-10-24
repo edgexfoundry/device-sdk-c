@@ -1294,6 +1294,39 @@ char *edgex_device_write (const edgex_device *e, bool create)
   return result;
 }
 
+char *edgex_device_write_sparse
+(
+  const char * name,
+  const char * id,
+  const char * description,
+  const edgex_strings * labels,
+  const char * profile_name
+)
+{
+  char *json;
+  JSON_Value *jval = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (jval);
+
+  if (name) { json_object_set_string (obj, "name", name); }
+  if (id) { json_object_set_string (obj, "id", id); }
+  if (description) { json_object_set_string (obj, "description", description); }
+  if (labels)
+  {
+    json_object_set_value (obj, "labels", strings_to_array (labels));
+  }
+  if (profile_name)
+  {
+    JSON_Value *pval = json_value_init_object ();
+    JSON_Object *pobj = json_value_get_object (pval);
+    json_object_set_string (pobj, "name", profile_name);
+    json_object_set_value (obj, "profile", pval);
+  }
+  json = json_serialize_to_string (jval);
+  json_value_free (jval);
+
+  return json;
+}
+
 edgex_device *edgex_devices_read (const char *json)
 {
   edgex_device *result = NULL;
