@@ -10,6 +10,7 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "edgex_rest.h"
+#include "errorlist.h"
 #include "edgex_time.h"
 
 #include <string.h>
@@ -178,12 +179,32 @@ void edgex_device_remove_device
   {
     pthread_rwlock_wrlock (&svc->deviceslock);
     edgex_device **d = edgex_map_get (&svc->devices, id);
+    edgex_device *dev = d ? *d : NULL;
     if (d)
     {
-      edgex_map_remove (&svc->name_to_id, (*d)->name);
+      edgex_map_remove (&svc->name_to_id, dev->name);
       edgex_map_remove (&svc->devices, id);
     }
     pthread_rwlock_unlock (&svc->deviceslock);
+    if (dev)
+    {
+      edgex_metadata_client_delete_addressable
+        (svc->logger, &svc->config.endpoints, dev->addressable->name, err);
+      if (err->code)
+      {
+        iot_log_error
+        (
+          svc->logger,
+          "Unable to remove addressable %s from metadata",
+          (*d)->addressable->name
+        );
+      }
+      edgex_device_free (dev);
+    }
+  }
+  else
+  {
+    iot_log_error (svc->logger, "Unable to remove device %s from metadata", id);
   }
 }
 
@@ -196,12 +217,128 @@ void edgex_device_remove_device_byname
   {
     pthread_rwlock_wrlock (&svc->deviceslock);
     char **id = edgex_map_get (&svc->name_to_id, name);
+    edgex_device **d = edgex_map_get (&svc->devices, *id);
+    edgex_device *dev = d ? *d : NULL;
     if (id)
     {
       edgex_map_remove (&svc->name_to_id, name); 
       edgex_map_remove (&svc->devices, *id);
     }
     pthread_rwlock_unlock (&svc->deviceslock);
+    if (dev)
+    {
+      edgex_metadata_client_delete_addressable
+        (svc->logger, &svc->config.endpoints, dev->addressable->name, err);
+      if (err->code)
+      {
+        iot_log_error
+        (
+          svc->logger,
+          "Unable to remove addressable %s from metadata",
+          dev->addressable->name
+        );
+      }
+      edgex_device_free (dev);
+    }
+  }
+  else
+  {
+    iot_log_error
+      (svc->logger, "Unable to remove device %s from metadata", name);
   }
 }
 
+void edgex_device_update_device
+(
+  edgex_device_service *svc,
+  const char *id,
+  const char *name,
+  const char *description,
+  const edgex_strings *labels,
+  const char *profile_name,
+  edgex_error *err
+)
+{
+  edgex_device *olddev = NULL;
+  edgex_device **od = NULL;
+
+  *err = EDGEX_OK;
+  edgex_metadata_client_update_device
+  (
+    svc->logger,
+    &svc->config.endpoints,
+    name,
+    id,
+    description,
+    labels,
+    profile_name,
+    err
+  );
+  if (err->code == 0)
+  {
+    pthread_rwlock_wrlock (&svc->deviceslock);
+    if (id)
+    {
+      od = edgex_map_get (&svc->devices, id);
+      if (od)
+      {
+        olddev = *od;
+        edgex_map_remove (&svc->name_to_id, olddev->name);
+        edgex_map_remove (&svc->devices, id);
+      }
+    }
+    else
+    {
+      char **eid = edgex_map_get (&svc->name_to_id, name);
+      if (eid)
+      {
+        od = edgex_map_get (&svc->devices, *eid);
+        if (od)
+        {
+          olddev = *od;
+        }
+        edgex_map_remove (&svc->devices, *eid);
+        edgex_map_remove (&svc->name_to_id, name);
+      }
+    }
+    pthread_rwlock_unlock (&svc->deviceslock);
+
+    if (olddev)
+    {
+      edgex_device_free (olddev);
+    }
+
+    edgex_device *newdev;
+    if (id)
+    {
+      newdev = edgex_metadata_client_get_device
+        (svc->logger, &svc->config.endpoints, id, err);
+    }
+    else
+    {
+      newdev = edgex_metadata_client_get_device_byname
+        (svc->logger, &svc->config.endpoints, name, err);
+    }
+
+    if (err->code)
+    {
+      iot_log_error
+      (
+        svc->logger,
+        "Unable to retrieve device %s following update",
+        name ? name : id
+      );
+    }
+    else
+    {
+      pthread_rwlock_wrlock (&svc->deviceslock);
+      edgex_map_set (&svc->devices, newdev->id, newdev);
+      edgex_map_set (&svc->name_to_id, newdev->name, newdev->id);
+      pthread_rwlock_unlock (&svc->deviceslock);
+    }
+  }
+  else
+  {
+    iot_log_error (svc->logger, "Unable to update device %s", id ? id : name);
+  }
+}
