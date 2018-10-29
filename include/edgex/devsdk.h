@@ -284,10 +284,11 @@ void edgex_device_remove_device_byname
 void edgex_device_update_device
 (
   edgex_device_service *svc,
+  const char *id,
   const char *name,
   const char *description,
   const edgex_strings *labels,
-  edgex_addressable *address,
+  const char *profilename,
   edgex_error *err
 );
 

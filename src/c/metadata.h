@@ -132,6 +132,24 @@ edgex_device * edgex_metadata_client_get_device
   const char * deviceid,
   edgex_error * err
 );
+edgex_device * edgex_metadata_client_get_device_byname
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * devicename,
+  edgex_error * err
+);
+void edgex_metadata_client_update_device
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * name,
+  const char * id,
+  const char * description,
+  const edgex_strings * labels,
+  const char * profile_name,
+  edgex_error * err
+);
 void edgex_metadata_client_delete_device
 (
   iot_logging_client * lc,
@@ -165,6 +183,13 @@ void edgex_metadata_client_update_addressable
   iot_logging_client * lc,
   edgex_service_endpoints * endpoints,
   const edgex_addressable * addressable,
+  edgex_error * err
+);
+void edgex_metadata_client_delete_addressable
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  const char * name,
   edgex_error * err
 );
 bool edgex_metadata_client_ping

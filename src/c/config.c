@@ -683,8 +683,8 @@ void edgex_device_process_configured_devices
           }
 
           *err = EDGEX_OK;
-          edgex_device_add_device
-            (svc, devname, description, labels, profile_name, address, err);
+          free (edgex_device_add_device
+            (svc, devname, description, labels, profile_name, address, err));
 
           edgex_strings_free (labels);
           edgex_addressable_free (address);

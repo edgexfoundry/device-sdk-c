@@ -26,6 +26,7 @@ edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e);
 void edgex_deviceservice_free (edgex_deviceservice *e);
 edgex_device *edgex_device_read (const char *json);
 char *edgex_device_write (const edgex_device *e, bool create);
+char *edgex_device_write_sparse (const char *name, const char *id, const char *description, const edgex_strings *labels, const char *profile_name);
 edgex_device *edgex_device_dup (const edgex_device *e);
 void edgex_device_free (edgex_device *e);
 edgex_device *edgex_devices_read (const char *json);
