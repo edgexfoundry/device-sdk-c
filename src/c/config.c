@@ -190,11 +190,10 @@ void edgex_device_populateConfig
   {
     GET_CONFIG_STRING(Host, service.host);
     GET_CONFIG_INT(Port, service.port);
+    GET_CONFIG_INT(Timeout, service.timeout);
     GET_CONFIG_INT(ConnectRetries, service.connectretries);
-    GET_CONFIG_STRING(HealthCheck, service.healthcheck);
     GET_CONFIG_STRING(OpenMsg, service.openmsg);
     GET_CONFIG_INT(ReadMaxLimit, service.readmaxlimit);
-    GET_CONFIG_INT(Timeout, service.timeout);
     int n = 0;
     arr = toml_array_in (table, "Labels");
     if (arr)
@@ -487,11 +486,10 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   DUMP_LIT ("[Service]");
   DUMP_STR ("   Host", service.host);
   DUMP_INT ("   Port", service.port);
+  DUMP_INT ("   Timeout", service.timeout);
   DUMP_INT ("   ConnectRetries", service.connectretries);
-  DUMP_STR ("   HealthCheck", service.healthcheck);
   DUMP_STR ("   OpenMsg", service.openmsg);
   DUMP_INT ("   ReadMaxLimit", service.readmaxlimit);
-  DUMP_INT ("   Timeout", service.timeout);
   DUMP_ARR ("   Labels", service.labels);
   DUMP_LIT ("[Device]");
   DUMP_BOO ("   DataTransform", device.datatransform);
@@ -552,7 +550,6 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   free (svc->config.logging.file);
   free (svc->config.logging.remoteurl);
   free (svc->config.service.host);
-  free (svc->config.service.healthcheck);
   free (svc->config.service.openmsg);
   free (svc->config.device.initcmd);
   free (svc->config.device.initcmdargs);
