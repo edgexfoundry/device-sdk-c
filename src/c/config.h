@@ -17,7 +17,6 @@ typedef struct edgex_device_serviceinfo
   char *host;
   int64_t port;
   int64_t connectretries;
-  char *healthcheck;
   char **labels;
   char *openmsg;
   int64_t readmaxlimit;
