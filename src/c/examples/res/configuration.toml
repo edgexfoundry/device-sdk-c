@@ -1,12 +1,11 @@
 [Service]
   Host = "localhost"
   Port = 49990
+  Timeout = 5000
   ConnectRetries = 3
-  HealthCheck = ""
   Labels = [ "Template" ]
   OpenMsg = "Example template device started"
   ReadMaxLimit = 256
-  Timeout = 5000
 
 [Consul]
   Host = "localhost"

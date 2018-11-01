@@ -643,6 +643,7 @@ void edgex_device_post_readings
     (
       values[i].type,
       values[i].value,
+      svc->config.device.datatransform,
       sources[i].devobj->properties->value,
       sources[i].ro->mappings
     );
