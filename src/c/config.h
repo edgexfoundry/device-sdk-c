@@ -10,6 +10,7 @@
 #define _EDGEX_DEVICE_CONFIG_H_ 1
 
 #include "edgex/devsdk.h"
+#include "toml.h"
 #include "map.h"
 
 typedef struct edgex_device_serviceinfo
@@ -21,6 +22,7 @@ typedef struct edgex_device_serviceinfo
   char *openmsg;
   int64_t readmaxlimit;
   int64_t timeout;
+  char *checkinterval;
 } edgex_device_serviceinfo;
 
 typedef struct edgex_device_service_endpoint
@@ -80,6 +82,7 @@ typedef struct edgex_device_config
   edgex_service_endpoints endpoints;
   edgex_device_deviceinfo device;
   edgex_device_logginginfo logging;
+  edgex_nvpairs *driverconf;
   edgex_map_string schedules;
   edgex_map_device_scheduleeventinfo scheduleevents;
   edgex_map_device_watcherinfo watchers;
@@ -98,7 +101,12 @@ const char *edgex_device_config_parse8601 (const char *str, int *result);
 void edgex_device_populateConfig
   (edgex_device_service *svc, toml_table_t *config, edgex_error *err);
 
+void edgex_device_populateConfigNV
+  (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err);
+
 void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err);
+
+edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc);
 
 void edgex_device_dumpConfig (edgex_device_service *svc);
 

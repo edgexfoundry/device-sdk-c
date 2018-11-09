@@ -23,6 +23,11 @@ typedef struct edgex_ctx
   size_t size;
 } edgex_ctx;
 
+#define URL_BUF_SIZE 512
+
+size_t edgex_http_write_cb
+  (void *contents, size_t size, size_t nmemb, void *userp);
+
 long edgex_http_get
 (
   iot_logging_client *lc,

@@ -149,44 +149,101 @@ void edgex_device_service_start
 (
   edgex_device_service *svc,
   bool useRegistry,
+  const char *regHost,
+  uint16_t regPort,
   const char *profile,
   const char *confDir,
   edgex_error *err
 )
 {
-  toml_table_t *config;
+  toml_table_t *config = NULL;
+  bool uploadConfig = false;
 
-  *err = EDGEX_OK;
+  svc->logger = iot_logging_client_create (svc->name);
   if (confDir == NULL || *confDir == '\0')
   {
     confDir = "res";
   }
+  *err = EDGEX_OK;
 
-  svc->logger = iot_logging_client_create (svc->name);
-  config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
-  if (err->code)
+  if (useRegistry)
   {
-    return;
-  }
-  edgex_device_populateConfig (svc, config, err);
-  if (err->code)
-  {
-    toml_free (config);
-    return;
+    svc->config.endpoints.consul.host =
+      strdup (regHost ? regHost : "localhost");
+    svc->config.endpoints.consul.port = regPort ? regPort : 8500;
+
+    // Wait for consul to be ready
+
+    int retries = 5;
+    struct timespec delay = { .tv_sec = 1, .tv_nsec = 0 };
+    while
+    (
+      !edgex_consul_client_ping (svc->logger, &svc->config.endpoints, err) &&
+      --retries
+    )
+    {
+      nanosleep (&delay, NULL);
+    }
+    if (retries == 0)
+    {
+      iot_log_error (svc->logger, "consul registry service not running");
+      *err = EDGEX_REMOTE_SERVER_DOWN;
+      return;
+    }
+
+    edgex_nvpairs *consulConf = edgex_consul_client_get_config
+    (
+      svc->logger,
+      &svc->config.endpoints,
+      svc->name,
+      profile,
+      err
+    );
+
+    if (consulConf)
+    {
+      edgex_device_populateConfigNV (svc, consulConf, err);
+      edgex_nvpairs_free (consulConf);
+      if (err->code)
+      {
+        return;
+      }
+    }
+    else
+    {
+      iot_log_info (svc->logger, "Unable to get configuration from registry.");
+      iot_log_info (svc->logger, "Will load from file.");
+      uploadConfig = true;
+      *err = EDGEX_OK;
+    }
   }
 
-  /* TODO: if (useRegistry) get config from consul. Wait for it if need be. */
+  if (uploadConfig || !useRegistry)
+  {
+    config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
+    if (err->code)
+    {
+      return;
+    }
+
+    edgex_device_populateConfig (svc, config, err);
+    if (err->code)
+    {
+      toml_free (config);
+      return;
+    }
+  }
+
+  if (svc->config.device.profilesdir == NULL)
+  {
+    svc->config.device.profilesdir = strdup (confDir);
+  }
 
   edgex_device_validateConfig (svc, err);
   if (err->code)
   {
     toml_free (config);
     return;
-  }
-
-  if (svc->config.device.profilesdir == NULL)
-  {
-    svc->config.device.profilesdir = strdup (confDir);
   }
 
   if (svc->config.logging.file)
@@ -198,6 +255,21 @@ void edgex_device_service_start
   {
     iot_log_addlogger
       (svc->logger, edgex_log_torest, svc->config.logging.remoteurl);
+  }
+
+  if (uploadConfig)
+  {
+    iot_log_info (svc->logger, "Uploading configuration to registry.");
+    edgex_nvpairs *c = edgex_device_getConfig (svc);
+    edgex_consul_client_write_config
+      (svc->logger, &svc->config.endpoints, svc->name, profile, c, err);
+    edgex_nvpairs_free (c);
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
+      toml_free (config);
+      return;
+    }
   }
 
   iot_log_debug
@@ -342,12 +414,15 @@ void edgex_device_service_start
 
   /* Obtain Devices from configuration */
 
-  edgex_device_process_configured_devices
-    (svc, toml_array_in (config, "DeviceList"), err);
-  if (err->code)
+  if (config)
   {
+    edgex_device_process_configured_devices
+      (svc, toml_array_in (config, "DeviceList"), err);
     toml_free (config);
-    return;
+    if (err->code)
+    {
+      return;
+    }
   }
 
   /* Start REST server */
@@ -356,7 +431,6 @@ void edgex_device_service_start
     (svc->logger, svc->config.service.port, err);
   if (err->code)
   {
-    toml_free (config);
     return;
   }
 
@@ -378,20 +452,12 @@ void edgex_device_service_start
 
   /* Driver configuration */
 
-  if
-  (
-    !svc->userfns.init
-      (svc->userdata, svc->logger, toml_table_in (config, "Driver"))
-  )
+  if (!svc->userfns.init (svc->userdata, svc->logger, svc->config.driverconf))
   {
     *err = EDGEX_DRIVER_UNSTART;
     iot_log_error (svc->logger, "Protocol driver initialization failed");
-    toml_free (config);
     return;
   }
-  toml_free (config);
-
-  /* TODO: Register device service and health check with consul (if enabled) */
 
   /* Upload Schedules and ScheduleEvents */
 
@@ -600,6 +666,25 @@ void edgex_device_service_start
   (
     svc->daemon, EDGEX_DEV_API_PING, GET, svc, ping_handler
   );
+
+  if (useRegistry && svc->config.service.checkinterval)
+  {
+    edgex_consul_client_register_service
+    (
+      svc->logger,
+      &svc->config.endpoints,
+      svc->name,
+      svc->config.service.host,
+      svc->config.service.port,
+      svc->config.service.checkinterval,
+      err
+    );
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Unable to register service in consul");
+      return;
+    }
+  }
 
   iot_log_debug (svc->logger, svc->config.service.openmsg);
 }

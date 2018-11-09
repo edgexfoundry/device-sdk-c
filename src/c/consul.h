@@ -15,24 +15,40 @@
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
-const char *edgex_consul_client_get_value
+bool edgex_consul_client_ping
+(
+  iot_logging_client * lc,
+  edgex_service_endpoints * endpoints,
+  edgex_error * err
+);
+
+edgex_nvpairs *edgex_consul_client_get_config
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
   const char *servicename,
-  const char *config,
-  const char *key,
+  const char *profile,
   edgex_error *err
 );
 
-int edgex_consul_client_get_keys
+void edgex_consul_client_write_config
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
   const char *servicename,
-  const char *config,
-  const char *base,
-  char ***results,
+  const char *profile,
+  const edgex_nvpairs *config,
+  edgex_error *err
+);
+
+void edgex_consul_client_register_service
+(
+  iot_logging_client *lc,
+  edgex_service_endpoints *endpoints,
+  const char *servicename,
+  const char *host,
+  int64_t port,
+  const char *checkInterval,
   edgex_error *err
 );
 

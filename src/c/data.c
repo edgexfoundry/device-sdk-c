@@ -12,20 +12,6 @@
 #include "errorlist.h"
 #include "config.h"
 
-#define URL_BUF_SIZE 512
-
-static size_t write_cb (void *contents, size_t size, size_t nmemb, void *userp)
-{
-  edgex_ctx *ctx = (edgex_ctx *) userp;
-  size *= nmemb;
-  ctx->buff = realloc (ctx->buff, ctx->size + size + 1);
-  memcpy (&(ctx->buff[ctx->size]), contents, size);
-  ctx->size += size;
-  ctx->buff[ctx->size] = 0;
-
-  return size;
-}
-
 static edgex_reading *readings_dup (const edgex_reading *readings)
 {
   edgex_reading *result = NULL;
@@ -79,7 +65,7 @@ edgex_event *edgex_data_client_add_event
   result->origin = origin;
   result->readings = readings_dup (readings);
   json = edgex_event_write (result, true);
-  edgex_http_post (lc, &ctx, url, json, write_cb, err);
+  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
   result->id = ctx.buff;
   free (json);
 
@@ -127,7 +113,7 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   result->formatting = strdup (formatting);
   result->description = strdup (description);
   json = edgex_valuedescriptor_write (result);
-  edgex_http_post (lc, &ctx, url, json, write_cb, err);
+  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
   result->id = ctx.buff;
   free (json);
 
@@ -154,7 +140,7 @@ bool edgex_data_client_ping
     (uint16_t) endpoints->data.port
   );
 
-  edgex_http_get (lc, &ctx, url, write_cb, err);
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
   free (ctx.buff);
 
   return (err->code == 0);

@@ -92,6 +92,19 @@ static void edgex_log_peer_cert
   }
 }
 
+size_t edgex_http_write_cb
+  (void *contents, size_t size, size_t nmemb, void *userp)
+{
+  edgex_ctx *ctx = (edgex_ctx *) userp;
+  size *= nmemb;
+  ctx->buff = realloc (ctx->buff, ctx->size + size + 1);
+  memcpy (&(ctx->buff[ctx->size]), contents, size);
+  ctx->size += size;
+  ctx->buff[ctx->size] = 0;
+
+  return size;
+}
+
 /*
  * This function uses libcurl to send a simple HTTP GET
  * request with no Content-Type header.

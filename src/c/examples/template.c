@@ -38,7 +38,7 @@ static bool template_init
 (
   void *impl,
   struct iot_logging_client *lc,
-  toml_table_t *config
+  const edgex_nvpairs *config
 )
 {
   template_driver *driver = (template_driver *) impl;
@@ -248,7 +248,8 @@ int main (int argc, char *argv[])
   ERR_CHECK (e);
 
   /* Start the device service*/
-  edgex_device_service_start (service, useRegistry, profile, confdir, &e);
+  edgex_device_service_start
+    (service, useRegistry, NULL, 0, profile, confdir, &e);
   ERR_CHECK (e);
 
   signal (SIGINT, inthandler);

@@ -9,12 +9,12 @@ release
 build
 deps
 src/c/toml.c
+src/c/toml.h
 src/c/thpool.c
 src/c/logging.c
 src/c/scheduler.c
 include/thpool.h
 include/edgex/csdk-defs.h
-include/edgex/toml.h
 include/iot/logging.h
 include/iot/scheduler.h
 *~
