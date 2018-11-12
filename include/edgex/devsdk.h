@@ -12,7 +12,6 @@
 #include "edgex/edgex.h"
 #include "edgex/error.h"
 #include "edgex/edgex_logging.h"
-#include "edgex/toml.h"
 
 /* command requests and results */
 
@@ -60,8 +59,9 @@ typedef struct edgex_device_commandresult
  * @brief Function called during service start operation.
  * @param impl The context data passed in when the service was created.
  * @param lc A logging client for the device service.
- * @param config A table named "Driver" within the configuration file, if
- *               such a table exists.
+ * @param config Name-Value pairs in the <service-name>.driver hierarchy. NB
+ *               these are represented in .toml configuration fies as a
+ *               "Driver" table.
  * @return true if the operation was successful, false otherwise.
  */
 
@@ -69,7 +69,7 @@ typedef bool (*edgex_device_device_initialize)
 (
   void *impl,
   struct iot_logging_client *lc,
-  toml_table_t *config
+  const edgex_nvpairs *config
 );
 
 /**
@@ -180,7 +180,11 @@ edgex_device_service *edgex_device_service_new
  * @brief Start a device service.
  * @param svc The service to start.
  * @param useRegistry If set, obtain configuration from the Consul Key-Value
- *                    store.
+ *                    store and register the service with it. If no
+ *                    configuration is available, it will be read from file and
+ *                    uploaded to Consul ready for subsequent runs.
+ * @param regHost Host on which to find Consul. Defaults to localhost if NULL.
+ * @param regPort Port on which to find Consul. Defaults to 8500 if zero.
  * @param profile Configuration profile to use (may be null).
  * @param confDir Directory containing configuration files.
  * @param err Nonzero reason codes will be set here in the event of errors.
@@ -190,6 +194,8 @@ void edgex_device_service_start
 (
   edgex_device_service *svc,
   bool useRegistry,
+  const char *regHost,
+  uint16_t regPort,
   const char *profile,
   const char *confDir,
   edgex_error *err

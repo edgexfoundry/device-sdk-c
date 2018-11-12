@@ -31,10 +31,9 @@ then
 
   # TOML Parser
 
-  wget -O - https://github.com/IOTechSystems/tomlc99/archive/SDK-0.1.tar.gz | tar -C deps -z -x -f -
-  cp deps/tomlc99-SDK-0.1/toml.c src/c
-  cp deps/tomlc99-SDK-0.1/toml.h include/edgex
-  
+  wget -O - https://github.com/IOTechSystems/tomlc99/archive/SDK-0.2.tar.gz | tar -C deps -z -x -f -
+  cp deps/tomlc99-SDK-0.2/toml.* src/c
+
   # Thread Pool
   
   wget -O - https://github.com/IOTechSystems/C-Thread-Pool/archive/SDK-0.1.tar.gz | tar -C deps -z -x -f -

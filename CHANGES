@@ -14,3 +14,15 @@ differs as follows:
   device definitions. These are uploaded to core-metadata during startup.
 * An API call is introduced which provides access to the device profiles which
   are known to the service.
+
+Changes since "Delhi" version:
+
+- Consul is supported for registration and configuration.
+-   New configuration option Service.CheckInterval controlling how frequently
+    the registry polls the device service for liveliness.
+-   Driver init functions get their configuration as a name-value pair list
+    rather than a TOML table.
+-   SDK start function now takes parameters for Consul's hostname and port. They
+    are no longer included in the configuration file.
+
+- "Discovery", "DataTransform" and "ReadMaxLimit" configuration options are now effective.
