@@ -93,7 +93,7 @@ static bool template_get_handler
     {
       if (strcmp (current->name, "SensorType") ==0 )
       {
-        /* Set the resulting reading type as Uint62 */
+        /* Set the resulting reading type as Uint64 */
         readings[i].type = Uint64;
 
         if (strcmp (current->value, "1") ==0 )
