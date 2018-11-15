@@ -127,7 +127,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     (
       url, URL_BUF_SIZE - 1,
       "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse",
-      endpoints->consul.host, (uint16_t) endpoints->consul.port,
+      endpoints->consul.host, endpoints->consul.port,
       servicename, profile
     );
   }
@@ -137,7 +137,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     (
       url, URL_BUF_SIZE - 1,
       "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse",
-      endpoints->consul.host, (uint16_t) endpoints->consul.port, servicename
+      endpoints->consul.host, endpoints->consul.port, servicename
     );
   }
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
@@ -173,7 +173,7 @@ void edgex_consul_client_write_config
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/txn",
-    endpoints->consul.host, (uint16_t) endpoints->consul.port
+    endpoints->consul.host, endpoints->consul.port
   );
 
   JSON_Value *jresult = json_value_init_array ();
@@ -234,7 +234,7 @@ void edgex_consul_client_register_service
   edgex_service_endpoints *endpoints,
   const char *servicename,
   const char *host,
-  int64_t port,
+  uint16_t port,
   const char *checkInterval,
   edgex_error *err
 )
@@ -248,10 +248,10 @@ void edgex_consul_client_register_service
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/register",
-    endpoints->consul.host, (uint16_t) endpoints->consul.port
+    endpoints->consul.host, endpoints->consul.port
   );
   snprintf
-    (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, (uint16_t)port);
+    (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, port);
   snprintf (checkName, URL_BUF_SIZE - 1, "Health Check: %s", servicename);
 
   JSON_Value *checkval = json_value_init_object ();
@@ -297,7 +297,7 @@ bool edgex_consul_client_ping
     URL_BUF_SIZE - 1,
     "http://%s:%u/v1/status/leader",
     endpoints->consul.host,
-    (uint16_t) endpoints->consul.port
+    endpoints->consul.port
   );
 
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);

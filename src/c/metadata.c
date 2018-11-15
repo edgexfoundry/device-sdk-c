@@ -35,7 +35,7 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/deviceprofile/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     ename
   );
 
@@ -74,7 +74,7 @@ void edgex_metadata_client_set_device_opstate
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/%s/opstate/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     deviceid,
     enabled ? "enabled" : "disabled"
   );
@@ -102,7 +102,7 @@ void edgex_metadata_client_set_device_adminstate
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/%s/adminstate/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     deviceid,
     locked ? "LOCKED" : "UNLOCKED"
   );
@@ -130,7 +130,7 @@ char *edgex_metadata_client_create_deviceprofile
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/deviceprofile",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   json = edgex_deviceprofile_write (newdp, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
@@ -156,7 +156,7 @@ char *edgex_metadata_client_create_deviceprofile_file
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/deviceprofile/uploadfile",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   edgex_http_postfile (lc, &ctx, url, filename, edgex_http_write_cb, err);
   return ctx.buff;
@@ -182,7 +182,7 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/deviceservice/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     name
   );
 
@@ -225,7 +225,7 @@ char *edgex_metadata_client_create_deviceservice
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/deviceservice",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   json = edgex_deviceservice_write (newds, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
@@ -252,7 +252,7 @@ edgex_device *edgex_metadata_client_get_devices
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/servicename/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     servicename
   );
 
@@ -288,7 +288,7 @@ edgex_scheduleevent *edgex_metadata_client_get_scheduleevents
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/scheduleevent/servicename/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     servicename
   );
 
@@ -331,7 +331,7 @@ edgex_scheduleevent *edgex_metadata_client_create_scheduleevent
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/scheduleevent",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   result->name = strdup (name);
   result->origin = origin;
@@ -382,7 +382,7 @@ edgex_schedule *edgex_metadata_client_get_schedule
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/schedule/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     schedulename
   );
 
@@ -425,7 +425,7 @@ edgex_schedule *edgex_metadata_client_create_schedule
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/schedule",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   result->name = strdup (name);
   result->origin = origin;
@@ -482,7 +482,7 @@ edgex_device *edgex_metadata_client_add_device
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   result->name = strdup (name);
   result->description = strdup (description);
@@ -539,7 +539,7 @@ edgex_device *edgex_metadata_client_get_device
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     deviceid
   );
 
@@ -575,7 +575,7 @@ edgex_device *edgex_metadata_client_get_device_byname
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     devicename
   );
 
@@ -615,7 +615,7 @@ void edgex_metadata_client_update_device
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
 
   json = edgex_device_write_sparse
@@ -654,7 +654,7 @@ void edgex_metadata_client_delete_device
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/id/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     deviceid
   );
 
@@ -681,7 +681,7 @@ void edgex_metadata_client_delete_device_byname
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/device/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     devicename
   );
 
@@ -710,7 +710,7 @@ edgex_addressable *edgex_metadata_client_get_addressable
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/addressable/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     name
   );
 
@@ -751,7 +751,7 @@ char *edgex_metadata_client_create_addressable
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/addressable",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   json = edgex_addressable_write (newadd, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
@@ -778,7 +778,7 @@ void edgex_metadata_client_update_addressable
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/addressable",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
   json = edgex_addressable_write (addressable, false);
   edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
@@ -804,7 +804,7 @@ void edgex_metadata_client_delete_addressable
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/addressable/name/%s",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port,
+    endpoints->metadata.port,
     name
   );
 
@@ -830,7 +830,7 @@ bool edgex_metadata_client_ping
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/ping",
     endpoints->metadata.host,
-    (uint16_t) endpoints->metadata.port
+    endpoints->metadata.port
   );
 
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
