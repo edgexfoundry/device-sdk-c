@@ -159,14 +159,49 @@ void toml_rtos2 (const char *s, char **ret)
   }
 }
 
+
 #define GET_CONFIG_STRING(KEY, ELEMENT) \
 toml_rtos2 (toml_raw_in (table, #KEY), &svc->config.ELEMENT);
+
 #define GET_CONFIG_INT(KEY, ELEMENT) \
 raw = toml_raw_in (table, #KEY); \
 if (raw) \
 { \
   toml_rtoi (raw, &svc->config.ELEMENT); \
 }
+
+#define GET_CONFIG_UINT16(KEY, ELEMENT) \
+raw = toml_raw_in (table, #KEY); \
+if (raw) \
+{ \
+  int64_t dummy; \
+  if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT16_MAX) \
+  { \
+    svc->config.ELEMENT = dummy; \
+  } \
+  else \
+  { \
+    iot_log_error (svc->logger, "Unable to parse %s as uint16", raw); \
+    *err = EDGEX_BAD_CONFIG; \
+  } \
+}
+
+#define GET_CONFIG_UINT32(KEY, ELEMENT) \
+raw = toml_raw_in (table, #KEY); \
+if (raw) \
+{ \
+  int64_t dummy; \
+  if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT32_MAX) \
+  { \
+    svc->config.ELEMENT = dummy; \
+  } \
+  else \
+  { \
+    iot_log_error (svc->logger, "Unable to parse %s as uint32", raw); \
+    *err = EDGEX_BAD_CONFIG; \
+  } \
+}
+
 #define GET_CONFIG_BOOL(KEY, ELEMENT) \
 raw = toml_raw_in (table, #KEY); \
 if (raw) \
@@ -192,11 +227,11 @@ void edgex_device_populateConfig
   if (table)
   {
     GET_CONFIG_STRING(Host, service.host);
-    GET_CONFIG_INT(Port, service.port);
-    GET_CONFIG_INT(Timeout, service.timeout);
-    GET_CONFIG_INT(ConnectRetries, service.connectretries);
+    GET_CONFIG_UINT16(Port, service.port);
+    GET_CONFIG_UINT32(Timeout, service.timeout);
+    GET_CONFIG_UINT32(ConnectRetries, service.connectretries);
     GET_CONFIG_STRING(OpenMsg, service.openmsg);
-    GET_CONFIG_INT(ReadMaxLimit, service.readmaxlimit);
+    GET_CONFIG_UINT32(ReadMaxLimit, service.readmaxlimit);
     GET_CONFIG_STRING(CheckInterval, service.checkinterval);
     int n = 0;
     arr = toml_array_in (table, "Labels");
@@ -221,13 +256,13 @@ void edgex_device_populateConfig
     if (table)
     {
       GET_CONFIG_STRING(Host, endpoints.data.host);
-      GET_CONFIG_INT(Port, endpoints.data.port);
+      GET_CONFIG_UINT16(Port, endpoints.data.port);
     }
     table = toml_table_in (subtable, "Metadata");
     if (table)
     {
       GET_CONFIG_STRING(Host, endpoints.metadata.host);
-      GET_CONFIG_INT(Port, endpoints.metadata.port);
+      GET_CONFIG_UINT16(Port, endpoints.metadata.port);
     }
   }
 
@@ -238,8 +273,8 @@ void edgex_device_populateConfig
     GET_CONFIG_BOOL(Discovery, device.discovery);
     GET_CONFIG_STRING(InitCmd, device.initcmd);
     GET_CONFIG_STRING(InitCmdArgs, device.initcmdargs);
-    GET_CONFIG_INT(MaxCmdOps, device.maxcmdops);
-    GET_CONFIG_INT(MaxCmdResultLen, device.maxcmdresultlen);
+    GET_CONFIG_UINT32(MaxCmdOps, device.maxcmdops);
+    GET_CONFIG_UINT32(MaxCmdResultLen, device.maxcmdresultlen);
     GET_CONFIG_STRING(RemoveCmd, device.removecmd);
     GET_CONFIG_STRING(RemoveCmdArgs, device.removecmdargs);
     GET_CONFIG_STRING(ProfilesDir, device.profilesdir);
@@ -268,7 +303,7 @@ void edgex_device_populateConfig
       {
         iot_log_error
           (svc->logger, "Arrays and subtables not supported in Driver table");
-        *err = EDGEX_CONF_PARSE_ERROR;
+        *err = EDGEX_BAD_CONFIG;
         return;
       }
     }
@@ -427,67 +462,111 @@ static edgex_nvpairs *makepair
   return result;
 }
 
-static void get_nv_config_string
-  (const edgex_nvpairs *config, const char *key, char **target)
+
+static char *get_nv_config_string
+  (const edgex_nvpairs *config, const char *key)
 {
   for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
-      *target = strdup (iter->value);
-      break;
+      return strdup (iter->value);
     }
   }
+  return NULL;
 }
 
-static void get_nv_config_int
-  (const edgex_nvpairs *config, const char *key, int64_t *target)
+static uint32_t get_nv_config_uint32
+(
+  iot_logging_client *lc,
+  const edgex_nvpairs *config,
+  const char *key,
+  edgex_error *err
+)
 {
   for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
-      *target = strtol (iter->value, NULL, 10);
-      break;
+      unsigned long long tmp;
+      errno = 0;
+      tmp = strtoull (iter->value, NULL, 0);
+      if (errno == 0 && tmp >= 0 && tmp <= UINT32_MAX)
+      {
+        return tmp;
+      }
+      else
+      {
+        *err = EDGEX_BAD_CONFIG;
+        iot_log_error (lc, "Unable to parse %s as uint32", iter->value);
+        return 0;
+      }
     }
   }
+  return 0;
 }
 
-static void get_nv_config_bool
-  (const edgex_nvpairs *config, const char *key, bool *target)
+static uint16_t get_nv_config_uint16
+(
+  iot_logging_client *lc,
+  const edgex_nvpairs *config,
+  const char *key,
+  edgex_error *err
+)
 {
   for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
-      *target = (strcasecmp (iter->value, "true") == 0);
-      break;
+      unsigned long long tmp;
+      errno = 0;
+      tmp = strtoull (iter->value, NULL, 0);
+      if (errno == 0 && tmp >= 0 && tmp <= UINT16_MAX)
+      {
+        return tmp;
+      }
+      else
+      {
+        *err = EDGEX_BAD_CONFIG;
+        iot_log_error (lc, "Unable to parse %s as uint16", iter->value);
+        return 0;
+      }
     }
   }
+  return 0;
+}
+
+static bool get_nv_config_bool
+  (const edgex_nvpairs *config, const char *key, bool dfl)
+{
+  for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
+  {
+    if (strcasecmp (iter->name, key) == 0)
+    {
+      return (strcasecmp (iter->value, "true") == 0);
+    }
+  }
+  return dfl;
 }
 
 void edgex_device_populateConfigNV
   (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err)
 {
-  char *lstr = NULL;
+  svc->config.service.host = get_nv_config_string (config, "Service/Host");
+  svc->config.service.port =
+    get_nv_config_uint16 (svc->logger, config, "Service/Port", err);
+  svc->config.service.timeout =
+    get_nv_config_uint32 (svc->logger, config, "Service/Timeout", err);
+  svc->config.service.connectretries =
+    get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
+  svc->config.service.openmsg =
+    get_nv_config_string (config, "Service/OpenMsg");
+  svc->config.service.readmaxlimit =
+    get_nv_config_uint32 (svc->logger, config, "Service/ReadMaxLimit", err);
+  svc->config.service.checkinterval =
+    get_nv_config_string (config, "Service/CheckInterval");
 
-  svc->config.device.discovery = true;
-  svc->config.device.datatransform = true;
-
-  get_nv_config_string (config, "Service/Host", &svc->config.service.host);
-  get_nv_config_int (config, "Service/Port", &svc->config.service.port);
-  get_nv_config_int (config, "Service/Timeout", &svc->config.service.timeout);
-  get_nv_config_int
-    (config, "Service/ConnectRetries", &svc->config.service.connectretries);
-  get_nv_config_string
-    (config, "Service/OpenMsg", &svc->config.service.openmsg);
-  get_nv_config_int
-    (config, "Service/ReadMaxLimit", &svc->config.service.readmaxlimit);
-  get_nv_config_string
-    (config, "Service/CheckInterval", &svc->config.service.checkinterval);
-
-  get_nv_config_string (config, "Service/Labels", &lstr);
-
+  char *lstr = get_nv_config_string (config, "Service/Labels");
   if (lstr)
   {
     char *iter = lstr;
@@ -516,34 +595,34 @@ void edgex_device_populateConfigNV
     svc->config.service.labels[0] = NULL;
   }
 
-  get_nv_config_string
-    (config, "Clients/Data/Host", &svc->config.endpoints.data.host);
-  get_nv_config_int
-    (config, "Clients/Data/Port", &svc->config.endpoints.data.port);
-  get_nv_config_string
-    (config, "Clients/Metadata/Host", &svc->config.endpoints.metadata.host);
-  get_nv_config_int
-    (config, "Clients/Metadata/Port", &svc->config.endpoints.metadata.port);
+  svc->config.endpoints.data.host =
+    get_nv_config_string (config, "Clients/Data/Host");
+  svc->config.endpoints.data.port =
+    get_nv_config_uint16 (svc->logger, config, "Clients/Data/Port", err);
+  svc->config.endpoints.metadata.host =
+    get_nv_config_string (config, "Clients/Metadata/Host");
+  svc->config.endpoints.metadata.port =
+    get_nv_config_uint16 (svc->logger, config, "Clients/Metadata/Port", err);
 
-  get_nv_config_bool
-    (config, "Device/DataTransform", &svc->config.device.datatransform);
-  get_nv_config_bool
-    (config, "Device/Discovery", &svc->config.device.discovery);
-  get_nv_config_string (config, "Device/InitCmd", &svc->config.device.initcmd);
-  get_nv_config_string
-    (config, "Device/InitCmdArgs", &svc->config.device.initcmdargs);
-  get_nv_config_int
-    (config, "Device/MaxCmdOps", &svc->config.device.maxcmdops);
-  get_nv_config_int
-    (config, "Device/MaxCmdResultLen", &svc->config.device.maxcmdresultlen);
-  get_nv_config_string
-    (config, "Device/RemoveCmd", &svc->config.device.removecmd);
-  get_nv_config_string
-    (config, "Device/RemoveCmdArgs", &svc->config.device.removecmdargs);
-  get_nv_config_string
-    (config, "Device/ProfilesDir", &svc->config.device.profilesdir);
-  get_nv_config_bool (config, "Device/SendReadingsOnChanged",
-    &svc->config.device.sendreadingsonchanged);
+  svc->config.device.datatransform =
+    get_nv_config_bool (config, "Device/DataTransform", true);
+  svc->config.device.discovery =
+    get_nv_config_bool (config, "Device/Discovery", true);
+  svc->config.device.initcmd = get_nv_config_string (config, "Device/InitCmd");
+  svc->config.device.initcmdargs =
+    get_nv_config_string (config, "Device/InitCmdArgs");
+  svc->config.device.maxcmdops =
+    get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdOps", err);
+  svc->config.device.maxcmdresultlen =
+    get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdResultLen", err);
+  svc->config.device.removecmd =
+    get_nv_config_string (config, "Device/RemoveCmd");
+  svc->config.device.removecmdargs =
+    get_nv_config_string (config, "Device/RemoveCmdArgs");
+  svc->config.device.profilesdir =
+    get_nv_config_string (config, "Device/ProfilesDir");
+  svc->config.device.sendreadingsonchanged =
+    get_nv_config_bool (config, "Device/SendReadingsOnChanged", false);
 
   for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
   {
@@ -554,15 +633,17 @@ void edgex_device_populateConfigNV
     }
   }
 
-  get_nv_config_string
-    (config, "Logging/RemoteURL", &svc->config.logging.remoteurl);
-  get_nv_config_string (config, "Logging/File", &svc->config.logging.file);
+  svc->config.logging.remoteurl =
+    get_nv_config_string (config, "Logging/RemoteURL");
+  svc->config.logging.file = get_nv_config_string (config, "Logging/File");
 }
 
 #define PUT_CONFIG_STRING(X,Y) \
   if (svc->config.Y) result = makepair (#X, svc->config.Y, result)
 #define PUT_CONFIG_INT(X,Y) \
-  sprintf (buf, "%ld", svc->config.Y); result = makepair (#X, buf, result)
+  sprintf (buf, "%ld", (long)svc->config.Y); result = makepair (#X, buf, result)
+#define PUT_CONFIG_UINT(X,Y) \
+  sprintf (buf, "%lu", (unsigned long)svc->config.Y); result = makepair (#X, buf, result)
 #define PUT_CONFIG_BOOL(X,Y) \
   result = makepair (#X, svc->config.Y ? "true" : "false", result)
 
@@ -572,11 +653,11 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   edgex_nvpairs *result = NULL;
 
   PUT_CONFIG_STRING(Service/Host, service.host);
-  PUT_CONFIG_INT(Service/Port, service.port);
-  PUT_CONFIG_INT(Service/Timeout, service.timeout);
-  PUT_CONFIG_INT(Service/ConnectRetries, service.connectretries);
+  PUT_CONFIG_UINT(Service/Port, service.port);
+  PUT_CONFIG_UINT(Service/Timeout, service.timeout);
+  PUT_CONFIG_UINT(Service/ConnectRetries, service.connectretries);
   PUT_CONFIG_STRING(Service/OpenMsg, service.openmsg);
-  PUT_CONFIG_INT(Service/ReadMaxLimit, service.readmaxlimit);
+  PUT_CONFIG_UINT(Service/ReadMaxLimit, service.readmaxlimit);
   PUT_CONFIG_STRING(Service/CheckInterval, service.checkinterval);
 
   int labellen = 0;
@@ -601,16 +682,16 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   }
 
   PUT_CONFIG_STRING(Clients/Data/Host, endpoints.data.host);
-  PUT_CONFIG_INT(Clients/Data/Port, endpoints.data.port);
+  PUT_CONFIG_UINT(Clients/Data/Port, endpoints.data.port);
   PUT_CONFIG_STRING(Clients/Metadata/Host, endpoints.metadata.host);
-  PUT_CONFIG_INT(Clients/Metadata/Port, endpoints.metadata.port);
+  PUT_CONFIG_UINT(Clients/Metadata/Port, endpoints.metadata.port);
 
   PUT_CONFIG_BOOL(Device/DataTransform, device.datatransform);
   PUT_CONFIG_BOOL(Device/Discovery, device.discovery);
   PUT_CONFIG_STRING(Device/InitCmd, device.initcmd);
   PUT_CONFIG_STRING(Device/InitCmdArgs, device.initcmdargs);
-  PUT_CONFIG_INT(Device/MaxCmdOps, device.maxcmdops);
-  PUT_CONFIG_INT(Device/MaxCmdResultLen, device.maxcmdresultlen);
+  PUT_CONFIG_UINT(Device/MaxCmdOps, device.maxcmdops);
+  PUT_CONFIG_UINT(Device/MaxCmdResultLen, device.maxcmdresultlen);
   PUT_CONFIG_STRING(Device/RemoveCmd, device.removecmd);
   PUT_CONFIG_STRING(Device/RemoveCmdArgs, device.removecmdargs);
   PUT_CONFIG_STRING(Device/ProfilesDir, device.profilesdir);
@@ -697,7 +778,8 @@ void dumpArray (iot_logging_client *log, const char *name, char **list)
 }
 
 #define DUMP_STR(TEXT, VAR) if (svc->config.VAR) iot_log_debug (svc->logger, TEXT " = \"%s\" ", svc->config.VAR)
-#define DUMP_INT(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %d", svc->config.VAR)
+#define DUMP_INT(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %ld", svc->config.VAR)
+#define DUMP_UNS(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %u", svc->config.VAR)
 #define DUMP_LIT(TEXT) iot_log_debug (svc->logger, TEXT)
 #define DUMP_ARR(TEXT, VAR) dumpArray(svc->logger, TEXT, svc->config.VAR)
 #define DUMP_BOO(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %s", svc->config.VAR ? "true" : "false")
@@ -713,20 +795,20 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   DUMP_LIT ("[Clients]");
   DUMP_LIT ("   [Clients.Data]");
   DUMP_STR ("      Host", endpoints.data.host);
-  DUMP_INT ("      Port", endpoints.data.port);
+  DUMP_UNS ("      Port", endpoints.data.port);
   DUMP_LIT ("   [Clients.Metadata]");
   DUMP_STR ("      Host", endpoints.metadata.host);
-  DUMP_INT ("      Port", endpoints.metadata.port);
+  DUMP_UNS ("      Port", endpoints.metadata.port);
   DUMP_LIT ("[Logging]");
   DUMP_STR ("   RemoteURL", logging.remoteurl);
   DUMP_STR ("   File", logging.file);
   DUMP_LIT ("[Service]");
   DUMP_STR ("   Host", service.host);
-  DUMP_INT ("   Port", service.port);
-  DUMP_INT ("   Timeout", service.timeout);
-  DUMP_INT ("   ConnectRetries", service.connectretries);
+  DUMP_UNS ("   Port", service.port);
+  DUMP_UNS ("   Timeout", service.timeout);
+  DUMP_UNS ("   ConnectRetries", service.connectretries);
   DUMP_STR ("   OpenMsg", service.openmsg);
-  DUMP_INT ("   ReadMaxLimit", service.readmaxlimit);
+  DUMP_UNS ("   ReadMaxLimit", service.readmaxlimit);
   DUMP_STR ("   CheckInterval", service.checkinterval);
   DUMP_ARR ("   Labels", service.labels);
   DUMP_LIT ("[Device]");
@@ -734,8 +816,8 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   DUMP_BOO ("   Discovery", device.discovery);
   DUMP_STR ("   InitCmd", device.initcmd);
   DUMP_STR ("   InitCmdArgs", device.initcmdargs);
-  DUMP_INT ("   MaxCmdOps", device.maxcmdops);
-  DUMP_INT ("   MaxCmdResultLen", device.maxcmdresultlen);
+  DUMP_UNS ("   MaxCmdOps", device.maxcmdops);
+  DUMP_UNS ("   MaxCmdResultLen", device.maxcmdresultlen);
   DUMP_STR ("   RemoveCmd", device.removecmd);
   DUMP_STR ("   RemoveCmdArgs", device.removecmdargs);
   DUMP_STR ("   ProfilesDir", device.profilesdir);

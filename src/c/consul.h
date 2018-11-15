@@ -47,7 +47,7 @@ void edgex_consul_client_register_service
   edgex_service_endpoints *endpoints,
   const char *servicename,
   const char *host,
-  int64_t port,
+  uint16_t port,
   const char *checkInterval,
   edgex_error *err
 );

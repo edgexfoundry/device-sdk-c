@@ -16,19 +16,19 @@
 typedef struct edgex_device_serviceinfo
 {
   char *host;
-  int64_t port;
-  int64_t connectretries;
+  uint16_t port;
+  uint32_t connectretries;
   char **labels;
   char *openmsg;
-  int64_t readmaxlimit;
-  int64_t timeout;
+  uint32_t readmaxlimit;
+  uint32_t timeout;
   char *checkinterval;
 } edgex_device_serviceinfo;
 
 typedef struct edgex_device_service_endpoint
 {
   char *host;
-  int64_t port;
+  uint16_t port;
 } edgex_device_service_endpoint;
 
 typedef struct edgex_service_endpoints
@@ -45,8 +45,8 @@ typedef struct edgex_device_deviceinfo
   bool discovery;
   char *initcmd;
   char *initcmdargs;
-  int64_t maxcmdops;
-  int64_t maxcmdresultlen;
+  uint32_t maxcmdops;
+  uint32_t maxcmdresultlen;
   char *removecmd;
   char *removecmdargs;
   char *profilesdir;

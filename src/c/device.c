@@ -683,8 +683,8 @@ static int allCommand
   }
   pthread_rwlock_unlock (&svc->deviceslock);
 
-  int64_t nret = 0;
-  int64_t maxret = svc->config.service.readmaxlimit;
+  uint32_t nret = 0;
+  uint32_t maxret = svc->config.service.readmaxlimit;
 
   for (d = devs; d; d = d->next)
   {

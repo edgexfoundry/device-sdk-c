@@ -59,7 +59,7 @@ edgex_event *edgex_data_client_add_event
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/event",
     endpoints->data.host,
-    (uint16_t) endpoints->data.port
+    endpoints->data.port
   );
   result->device = strdup (device);
   result->origin = origin;
@@ -101,7 +101,7 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/valuedescriptor",
     endpoints->data.host,
-    (uint16_t) endpoints->data.port
+    endpoints->data.port
   );
   result->origin = origin;
   result->name = strdup (name);
@@ -137,7 +137,7 @@ bool edgex_data_client_ping
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/ping",
     endpoints->data.host,
-    (uint16_t) endpoints->data.port
+    endpoints->data.port
   );
 
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
