@@ -12,7 +12,7 @@ Host | String | This is the hostname to use when the service generates URLs poin
 Port | Int | Port on which to accept the device service's REST API.
 Timeout | Int | Time (in milliseconds) to wait between attempts to contact core-data and core-metadata when starting up.
 ConnectRetries | Int | Number of times to attempt to contact core-data and core-metadata when starting up.
-OpenMsg | String | Message to log on successful startup.
+StartupMsg | String | Message to log on successful startup.
 ReadMaxLimit | Int | Limits the number of items returned by a GET request to `/api/v1/device/all/<command>`.
 CheckInterval | String | The checking interval to request if registering with Consul
 

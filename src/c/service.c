@@ -686,7 +686,7 @@ void edgex_device_service_start
     }
   }
 
-  iot_log_debug (svc->logger, svc->config.service.openmsg);
+  iot_log_debug (svc->logger, svc->config.service.startupmsg);
 }
 
 static void doPost (void *p)
