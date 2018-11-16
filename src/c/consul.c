@@ -14,159 +14,294 @@
 #include "parson.h"
 #include "base64.h"
 
-#define URL_BUF_SIZE 512
+#define CONF_PREFIX "config/V2/"
 
-static size_t write_cb (void *contents, size_t size, size_t nmemb, void *userp)
+static edgex_nvpairs *read_pairs
+(
+  iot_logging_client *lc,
+  const char *json,
+  edgex_error *err
+)
 {
-  edgex_ctx *ctx = (edgex_ctx *) userp;
-  size *= nmemb;
-  ctx->buff = realloc (ctx->buff, ctx->size + size + 1);
-  memcpy (&(ctx->buff[ctx->size]), contents, size);
-  ctx->size += size;
-  ctx->buff[ctx->size] = 0;
+  const char *key;
+  const char *keyindex;
+  const char *enc;
+  size_t nconfs;
+  size_t rsize;
+  JSON_Object *obj;
+  edgex_nvpairs *pair;
+  edgex_nvpairs *result = NULL;
 
-  return size;
-}
-
-static char *keyvalue_read (const char *json)
-{
-  char *result = NULL;
   JSON_Value *val = json_parse_string (json);
-  JSON_Array *aval = json_value_get_array (val);
-  JSON_Object *obj = json_array_get_object (aval, 0);
+  JSON_Array *configs = json_value_get_array (val);
 
-  if (obj)
+  nconfs = json_array_get_count (configs);
+  for (size_t i = 0; i < nconfs; i++)
   {
-    const char *enc = json_object_get_string (obj, "Value");
-    if (enc)
+    obj = json_array_get_object (configs, i);
+    pair = malloc (sizeof (edgex_nvpairs));
+    key = json_object_get_string (obj, "Key");
+    if (key)
     {
-      size_t rsize = edgex_b64_maxdecodesize (enc);
-      result = malloc (rsize + 1);
-      if (edgex_b64_decode (enc, result, &rsize))
+      keyindex = strchr (key, '/');
+      if (keyindex)
       {
-        result[rsize] = '\0';
+        keyindex = strchr (keyindex + 1, '/');
+      }
+      if (keyindex)
+      {
+        keyindex = strchr (keyindex + 1, '/');
+      }
+      if (keyindex)
+      {
+        pair->name = strdup (keyindex + 1);
       }
       else
       {
-        free (result);
-        result = NULL;
+        iot_log_error (lc, "Unexpected Key %s returned from consul", key);
+        *err = EDGEX_CONSUL_RESPONSE;
+        free (pair);
+        break;
       }
     }
+    else
+    {
+      iot_log_error (lc, "No Key field in consul response. JSON was %s", json);
+      *err = EDGEX_CONSUL_RESPONSE;
+      break;
+    }
+    enc = json_object_get_string (obj, "Value");
+    if (enc)
+    {
+      rsize = edgex_b64_maxdecodesize (enc);
+      pair->value = malloc (rsize + 1);
+      if (edgex_b64_decode (enc, pair->value, &rsize))
+      {
+        (pair->value)[rsize] = '\0';
+      }
+      else
+      {
+        iot_log_error
+          (lc, "Unable to decode Value %s (for config key %s)", enc, key);
+        *err = EDGEX_CONSUL_RESPONSE;
+        free (pair->value);
+        free (pair->name);
+        free (pair);
+        break;
+      }
+    }
+    else
+    {
+      iot_log_error
+        (lc, "No Value field in consul response. JSON was %s", json);
+      *err = EDGEX_CONSUL_RESPONSE;
+      free (pair->name);
+      free (pair);
+      break;
+    }
+
+    pair->next = result;
+    result = pair;
   }
-
   json_value_free (val);
-
   return result;
 }
 
-static size_t keylist_read (const char *json, char ***results)
+edgex_nvpairs *edgex_consul_client_get_config
+(
+  iot_logging_client *lc,
+  edgex_service_endpoints *endpoints,
+  const char *servicename,
+  const char *profile,
+  edgex_error *err
+)
 {
-  size_t nkeys = 0;
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  edgex_nvpairs *result = NULL;
 
-  JSON_Value *val = json_parse_string (json);
-  JSON_Array *keys = json_value_get_array (val);
-  if (keys)
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  if (profile && *profile)
   {
-    nkeys = json_array_get_count (keys);
-    *results = malloc (nkeys * sizeof (char *));
-    for (size_t i = 0; i < nkeys; i++)
+    snprintf
+    (
+      url, URL_BUF_SIZE - 1,
+      "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse",
+      endpoints->consul.host, endpoints->consul.port,
+      servicename, profile
+    );
+  }
+  else
+  {
+    snprintf
+    (
+      url, URL_BUF_SIZE - 1,
+      "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse",
+      endpoints->consul.host, endpoints->consul.port, servicename
+    );
+  }
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  if (err->code == 0)
+  {
+    result = read_pairs (lc, ctx.buff, err);
+    if (err->code)
     {
-      (*results)[i] = strdup (json_array_get_string (keys, i));
+      edgex_nvpairs_free (result);
+      result = NULL;
     }
   }
-  json_value_free (val);
-  return nkeys;
-}
 
-const char *edgex_consul_client_get_value
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
-  const char *servicename,
-  const char *config,
-  const char *key,
-  edgex_error *err
-)
-{
-  const char *result;
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  if (config)
-  {
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/config/%s;%s/%s",
-      endpoints->consul.host, (uint16_t) endpoints->consul.port,
-      servicename, config, key
-    );
-  }
-  else
-  {
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/config/%s/%s",
-      endpoints->consul.host, (uint16_t) endpoints->consul.port,
-      servicename, key
-    );
-  }
-  edgex_http_get (lc, &ctx, url, write_cb, err);
-
-  if (err->code)
-  {
-    return 0;
-  }
-
-  result = keyvalue_read (ctx.buff);
   free (ctx.buff);
-  *err = EDGEX_OK;
   return result;
 }
 
-int edgex_consul_client_get_keys
+void edgex_consul_client_write_config
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
   const char *servicename,
-  const char *config,
-  const char *base,
-  char ***results,
+  const char *profile,
+  const edgex_nvpairs *config,
   edgex_error *err
 )
 {
-  int nkeys = 0;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  if (config)
+  snprintf
+  (
+    url, URL_BUF_SIZE - 1, "http://%s:%u/v1/txn",
+    endpoints->consul.host, endpoints->consul.port
+  );
+
+  JSON_Value *jresult = json_value_init_array ();
+  JSON_Array *jarray = json_value_get_array (jresult);
+
+  const edgex_nvpairs *iter = config;
+  while (iter)
   {
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/config/%s;%s/%s?keys",
-      endpoints->consul.host, (uint16_t) endpoints->consul.port,
-      servicename, config, base
-    );
+    size_t valsz = strlen (iter->value);
+    size_t base64sz = edgex_b64_encodesize (valsz);
+    char *base64val = malloc (base64sz);
+    edgex_b64_encode (iter->value, valsz, base64val, base64sz);
+
+    size_t keysz =
+      strlen (CONF_PREFIX) + strlen (servicename) + strlen (iter->name) + 2;
+    if (profile && *profile)
+    {
+      keysz += (strlen (profile) + 1);
+    }
+    char *keystr = malloc (keysz);
+    if (profile && *profile)
+    {
+      sprintf
+        (keystr, "%s%s;%s/%s", CONF_PREFIX, servicename, profile, iter->name);
+    }
+    else
+    {
+      sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, iter->name);
+    }
+
+    JSON_Value *kvfields = json_value_init_object ();
+    JSON_Object *obj = json_value_get_object (kvfields);
+    json_object_set_string (obj, "Verb", "set");
+    json_object_set_string (obj, "Key", keystr);
+    json_object_set_string (obj, "Value", base64val);
+
+    JSON_Value *kvcmd = json_value_init_object ();
+    json_object_set_value (json_value_get_object (kvcmd), "KV", kvfields);
+    json_array_append_value (jarray, kvcmd);
+
+    free (base64val);
+    free (keystr);
+    iter = iter->next;
   }
-  else
-  {
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/config/%s/%s?keys",
-      endpoints->consul.host, (uint16_t) endpoints->consul.port,
-      servicename, base
-    );
-  }
-  edgex_http_get (lc, &ctx, url, write_cb, err);
+
+  char *json = json_serialize_to_string (jresult);
+  json_value_free (jresult);
+
+  edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  free (json);
+  free (ctx.buff);
+}
+
+void edgex_consul_client_register_service
+(
+  iot_logging_client *lc,
+  edgex_service_endpoints *endpoints,
+  const char *servicename,
+  const char *host,
+  uint16_t port,
+  const char *checkInterval,
+  edgex_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  char myUrl[URL_BUF_SIZE];
+  char checkName[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/register",
+    endpoints->consul.host, endpoints->consul.port
+  );
+  snprintf
+    (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, port);
+  snprintf (checkName, URL_BUF_SIZE - 1, "Health Check: %s", servicename);
+
+  JSON_Value *checkval = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (checkval);
+  json_object_set_string (obj, "Name", checkName);
+  json_object_set_string (obj, "Interval", checkInterval);
+  json_object_set_string (obj, "HTTP", myUrl);
+
+  JSON_Value *params = json_value_init_object ();
+  obj = json_value_get_object (params);
+  json_object_set_string (obj, "Name", servicename);
+  json_object_set_string (obj, "Address", host);
+  json_object_set_number (obj, "Port", port);
+  json_object_set_value (obj, "Check", checkval);
+
+  char *json = json_serialize_to_string (params);
+  json_value_free (params);
+
+  edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
 
   if (err->code)
   {
-    return 0;
+    iot_log_error (lc, "Register service failed: %s", ctx.buff);
   }
-
-  nkeys = keylist_read (ctx.buff, results);
+  free (json);
   free (ctx.buff);
-  *err = EDGEX_OK;
-  return nkeys;
+}
+
+bool edgex_consul_client_ping
+(
+  iot_logging_client *lc,
+  edgex_service_endpoints *endpoints,
+  edgex_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/v1/status/leader",
+    endpoints->consul.host,
+    endpoints->consul.port
+  );
+
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+  free (ctx.buff);
+
+  return (err->code == 0);
 }

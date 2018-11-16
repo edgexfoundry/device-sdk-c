@@ -104,7 +104,6 @@ bool edgex_b64_encode (const void *in, size_t inLen, char *out, size_t outLen)
   size_t resultIndex = 0;
   size_t x;
   uint32_t n = 0;
-  int padCount = inLen % 3;
   uint8_t n0, n1, n2, n3;
 
   if (outLen < edgex_b64_encodesize (inLen))
@@ -156,7 +155,7 @@ bool edgex_b64_encode (const void *in, size_t inLen, char *out, size_t outLen)
 
   /* Pad to multiple of four characters */
 
-  while (padCount--)
+  while (resultIndex % 4)
   {
     out[resultIndex++] = '=';
   }

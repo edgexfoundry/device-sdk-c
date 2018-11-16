@@ -13,14 +13,8 @@ Port | Int | Port on which to accept the device service's REST API.
 Timeout | Int | Time (in milliseconds) to wait between attempts to contact core-data and core-metadata when starting up.
 ConnectRetries | Int | Number of times to attempt to contact core-data and core-metadata when starting up.
 OpenMsg | String | Message to log on successful startup.
-ReadMaxLimit | Int | Not implemented. Will limit the number of items returned (for example, by the 'All' variant of the device command endpoint).
-
-## Consul section
-
-Option | Type | Notes
-:--- | :--- | :---
-Host | String | Not implemented. Hostname on which to contact the Consul registry.
-Port | Int | Not implemented. Port on which to contact the Consul registry.
+ReadMaxLimit | Int | Limits the number of items returned by a GET request to `/api/v1/device/all/<command>`.
+CheckInterval | String | The checking interval to request if registering with Consul
 
 ## Clients section
 
@@ -42,8 +36,8 @@ Port | Int | Port on which to contact the core-metadata service.
 
 Option | Type | Notes
 :--- | :--- | :---
-DataTransform | Bool | Not implemented. For enabling/disabling transformations on data between the device and EdgeX.
-Discovery | Bool | Not implemented. For enabling/disabling device discovery.
+DataTransform | Bool | For enabling/disabling transformations on data between the device and EdgeX. Defaults to true (enabled).
+Discovery | Bool | For enabling/disabling device discovery. Defaults to true (enabled).
 InitCmd | String | Not implemented. Specifies a resource command to be automatically generated when a device is added to the service.
 InitCmdArgs | String | Not implemented. Specifies arguments to be included with InitCmd.
 MaxCmdOps | Int | Defines the maximum number of resource operations that can be sent to the driver in a single command.
@@ -78,7 +72,7 @@ Frequency | String | Frequency of execution. Only ISO8601 Period format is accep
 ScheduleEvents specified here will be posted to core-metadata if they do not already exist. A number of limitations apply to these ScheduleEvents:
 
 * Specification of parameters is not implemented.
-* Only local discovery and device commands are supported. Paths should therefore be '/api/v1/discovery' or begin with '/api/v1/device/'.
+* Only local discovery and device commands are supported. Paths should therefore be `/api/v1/discovery` or begin with `/api/v1/device/`.
 * ScheduleEvents will be configured for implementation within the device service, not by support-scheduler.
 
 ## Watchers section

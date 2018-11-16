@@ -6,10 +6,7 @@
   Labels = [ "Template" ]
   OpenMsg = "Example template device started"
   ReadMaxLimit = 256
-
-[Consul]
-  Host = "localhost"
-  Port = 8500
+  CheckInterval = "10s"
 
 [Clients]
   [Clients.Data]
