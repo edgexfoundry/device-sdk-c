@@ -207,6 +207,7 @@ char *edgex_value_tostring
 (
   edgex_device_resulttype vtype,
   edgex_device_resultvalue value,
+  bool xform,
   edgex_propertyvalue *props,
   edgex_nvpairs *mappings
 )
@@ -215,19 +216,22 @@ char *edgex_value_tostring
 
   if (vtype != Bool && vtype != String)
   {
-    long double offset = 0.0;
-    long double scale = 1.0;
-    long double base = 0.0;
-
-    safeStrtold (props->base, &base);
-    safeStrtold (props->scale, &scale);
-    safeStrtold (props->offset, &offset);
-
-    if (offset != 0.0 || scale != 1.0 || base != 0.0)
+    if (xform)
     {
-      if (!transformResult (vtype, &value, base, scale, offset))
+      long double offset = 0.0;
+      long double scale = 1.0;
+      long double base = 0.0;
+
+      safeStrtold (props->base, &base);
+      safeStrtold (props->scale, &scale);
+      safeStrtold (props->offset, &offset);
+
+      if (offset != 0.0 || scale != 1.0 || base != 0.0)
       {
-        return strdup ("overflow");
+        if (!transformResult (vtype, &value, base, scale, offset))
+        {
+          return strdup ("overflow");
+        }
       }
     }
 
@@ -270,7 +274,12 @@ char *edgex_value_tostring
       sprintf (res, "%.16e", value.f64_result);
       break;
     case String:
-      res = strdup (checkMapping (value.string_result, mappings));
+      res = strdup
+      (
+        xform ?
+          checkMapping (value.string_result, mappings) :
+          value.string_result
+      );
       break;
   }
   return res;
@@ -497,6 +506,7 @@ static int runOneGet
       (
         results[i].type,
         results[i].value,
+        svc->config.device.datatransform,
         requests[i].devobj->properties->value,
         requests[i].ro->mappings
       );
@@ -673,12 +683,15 @@ static int allCommand
   }
   pthread_rwlock_unlock (&svc->deviceslock);
 
+  uint32_t nret = 0;
+  uint32_t maxret = svc->config.service.readmaxlimit;
+
   for (d = devs; d; d = d->next)
   {
     JSON_Value *jreply = NULL;
     ret = runOne
       (svc, d->dev, d->cmd, method, upload_data, upload_data_size, &jreply);
-    if (jreply)
+    if (jreply && (maxret == 0 || nret++ < maxret))
     {
       json_array_append_value (jarray, jreply);
     }

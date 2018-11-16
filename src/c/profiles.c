@@ -181,7 +181,14 @@ void edgex_device_profiles_upload
         {
           iot_log_debug
             (lc, "DeviceProfile %s already exists: skipped", profname);
-          edgex_map_set (&svc->profiles, profname, dp);
+          if (edgex_map_get (&svc->profiles, profname))
+          {
+            edgex_deviceprofile_free (dp);
+          }
+          else
+          {
+            edgex_map_set (&svc->profiles, profname, dp);
+          }
         }
         else
         {

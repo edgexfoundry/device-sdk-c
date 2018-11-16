@@ -35,6 +35,12 @@ int edgex_device_handler_discovery
     return MHD_HTTP_LOCKED;
   }
 
+  if (!svc->config.device.discovery)
+  {
+    *reply = strdup ("Discovery disabled by configuration\n");
+    return MHD_HTTP_SERVICE_UNAVAILABLE;
+  }
+
   if (pthread_mutex_trylock (&svc->discolock) == 0)
   {
     thpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc);

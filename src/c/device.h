@@ -26,6 +26,7 @@ extern char *edgex_value_tostring
 (
   edgex_device_resulttype vtype,
   edgex_device_resultvalue value,
+  bool xform,
   edgex_propertyvalue *props,
   edgex_nvpairs *mappings
 );
