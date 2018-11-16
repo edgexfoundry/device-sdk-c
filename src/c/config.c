@@ -230,7 +230,7 @@ void edgex_device_populateConfig
     GET_CONFIG_UINT16(Port, service.port);
     GET_CONFIG_UINT32(Timeout, service.timeout);
     GET_CONFIG_UINT32(ConnectRetries, service.connectretries);
-    GET_CONFIG_STRING(OpenMsg, service.openmsg);
+    GET_CONFIG_STRING(StartupMsg, service.startupmsg);
     GET_CONFIG_UINT32(ReadMaxLimit, service.readmaxlimit);
     GET_CONFIG_STRING(CheckInterval, service.checkinterval);
     int n = 0;
@@ -559,8 +559,8 @@ void edgex_device_populateConfigNV
     get_nv_config_uint32 (svc->logger, config, "Service/Timeout", err);
   svc->config.service.connectretries =
     get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
-  svc->config.service.openmsg =
-    get_nv_config_string (config, "Service/OpenMsg");
+  svc->config.service.startupmsg =
+    get_nv_config_string (config, "Service/StartupMsg");
   svc->config.service.readmaxlimit =
     get_nv_config_uint32 (svc->logger, config, "Service/ReadMaxLimit", err);
   svc->config.service.checkinterval =
@@ -656,7 +656,7 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   PUT_CONFIG_UINT(Service/Port, service.port);
   PUT_CONFIG_UINT(Service/Timeout, service.timeout);
   PUT_CONFIG_UINT(Service/ConnectRetries, service.connectretries);
-  PUT_CONFIG_STRING(Service/OpenMsg, service.openmsg);
+  PUT_CONFIG_STRING(Service/StartupMsg, service.startupmsg);
   PUT_CONFIG_UINT(Service/ReadMaxLimit, service.readmaxlimit);
   PUT_CONFIG_STRING(Service/CheckInterval, service.checkinterval);
 
@@ -807,7 +807,7 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   DUMP_UNS ("   Port", service.port);
   DUMP_UNS ("   Timeout", service.timeout);
   DUMP_UNS ("   ConnectRetries", service.connectretries);
-  DUMP_STR ("   OpenMsg", service.openmsg);
+  DUMP_STR ("   StartupMsg", service.startupmsg);
   DUMP_UNS ("   ReadMaxLimit", service.readmaxlimit);
   DUMP_STR ("   CheckInterval", service.checkinterval);
   DUMP_ARR ("   Labels", service.labels);
@@ -881,7 +881,7 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   free (svc->config.logging.file);
   free (svc->config.logging.remoteurl);
   free (svc->config.service.host);
-  free (svc->config.service.openmsg);
+  free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
   free (svc->config.device.initcmd);
   free (svc->config.device.initcmdargs);
