@@ -101,7 +101,7 @@ void edgex_device_profiles_upload
       iot_log_error
         (lc, "Error scanning profiles directory: %s", strerror (errno));
     }
-    *err = EDGEX_NO_CONF_FILE;
+    *err = EDGEX_PROFILES_DIRECTORY;
     return;
   }
 

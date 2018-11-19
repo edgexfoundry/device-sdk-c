@@ -146,7 +146,7 @@ const char *edgex_device_config_parse8601 (const char *str, int *result)
 
 /* As toml_rtos but return null instead of a zero-length string */
 
-void toml_rtos2 (const char *s, char **ret)
+static void toml_rtos2 (const char *s, char **ret)
 {
   if (s)
   {
@@ -159,57 +159,67 @@ void toml_rtos2 (const char *s, char **ret)
   }
 }
 
+/* As toml_rtob but return a bool */
+
+static void toml_rtob2 (const char *raw, bool *ret)
+{
+  if (raw)
+  {
+    int dummy;
+    toml_rtob (raw, &dummy);
+    *ret = dummy;
+  }
+}
+
+/* Wrap toml_rtoi for uint16, uint32. */
+
+static void toml_rtoui16
+  (const char *raw, uint16_t *ret, iot_logging_client *lc, edgex_error *err)
+{
+  if (raw)
+  {
+    int64_t dummy;
+    if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT16_MAX)
+    {
+      *ret = dummy;
+    }
+    else
+    {
+      iot_log_error (lc, "Unable to parse %s as uint16", raw);
+      *err = EDGEX_BAD_CONFIG;
+    }
+  }
+}
+
+static void toml_rtoui32
+  (const char *raw, uint32_t *ret, iot_logging_client *lc, edgex_error *err)
+{
+  if (raw)
+  {
+    int64_t dummy;
+    if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT32_MAX)
+    {
+      *ret = dummy;
+    }
+    else
+    {
+      iot_log_error (lc, "Unable to parse %s as uint32", raw);
+      *err = EDGEX_BAD_CONFIG;
+    }
+  }
+}
 
 #define GET_CONFIG_STRING(KEY, ELEMENT) \
 toml_rtos2 (toml_raw_in (table, #KEY), &svc->config.ELEMENT);
 
-#define GET_CONFIG_INT(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  toml_rtoi (raw, &svc->config.ELEMENT); \
-}
-
 #define GET_CONFIG_UINT16(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  int64_t dummy; \
-  if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT16_MAX) \
-  { \
-    svc->config.ELEMENT = dummy; \
-  } \
-  else \
-  { \
-    iot_log_error (svc->logger, "Unable to parse %s as uint16", raw); \
-    *err = EDGEX_BAD_CONFIG; \
-  } \
-}
+toml_rtoui16 (toml_raw_in(table, #KEY), &svc->config.ELEMENT, svc->logger, err);
 
 #define GET_CONFIG_UINT32(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  int64_t dummy; \
-  if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT32_MAX) \
-  { \
-    svc->config.ELEMENT = dummy; \
-  } \
-  else \
-  { \
-    iot_log_error (svc->logger, "Unable to parse %s as uint32", raw); \
-    *err = EDGEX_BAD_CONFIG; \
-  } \
-}
+toml_rtoui32 (toml_raw_in(table, #KEY), &svc->config.ELEMENT, svc->logger, err);
 
 #define GET_CONFIG_BOOL(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  int dummy; \
-  toml_rtob (raw, &dummy); \
-  svc->config.ELEMENT = dummy; \
-}
+toml_rtob2 (toml_raw_in(table, #KEY), &svc->config.ELEMENT);
 
 void edgex_device_populateConfig
   (edgex_device_service *svc, toml_table_t *config, edgex_error *err)
@@ -325,10 +335,8 @@ void edgex_device_populateConfig
       char *freqstr = NULL;
       namestr = NULL;
       int interval = 0;
-      raw = toml_raw_in (table, "Frequency");
-      toml_rtos2 (raw, &freqstr);
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &namestr);
+      toml_rtos2 (toml_raw_in (table, "Frequency"), &freqstr);
+      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
       if (namestr && freqstr)
       {
         const char *errmsg = edgex_device_config_parse8601 (freqstr, &interval);
@@ -365,12 +373,9 @@ void edgex_device_populateConfig
       info.schedule = NULL;
       info.path = NULL;
       namestr = NULL;
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &namestr);
-      raw = toml_raw_in (table, "Schedule");
-      toml_rtos2 (raw, &info.schedule);
-      raw = toml_raw_in (table, "Path");
-      toml_rtos2 (raw, &info.path);
+      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
+      toml_rtos2 (toml_raw_in (table, "Schedule"), &info.schedule);
+      toml_rtos2 (toml_raw_in (table, "Path"), &info.path);
 
       if (namestr && info.schedule && info.path)
       {
@@ -402,14 +407,10 @@ void edgex_device_populateConfig
       watcher.key = NULL;
       watcher.matchstring = NULL;
       namestr = NULL;
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &namestr);
-      raw = toml_raw_in (table, "DeviceProfile");
-      toml_rtos2 (raw, &watcher.profile);
-      raw = toml_raw_in (table, "Key");
-      toml_rtos2 (raw, &watcher.key);
-      raw = toml_raw_in (table, "MatchString");
-      toml_rtos2 (raw, &watcher.matchstring);
+      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
+      toml_rtos2 (toml_raw_in (table, "DeviceProfile"), &watcher.profile);
+      toml_rtos2 (toml_raw_in (table, "Key"), &watcher.key);
+      toml_rtos2 (toml_raw_in (table, "MatchString"), &watcher.matchstring);
       int n = 0;
       toml_array_t *arr2 = toml_array_in (table, "Identifiers");
       if (arr2)

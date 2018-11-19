@@ -728,6 +728,8 @@ static int oneCommand
   const char **reply_type
 )
 {
+  int result = MHD_HTTP_NOT_FOUND;
+
   iot_log_debug
   (
     svc->logger,
@@ -738,31 +740,32 @@ static int oneCommand
   pthread_rwlock_rdlock (&svc->deviceslock);
   edgex_device **dev = edgex_map_get (&svc->devices, id);
   pthread_rwlock_unlock (&svc->deviceslock);
-  if (dev == NULL)
-  {
-    iot_log_error (svc->logger, "No such device {%s}", id);
-    return MHD_HTTP_NOT_FOUND;
-  }
-  else
+  if (dev)
   {
     const edgex_command *command = findCommand (cmd, (*dev)->profile->commands);
-    if (command == NULL)
+    if (command)
+    {
+      JSON_Value *jreply = NULL;
+      result = runOne
+        (svc, *dev, command, method, upload_data, upload_data_size, &jreply);
+      if (jreply)
+      {
+        *reply = json_serialize_to_string (jreply);
+        *reply_type = "application/json";
+        json_value_free (jreply);
+      }
+    }
+    else
     {
       iot_log_error
         (svc->logger, "Command %s not found for device %s", cmd, (*dev)->name);
-      return MHD_HTTP_NOT_FOUND;
     }
-    JSON_Value *jreply = NULL;
-    int result = runOne
-      (svc, *dev, command, method, upload_data, upload_data_size, &jreply);
-    if (jreply)
-    {
-      *reply = json_serialize_to_string (jreply);
-      *reply_type = "application/json";
-      json_value_free (jreply);
-    }
-    return result;
   }
+  else
+  {
+    iot_log_error (svc->logger, "No such device {%s}", id);
+  }
+  return result;
 }
 
 int edgex_device_handler_device
