@@ -42,12 +42,12 @@ then
   
   # C Utils
   
-  wget -O - https://github.com/IOTechSystems/iotech-c-utils/archive/v0.1.2.tar.gz | tar -C deps -z -x -f -
-  cp deps/iotech-c-utils-0.1.2/src/c/scheduler.c src/c/scheduler.c
-  cp deps/iotech-c-utils-0.1.2/src/c/logging.c src/c/logging.c
+  wget -O - https://github.com/IOTechSystems/iotech-c-utils/archive/v0.1.3.tar.gz | tar -C deps -z -x -f -
+  cp deps/iotech-c-utils-0.1.3/src/c/scheduler.c src/c/scheduler.c
+  cp deps/iotech-c-utils-0.1.3/src/c/logging.c src/c/logging.c
   mkdir -p include/iot
-  cp deps/iotech-c-utils-0.1.2/include/iot/scheduler.h include/iot/scheduler.h
-  cp deps/iotech-c-utils-0.1.2/include/iot/logging.h include/iot/logging.h
+  cp deps/iotech-c-utils-0.1.3/include/iot/scheduler.h include/iot/scheduler.h
+  cp deps/iotech-c-utils-0.1.3/include/iot/logging.h include/iot/logging.h
 fi
 
 # Cmake release build
