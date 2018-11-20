@@ -24,4 +24,6 @@ edgex_deviceprofile *edgex_deviceprofile_get
   edgex_error *err
 );
 
+bool edgex_string_to_resulttype (const char *str, edgex_device_resulttype *res);
+
 #endif
