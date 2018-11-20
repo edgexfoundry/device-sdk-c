@@ -8,10 +8,12 @@ differs as follows:
 * A "Driver" section in the configuration file is introduced for driver-specific
   configuration elements. A list of name-value pairs is passed to the
   implementation during startup.
-* A "DeviceList" section in the configuration file is introduced for fixed
-  device definitions. These are uploaded to core-metadata during startup.
-* An API call is introduced which provides access to the device profiles which
-  are known to the service.
+* The API for adding, removing and updating Device Profiles is NYI.
+
+Changes for 0.7.1:
+
+- Some verification on Device Profiles is now done at startup. This may result
+  in failures during startup rather than in "device" command handling.
 
 Changes for Delhi release (0.7.0):
 
@@ -24,3 +26,4 @@ Changes for Delhi release (0.7.0):
     are no longer included in the configuration file.
 
 - "Discovery", "DataTransform" and "ReadMaxLimit" configuration options are now effective.
+- "OpenMsg" option replaced by "StartupMsg" for consistency with other services.

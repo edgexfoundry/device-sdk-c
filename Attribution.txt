@@ -78,3 +78,12 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
+-------------------------------------------------------------------------------
+
+  CUnit
+  -----
+
+CUnit is contained in the SDK sources and will be used for future unit testing.
+It is not used in the SDK and is not contained in a binary distribution. It is
+licensed under the LGPL version 2, a copy of which may be found in the file
+src/c/cunit/COPYING.
