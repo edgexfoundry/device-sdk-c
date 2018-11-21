@@ -19,7 +19,7 @@ typedef struct edgex_rest_server edgex_rest_server;
 typedef int (*http_method_handler_fn)
 (
   void *context,
-  const char *url,
+  char *url,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,

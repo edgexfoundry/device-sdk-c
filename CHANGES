@@ -14,6 +14,7 @@ Changes for 0.7.1:
 
 - Some verification on Device Profiles is now done at startup. This may result
   in failures during startup rather than in "device" command handling.
+- The /device/name/{name}/{command} REST endpoint is implemented.
 
 Changes for Delhi release (0.7.0):
 
