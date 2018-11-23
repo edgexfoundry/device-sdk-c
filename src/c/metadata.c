@@ -7,11 +7,127 @@
  */
 
 #include <curl/curl.h>
+#include <errno.h>
+
 #include "metadata.h"
 #include "edgex_rest.h"
 #include "rest.h"
 #include "errorlist.h"
 #include "config.h"
+#include "profiles.h"
+
+static bool verifyInt (iot_logging_client *lc, const char *s, const char *f)
+{
+  if (s && *s)
+  {
+    char *end = NULL;
+    errno = 0;
+    strtoll (s, &end, 0);
+    if (errno || (end && *end))
+    {
+      iot_log_error (lc, "Unable to parse %s as Integer for %s", s, f);
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool verifyFloat (iot_logging_client *lc, const char *s, const char *f)
+{
+  if (s && *s)
+  {
+    char *end = NULL;
+    errno = 0;
+    strtold (s, &end);
+    if (errno || (end && *end))
+    {
+      iot_log_error (lc, "Unable to parse %s as Float for %s", s, f);
+      return false;
+    }
+  }
+  return true;
+}
+
+/*
+static bool verifyBlank (iot_logging_client *lc, const char *s, const char *f)
+{
+  if (s && strlen (s))
+  {
+    iot_log_error (lc, "Inapplicable %s specified in device resource", f);
+    return false;
+  }
+  else
+  {
+    return true;
+  }
+}
+*/
+
+static bool verifyProfile (iot_logging_client *lc, edgex_deviceprofile *dp)
+{
+  edgex_device_resulttype rtype;
+  edgex_propertyvalue *pv;
+
+  for (edgex_deviceobject *res = dp->device_resources; res; res = res->next)
+  {
+    pv = res->properties->value;
+    if (!edgex_string_to_resulttype (pv->type, &rtype))
+    {
+      iot_log_error
+      (
+        lc, "deviceResource %s has unknown value type %s", res->name, pv->type
+      );
+      return false;
+    }
+    switch (rtype)
+    {
+      case Uint8:
+      case Uint16:
+      case Uint32:
+      case Uint64:
+      case Int8:
+      case Int16:
+      case Int32:
+      case Int64:
+/* TODO: These should all be verifyInt, but current metadata implementation
+   sets "1.0" for default scale and "0.0" for default offset */
+
+        if (!verifyFloat (lc, pv->offset, "offset") ||
+            !verifyFloat (lc, pv->scale, "scale") ||
+            !verifyInt (lc, pv->base, "base"))
+        {
+          iot_log_error
+            (lc, "Invalid transform in deviceResource %s", res->name);
+          return false;
+        }
+        break;
+      case Float32:
+      case Float64:
+        if (!verifyFloat (lc, pv->offset, "offset") ||
+            !verifyFloat (lc, pv->scale, "scale") ||
+            !verifyFloat (lc, pv->base, "base"))
+        {
+          iot_log_error
+            (lc, "Invalid transform in deviceResource %s", res->name);
+          return false;
+        }
+        break;
+      default:
+/* TODO: metadata sets default values for these. Enable these tests when fixed.
+
+        if (!verifyBlank (lc, pv->offset, "offset") ||
+            !verifyBlank (lc, pv->scale, "scale") ||
+            !verifyBlank (lc, pv->base, "base"))
+        {
+          iot_log_error
+            (lc, "Invalid transform in deviceResource %s", res->name);
+          return false;
+        }
+*/ ;
+    }
+  }
+  return true;
+}
 
 edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
 (
@@ -48,7 +164,17 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
   else
   {
     result = edgex_deviceprofile_read (ctx.buff);
-    *err = EDGEX_OK;
+    if (verifyProfile (lc, result))
+    {
+      *err = EDGEX_OK;
+    }
+    else
+    {
+      *err = EDGEX_PROFILE_PARSE_ERROR;
+      iot_log_error (lc, "Parse error reading device profile %s", name);
+      edgex_deviceprofile_free (result);
+      result = 0;
+    }
   }
   curl_free (ename);
   free (ctx.buff);

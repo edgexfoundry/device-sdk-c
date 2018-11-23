@@ -1,21 +1,22 @@
 This is the C SDK for EdgeX. It is based largely on the Go SDK but the API
 differs as follows:
 
-* The callback function for the "device" endpoint is separated into get and put
-  variants.
 * Adding devices in the "discovery" callback is done using an API function call
   rather than directly returning the new devices.
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 * A "Driver" section in the configuration file is introduced for driver-specific
-  configuration elements. A parsed structure is passed to the implementation
-  during startup.
-* A "DeviceList" section in the configuration file is introduced for fixed
-  device definitions. These are uploaded to core-metadata during startup.
-* An API call is introduced which provides access to the device profiles which
-  are known to the service.
+  configuration elements. A list of name-value pairs is passed to the
+  implementation during startup.
+* The API for adding, removing and updating Device Profiles is NYI.
 
-Changes since "Delhi" version:
+Changes for 0.7.1:
+
+- Some verification on Device Profiles is now done at startup. This may result
+  in failures during startup rather than in "device" command handling.
+- The /device/name/{name}/{command} REST endpoint is implemented.
+
+Changes for Delhi release (0.7.0):
 
 - Consul is supported for registration and configuration.
 -   New configuration option Service.CheckInterval controlling how frequently
@@ -26,3 +27,4 @@ Changes since "Delhi" version:
     are no longer included in the configuration file.
 
 - "Discovery", "DataTransform" and "ReadMaxLimit" configuration options are now effective.
+- "OpenMsg" option replaced by "StartupMsg" for consistency with other services.

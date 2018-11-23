@@ -4,7 +4,7 @@
   Timeout = 5000
   ConnectRetries = 3
   Labels = [ "Template" ]
-  OpenMsg = "Example template device started"
+  StartupMsg = "Example template device started"
   ReadMaxLimit = 256
   CheckInterval = "10s"
 

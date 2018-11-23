@@ -28,4 +28,5 @@
 #define EDGEX_PROFILE_PARSE_ERROR (edgex_error){ .code = 16, .reason = "Error while parsing device profile" }
 #define EDGEX_HTTP_CONFLICT (edgex_error){ .code = 17, .reason = "HTTP 409 Conflict" }
 #define EDGEX_CONSUL_RESPONSE (edgex_error){ .code = 18, .reason = "Unable to process response from consul" }
+#define EDGEX_PROFILES_DIRECTORY (edgex_error){ .code = 19, .reason = "Problem scanning profiles directory" }
 #endif

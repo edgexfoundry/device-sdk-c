@@ -1,15 +1,17 @@
 TODO
 ====
 
-Consul integration - Read config settings. Upload new settings. Register as a
-service. Ensure that healthcheck mechanism is properly configured/implemented.
+Readings - Assertions. Binary encodings. base64 encoding of floating point
+numbers. Mask and shift transforms.
 
-Readings - Assertions. Binary encodings. b64 encoding of floating point numbers.
-
-Discovery endpoint - Only add new devices which match a provisionwatcher.
+Discovery endpoint - Only enable new devices which match a provisionwatcher.
 These to be dynamically created according to configuration.
 
 Threadpool - Configure number of threads.
 
 Handle resource operations which link to profile resource rather than device
 resource.
+
+Provide device profile management API.
+
+Support system management API.

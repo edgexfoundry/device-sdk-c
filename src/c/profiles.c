@@ -20,9 +20,64 @@
 
 #define MAX_PATH_SIZE 256
 
-static int yamlselect (const struct dirent *d);
+bool edgex_string_to_resulttype (const char *str, edgex_device_resulttype *res)
+{
+  if (strcmp (str, "String") == 0)
+  {
+    *res = String;
+  }
+  else if (strcmp (str, "Bool") == 0)
+  {
+    *res = Bool;
+  }
+  else if (strcmp (str, "Uint8") == 0)
+  {
+    *res = Uint8;
+  }
+  else if (strcmp (str, "Uint16") == 0)
+  {
+    *res = Uint16;
+  }
+  else if (strcmp (str, "Uint32") == 0)
+  {
+    *res = Uint32;
+  }
+  else if (strcmp (str, "Uint64") == 0)
+  {
+    *res = Uint64;
+  }
+  else if (strcmp (str, "Int8") == 0)
+  {
+    *res = Int8;
+  }
+  else if (strcmp (str, "Int16") == 0)
+  {
+    *res = Int16;
+  }
+  else if (strcmp (str, "Int32") == 0)
+  {
+    *res = Int32;
+  }
+  else if (strcmp (str, "Int64") == 0)
+  {
+    *res = Int64;
+  }
+  else if (strcmp (str, "Float32") == 0)
+  {
+    *res = Float32;
+  }
+  else if (strcmp (str, "Float64") == 0)
+  {
+    *res = Float64;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+}
 
-int yamlselect (const struct dirent *d)
+static int yamlselect (const struct dirent *d)
 {
   return strcasecmp (d->d_name + strlen (d->d_name) - 5, ".yaml") == 0 ? 1 : 0;
 }
@@ -101,7 +156,7 @@ void edgex_device_profiles_upload
       iot_log_error
         (lc, "Error scanning profiles directory: %s", strerror (errno));
     }
-    *err = EDGEX_NO_CONF_FILE;
+    *err = EDGEX_PROFILES_DIRECTORY;
     return;
   }
 
@@ -192,6 +247,11 @@ void edgex_device_profiles_upload
         }
         else
         {
+          if (err->code == EDGEX_PROFILE_PARSE_ERROR.code)
+          {
+            iot_log_error (lc, "Profile %s exists but has errors", profname);
+            break;
+          }
           *err = EDGEX_OK;
           iot_log_debug (lc, "Uploading deviceprofile from %s", pathname);
           free (edgex_metadata_client_create_deviceprofile_file
@@ -203,7 +263,8 @@ void edgex_device_profiles_upload
           }
           else
           {
-            iot_log_debug (lc, "Device profile upload successful");
+            iot_log_debug
+              (lc, "Device profile upload successful, will now retrieve it");
             dp = edgex_metadata_client_get_deviceprofile
               (lc, endpoints, profname, err);
             if (dp)

@@ -23,8 +23,6 @@
 #include <float.h>
 #include <assert.h>
 
-#define ID_LEN 40
-
 /* NOTES
  *
  * The entry point for the device command is edgex_device_handler_device. This
@@ -720,6 +718,7 @@ static int oneCommand
 (
   edgex_device_service *svc,
   const char *id,
+  bool byName,
   const char *cmd,
   edgex_http_method method,
   const char *upload_data,
@@ -728,6 +727,9 @@ static int oneCommand
   const char **reply_type
 )
 {
+  int result = MHD_HTTP_NOT_FOUND;
+  edgex_device **dev = NULL;
+
   iot_log_debug
   (
     svc->logger,
@@ -736,39 +738,51 @@ static int oneCommand
   );
 
   pthread_rwlock_rdlock (&svc->deviceslock);
-  edgex_device **dev = edgex_map_get (&svc->devices, id);
-  pthread_rwlock_unlock (&svc->deviceslock);
-  if (dev == NULL)
+  if (byName)
   {
-    iot_log_error (svc->logger, "No such device {%s}", id);
-    return MHD_HTTP_NOT_FOUND;
+    char **found = edgex_map_get (&svc->name_to_id, id);
+    if (found)
+    {
+      dev = edgex_map_get (&svc->devices, *found);
+    }
   }
   else
   {
+    dev = edgex_map_get (&svc->devices, id);
+  }
+  pthread_rwlock_unlock (&svc->deviceslock);
+  if (dev)
+  {
     const edgex_command *command = findCommand (cmd, (*dev)->profile->commands);
-    if (command == NULL)
+    if (command)
+    {
+      JSON_Value *jreply = NULL;
+      result = runOne
+        (svc, *dev, command, method, upload_data, upload_data_size, &jreply);
+      if (jreply)
+      {
+        *reply = json_serialize_to_string (jreply);
+        *reply_type = "application/json";
+        json_value_free (jreply);
+      }
+    }
+    else
     {
       iot_log_error
         (svc->logger, "Command %s not found for device %s", cmd, (*dev)->name);
-      return MHD_HTTP_NOT_FOUND;
     }
-    JSON_Value *jreply = NULL;
-    int result = runOne
-      (svc, *dev, command, method, upload_data, upload_data_size, &jreply);
-    if (jreply)
-    {
-      *reply = json_serialize_to_string (jreply);
-      *reply_type = "application/json";
-      json_value_free (jreply);
-    }
-    return result;
   }
+  else
+  {
+    iot_log_error (svc->logger, "No such device {%s}", id);
+  }
+  return result;
 }
 
 int edgex_device_handler_device
 (
   void *ctx,
-  const char *url,
+  char *url,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -776,8 +790,7 @@ int edgex_device_handler_device
   const char **reply_type
 )
 {
-  char id[ID_LEN];
-  const char *cmd;
+  char *cmd;
   edgex_device_service *svc = (edgex_device_service *) ctx;
 
   if (strlen (url) == 0)
@@ -802,21 +815,25 @@ int edgex_device_handler_device
   }
   else
   {
+    bool byName = false;
+    if (strncmp (url, "name/", 4) == 0)
+    {
+      byName = true;
+      url += 5;
+    }
     cmd = strchr (url, '/');
     if (cmd == NULL || strlen (cmd + 1) == 0)
     {
       iot_log_error (svc->logger, "No command specified in url");
       return MHD_HTTP_NOT_FOUND;
     }
-    if (cmd - url >= ID_LEN)
-    {
-      iot_log_error (svc->logger, "Device ID too long in location %s", url);
-      return MHD_HTTP_NOT_FOUND;
-    }
-    strncpy (id, url, cmd - url);
-    id[cmd - url] = '\0';
-    cmd++;
+    *cmd++ = '\0';
     return oneCommand
-      (svc, id, cmd, method, upload_data, upload_data_size, reply, reply_type);
+    (
+      svc,
+      url, byName, cmd, method,
+      upload_data, upload_data_size,
+      reply, reply_type
+    );
   }
 }

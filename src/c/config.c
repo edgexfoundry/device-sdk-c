@@ -146,7 +146,7 @@ const char *edgex_device_config_parse8601 (const char *str, int *result)
 
 /* As toml_rtos but return null instead of a zero-length string */
 
-void toml_rtos2 (const char *s, char **ret)
+static void toml_rtos2 (const char *s, char **ret)
 {
   if (s)
   {
@@ -159,57 +159,67 @@ void toml_rtos2 (const char *s, char **ret)
   }
 }
 
+/* As toml_rtob but return a bool */
+
+static void toml_rtob2 (const char *raw, bool *ret)
+{
+  if (raw)
+  {
+    int dummy;
+    toml_rtob (raw, &dummy);
+    *ret = dummy;
+  }
+}
+
+/* Wrap toml_rtoi for uint16, uint32. */
+
+static void toml_rtoui16
+  (const char *raw, uint16_t *ret, iot_logging_client *lc, edgex_error *err)
+{
+  if (raw)
+  {
+    int64_t dummy;
+    if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT16_MAX)
+    {
+      *ret = dummy;
+    }
+    else
+    {
+      iot_log_error (lc, "Unable to parse %s as uint16", raw);
+      *err = EDGEX_BAD_CONFIG;
+    }
+  }
+}
+
+static void toml_rtoui32
+  (const char *raw, uint32_t *ret, iot_logging_client *lc, edgex_error *err)
+{
+  if (raw)
+  {
+    int64_t dummy;
+    if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT32_MAX)
+    {
+      *ret = dummy;
+    }
+    else
+    {
+      iot_log_error (lc, "Unable to parse %s as uint32", raw);
+      *err = EDGEX_BAD_CONFIG;
+    }
+  }
+}
 
 #define GET_CONFIG_STRING(KEY, ELEMENT) \
 toml_rtos2 (toml_raw_in (table, #KEY), &svc->config.ELEMENT);
 
-#define GET_CONFIG_INT(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  toml_rtoi (raw, &svc->config.ELEMENT); \
-}
-
 #define GET_CONFIG_UINT16(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  int64_t dummy; \
-  if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT16_MAX) \
-  { \
-    svc->config.ELEMENT = dummy; \
-  } \
-  else \
-  { \
-    iot_log_error (svc->logger, "Unable to parse %s as uint16", raw); \
-    *err = EDGEX_BAD_CONFIG; \
-  } \
-}
+toml_rtoui16 (toml_raw_in(table, #KEY), &svc->config.ELEMENT, svc->logger, err);
 
 #define GET_CONFIG_UINT32(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  int64_t dummy; \
-  if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT32_MAX) \
-  { \
-    svc->config.ELEMENT = dummy; \
-  } \
-  else \
-  { \
-    iot_log_error (svc->logger, "Unable to parse %s as uint32", raw); \
-    *err = EDGEX_BAD_CONFIG; \
-  } \
-}
+toml_rtoui32 (toml_raw_in(table, #KEY), &svc->config.ELEMENT, svc->logger, err);
 
 #define GET_CONFIG_BOOL(KEY, ELEMENT) \
-raw = toml_raw_in (table, #KEY); \
-if (raw) \
-{ \
-  int dummy; \
-  toml_rtob (raw, &dummy); \
-  svc->config.ELEMENT = dummy; \
-}
+toml_rtob2 (toml_raw_in(table, #KEY), &svc->config.ELEMENT);
 
 void edgex_device_populateConfig
   (edgex_device_service *svc, toml_table_t *config, edgex_error *err)
@@ -230,7 +240,7 @@ void edgex_device_populateConfig
     GET_CONFIG_UINT16(Port, service.port);
     GET_CONFIG_UINT32(Timeout, service.timeout);
     GET_CONFIG_UINT32(ConnectRetries, service.connectretries);
-    GET_CONFIG_STRING(OpenMsg, service.openmsg);
+    GET_CONFIG_STRING(StartupMsg, service.startupmsg);
     GET_CONFIG_UINT32(ReadMaxLimit, service.readmaxlimit);
     GET_CONFIG_STRING(CheckInterval, service.checkinterval);
     int n = 0;
@@ -325,10 +335,8 @@ void edgex_device_populateConfig
       char *freqstr = NULL;
       namestr = NULL;
       int interval = 0;
-      raw = toml_raw_in (table, "Frequency");
-      toml_rtos2 (raw, &freqstr);
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &namestr);
+      toml_rtos2 (toml_raw_in (table, "Frequency"), &freqstr);
+      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
       if (namestr && freqstr)
       {
         const char *errmsg = edgex_device_config_parse8601 (freqstr, &interval);
@@ -365,12 +373,9 @@ void edgex_device_populateConfig
       info.schedule = NULL;
       info.path = NULL;
       namestr = NULL;
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &namestr);
-      raw = toml_raw_in (table, "Schedule");
-      toml_rtos2 (raw, &info.schedule);
-      raw = toml_raw_in (table, "Path");
-      toml_rtos2 (raw, &info.path);
+      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
+      toml_rtos2 (toml_raw_in (table, "Schedule"), &info.schedule);
+      toml_rtos2 (toml_raw_in (table, "Path"), &info.path);
 
       if (namestr && info.schedule && info.path)
       {
@@ -402,14 +407,10 @@ void edgex_device_populateConfig
       watcher.key = NULL;
       watcher.matchstring = NULL;
       namestr = NULL;
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &namestr);
-      raw = toml_raw_in (table, "DeviceProfile");
-      toml_rtos2 (raw, &watcher.profile);
-      raw = toml_raw_in (table, "Key");
-      toml_rtos2 (raw, &watcher.key);
-      raw = toml_raw_in (table, "MatchString");
-      toml_rtos2 (raw, &watcher.matchstring);
+      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
+      toml_rtos2 (toml_raw_in (table, "DeviceProfile"), &watcher.profile);
+      toml_rtos2 (toml_raw_in (table, "Key"), &watcher.key);
+      toml_rtos2 (toml_raw_in (table, "MatchString"), &watcher.matchstring);
       int n = 0;
       toml_array_t *arr2 = toml_array_in (table, "Identifiers");
       if (arr2)
@@ -559,8 +560,8 @@ void edgex_device_populateConfigNV
     get_nv_config_uint32 (svc->logger, config, "Service/Timeout", err);
   svc->config.service.connectretries =
     get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
-  svc->config.service.openmsg =
-    get_nv_config_string (config, "Service/OpenMsg");
+  svc->config.service.startupmsg =
+    get_nv_config_string (config, "Service/StartupMsg");
   svc->config.service.readmaxlimit =
     get_nv_config_uint32 (svc->logger, config, "Service/ReadMaxLimit", err);
   svc->config.service.checkinterval =
@@ -656,7 +657,7 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   PUT_CONFIG_UINT(Service/Port, service.port);
   PUT_CONFIG_UINT(Service/Timeout, service.timeout);
   PUT_CONFIG_UINT(Service/ConnectRetries, service.connectretries);
-  PUT_CONFIG_STRING(Service/OpenMsg, service.openmsg);
+  PUT_CONFIG_STRING(Service/StartupMsg, service.startupmsg);
   PUT_CONFIG_UINT(Service/ReadMaxLimit, service.readmaxlimit);
   PUT_CONFIG_STRING(Service/CheckInterval, service.checkinterval);
 
@@ -807,7 +808,7 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
   DUMP_UNS ("   Port", service.port);
   DUMP_UNS ("   Timeout", service.timeout);
   DUMP_UNS ("   ConnectRetries", service.connectretries);
-  DUMP_STR ("   OpenMsg", service.openmsg);
+  DUMP_STR ("   StartupMsg", service.startupmsg);
   DUMP_UNS ("   ReadMaxLimit", service.readmaxlimit);
   DUMP_STR ("   CheckInterval", service.checkinterval);
   DUMP_ARR ("   Labels", service.labels);
@@ -881,7 +882,7 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   free (svc->config.logging.file);
   free (svc->config.logging.remoteurl);
   free (svc->config.service.host);
-  free (svc->config.service.openmsg);
+  free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
   free (svc->config.device.initcmd);
   free (svc->config.device.initcmdargs);
