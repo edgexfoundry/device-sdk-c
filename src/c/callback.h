@@ -14,7 +14,7 @@
 extern int edgex_device_handler_callback
 (
   void *ctx,
-  const char *url,
+  char *url,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
