@@ -15,15 +15,6 @@
 
 /* command requests and results */
 
-typedef enum edgex_device_resulttype
-{
-  Bool,
-  String,
-  Uint8, Uint16, Uint32, Uint64,
-  Int8, Int16, Int32, Int64,
-  Float32, Float64
-} edgex_device_resulttype;
-
 typedef union edgex_device_resultvalue
 {
   bool bool_result;
@@ -49,7 +40,7 @@ typedef struct edgex_device_commandrequest
 typedef struct edgex_device_commandresult
 {
   uint64_t origin;
-  edgex_device_resulttype type;
+  edgex_propertytype type;
   edgex_device_resultvalue value;
 } edgex_device_commandresult;
 
