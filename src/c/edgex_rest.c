@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 
 #define SAFE_STR(s) (s ? s : "NULL")
 #define SAFE_STRDUP(s) (s ? strdup(s) : NULL)
@@ -119,48 +120,185 @@ void edgex_nvpairs_free (edgex_nvpairs *p)
   }
 }
 
-static edgex_propertyvalue *propertyvalue_read (const JSON_Object *obj)
+static const char *proptypes[] =
 {
-  edgex_propertyvalue *result = malloc (sizeof (edgex_propertyvalue));
-  result->type = get_string (obj, "type");
-  result->readwrite = get_string (obj, "readWrite");
-  result->minimum = get_string (obj, "minimum");
-  result->maximum = get_string (obj, "maximum");
-  result->defaultvalue = get_string (obj, "defaultValue");
-  result->size = get_string (obj, "size");
-  result->word = get_string (obj, "word");
-  result->lsb = get_string (obj, "lsb");
-  result->mask = get_string (obj, "mask");
-  result->shift = get_string (obj, "shift");
-  result->scale = get_string (obj, "scale");
-  result->offset = get_string (obj, "offset");
-  result->base = get_string (obj, "base");
-  result->assertion = get_string (obj, "assertion");
-  result->issigned = json_object_get_boolean (obj, "signed");
-  result->precision = get_string (obj, "precision");
+  "Bool", "String", "Uint8", "Uint16", "Uint32", "Uint64",
+  "Int8", "Int16", "Int32", "Int64", "Float32", "Float64"
+};
+
+const char *edgex_propertytype_tostring (edgex_propertytype pt)
+{
+  return proptypes[pt];
+}
+
+bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
+{
+  for (edgex_propertytype i = Bool; i <= Float64; i++)
+  {
+    if (strcmp (str, proptypes[i]) == 0)
+    {
+      *res = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool get_transformArg
+(
+  iot_logging_client *lc,
+  const JSON_Object *obj,
+  const char *name,
+  edgex_propertytype type,
+  edgex_transformArg *res
+)
+{
+  const char *str;
+  char *end = NULL;
+  bool ok = true;
+
+  res->enabled = false;
+  str = json_object_get_string (obj, name);
+  if (str && *str)
+  {
+// TODO: the workaround below can be removed when edgex-go #855 is resolved
+if (strcmp (name, "scale") == 0 && strcmp (str, "1.0") == 0) return true;
+if (strcmp (name, "offset") == 0 && strcmp (str, "0.0") == 0) return true;
+if (strcmp (name, "base") == 0 && strcmp (str, "0") == 0) return true;
+
+    switch (type)
+    {
+      case Int8:
+      case Int16:
+      case Int32:
+      case Int64:
+      case Uint8:
+      case Uint16:
+      case Uint32:
+      case Uint64:
+        errno = 0;
+        int64_t i = strtol (str, &end, 0);
+        if (errno || (end && *end))
+        {
+          iot_log_error
+          (
+            lc,
+            "Unable to parse \"%s\" as integer for transform \"%s\"",
+            str, name
+          );
+          ok = false;
+        }
+        else
+        {
+          res->enabled = true;
+          res->value.ival = i;
+        }
+        break;
+      case Float32:
+      case Float64:
+        errno = 0;
+        double d = strtod (str, &end);
+        if (errno || (end && *end))
+        {
+          iot_log_error
+          (
+            lc,
+            "Unable to parse \"%s\" as float for transform \"%s\"",
+            str, name
+          );
+          ok = false;
+        }
+        else
+        {
+          res->enabled = true;
+          res->value.dval = d;
+        }
+        break;
+      default:
+        iot_log_error
+          (lc, "Transform \"%s\" specified for non-numeric data", name);
+        ok = false;
+    }
+  }
+  return ok;
+}
+
+static edgex_propertyvalue *propertyvalue_read
+  (iot_logging_client *lc, const JSON_Object *obj)
+{
+  edgex_propertytype pt;
+  edgex_propertyvalue *result = NULL;
+  const char *tstr = json_object_get_string (obj, "type");
+  if (edgex_propertytype_fromstring (&pt, tstr))
+  {
+    bool ok = true;
+    result = malloc (sizeof (edgex_propertyvalue));
+    memset (result, 0, sizeof (edgex_propertyvalue));
+    ok &= get_transformArg (lc, obj, "scale", pt, &result->scale);
+    ok &= get_transformArg (lc, obj, "offset", pt, &result->offset);
+    ok &= get_transformArg (lc, obj, "base", pt, &result->base);
+    if (!ok)
+    {
+      free (result);
+      return NULL;
+    }
+    result->type = pt;
+    result->readwrite = get_string (obj, "readWrite");
+    result->minimum = get_string (obj, "minimum");
+    result->maximum = get_string (obj, "maximum");
+    result->defaultvalue = get_string (obj, "defaultValue");
+    result->lsb = get_string (obj, "lsb");
+    result->mask = get_string (obj, "mask");
+    result->shift = get_string (obj, "shift");
+    result->assertion = get_string (obj, "assertion");
+    result->precision = get_string (obj, "precision");
+  }
+  else
+  {
+    iot_log_error (lc, "Unable to parse \"%s\" as data type", tstr);
+  }
   return result;
+}
+
+static void set_arg
+(
+  JSON_Object *obj,
+  const char *name,
+  edgex_transformArg arg,
+  edgex_propertytype pt
+)
+{
+  if (arg.enabled)
+  {
+    char tmp[32];
+    if (pt == Float32 || pt == Float64)
+    {
+      sprintf (tmp, "%f", arg.value.dval);
+    }
+    else
+    {
+      sprintf (tmp, "%ld", arg.value.ival);
+    }
+    json_object_set_string (obj, name, tmp);
+  }
 }
 
 static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
-  json_object_set_string (obj, "type", e->type);
-  json_object_set_string (obj, "type", e->type);
+  json_object_set_string (obj, "type", edgex_propertytype_tostring (e->type));
   json_object_set_string (obj, "readWrite", e->readwrite);
   json_object_set_string (obj, "minimum", e->minimum);
   json_object_set_string (obj, "maximum", e->maximum);
   json_object_set_string (obj, "defaultValue", e->defaultvalue);
-  json_object_set_string (obj, "size", e->size);
-  json_object_set_string (obj, "word", e->word);
   json_object_set_string (obj, "lsb", e->lsb);
   json_object_set_string (obj, "mask", e->mask);
   json_object_set_string (obj, "shift", e->shift);
-  json_object_set_string (obj, "scale", e->scale);
-  json_object_set_string (obj, "offset", e->offset);
-  json_object_set_string (obj, "base", e->base);
+  set_arg (obj, "scale", e->scale, e->type);
+  set_arg (obj, "offset", e->offset, e->type);
+  set_arg (obj, "base", e->base, e->type);
   json_object_set_string (obj, "assertion", e->assertion);
-  json_object_set_boolean (obj, "signed", e->issigned);
   json_object_set_string (obj, "precision", e->precision);
   return result;
 }
@@ -171,21 +309,18 @@ static edgex_propertyvalue *propertyvalue_dup (edgex_propertyvalue *pv)
   if (pv)
   {
     result = malloc (sizeof (edgex_propertyvalue));
-    result->type = strdup (pv->type);
+    result->type = pv->type;
     result->readwrite = strdup (pv->readwrite);
     result->minimum = strdup (pv->minimum);
     result->maximum = strdup (pv->maximum);
     result->defaultvalue = strdup (pv->defaultvalue);
-    result->size = strdup (pv->size);
-    result->word = strdup (pv->word);
     result->lsb = strdup (pv->lsb);
     result->mask = strdup (pv->mask);
     result->shift = strdup (pv->shift);
-    result->scale = strdup (pv->scale);
-    result->offset = strdup (pv->offset);
-    result->base = strdup (pv->base);
+    result->scale = pv->scale;
+    result->offset = pv->offset;
+    result->base = pv->base;
     result->assertion = strdup (pv->assertion);
-    result->issigned = pv->issigned;
     result->precision = strdup (pv->precision);
   }
   return result;
@@ -193,19 +328,13 @@ static edgex_propertyvalue *propertyvalue_dup (edgex_propertyvalue *pv)
 
 static void propertyvalue_free (edgex_propertyvalue *e)
 {
-  free (e->type);
   free (e->readwrite);
   free (e->minimum);
   free (e->maximum);
   free (e->defaultvalue);
-  free (e->size);
-  free (e->word);
   free (e->lsb);
   free (e->mask);
   free (e->shift);
-  free (e->scale);
-  free (e->offset);
-  free (e->base);
   free (e->assertion);
   free (e->precision);
   free (e);
@@ -251,11 +380,19 @@ static void units_free (edgex_units *e)
   free (e);
 }
 
-static edgex_profileproperty *profileproperty_read (const JSON_Object *obj)
+static edgex_profileproperty *profileproperty_read
+  (iot_logging_client *lc, const JSON_Object *obj)
 {
-  edgex_profileproperty *result = malloc (sizeof (edgex_profileproperty));
-  result->value = propertyvalue_read (json_object_get_object (obj, "value"));
-  result->units = units_read (json_object_get_object (obj, "units"));
+  edgex_propertyvalue *val;
+  edgex_profileproperty *result = NULL;
+
+  val = propertyvalue_read (lc, json_object_get_object (obj, "value"));
+  if (val)
+  {
+    result = malloc (sizeof (edgex_profileproperty));
+    result->value = val;
+    result->units = units_read (json_object_get_object (obj, "units"));
+  }
   return result;
 }
 
@@ -287,33 +424,46 @@ static void profileproperty_free (edgex_profileproperty *e)
   free (e);
 }
 
-static edgex_deviceobject *deviceobject_read (const JSON_Object *obj)
+static edgex_deviceobject *deviceobject_read
+  (iot_logging_client *lc, const JSON_Object *obj)
 {
-  edgex_deviceobject *result = malloc (sizeof (edgex_deviceobject));
-  JSON_Object *attributes_obj;
-  size_t count;
-  edgex_nvpairs *nv;
-  edgex_nvpairs **nv_last = &result->attributes;
+  edgex_deviceobject *result = NULL;
+  edgex_profileproperty *pp = profileproperty_read
+    (lc, json_object_get_object (obj, "properties"));
+  char *name = get_string (obj, "name");
 
-  result->name = get_string (obj, "name");
-  result->description = get_string (obj, "description");
-  result->tag = get_string (obj, "tag");
-  result->properties = profileproperty_read
-    (json_object_get_object (obj, "properties"));
-  result->attributes = NULL;
-  attributes_obj = json_object_get_object (obj, "attributes");
-  count = json_object_get_count (attributes_obj);
-  for (size_t i = 0; i < count; i++)
+  if (pp)
   {
-    nv = malloc (sizeof (edgex_nvpairs));
-    nv->name = strdup (json_object_get_name (attributes_obj, i));
-    nv->value = strdup
-      (json_value_get_string (json_object_get_value_at (attributes_obj, i)));
-    nv->next = NULL;
-    *nv_last = nv;
-    nv_last = &nv->next;
+    JSON_Object *attributes_obj;
+    size_t count;
+    edgex_nvpairs *nv;
+    edgex_nvpairs **nv_last;
+
+    result = malloc (sizeof (edgex_deviceobject));
+    result->name = name;
+    result->description = get_string (obj, "description");
+    result->tag = get_string (obj, "tag");
+    result->properties = pp;
+    result->attributes = NULL;
+    attributes_obj = json_object_get_object (obj, "attributes");
+    count = json_object_get_count (attributes_obj);
+    nv_last = &result->attributes;
+    for (size_t i = 0; i < count; i++)
+    {
+      nv = malloc (sizeof (edgex_nvpairs));
+      nv->name = strdup (json_object_get_name (attributes_obj, i));
+      nv->value = strdup
+        (json_value_get_string (json_object_get_value_at (attributes_obj, i)));
+      nv->next = NULL;
+      *nv_last = nv;
+      nv_last = &nv->next;
+    }
+    result->next = NULL;
   }
-  result->next = NULL;
+  else
+  {
+    iot_log_error (lc, "Error reading property for deviceResource %s", name);
+  }
   return result;
 }
 
@@ -765,7 +915,8 @@ static void profileresource_free (edgex_profileresource *e)
   }
 }
 
-static edgex_deviceprofile *deviceprofile_read (const JSON_Object *obj)
+static edgex_deviceprofile *deviceprofile_read
+  (iot_logging_client *lc, const JSON_Object *obj)
 {
   edgex_deviceprofile *result = malloc (sizeof (edgex_deviceprofile));
   size_t count;
@@ -785,16 +936,26 @@ static edgex_deviceprofile *deviceprofile_read (const JSON_Object *obj)
   result->labels = array_to_strings (json_object_get_array (obj, "labels"));
   array = json_object_get_array (obj, "deviceResources");
   result->device_resources = NULL;
+  result->commands = NULL;
+  result->resources = NULL;
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
     edgex_deviceobject *temp = deviceobject_read
-      (json_array_get_object (array, i));
-    *last_ptr = temp;
-    last_ptr = &(temp->next);
+      (lc, json_array_get_object (array, i));
+    if (temp)
+    {
+      *last_ptr = temp;
+      last_ptr = &(temp->next);
+    }
+    else
+    {
+      iot_log_error (lc, "Parse error in device profile %s", result->name);
+      edgex_deviceprofile_free (result);
+      return NULL;
+    }
   }
   array = json_object_get_array (obj, "commands");
-  result->commands = NULL;
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
@@ -803,7 +964,6 @@ static edgex_deviceprofile *deviceprofile_read (const JSON_Object *obj)
     last_ptr2 = &(temp->next);
   }
   array = json_object_get_array (obj, "resources");
-  result->resources = NULL;
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
@@ -873,7 +1033,8 @@ static JSON_Value *deviceprofile_write_name (const edgex_deviceprofile *e)
   return result;
 }
 
-edgex_deviceprofile *edgex_deviceprofile_read (const char *json)
+edgex_deviceprofile *edgex_deviceprofile_read
+  (iot_logging_client *lc, const char *json)
 {
   edgex_deviceprofile *result = NULL;
   JSON_Value *val = json_parse_string (json);
@@ -883,7 +1044,7 @@ edgex_deviceprofile *edgex_deviceprofile_read (const char *json)
 
   if (obj)
   {
-    result = deviceprofile_read (obj);
+    result = deviceprofile_read (lc, obj);
   }
 
   json_value_free (val);
@@ -1157,7 +1318,8 @@ char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create)
   return result;
 }
 
-static edgex_device *device_read (const JSON_Object *obj)
+static edgex_device *device_read
+  (iot_logging_client *lc, const JSON_Object *obj)
 {
   edgex_device *result = malloc (sizeof (edgex_device));
   result->addressable = addressable_read
@@ -1174,7 +1336,7 @@ static edgex_device *device_read (const JSON_Object *obj)
   result->operatingState = get_string (obj, "operatingState");
   result->origin = json_object_get_number (obj, "origin");
   result->profile = deviceprofile_read
-    (json_object_get_object (obj, "profile"));
+    (lc, json_object_get_object (obj, "profile"));
   result->service = deviceservice_read
     (json_object_get_object (obj, "service"));
   result->next = NULL;
@@ -1265,7 +1427,7 @@ void edgex_device_free (edgex_device *e)
   }
 }
 
-edgex_device *edgex_device_read (const char *json)
+edgex_device *edgex_device_read (iot_logging_client *lc, const char *json)
 {
   edgex_device *result = NULL;
   JSON_Value *val = json_parse_string (json);
@@ -1275,7 +1437,7 @@ edgex_device *edgex_device_read (const char *json)
 
   if (obj)
   {
-    result = device_read (obj);
+    result = device_read (lc, obj);
   }
 
   json_value_free (val);
@@ -1327,7 +1489,7 @@ char *edgex_device_write_sparse
   return json;
 }
 
-edgex_device *edgex_devices_read (const char *json)
+edgex_device *edgex_devices_read (iot_logging_client *lc, const char *json)
 {
   edgex_device *result = NULL;
   JSON_Value *val = json_parse_string (json);
@@ -1339,7 +1501,7 @@ edgex_device *edgex_devices_read (const char *json)
     size_t count = json_array_get_count (array);
     for (size_t i = 0; i < count; i++)
     {
-      edgex_device *temp = device_read (json_array_get_object (array, i));
+      edgex_device *temp = device_read (lc, json_array_get_object (array, i));
       *last_ptr = temp;
       last_ptr = &(temp->next);
     }

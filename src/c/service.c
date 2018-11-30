@@ -729,7 +729,6 @@ void edgex_device_post_readings
     rdgs[i].id = NULL;
     rdgs[i].value = edgex_value_tostring
     (
-      values[i].type,
       values[i].value,
       svc->config.device.datatransform,
       sources[i].devobj->properties->value,

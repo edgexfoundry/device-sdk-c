@@ -69,141 +69,121 @@ static const char *checkMapping (const char *in, const edgex_nvpairs *map)
   return in;
 }
 
-static void safeStrtold (const char *txt, long double *val)
-{
-  if (txt && *txt)
-  {
-    char *end;
-    errno = 0;
-    long double x = strtold (txt, &end);
-    if (errno == 0 && end == txt + strlen (txt))
-    {
-      *val = x;
-    }
-  }
-}
-
-#define SELECT(X,Y) case X: result = offset + scale * (base == 0.0 ? (Y) : powl (base, (Y))); break
-
 static bool transformResult
-(
-  edgex_device_resulttype vtype,
-  edgex_device_resultvalue *value,
-  long double base,
-  long double scale,
-  long double offset)
+  (edgex_device_resultvalue *value, edgex_propertyvalue *props)
 {
-  long double result = 0.0;
-  errno = 0;
-  switch (vtype)
+  if (props->type == Float64 || props->type == Float32)
   {
-    SELECT (Uint8, value->ui8_result);
-    SELECT (Uint16, value->ui16_result);
-    SELECT (Uint32, value->ui32_result);
-    SELECT (Uint64, value->ui64_result);
-    SELECT (Int8, value->i8_result);
-    SELECT (Int16, value->i16_result);
-    SELECT (Int32, value->i32_result);
-    SELECT (Int64, value->i64_result);
-    SELECT (Float32, value->f32_result);
-    SELECT (Float64, value->f64_result);
-    default: assert (0);
-  }
-  if (errno)
-  {
-    return false;
-  }
-
-  if (vtype == Float64)
-  {
-    if (result <= DBL_MAX && result >= -DBL_MAX)
+    long double result =
+      (props->type == Float64) ? value->f64_result : value->f32_result;
+    if (props->base.enabled) result = powl (props->base.value.dval, result);
+    if (props->scale.enabled) result *= props->scale.value.dval;
+    if (props->offset.enabled) result += props->offset.value.dval;
+    if (props->type == Float64)
     {
-      value->f64_result = (double)result;
-      return true;
+      if (result <= DBL_MAX && result >= -DBL_MAX)
+      {
+        value->f64_result = (double)result;
+        return true;
+      }
+      return false;
     }
-    return false;
-  }
-  if (vtype == Float32)
-  {
-    if (result <= FLT_MAX && result >= -FLT_MAX)
+    else
     {
-      value->f32_result = (float)result;
-      return true;
+      if (result <= FLT_MAX && result >= -FLT_MAX)
+      {
+        value->f32_result = (float)result;
+        return true;
+      }
+      return false;
     }
-    return false;
   }
-
-  if (result < LLONG_MIN || result > LLONG_MAX)
+  else
   {
-    return false;
+    long long int result = 0;
+    switch (props->type)
+    {
+      case Uint8: result = value->ui8_result; break;
+      case Uint16: result = value->ui16_result; break;
+      case Uint32: result = value->ui32_result; break;
+      case Uint64: result = value->ui64_result; break;
+      case Int8: result = value->i8_result; break;
+      case Int16: result = value->i16_result; break;
+      case Int32: result = value->i32_result; break;
+      case Int64: result = value->i64_result; break;
+      default: assert (0);
+    }
+    if (props->base.enabled) result = powl (props->base.value.ival, result);
+    if (props->scale.enabled) result *= props->scale.value.ival;
+    if (props->offset.enabled) result += props->offset.value.ival;
+
+    switch (props->type)
+    {
+      case Uint8:
+        if (result >= 0 && result <= UCHAR_MAX)
+        {
+          value->ui8_result = (uint8_t)result;
+          return true;
+        }
+        break;
+      case Uint16:
+        if (result >= 0 && result <= USHRT_MAX)
+        {
+          value->ui16_result = (uint16_t)result;
+          return true;
+        }
+        break;
+      case Uint32:
+        if (result >= 0 && result <= UINT_MAX)
+        {
+          value->ui32_result = (uint32_t)result;
+          return true;
+        }
+        break;
+      case Uint64:
+        if (result >= 0 && result <= ULLONG_MAX)
+        {
+          value->ui64_result = (uint64_t)result;
+          return true;
+        }
+        break;
+      case Int8:
+        if (result >= SCHAR_MIN && result <= SCHAR_MAX)
+        {
+          value->i8_result = (int8_t)result;
+          return true;
+        }
+        break;
+      case Int16:
+        if (result >= SHRT_MIN && result <= SHRT_MAX)
+        {
+          value->i16_result = (int16_t)result;
+          return true;
+        }
+        break;
+      case Int32:
+        if (result >= INT_MIN && result <= INT_MAX)
+        {
+          value->i32_result = (int32_t)result;
+          return true;
+        }
+        break;
+      case Int64:
+        if (result >= LLONG_MIN && result <= LLONG_MAX)
+        {
+          value->i64_result = (int64_t)result;
+          return true;
+        }
+        break;
+      default:
+        assert (0);
+    }
   }
-
-  long long int res = llrintl (result);
-
-  switch (vtype)
-  {
-    case Uint8:
-      if (res >= 0 && res <= UCHAR_MAX)
-      {
-        value->ui8_result = (uint8_t)res;
-        return true;
-      }
-      break;
-    case Uint16:
-      if (res >= 0 && res <= USHRT_MAX)
-      {
-        value->ui16_result = (uint16_t)res;
-        return true;
-      }
-      break;
-    case Uint32:
-      if (res >= 0 && res <= UINT_MAX)
-      {
-        value->ui32_result = (uint32_t)res;
-        return true;
-      }
-      break;
-    case Uint64:
-      if (res >= 0 && res <= ULLONG_MAX)
-      {
-        value->ui64_result = (uint64_t)res;
-        return true;
-      }
-      break;
-    case Int8:
-      if (res >= SCHAR_MIN && res <= SCHAR_MAX)
-      {
-        value->i8_result = (int8_t)res;
-        return true;
-      }
-      break;
-    case Int16:
-      if (res >= SHRT_MIN && res <= SHRT_MAX)
-      {
-        value->i16_result = (int16_t)res;
-        return true;
-      }
-      break;
-    case Int32:
-      if (res >= INT_MIN && res <= INT_MAX)
-      {
-        value->i32_result = (int32_t)res;
-        return true;
-      }
-      break;
-    case Int64:
-      value->i64_result = res;
-      break;
-    default:
-      assert (0);
-  }
-
   return false;
 }
 
 char *edgex_value_tostring
 (
-  edgex_device_resulttype vtype,
   edgex_device_resultvalue value,
   bool xform,
   edgex_propertyvalue *props,
@@ -212,21 +192,13 @@ char *edgex_value_tostring
 {
   char *res = NULL;
 
-  if (vtype != Bool && vtype != String)
+  if (props->type != Bool && props->type != String)
   {
     if (xform)
     {
-      long double offset = 0.0;
-      long double scale = 1.0;
-      long double base = 0.0;
-
-      safeStrtold (props->base, &base);
-      safeStrtold (props->scale, &scale);
-      safeStrtold (props->offset, &offset);
-
-      if (offset != 0.0 || scale != 1.0 || base != 0.0)
+      if (props->offset.enabled || props->scale.enabled || props->base.enabled)
       {
-        if (!transformResult (vtype, &value, base, scale, offset))
+        if (!transformResult (&value, props))
         {
           return strdup ("overflow");
         }
@@ -236,7 +208,7 @@ char *edgex_value_tostring
     res = malloc (32);
   }
 
-  switch (vtype)
+  switch (props->type)
   {
     case Bool:
       res = strdup (value.bool_result ? "true" : "false");
@@ -284,78 +256,45 @@ char *edgex_value_tostring
 }
 
 static bool populateValue
-  (edgex_device_commandresult *cres, const char *val, const char *type)
+  (edgex_device_commandresult *cres, const char *val)
 {
-  if (strcmp (type, "String") == 0)
+  switch (cres->type)
   {
-    cres->type = String;
-    cres->value.string_result = strdup (val);
-    return true;
-  }
-  if (strcmp (type, "Bool") == 0)
-  {
-    cres->type = Bool;
-    if (strcasecmp (val, "true") == 0)
-    {
-      cres->value.bool_result = true;
+    case String:
+      cres->value.string_result = strdup (val);
       return true;
-    }
-    if (strcasecmp (val, "false") == 0)
-    {
-      cres->value.bool_result = false;
-      return true;
-    }
-    return false;
-  }
-  if (strcmp (type, "Uint8") == 0)
-  {
-    cres->type = Uint8;
-    return (sscanf (val, "%" SCNu8, &cres->value.ui8_result) == 1);
-  }
-  if (strcmp (type, "Uint16") == 0)
-  {
-    cres->type = Uint16;
-    return (sscanf (val, "%" SCNu16, &cres->value.ui16_result) == 1);
-  }
-  if (strcmp (type, "Uint32") == 0)
-  {
-    cres->type = Uint32;
-    return (sscanf (val, "%" SCNu32, &cres->value.ui32_result) == 1);
-  }
-  if (strcmp (type, "Uint64") == 0)
-  {
-    cres->type = Uint64;
-    return (sscanf (val, "%" SCNu64, &cres->value.ui64_result) == 1);
-  }
-  if (strcmp (type, "Int8") == 0)
-  {
-    cres->type = Int8;
-    return (sscanf (val, "%" SCNi8, &cres->value.i8_result) == 1);
-  }
-  if (strcmp (type, "Int16") == 0)
-  {
-    cres->type = Int16;
-    return (sscanf (val, "%" SCNi16, &cres->value.i16_result) == 1);
-  }
-  if (strcmp (type, "Int32") == 0)
-  {
-    cres->type = Int32;
-    return (sscanf (val, "%" SCNi32, &cres->value.i32_result) == 1);
-  }
-  if (strcmp (type, "Int64") == 0)
-  {
-    cres->type = Int64;
-    return (sscanf (val, "%" SCNi64, &cres->value.i64_result) == 1);
-  }
-  if (strcmp (type, "Float32") == 0)
-  {
-    cres->type = Float32;
-    return (sscanf (val, "%e", &cres->value.f32_result) == 1);
-  }
-  if (strcmp (type, "Float64") == 0)
-  {
-    cres->type = Float64;
-    return (sscanf (val, "%le", &cres->value.f64_result) == 1);
+    case Bool:
+      if (strcasecmp (val, "true") == 0)
+      {
+        cres->value.bool_result = true;
+        return true;
+      }
+      if (strcasecmp (val, "false") == 0)
+      {
+        cres->value.bool_result = false;
+        return true;
+      }
+      return false;
+    case Uint8:
+      return (sscanf (val, "%" SCNu8, &cres->value.ui8_result) == 1);
+    case Uint16:
+      return (sscanf (val, "%" SCNu16, &cres->value.ui16_result) == 1);
+    case Uint32:
+      return (sscanf (val, "%" SCNu32, &cres->value.ui32_result) == 1);
+    case Uint64:
+      return (sscanf (val, "%" SCNu64, &cres->value.ui64_result) == 1);
+    case Int8:
+      return (sscanf (val, "%" SCNi8, &cres->value.i8_result) == 1);
+    case Int16:
+      return (sscanf (val, "%" SCNi16, &cres->value.i16_result) == 1);
+    case Int32:
+      return (sscanf (val, "%" SCNi32, &cres->value.i32_result) == 1);
+    case Int64:
+      return (sscanf (val, "%" SCNi64, &cres->value.i64_result) == 1);
+    case Float32:
+      return (sscanf (val, "%e", &cres->value.f32_result) == 1);
+    case Float64:
+      return (sscanf (val, "%le", &cres->value.f64_result) == 1);
   }
   return false;
 }
@@ -420,11 +359,8 @@ static int runOnePut
       iot_log_error (svc->logger, "No value supplied for %s", op->object);
       break;
     }
-    if
-    (
-      !populateValue
-        (&results[i], value, reqs[i].devobj->properties->value->type)
-    )
+    results[i].type = reqs[i].devobj->properties->value->type;
+    if (!populateValue (&results[i], value))
     {
       retcode = MHD_HTTP_BAD_REQUEST;
       iot_log_error
@@ -502,7 +438,6 @@ static int runOneGet
       rdgs[i].id = NULL;
       rdgs[i].value = edgex_value_tostring
       (
-        results[i].type,
         results[i].value,
         svc->config.device.datatransform,
         requests[i].devobj->properties->value,

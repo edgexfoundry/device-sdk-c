@@ -10,6 +10,13 @@ differs as follows:
   implementation during startup.
 * The API for adding, removing and updating Device Profiles is NYI.
 
+Changes for 1.0.0:
+
+- Some parts of the edgex_deviceprofile structure are now held in appropriate
+  types rather than strings.
+-   edgex_device_resulttype is renamed to edgex_propertytype, reflecting its
+    broader usage.
+
 Changes for 0.7.1:
 
 - Some verification on Device Profiles is now done at startup. This may result

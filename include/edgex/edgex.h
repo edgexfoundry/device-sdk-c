@@ -11,6 +11,15 @@
 
 #include "edgex/os.h"
 
+typedef enum edgex_propertytype
+{
+  Bool,
+  String,
+  Uint8, Uint16, Uint32, Uint64,
+  Int8, Int16, Int32, Int64,
+  Float32, Float64
+} edgex_propertytype;
+
 typedef struct edgex_nvpairs
 {
   char *name;
@@ -43,6 +52,16 @@ typedef enum
   OTHER = 4,
   SSL = 5
 } edgex_protocol;
+
+typedef struct
+{
+  bool enabled;
+  union
+  {
+    int64_t ival;
+    double dval;
+  } value;
+} edgex_transformArg;
 
 typedef struct
 {
@@ -126,21 +145,18 @@ typedef struct edgex_resourceoperation
 
 typedef struct
 {
-  char *type;
+  edgex_propertytype type;
   char *readwrite;
   char *minimum;
   char *maximum;
   char *defaultvalue;
-  char *size;
-  char *word;
   char *lsb;
   char *mask;
   char *shift;
-  char *scale;
-  char *offset;
-  char *base;
+  edgex_transformArg scale;
+  edgex_transformArg offset;
+  edgex_transformArg base;
   char *assertion;
-  bool issigned;
   char *precision;
 } edgex_propertyvalue;
 
@@ -258,16 +274,5 @@ typedef struct edgex_event
   edgex_reading *readings;
   struct edgex_event *next;
 } edgex_event;
-
-#define EDGEX_LIST(T)    \
-struct edgex_##T##_list; \
-typedef struct edgex_##T##_list edgex_##T##_list; \
-typedef struct edgex_##T##_list \
-{ \
-   edgex_##T *entry; \
-   edgex_##T##_list *next; \
-} edgex_##T##_list;
-
-EDGEX_LIST(device)
 
 #endif
