@@ -9,11 +9,14 @@
 #ifndef _EDGEX_DEVSDK_H_
 #define _EDGEX_DEVSDK_H_ 1
 
+/**
+ * @file
+ * @brief This file defines the functions and callbacks relating to the SDK.
+ */
+
 #include "edgex/edgex.h"
 #include "edgex/error.h"
 #include "edgex/edgex_logging.h"
-
-/* command requests and results */
 
 typedef union edgex_device_resultvalue
 {
@@ -31,16 +34,32 @@ typedef union edgex_device_resultvalue
   double f64_result;
 } edgex_device_resultvalue;
 
+/**
+ * @brief Structure containing information about a get or set request.
+ */
+
 typedef struct edgex_device_commandrequest
 {
+  /** Corresponds to a get or set line in a resource of the device profile. */
   const edgex_resourceoperation *ro;
+  /** Corresponds to a deviceResource in the device profile. */
   const edgex_deviceobject *devobj;
 } edgex_device_commandrequest;
 
+/**
+ * @brief Structure containing a parameter (for set) or a result (for get).
+ */
+
 typedef struct edgex_device_commandresult
 {
+  /**
+   * The timestamp of the result. Should only be set if the device itself
+   * supplies one.
+   */
   uint64_t origin;
+  /** The type of the parameter or result. */
   edgex_propertytype type;
+  /** The value of the parameter or result. */
   edgex_device_resultvalue value;
 } edgex_device_commandresult;
 
@@ -112,6 +131,12 @@ typedef bool (*edgex_device_handle_put)
   const edgex_device_commandrequest *requests,
   const edgex_device_commandresult *values
 );
+
+/**
+ * @brief Unused in the current implementation. In future this may be used to
+ *        notify a device service implementation that a device has been removed
+ *        and any resources relating to it may be released.
+ */
 
 typedef bool (*edgex_device_disconnect_device)
 (
@@ -277,6 +302,20 @@ void edgex_device_remove_device
 
 void edgex_device_remove_device_byname
   (edgex_device_service *svc, const char *name, edgex_error *err);
+
+/**
+ * @brief Update a device's details.
+ * @param svc The device service.
+ * @param id The id of the device to update. If this is unset, the device will
+ *           be located by name.
+ * @param name If id is unset, this parameter must be set to the name of the
+ *             devce to be updated. Otherwise, it is optional and if set,
+ *             specifies a new name for the device.
+ * @param description If set, a new description for the device.
+ * @param labels If set, a new set of labels for the device.
+ * @param profilename If set, a new device profile for the device.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
 
 void edgex_device_update_device
 (

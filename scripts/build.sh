@@ -2,6 +2,7 @@
 set -e -x
 
 CPPCHECK=false
+DOCGEN=false
 
 # Process arguments
 
@@ -10,6 +11,10 @@ do
   case $1 in
     -cppcheck)
       CPPCHECK=true
+      shift 1
+    ;;
+    -doxygen)
+      DOCGEN=true
       shift 1
     ;;
     *)
@@ -63,6 +68,14 @@ make package>&1 | tee -a release.log
 if [ "$CPPCHECK" = "true" ]
 then
   echo cppcheck --project=compile_commands.json --xml-version=2 --enable=style --output-file=cppcheck.xml
+fi
+
+# Run doxygen if configured
+
+if [ "$DOCGEN" = "true" ]
+then
+  cd $ROOT
+  doxygen
 fi
 
 # Cmake debug build
