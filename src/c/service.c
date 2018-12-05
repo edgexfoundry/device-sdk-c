@@ -436,7 +436,7 @@ void edgex_device_service_start
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_CALLBACK, PUT /* | POST | DELETE */, svc,
+    svc->daemon, EDGEX_DEV_API_CALLBACK, PUT | POST | DELETE, svc,
     edgex_device_handler_callback
   );
   edgex_rest_server_register_handler
