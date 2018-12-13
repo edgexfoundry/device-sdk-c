@@ -11,7 +11,7 @@
 
 #include "edgex/os.h"
 
-typedef enum edgex_propertytype
+typedef enum
 {
   Bool,
   String,
@@ -19,19 +19,6 @@ typedef enum edgex_propertytype
   Int8, Int16, Int32, Int64,
   Float32, Float64
 } edgex_propertytype;
-
-typedef struct edgex_nvpairs
-{
-  char *name;
-  char *value;
-  struct edgex_nvpairs *next;
-} edgex_nvpairs;
-
-typedef struct edgex_strings
-{
-  char *str;
-  struct edgex_strings *next;
-} edgex_strings;
 
 typedef enum
 {
@@ -52,6 +39,23 @@ typedef enum
   OTHER = 4,
   SSL = 5
 } edgex_protocol;
+
+typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
+
+typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
+
+typedef struct edgex_nvpairs
+{
+  char *name;
+  char *value;
+  struct edgex_nvpairs *next;
+} edgex_nvpairs;
+
+typedef struct edgex_strings
+{
+  char *str;
+  struct edgex_strings *next;
+} edgex_strings;
 
 typedef struct
 {
@@ -92,7 +96,7 @@ typedef struct
 typedef struct
 {
   edgex_addressable *addressable;
-  char *adminState;
+  edgex_device_adminstate adminState;
   uint64_t created;
   char *description;
   char *id;
@@ -101,11 +105,11 @@ typedef struct
   uint64_t lastReported;
   uint64_t modified;
   char *name;
-  char *operatingState;
+  edgex_device_operatingstate operatingState;
   uint64_t origin;
 } edgex_deviceservice;
 
-typedef struct edgex_valuedescriptor
+typedef struct
 {
   uint64_t created;
   char *defaultValue;
@@ -216,7 +220,7 @@ typedef struct edgex_profileresource
   struct edgex_profileresource *next;
 } edgex_profileresource;
 
-typedef struct edgex_deviceprofile
+typedef struct
 {
   char *id;
   char *name;
@@ -235,7 +239,7 @@ typedef struct edgex_deviceprofile
 typedef struct edgex_device
 {
   edgex_addressable *addressable;
-  char *adminState;
+  edgex_device_adminstate adminState;
   uint64_t created;
   char *description;
   char *id;
@@ -244,7 +248,7 @@ typedef struct edgex_device
   uint64_t lastReported;
   uint64_t modified;
   char *name;
-  char *operatingState;
+  edgex_device_operatingstate operatingState;
   uint64_t origin;
   edgex_deviceservice *service;
   edgex_deviceprofile *profile;

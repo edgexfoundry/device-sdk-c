@@ -56,10 +56,13 @@ int edgex_device_handler_callback
         {
           iot_log_info
             (svc->logger, "callback: Update device %s", newdev->name);
-          if (strcmp (newdev->adminState, (*ourdev)->adminState))
+          if (newdev->adminState != (*ourdev)->adminState)
           {
-            free ((*ourdev)->adminState);
-            (*ourdev)->adminState = strdup (newdev->adminState);
+            (*ourdev)->adminState = newdev->adminState;
+          }
+          else if (newdev->operatingState != (*ourdev)->operatingState)
+          {
+            (*ourdev)->operatingState = newdev->operatingState;
           }
           else
           {
@@ -67,7 +70,7 @@ int edgex_device_handler_callback
             iot_log_error
             (
               svc->logger,
-              "callback: Non-adminstate update invoked for device %s",
+              "callback: Non-adminstate/opstate update invoked for device %s",
               newdev->name
             );
           }
@@ -165,13 +168,7 @@ int edgex_device_handler_callback
   }
   else
   {
-    status = MHD_HTTP_BAD_REQUEST;
-    iot_log_error
-    (
-      svc->logger,
-      "callback: Unsupported action %s requested",
-      action ? action : "(null)"
-    );
+    status = MHD_HTTP_NOT_IMPLEMENTED;
   }
 
   json_value_free (jval);

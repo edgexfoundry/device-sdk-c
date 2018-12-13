@@ -62,7 +62,7 @@ void edgex_metadata_client_set_device_opstate
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
   const char *deviceid,
-  bool enabled,
+  edgex_device_operatingstate opstate,
   edgex_error *err
 )
 {
@@ -78,7 +78,7 @@ void edgex_metadata_client_set_device_opstate
     endpoints->metadata.host,
     endpoints->metadata.port,
     deviceid,
-    enabled ? "enabled" : "disabled"
+    (opstate == ENABLED) ? "enabled" : "disabled"
   );
 
   edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
@@ -90,7 +90,7 @@ void edgex_metadata_client_set_device_adminstate
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
   const char *deviceid,
-  bool locked,
+  edgex_device_adminstate adminstate,
   edgex_error *err
 )
 {
@@ -106,7 +106,7 @@ void edgex_metadata_client_set_device_adminstate
     endpoints->metadata.host,
     endpoints->metadata.port,
     deviceid,
-    locked ? "LOCKED" : "UNLOCKED"
+    (adminstate == LOCKED) ? "locked" : "unlocked"
   );
 
   edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
@@ -488,8 +488,8 @@ edgex_device *edgex_metadata_client_add_device
   );
   result->name = strdup (name);
   result->description = strdup (description);
-  result->adminState = strdup ("UNLOCKED");
-  result->operatingState = strdup ("ENABLED");
+  result->adminState = UNLOCKED;
+  result->operatingState = ENABLED;
   result->labels = edgex_strings_dup (labels);
   result->addressable = malloc (sizeof (edgex_addressable));
   memset (result->addressable, 0, sizeof (edgex_addressable));

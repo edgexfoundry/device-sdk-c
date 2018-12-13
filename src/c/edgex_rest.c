@@ -144,6 +144,46 @@ bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
   return false;
 }
 
+static const char *adstatetypes[] = { "LOCKED", "UNLOCKED" };
+
+static const char *edgex_adminstate_tostring (edgex_device_adminstate ad)
+{
+  return adstatetypes[ad];
+}
+
+static edgex_device_adminstate edgex_adminstate_fromstring (const char *str)
+{
+  if (strcmp (str, adstatetypes[LOCKED]) == 0)
+  {
+    return LOCKED;
+  }
+  else
+  {
+    return UNLOCKED;
+  }
+}
+
+static const char *opstatetypes[] = { "ENABLED", "DISABLED" };
+
+static const char *edgex_operatingstate_tostring
+  (edgex_device_operatingstate op)
+{
+  return opstatetypes[op];
+}
+
+static edgex_device_operatingstate edgex_operatingstate_fromstring
+  (const char *str)
+{
+  if (strcmp (str, opstatetypes[DISABLED]) == 0)
+  {
+    return DISABLED;
+  }
+  else
+  {
+    return ENABLED;
+  }
+}
+
 static bool get_transformArg
 (
   iot_logging_client *lc,
@@ -1157,7 +1197,8 @@ static edgex_deviceservice *deviceservice_read (const JSON_Object *obj)
   edgex_deviceservice *result = malloc (sizeof (edgex_deviceservice));
   result->addressable = addressable_read
     (json_object_get_object (obj, "addressable"));;
-  result->adminState = get_string (obj, "adminState");
+  result->adminState = edgex_adminstate_fromstring
+    (get_string (obj, "adminState"));
   result->created = json_object_get_number (obj, "created");
   result->description = get_string (obj, "description");
   result->id = get_string (obj, "id");
@@ -1166,7 +1207,8 @@ static edgex_deviceservice *deviceservice_read (const JSON_Object *obj)
   result->lastReported = json_object_get_number (obj, "lastReported");
   result->modified = json_object_get_number (obj, "modified");
   result->name = get_string (obj, "name");
-  result->operatingState = get_string (obj, "operatingState");
+  result->operatingState = edgex_operatingstate_fromstring
+    (get_string (obj, "operatingState"));
   result->origin = json_object_get_number (obj, "origin");
 
   return result;
@@ -1187,13 +1229,15 @@ deviceservice_write (const edgex_deviceservice *e, bool create)
 
   json_object_set_value
     (obj, "addressable", addressable_write (e->addressable, false));
-  json_object_set_string (obj, "adminState", e->adminState);
+  json_object_set_string
+    (obj, "adminState", edgex_adminstate_tostring (e->adminState));
   json_object_set_string (obj, "description", e->description);
   json_object_set_value (obj, "labels", strings_to_array (e->labels));
   json_object_set_number (obj, "lastConnected", e->lastConnected);
   json_object_set_number (obj, "lastReported", e->lastReported);
   json_object_set_string (obj, "name", e->name);
-  json_object_set_string (obj, "operatingState", e->operatingState);
+  json_object_set_string
+    (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
   json_object_set_number (obj, "origin", e->origin);
 
   return result;
@@ -1217,8 +1261,8 @@ edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e)
   res->description = strdup (e->description);
   res->labels = edgex_strings_dup (e->labels);
   res->addressable = edgex_addressable_dup (e->addressable);
-  res->adminState = strdup (e->adminState);
-  res->operatingState = strdup (e->operatingState);
+  res->adminState = e->adminState;
+  res->operatingState = e->operatingState;
   res->origin = e->origin;
   res->created = e->created;
   res->modified = e->modified;
@@ -1232,12 +1276,10 @@ void edgex_deviceservice_free (edgex_deviceservice *e)
   if (e)
   {
     edgex_addressable_free (e->addressable);
-    free (e->adminState);
     free (e->description);
     free (e->id);
     edgex_strings_free (e->labels);
     free (e->name);
-    free (e->operatingState);
     free (e);
   }
 }
@@ -1324,7 +1366,8 @@ static edgex_device *device_read
   edgex_device *result = malloc (sizeof (edgex_device));
   result->addressable = addressable_read
     (json_object_get_object (obj, "addressable"));;
-  result->adminState = get_string (obj, "adminState");
+  result->adminState = edgex_adminstate_fromstring
+    (get_string (obj, "adminState"));
   result->created = json_object_get_number (obj, "created");
   result->description = get_string (obj, "description");
   result->id = get_string (obj, "id");
@@ -1333,7 +1376,8 @@ static edgex_device *device_read
   result->lastReported = json_object_get_number (obj, "lastReported");
   result->modified = json_object_get_number (obj, "modified");
   result->name = get_string (obj, "name");
-  result->operatingState = get_string (obj, "operatingState");
+  result->operatingState = edgex_operatingstate_fromstring
+    (get_string (obj, "operatingState"));
   result->origin = json_object_get_number (obj, "origin");
   result->profile = deviceprofile_read
     (lc, json_object_get_object (obj, "profile"));
@@ -1364,8 +1408,10 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
   {
     json_object_set_value
       (obj, "addressable", addressable_write (e->addressable, false));
-    json_object_set_string (obj, "adminState", e->adminState);
-    json_object_set_string (obj, "operatingState", e->operatingState);
+    json_object_set_string
+      (obj, "adminState", edgex_adminstate_tostring (e->adminState));
+    json_object_set_string
+      (obj, "operatingState", edgex_operatingstate_tostring(e->operatingState));
     json_object_set_string (obj, "id", e->id);
     json_object_set_number (obj, "created", e->created);
     json_object_set_number (obj, "modified", e->modified);
@@ -1377,11 +1423,13 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
     json_object_set_number (obj, "lastReported", e->lastReported);
   }
 
-  json_object_set_string (obj, "adminState", e->adminState);
+  json_object_set_string
+    (obj, "adminState", edgex_adminstate_tostring (e->adminState));
   json_object_set_string (obj, "name", e->name);
   json_object_set_string (obj, "description", e->description);
   json_object_set_value (obj, "labels", strings_to_array (e->labels));
-  json_object_set_string (obj, "operatingState", e->operatingState);
+  json_object_set_string
+    (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
   json_object_set_number (obj, "origin", e->origin);
 
   return result;
@@ -1395,8 +1443,8 @@ edgex_device *edgex_device_dup (const edgex_device *e)
   result->description = strdup (e->description);
   result->labels = edgex_strings_dup (e->labels);
   result->addressable = edgex_addressable_dup (e->addressable);
-  result->adminState = strdup (e->adminState);
-  result->operatingState = strdup (e->operatingState);
+  result->adminState = e->adminState;
+  result->operatingState = e->operatingState;
   result->origin = e->origin;
   result->created = e->created;
   result->modified = e->modified;
@@ -1414,12 +1462,10 @@ void edgex_device_free (edgex_device *e)
   {
     edgex_device *current = e;
     edgex_addressable_free (e->addressable);
-    free (e->adminState);
     free (e->description);
     free (e->id);
     edgex_strings_free (e->labels);
     free (e->name);
-    free (e->operatingState);
     edgex_deviceprofile_free (e->profile);
     edgex_deviceservice_free (e->service);
     e = e->next;
