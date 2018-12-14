@@ -12,46 +12,22 @@
 #include "errorlist.h"
 #include "config.h"
 
-static edgex_reading *readings_dup (const edgex_reading *readings)
-{
-  edgex_reading *result = NULL;
-  edgex_reading **last = &result;
-
-  while (readings)
-  {
-    edgex_reading *tmp = malloc (sizeof (edgex_reading));
-    memset (tmp, 0, sizeof (edgex_reading));
-    tmp->created = readings->created;
-    tmp->modified = readings->modified;
-    tmp->origin = readings->origin;
-    tmp->pushed = readings->pushed;
-    tmp->id = readings->id ? strdup (readings->id) : NULL;
-    tmp->name = readings->name ? strdup (readings->name) : NULL;
-    tmp->value = readings->value ? strdup (readings->value) : NULL;
-    tmp->next = NULL;
-    *last = tmp;
-    last = &tmp->next;
-    readings = readings->next;
-  }
-  return result;
-}
-
-edgex_event *edgex_data_client_add_event
+void edgex_data_client_add_event
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
-  const char *device,
+  char *device,
   uint64_t origin,
-  const edgex_reading *readings,
+  edgex_reading *readings,
   edgex_error *err
 )
 {
-  edgex_event *result = malloc (sizeof (edgex_event));
+  edgex_event result;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
   char *json;
 
-  memset (result, 0, sizeof (edgex_event));
+  memset (&result, 0, sizeof (edgex_event));
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -61,15 +37,15 @@ edgex_event *edgex_data_client_add_event
     endpoints->data.host,
     endpoints->data.port
   );
-  result->device = strdup (device);
-  result->origin = origin;
-  result->readings = readings_dup (readings);
-  json = edgex_event_write (result, true);
-  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  result->id = ctx.buff;
-  free (json);
+  result.device = device;
+  result.origin = origin;
+  result.readings = readings;
 
-  return result;
+  json = edgex_event_write (&result, true);
+  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  free (ctx.buff);
+  free (json);
 }
 
 edgex_valuedescriptor *edgex_data_client_add_valuedescriptor

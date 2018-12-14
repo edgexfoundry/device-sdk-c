@@ -55,14 +55,15 @@ static const char *methStr (edgex_http_method method)
   }
 }
 
-static const char *checkMapping (const char *in, const edgex_nvpairs *map)
+static char *checkMapping (char *in, const edgex_nvpairs *map)
 {
   const edgex_nvpairs *pair = map;
   while (pair)
   {
     if (strcmp (in, pair->name) == 0)
     {
-      return pair->value;
+      free (in);
+      return strdup (pair->value);
     }
     pair = pair->next;
   }
@@ -272,12 +273,9 @@ char *edgex_value_tostring
       sprintf (res, "%.16e", value.f64_result);
       break;
     case String:
-      res = strdup
-      (
-        xform ?
-          checkMapping (value.string_result, mappings) :
-          value.string_result
-      );
+      res = xform ?
+        checkMapping (value.string_result, mappings) :
+        value.string_result;
       break;
   }
   return res;
@@ -512,9 +510,8 @@ static int runOneGet
       rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
       json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);
     }
-    edgex_event_free (edgex_data_client_add_event
-                        (svc->logger, &svc->config.endpoints, dev->name,
-                         timenow, rdgs, &err));
+    edgex_data_client_add_event
+      (svc->logger, &svc->config.endpoints, dev->name, timenow, rdgs, &err);
 
     for (uint32_t i = 0; i < nops; i++)
     {

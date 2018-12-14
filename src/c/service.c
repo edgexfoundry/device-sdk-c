@@ -38,8 +38,9 @@
 typedef struct postparams
 {
   edgex_device_service *svc;
-  const char *name;
+  char *name;
   uint64_t origin;
+  uint32_t nreadings;
   edgex_reading *readings;
 } postparams;
 
@@ -705,7 +706,13 @@ static void doPost (void *p)
     pp->readings,
     &err
   );
+
+  for (uint32_t i = 0; i < pp->nreadings; i++)
+  {
+    free (pp->readings[i].value);
+  }
   free (pp->readings);
+  free (pp->name);
   free (pp);
 }
 
@@ -740,9 +747,10 @@ void edgex_device_post_readings
   }
   postparams *pp = malloc (sizeof (postparams));
   pp->svc = svc;
-  pp->name = device_name;
+  pp->name = strdup (device_name);
   pp->origin = timenow;
   pp->readings = rdgs;
+  pp->nreadings = nreadings;
   thpool_add_work (svc->thpool, doPost, pp);
 }
 
