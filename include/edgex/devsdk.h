@@ -233,7 +233,9 @@ void edgex_device_service_start
  * @param sources An array specifying the resources from which the readings
  *        have been taken.
  * @param values An array of readings. These will be combined into an Event
- *        and submitted to core-data.
+ *        and submitted to core-data. For readings of String or Binary type,
+ *        the SDK takes ownership of the memory containing the string or
+ *        byte array.
  */
 
 void edgex_device_post_readings

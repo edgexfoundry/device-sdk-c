@@ -62,14 +62,15 @@ static bool isNumericType (edgex_propertytype type)
   return (type != Bool && type != String && type != Binary);
 }
 
-static const char *checkMapping (const char *in, const edgex_nvpairs *map)
+static char *checkMapping (char *in, const edgex_nvpairs *map)
 {
   const edgex_nvpairs *pair = map;
   while (pair)
   {
     if (strcmp (in, pair->name) == 0)
     {
-      return pair->value;
+      free (in);
+      return strdup (pair->value);
     }
     pair = pair->next;
   }
@@ -252,18 +253,16 @@ char *edgex_value_tostring
       sprintf (res, "%.16e", value.f64_result);
       break;
     case String:
-      res = strdup
-      (
-        xform ?
-          checkMapping (value.string_result, mappings) :
-          value.string_result
-      );
+      res = xform ?
+        checkMapping (value.string_result, mappings) :
+        value.string_result;
       break;
     case Binary:
       sz = edgex_b64_encodesize (value.binary_result.size);
       res = malloc (sz);
       edgex_b64_encode
         (value.binary_result.bytes, value.binary_result.size, res, sz);
+      free (value.binary_result.bytes);
       break;
   }
   return res;
@@ -493,9 +492,8 @@ static int runOneGet
 
     if (!assertfail)
     {
-      edgex_event_free (edgex_data_client_add_event
-                          (svc->logger, &svc->config.endpoints, dev->name,
-                           timenow, rdgs, &err));
+      edgex_data_client_add_event
+        (svc->logger, &svc->config.endpoints, dev->name, timenow, rdgs, &err);
     }
     else
     {

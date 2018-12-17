@@ -15,13 +15,13 @@
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
-edgex_event *edgex_data_client_add_event
+void edgex_data_client_add_event
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
-  const char *device,
+  char *device,
   uint64_t origin,
-  const edgex_reading *readings,
+  edgex_reading *readings,
   edgex_error *err
 );
 
