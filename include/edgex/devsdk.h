@@ -18,6 +18,12 @@
 #include "edgex/error.h"
 #include "edgex/edgex_logging.h"
 
+typedef struct edgex_blob
+{
+  size_t size;
+  uint8_t *bytes;
+} edgex_blob;
+
 typedef union edgex_device_resultvalue
 {
   bool bool_result;
@@ -32,6 +38,7 @@ typedef union edgex_device_resultvalue
   int64_t i64_result;
   float f32_result;
   double f64_result;
+  edgex_blob binary_result;
 } edgex_device_resultvalue;
 
 /**

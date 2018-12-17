@@ -15,6 +15,7 @@ typedef enum
 {
   Bool,
   String,
+  Binary,
   Uint8, Uint16, Uint32, Uint64,
   Int8, Int16, Int32, Int64,
   Float32, Float64
@@ -66,14 +67,6 @@ typedef struct
     double dval;
   } value;
 } edgex_transformArg;
-
-typedef struct
-{
-  char *id;
-  int64_t created;
-  int64_t modified;
-  int64_t origin;
-} edgex_baseobject;
 
 typedef struct
 {
