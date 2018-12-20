@@ -1,8 +1,7 @@
 TODO
 ====
 
-Readings:  Binary encodings. base64 encoding of floating point numbers. Mask
-and shift transforms.
+Readings:  base64 encoding of floating point numbers. Mask and shift transforms.
 
 Discovery endpoint - Only enable new devices which match a provisionwatcher.
 These to be dynamically created according to configuration.

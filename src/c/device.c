@@ -14,6 +14,7 @@
 #include "metadata.h"
 #include "edgex_rest.h"
 #include "edgex_time.h"
+#include "base64.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -56,14 +57,20 @@ static const char *methStr (edgex_http_method method)
   }
 }
 
-static const char *checkMapping (const char *in, const edgex_nvpairs *map)
+static bool isNumericType (edgex_propertytype type)
+{
+  return (type != Bool && type != String && type != Binary);
+}
+
+static char *checkMapping (char *in, const edgex_nvpairs *map)
 {
   const edgex_nvpairs *pair = map;
   while (pair)
   {
     if (strcmp (in, pair->name) == 0)
     {
-      return pair->value;
+      free (in);
+      return strdup (pair->value);
     }
     pair = pair->next;
   }
@@ -191,9 +198,10 @@ char *edgex_value_tostring
   edgex_nvpairs *mappings
 )
 {
+  size_t sz;
   char *res = NULL;
 
-  if (props->type != Bool && props->type != String)
+  if (isNumericType (props->type))
   {
     if (xform)
     {
@@ -245,12 +253,16 @@ char *edgex_value_tostring
       sprintf (res, "%.16e", value.f64_result);
       break;
     case String:
-      res = strdup
-      (
-        xform ?
-          checkMapping (value.string_result, mappings) :
-          value.string_result
-      );
+      res = xform ?
+        checkMapping (value.string_result, mappings) :
+        value.string_result;
+      break;
+    case Binary:
+      sz = edgex_b64_encodesize (value.binary_result.size);
+      res = malloc (sz);
+      edgex_b64_encode
+        (value.binary_result.bytes, value.binary_result.size, res, sz);
+      free (value.binary_result.bytes);
       break;
   }
   return res;
@@ -259,6 +271,7 @@ char *edgex_value_tostring
 static bool populateValue
   (edgex_device_commandresult *cres, const char *val)
 {
+  size_t sz;
   switch (cres->type)
   {
     case String:
@@ -296,6 +309,12 @@ static bool populateValue
       return (sscanf (val, "%e", &cres->value.f32_result) == 1);
     case Float64:
       return (sscanf (val, "%le", &cres->value.f64_result) == 1);
+    case Binary:
+      sz = edgex_b64_maxdecodesize (val);
+      cres->value.binary_result.size = sz;
+      cres->value.binary_result.bytes = malloc (sz);
+      return edgex_b64_decode
+        (val, cres->value.binary_result.bytes, &cres->value.binary_result.size);
   }
   return false;
 }
@@ -398,6 +417,10 @@ static int runOnePut
     {
       free (results[i].value.string_result);
     }
+    else if (results[i].type == Binary)
+    {
+      free (results[i].value.binary_result.bytes);
+    }
   }
   free (reqs);
   free (results);
@@ -459,16 +482,18 @@ static int runOneGet
       );
       rdgs[i].origin = results[i].origin;
       rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
-      assertfail |= checkAssertion
-        (rdgs[i].value, requests[i].devobj->properties->value->assertion);
+      if (requests[i].devobj->properties->value->type != Binary)
+      {
+        assertfail |= checkAssertion
+          (rdgs[i].value, requests[i].devobj->properties->value->assertion);
+      }
       json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);
     }
 
     if (!assertfail)
     {
-      edgex_event_free (edgex_data_client_add_event
-                          (svc->logger, &svc->config.endpoints, dev->name,
-                           timenow, rdgs, &err));
+      edgex_data_client_add_event
+        (svc->logger, &svc->config.endpoints, dev->name, timenow, rdgs, &err);
     }
     else
     {
