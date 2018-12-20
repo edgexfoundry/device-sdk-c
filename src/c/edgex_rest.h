@@ -12,6 +12,7 @@
 #include "edgex/edgex.h"
 #include "iot/logging.h"
 #include "schedules.h"
+#include "data.h"
 
 edgex_strings *edgex_strings_dup (const edgex_strings *strs);
 void edgex_strings_free (edgex_strings *strs);
