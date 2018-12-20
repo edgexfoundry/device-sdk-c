@@ -16,6 +16,16 @@
 struct edgex_rest_server;
 typedef struct edgex_rest_server edgex_rest_server;
 
+typedef enum
+{
+  GET = 1,
+  POST = 2,
+  PUT = 4,
+  PATCH = 8,
+  DELETE = 16,
+  UNKNOWN = 1024
+} edgex_http_method;
+
 typedef int (*http_method_handler_fn)
 (
   void *context,

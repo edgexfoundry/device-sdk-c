@@ -153,14 +153,7 @@ static const char *edgex_adminstate_tostring (edgex_device_adminstate ad)
 
 static edgex_device_adminstate edgex_adminstate_fromstring (const char *str)
 {
-  if (strcmp (str, adstatetypes[LOCKED]) == 0)
-  {
-    return LOCKED;
-  }
-  else
-  {
-    return UNLOCKED;
-  }
+  return (strcmp (str, adstatetypes[LOCKED]) == 0) ? LOCKED : UNLOCKED;
 }
 
 static const char *opstatetypes[] = { "ENABLED", "DISABLED" };
@@ -174,14 +167,7 @@ static const char *edgex_operatingstate_tostring
 static edgex_device_operatingstate edgex_operatingstate_fromstring
   (const char *str)
 {
-  if (strcmp (str, opstatetypes[DISABLED]) == 0)
-  {
-    return DISABLED;
-  }
-  else
-  {
-    return ENABLED;
-  }
+  return (strcmp (str, opstatetypes[DISABLED]) == 0) ? DISABLED : ENABLED;
 }
 
 static bool get_transformArg

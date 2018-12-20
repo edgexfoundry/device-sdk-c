@@ -223,28 +223,28 @@ char *edgex_value_tostring
       res = strdup (value.bool_result ? "true" : "false");
       break;
     case Uint8:
-      sprintf (res, "%u", value.ui8_result);
+      sprintf (res, "%" PRIu8, value.ui8_result);
       break;
     case Uint16:
-      sprintf (res, "%u", value.ui16_result);
+      sprintf (res, "%" PRIu16, value.ui16_result);
       break;
     case Uint32:
-      sprintf (res, "%u", value.ui32_result);
+      sprintf (res, "%" PRIu32, value.ui32_result);
       break;
     case Uint64:
-      sprintf (res, "%lu", value.ui64_result);
+      sprintf (res, "%" PRIu64, value.ui64_result);
       break;
     case Int8:
-      sprintf (res, "%d", value.i8_result);
+      sprintf (res, "%" PRIi8, value.i8_result);
       break;
     case Int16:
-      sprintf (res, "%d", value.i16_result);
+      sprintf (res, "%" PRIi16, value.i16_result);
       break;
     case Int32:
-      sprintf (res, "%d", value.i32_result);
+      sprintf (res, "%" PRIi32, value.i32_result);
       break;
     case Int64:
-      sprintf (res, "%ld", value.i64_result);
+      sprintf (res, "%" PRIi64, value.i64_result);
       break;
     case Float32:
       sprintf (res, "%.8e", value.f32_result);

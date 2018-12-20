@@ -21,26 +21,6 @@ typedef enum
   Float32, Float64
 } edgex_propertytype;
 
-typedef enum
-{
-  GET = 1,
-  POST = 2,
-  PUT = 4,
-  PATCH = 8,
-  DELETE = 16,
-  UNKNOWN = 1024
-} edgex_http_method;
-
-typedef enum
-{
-  HTTP = 0,
-  TCP = 1,
-  MAC = 2,
-  ZMQ = 3,
-  OTHER = 4,
-  SSL = 5
-} edgex_protocol;
-
 typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
 
 typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
@@ -101,23 +81,6 @@ typedef struct
   edgex_device_operatingstate operatingState;
   uint64_t origin;
 } edgex_deviceservice;
-
-typedef struct
-{
-  uint64_t created;
-  char *defaultValue;
-  char *description;
-  char *formatting;
-  char *id;
-  edgex_strings *labels;
-  char *max;
-  char *min;
-  uint64_t modified;
-  char *name;
-  uint64_t origin;
-  char *type;
-  char *uomLabel;
-} edgex_valuedescriptor;
 
 typedef struct edgex_response
 {
@@ -247,29 +210,5 @@ typedef struct edgex_device
   edgex_deviceprofile *profile;
   struct edgex_device *next;
 } edgex_device;
-
-typedef struct edgex_reading
-{
-  uint64_t created;
-  char *id;
-  uint64_t modified;
-  char *name;
-  uint64_t origin;
-  uint64_t pushed;
-  char *value;
-  struct edgex_reading *next;
-} edgex_reading;
-
-typedef struct edgex_event
-{
-  uint64_t created;
-  char *device;
-  char *id;
-  uint64_t modified;
-  uint64_t origin;
-  uint64_t pushed;
-  edgex_reading *readings;
-  struct edgex_event *next;
-} edgex_event;
 
 #endif

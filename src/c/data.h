@@ -13,6 +13,47 @@
 #include "edgex/edgex_logging.h"
 #include "edgex/error.h"
 
+typedef struct edgex_reading
+{
+  uint64_t created;
+  char *id;
+  uint64_t modified;
+  char *name;
+  uint64_t origin;
+  uint64_t pushed;
+  char *value;
+  struct edgex_reading *next;
+} edgex_reading;
+
+typedef struct edgex_event
+{
+  uint64_t created;
+  char *device;
+  char *id;
+  uint64_t modified;
+  uint64_t origin;
+  uint64_t pushed;
+  edgex_reading *readings;
+  struct edgex_event *next;
+} edgex_event;
+
+typedef struct
+{
+  uint64_t created;
+  char *defaultValue;
+  char *description;
+  char *formatting;
+  char *id;
+  edgex_strings *labels;
+  char *max;
+  char *min;
+  uint64_t modified;
+  char *name;
+  uint64_t origin;
+  char *type;
+  char *uomLabel;
+} edgex_valuedescriptor;
+
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
 void edgex_data_client_add_event

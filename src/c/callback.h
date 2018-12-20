@@ -9,7 +9,7 @@
 #ifndef _EDGEX_DEVICE_CALLBACK_H_
 #define _EDGEX_DEVICE_CALLBACK_H_ 1
 
-#include "edgex/devsdk.h"
+#include "rest_server.h"
 
 extern int edgex_device_handler_callback
 (
