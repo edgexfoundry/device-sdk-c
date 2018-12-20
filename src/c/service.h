@@ -12,7 +12,6 @@
 #include "edgex/devsdk.h"
 #include "edgex/edgex_logging.h"
 #include "config.h"
-#include "state.h"
 #include "map.h"
 #include "rest_server.h"
 #include "thpool.h"

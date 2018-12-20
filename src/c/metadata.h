@@ -28,7 +28,7 @@ void edgex_metadata_client_set_device_opstate
   iot_logging_client * lc,
   edgex_service_endpoints * endpoints,
   const char * deviceid,
-  bool enabled,
+  edgex_device_operatingstate opstate,
   edgex_error * err
 );
 void edgex_metadata_client_set_device_adminstate
@@ -36,7 +36,7 @@ void edgex_metadata_client_set_device_adminstate
   iot_logging_client *lc,
   edgex_service_endpoints * endpoints,
   const char * deviceid,
-  bool locked,
+  edgex_device_adminstate adminstate,
   edgex_error *err
 );
 char * edgex_metadata_client_create_deviceprofile

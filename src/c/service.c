@@ -370,8 +370,8 @@ void edgex_device_service_start
     memset (ds, 0, sizeof (edgex_deviceservice));
     ds->addressable = addr;
     ds->name = strdup (svc->name);
-    ds->operatingState = strdup ("ENABLED");
-    ds->adminState = strdup ("UNLOCKED");
+    ds->operatingState = ENABLED;
+    ds->adminState = UNLOCKED;
     ds->created = millis;
     for (int n = 0; svc->config.service.labels[n]; n++)
     {

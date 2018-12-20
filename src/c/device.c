@@ -11,6 +11,7 @@
 #include "errorlist.h"
 #include "parson.h"
 #include "data.h"
+#include "metadata.h"
 #include "edgex_rest.h"
 #include "edgex_time.h"
 
@@ -299,6 +300,18 @@ static bool populateValue
   return false;
 }
 
+static bool checkAssertion (const char *value, const char *test)
+{
+  if (test && *test)
+  {
+    return (strcmp (value, test));
+  }
+  else
+  {
+    return false;
+  }
+}
+
 static const edgex_command *findCommand
   (const char *name, const edgex_command *cmd)
 {
@@ -402,6 +415,7 @@ static int runOneGet
   JSON_Value **reply
 )
 {
+  bool assertfail = false;
   edgex_device_commandrequest *requests =
     malloc (nops * sizeof (edgex_device_commandrequest));
   memset (requests, 0, nops * sizeof (edgex_device_commandrequest));
@@ -445,11 +459,25 @@ static int runOneGet
       );
       rdgs[i].origin = results[i].origin;
       rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
+      assertfail |= checkAssertion
+        (rdgs[i].value, requests[i].devobj->properties->value->assertion);
       json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);
     }
-    edgex_event_free (edgex_data_client_add_event
-                        (svc->logger, &svc->config.endpoints, dev->name,
-                         timenow, rdgs, &err));
+
+    if (!assertfail)
+    {
+      edgex_event_free (edgex_data_client_add_event
+                          (svc->logger, &svc->config.endpoints, dev->name,
+                           timenow, rdgs, &err));
+    }
+    else
+    {
+      iot_log_error
+        (svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
+      edgex_metadata_client_set_device_opstate
+        (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
+      err = EDGEX_ASSERT_FAIL;
+    }
 
     for (uint32_t i = 0; i < nops; i++)
     {
@@ -479,13 +507,24 @@ static int runOne
   JSON_Value **reply
 )
 {
-  if (strcasecmp ("LOCKED", dev->adminState) == 0)
+  if (dev->adminState == LOCKED)
   {
     iot_log_error
     (
       svc->logger,
       "Can't run command %s on device %s as it is locked",
-      command->name, dev->addressable->id
+      command->name, dev->name
+    );
+    return MHD_HTTP_LOCKED;
+  }
+
+  if (dev->operatingState == DISABLED)
+  {
+    iot_log_error
+    (
+      svc->logger,
+      "Can't run command %s on device %s as it is disabled",
+      command->name, dev->name
     );
     return MHD_HTTP_LOCKED;
   }
@@ -588,6 +627,7 @@ static int allCommand
   edgex_device *dev;
   const edgex_command *command;
   int ret = MHD_HTTP_NOT_FOUND;
+  int retOne;
   JSON_Value *jresult;
   JSON_Array *jarray;
   devlist *devs = NULL;
@@ -604,14 +644,17 @@ static int allCommand
   while ((key = edgex_map_next (&svc->devices, &iter)))
   {
     dev = *edgex_map_get (&svc->devices, key);
-    command = findCommand (cmd, dev->profile->commands);
-    if (command)
+    if (dev->operatingState == ENABLED && dev->adminState == UNLOCKED)
     {
-      d = malloc (sizeof (devlist));
-      d->dev = dev;
-      d->cmd = command;
-      d->next = devs;
-      devs = d;
+      command = findCommand (cmd, dev->profile->commands);
+      if (command)
+      {
+        d = malloc (sizeof (devlist));
+        d->dev = dev;
+        d->cmd = command;
+        d->next = devs;
+        devs = d;
+      }
     }
   }
   pthread_rwlock_unlock (&svc->deviceslock);
@@ -622,7 +665,7 @@ static int allCommand
   for (d = devs; d; d = d->next)
   {
     JSON_Value *jreply = NULL;
-    ret = runOne
+    retOne = runOne
       (svc, d->dev, d->cmd, method, upload_data, upload_data_size, &jreply);
     if (jreply && (maxret == 0 || nret++ < maxret))
     {
@@ -630,7 +673,7 @@ static int allCommand
     }
     if (ret != MHD_HTTP_OK)
     {
-      break;
+      ret = retOne;
     }
   }
 

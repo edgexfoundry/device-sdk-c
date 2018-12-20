@@ -29,4 +29,5 @@
 #define EDGEX_HTTP_CONFLICT (edgex_error){ .code = 17, .reason = "HTTP 409 Conflict" }
 #define EDGEX_CONSUL_RESPONSE (edgex_error){ .code = 18, .reason = "Unable to process response from consul" }
 #define EDGEX_PROFILES_DIRECTORY (edgex_error){ .code = 19, .reason = "Problem scanning profiles directory" }
+#define EDGEX_ASSERT_FAIL (edgex_error){ .code = 20, .reason = "A reading did not match a specified assertion string" }
 #endif
