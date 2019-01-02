@@ -56,23 +56,31 @@ int edgex_device_handler_callback
         {
           iot_log_info
             (svc->logger, "callback: Update device %s", newdev->name);
-          if (newdev->adminState != (*ourdev)->adminState)
+          edgex_deviceprofile *profile = edgex_deviceprofile_get
+            (svc, newdev->profile->name, &err);
+          if (profile)
           {
-            (*ourdev)->adminState = newdev->adminState;
+            edgex_deviceprofile_free (newdev->profile);
+            newdev->profile = profile;
           }
-          else if (newdev->operatingState != (*ourdev)->operatingState)
+          pthread_rwlock_wrlock (&svc->deviceslock);
+          edgex_map_remove (&svc->name_to_id, (*ourdev)->name);
+          edgex_map_remove (&svc->devices, id);
+          edgex_map_set (&svc->devices, newdev->id, newdev);
+          edgex_map_set (&svc->name_to_id, newdev->name, newdev->id);
+          pthread_rwlock_unlock (&svc->deviceslock);
+          edgex_device_free (*ourdev);
+          if (!profile)
           {
-            (*ourdev)->operatingState = newdev->operatingState;
-          }
-          else
-          {
-            status = MHD_HTTP_BAD_REQUEST;
+            status = MHD_HTTP_NOT_FOUND;
             iot_log_error
             (
               svc->logger,
-              "callback: Non-adminstate/opstate update invoked for device %s",
+              "callback: No device profile %s found, device %s unavailable",
+              newdev->profile->name,
               newdev->name
             );
+            edgex_device_free (newdev);
           }
         }
         else
@@ -96,8 +104,7 @@ int edgex_device_handler_callback
             (svc, newdev->profile->name, &err);
           if (profile)
           {
-            free (newdev->profile->name);
-            free (newdev->profile);
+            edgex_deviceprofile_free (newdev->profile);
             newdev->profile = profile;
             pthread_rwlock_wrlock (&svc->deviceslock);
             edgex_map_set (&svc->devices, newdev->id, newdev);

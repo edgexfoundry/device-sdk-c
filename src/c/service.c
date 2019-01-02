@@ -413,6 +413,22 @@ void edgex_device_service_start
     return;
   }
 
+  /* Start REST server */
+
+  svc->daemon = edgex_rest_server_create
+    (svc->logger, svc->config.service.port, err);
+  if (err->code)
+  {
+    toml_free (config);
+    return;
+  }
+
+  edgex_rest_server_register_handler
+  (
+    svc->daemon, EDGEX_DEV_API_CALLBACK, PUT | POST | DELETE, svc,
+    edgex_device_handler_callback
+  );
+
   /* Obtain Devices from configuration */
 
   if (config)
@@ -426,20 +442,17 @@ void edgex_device_service_start
     }
   }
 
-  /* Start REST server */
+  /* Driver configuration */
 
-  svc->daemon = edgex_rest_server_create
-    (svc->logger, svc->config.service.port, err);
-  if (err->code)
+  if (!svc->userfns.init (svc->userdata, svc->logger, svc->config.driverconf))
   {
+    *err = EDGEX_DRIVER_UNSTART;
+    iot_log_error (svc->logger, "Protocol driver initialization failed");
     return;
   }
 
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_CALLBACK, PUT | POST | DELETE, svc,
-    edgex_device_handler_callback
-  );
+  /* Handle device and discovery requests */
+
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_DEVICE, GET | PUT | POST, svc,
@@ -450,15 +463,6 @@ void edgex_device_service_start
     svc->daemon, EDGEX_DEV_API_DISCOVERY, POST, svc,
     edgex_device_handler_discovery
   );
-
-  /* Driver configuration */
-
-  if (!svc->userfns.init (svc->userdata, svc->logger, svc->config.driverconf))
-  {
-    *err = EDGEX_DRIVER_UNSTART;
-    iot_log_error (svc->logger, "Protocol driver initialization failed");
-    return;
-  }
 
   /* Upload Schedules and ScheduleEvents */
 
@@ -574,7 +578,7 @@ void edgex_device_service_start
     }
   }
 
-  /* Retrieve */
+  /* Retrieve schedule events */
 
   int interval;
   iot_schedule sched = NULL;
