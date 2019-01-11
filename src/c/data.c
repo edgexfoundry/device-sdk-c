@@ -11,23 +11,64 @@
 #include "data.h"
 #include "errorlist.h"
 #include "config.h"
+#include "edgex_time.h"
+#include "device.h"
+
+JSON_Value *edgex_data_generate_event
+(
+  const char *device_name,
+  uint32_t nreadings,
+  const edgex_device_commandrequest *sources,
+  const edgex_device_commandresult *values,
+  bool doTransforms
+)
+{
+  uint64_t timenow = edgex_device_millitime ();
+  JSON_Value *jevent = json_value_init_object ();
+  JSON_Object *jobj = json_value_get_object (jevent);
+  JSON_Value *arrval = json_value_init_array ();
+  JSON_Array *jrdgs = json_value_get_array (arrval);
+  for (uint32_t i = 0; i < nreadings; i++)
+  {
+    char *reading = edgex_value_tostring
+    (
+      values[i].type,
+      values[i].value,
+      doTransforms,
+      sources[i].devobj->properties->value,
+      sources[i].ro->mappings
+    );
+    JSON_Value *rval = json_value_init_object ();
+    JSON_Object *robj = json_value_get_object (rval);
+
+    json_object_set_string (robj, "name", sources[i].devobj->name);
+    json_object_set_string (robj, "value", reading);
+    if (values[i].origin)
+    {
+      json_object_set_number (robj, "origin", values[i].origin);
+    }
+    json_array_append_value (jrdgs, rval);
+    free (reading);
+  }
+
+  json_object_set_string (jobj, "device", device_name);
+  json_object_set_number (jobj, "origin", timenow);
+  json_object_set_value (jobj, "readings", arrval);
+  return jevent;
+}
 
 void edgex_data_client_add_event
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
-  char *device,
-  uint64_t origin,
-  edgex_reading *readings,
+  JSON_Value *eventval,
   edgex_error *err
 )
 {
-  edgex_event result;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
   char *json;
 
-  memset (&result, 0, sizeof (edgex_event));
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -37,11 +78,8 @@ void edgex_data_client_add_event
     endpoints->data.host,
     endpoints->data.port
   );
-  result.device = device;
-  result.origin = origin;
-  result.readings = readings;
 
-  json = edgex_event_write (&result, true);
+  json = json_serialize_to_string (eventval);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
 
   free (ctx.buff);

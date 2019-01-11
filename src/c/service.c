@@ -38,10 +38,7 @@
 typedef struct postparams
 {
   edgex_device_service *svc;
-  char *name;
-  uint64_t origin;
-  uint32_t nreadings;
-  edgex_reading *readings;
+  JSON_Value *jevent;
 } postparams;
 
 typedef struct edgex_device_service_job
@@ -701,18 +698,11 @@ static void doPost (void *p)
   (
     pp->svc->logger,
     &pp->svc->config.endpoints,
-    pp->name,
-    pp->origin,
-    pp->readings,
+    pp->jevent,
     &err
   );
 
-  for (uint32_t i = 0; i < pp->nreadings; i++)
-  {
-    free (pp->readings[i].value);
-  }
-  free (pp->readings);
-  free (pp->name);
+  json_value_free (pp->jevent);
   free (pp);
 }
 
@@ -725,32 +715,12 @@ void edgex_device_post_readings
   const edgex_device_commandresult *values
 )
 {
-  uint64_t timenow = edgex_device_millitime ();
-  edgex_reading *rdgs = malloc (nreadings * sizeof (edgex_reading));
-  for (uint32_t i = 0; i < nreadings; i++)
-  {
-    rdgs[i].created = timenow;
-    rdgs[i].modified = timenow;
-    rdgs[i].pushed = timenow;
-    rdgs[i].name = sources[i].devobj->name;
-    rdgs[i].id = NULL;
-    rdgs[i].value = edgex_value_tostring
-    (
-      values[i].type,
-      values[i].value,
-      svc->config.device.datatransform,
-      sources[i].devobj->properties->value,
-      sources[i].ro->mappings
-    );
-    rdgs[i].origin = values[i].origin;
-    rdgs[i].next = (i == nreadings - 1) ? NULL : rdgs + i + 1;
-  }
+  JSON_Value *jevent = edgex_data_generate_event
+    (device_name, nreadings, sources, values, svc->config.device.datatransform);
+
   postparams *pp = malloc (sizeof (postparams));
   pp->svc = svc;
-  pp->name = strdup (device_name);
-  pp->origin = timenow;
-  pp->readings = rdgs;
-  pp->nreadings = nreadings;
+  pp->jevent = jevent;
   thpool_add_work (svc->thpool, doPost, pp);
 }
 
