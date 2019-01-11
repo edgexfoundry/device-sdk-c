@@ -44,11 +44,6 @@ edgex_addressable *edgex_addressable_read (const char *json);
 char *edgex_addressable_write (const edgex_addressable *e, bool create);
 edgex_addressable *edgex_addressable_dup (edgex_addressable *e);
 void edgex_addressable_free (edgex_addressable *e);
-edgex_event *edgex_event_read (const char *json);
-char *edgex_event_write (const edgex_event *e, bool create);
-char *edgex_events_write (const edgex_event *e, bool create);
-void edgex_event_free (edgex_event *e);
-void edgex_reading_free (edgex_reading *e);
 edgex_valuedescriptor *edgex_valuedescriptor_read (const char *json);
 char *edgex_valuedescriptor_write (const edgex_valuedescriptor *e);
 void edgex_valuedescriptor_free (edgex_valuedescriptor *e);
@@ -58,7 +53,6 @@ void edgex_deviceprofile_dump (edgex_deviceprofile * e);
 void edgex_deviceservice_dump (edgex_deviceservice * e);
 void edgex_addressable_dump (edgex_addressable * e);
 void edgex_device_dump (edgex_device * e);
-void edgex_event_dump (edgex_event * e);
 void edgex_valuedescriptor_dump (edgex_valuedescriptor * e);
 #endif
 
