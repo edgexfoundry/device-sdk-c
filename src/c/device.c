@@ -55,14 +55,15 @@ static const char *methStr (edgex_http_method method)
   }
 }
 
-static const char *checkMapping (const char *in, const edgex_nvpairs *map)
+static char *checkMapping (char *in, const edgex_nvpairs *map)
 {
   const edgex_nvpairs *pair = map;
   while (pair)
   {
     if (strcmp (in, pair->name) == 0)
     {
-      return pair->value;
+      free (in);
+      return strdup (pair->value);
     }
     pair = pair->next;
   }
@@ -272,12 +273,9 @@ char *edgex_value_tostring
       sprintf (res, "%.16e", value.f64_result);
       break;
     case String:
-      res = strdup
-      (
-        xform ?
-          checkMapping (value.string_result, mappings) :
-          value.string_result
-      );
+      res = xform ?
+        checkMapping (value.string_result, mappings) :
+        value.string_result;
       break;
   }
   return res;
@@ -466,6 +464,7 @@ static int runOneGet
   JSON_Value **reply
 )
 {
+  int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
   edgex_device_commandrequest *requests =
     malloc (nops * sizeof (edgex_device_commandrequest));
   memset (requests, 0, nops * sizeof (edgex_device_commandrequest));
@@ -487,50 +486,20 @@ static int runOneGet
       (svc->userdata, dev->addressable, nops, requests, results)
   )
   {
+    *reply = edgex_data_generate_event
+      (dev->name, nops, requests, results, svc->config.device.datatransform);
     edgex_error err = EDGEX_OK;
-    uint64_t timenow = edgex_device_millitime ();
-    edgex_reading *rdgs = malloc (nops * sizeof (edgex_reading));
-    *reply = json_value_init_object ();
-    JSON_Object *jobj = json_value_get_object (*reply);
-    for (uint32_t i = 0; i < nops; i++)
-    {
-      /* TODO: Transform & mapping for results[i] */
-      rdgs[i].created = timenow;
-      rdgs[i].modified = timenow;
-      rdgs[i].pushed = timenow;
-      rdgs[i].name = requests[i].devobj->name;
-      rdgs[i].id = NULL;
-      rdgs[i].value = edgex_value_tostring
-      (
-        results[i].type,
-        results[i].value,
-        svc->config.device.datatransform,
-        requests[i].devobj->properties->value,
-        requests[i].ro->mappings
-      );
-      rdgs[i].origin = results[i].origin;
-      rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
-      json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);
-    }
-    edgex_event_free (edgex_data_client_add_event
-                        (svc->logger, &svc->config.endpoints, dev->name,
-                         timenow, rdgs, &err));
 
-    for (uint32_t i = 0; i < nops; i++)
+    edgex_data_client_add_event
+      (svc->logger, &svc->config.endpoints, *reply, &err);
+    if (err.code == 0)
     {
-      free (rdgs[i].value);
+      retcode = MHD_HTTP_OK;
     }
-    free (rdgs);
-    free (results);
-    free (requests);
-    return (err.code == 0) ? MHD_HTTP_OK : MHD_HTTP_INTERNAL_SERVER_ERROR;
   }
-  else
-  {
-    free (results);
-    free (requests);
-    return MHD_HTTP_INTERNAL_SERVER_ERROR;
-  }
+  free (results);
+  free (requests);
+  return retcode;
 }
 
 static int runOne

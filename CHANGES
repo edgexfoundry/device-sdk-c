@@ -10,6 +10,10 @@ differs as follows:
   implementation during startup.
 * The API for adding, removing and updating Device Profiles is NYI.
 
+Changes for 0.7.2:
+
+- Device GET commands return Event structures rather than name-value pairs.
+
 Changes for 0.7.1:
 
 - Some verification on Device Profiles is now done at startup. This may result

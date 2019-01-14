@@ -11,47 +11,64 @@
 #include "data.h"
 #include "errorlist.h"
 #include "config.h"
+#include "edgex_time.h"
+#include "device.h"
 
-static edgex_reading *readings_dup (const edgex_reading *readings)
+JSON_Value *edgex_data_generate_event
+(
+  const char *device_name,
+  uint32_t nreadings,
+  const edgex_device_commandrequest *sources,
+  const edgex_device_commandresult *values,
+  bool doTransforms
+)
 {
-  edgex_reading *result = NULL;
-  edgex_reading **last = &result;
-
-  while (readings)
+  uint64_t timenow = edgex_device_millitime ();
+  JSON_Value *jevent = json_value_init_object ();
+  JSON_Object *jobj = json_value_get_object (jevent);
+  JSON_Value *arrval = json_value_init_array ();
+  JSON_Array *jrdgs = json_value_get_array (arrval);
+  for (uint32_t i = 0; i < nreadings; i++)
   {
-    edgex_reading *tmp = malloc (sizeof (edgex_reading));
-    memset (tmp, 0, sizeof (edgex_reading));
-    tmp->created = readings->created;
-    tmp->modified = readings->modified;
-    tmp->origin = readings->origin;
-    tmp->pushed = readings->pushed;
-    tmp->id = readings->id ? strdup (readings->id) : NULL;
-    tmp->name = readings->name ? strdup (readings->name) : NULL;
-    tmp->value = readings->value ? strdup (readings->value) : NULL;
-    tmp->next = NULL;
-    *last = tmp;
-    last = &tmp->next;
-    readings = readings->next;
+    char *reading = edgex_value_tostring
+    (
+      values[i].type,
+      values[i].value,
+      doTransforms,
+      sources[i].devobj->properties->value,
+      sources[i].ro->mappings
+    );
+    JSON_Value *rval = json_value_init_object ();
+    JSON_Object *robj = json_value_get_object (rval);
+
+    json_object_set_string (robj, "name", sources[i].devobj->name);
+    json_object_set_string (robj, "value", reading);
+    if (values[i].origin)
+    {
+      json_object_set_number (robj, "origin", values[i].origin);
+    }
+    json_array_append_value (jrdgs, rval);
+    free (reading);
   }
-  return result;
+
+  json_object_set_string (jobj, "device", device_name);
+  json_object_set_number (jobj, "origin", timenow);
+  json_object_set_value (jobj, "readings", arrval);
+  return jevent;
 }
 
-edgex_event *edgex_data_client_add_event
+void edgex_data_client_add_event
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
-  const char *device,
-  uint64_t origin,
-  const edgex_reading *readings,
+  JSON_Value *eventval,
   edgex_error *err
 )
 {
-  edgex_event *result = malloc (sizeof (edgex_event));
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
   char *json;
 
-  memset (result, 0, sizeof (edgex_event));
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -61,15 +78,12 @@ edgex_event *edgex_data_client_add_event
     endpoints->data.host,
     endpoints->data.port
   );
-  result->device = strdup (device);
-  result->origin = origin;
-  result->readings = readings_dup (readings);
-  json = edgex_event_write (result, true);
-  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  result->id = ctx.buff;
-  free (json);
 
-  return result;
+  json = json_serialize_to_string (eventval);
+  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  free (ctx.buff);
+  free (json);
 }
 
 edgex_valuedescriptor *edgex_data_client_add_valuedescriptor

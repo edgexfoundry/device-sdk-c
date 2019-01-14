@@ -235,30 +235,6 @@ typedef struct edgex_device
   struct edgex_device *next;
 } edgex_device;
 
-typedef struct edgex_reading
-{
-  uint64_t created;
-  char *id;
-  uint64_t modified;
-  char *name;
-  uint64_t origin;
-  uint64_t pushed;
-  char *value;
-  struct edgex_reading *next;
-} edgex_reading;
-
-typedef struct edgex_event
-{
-  uint64_t created;
-  char *device;
-  char *id;
-  uint64_t modified;
-  uint64_t origin;
-  uint64_t pushed;
-  edgex_reading *readings;
-  struct edgex_event *next;
-} edgex_event;
-
 #define EDGEX_LIST(T)    \
 struct edgex_##T##_list; \
 typedef struct edgex_##T##_list edgex_##T##_list; \
