@@ -793,50 +793,52 @@ int edgex_device_handler_device
   const char **reply_type
 )
 {
+  int result = MHD_HTTP_NOT_FOUND;
   char *cmd;
   edgex_device_service *svc = (edgex_device_service *) ctx;
 
   if (strlen (url) == 0)
   {
     iot_log_error (svc->logger, "No device specified in url");
-    return MHD_HTTP_NOT_FOUND;
-  }
-
-  if (strncmp (url, "all/", 4) == 0)
-  {
-    cmd = url + 4;
-    if (strlen (cmd))
-    {
-      return allCommand
-        (svc, cmd, method, upload_data, upload_data_size, reply, reply_type);
-    }
-    else
-    {
-      iot_log_error (svc->logger, "No command specified in url");
-      return MHD_HTTP_NOT_FOUND;
-    }
   }
   else
   {
-    bool byName = false;
-    if (strncmp (url, "name/", 4) == 0)
+    if (strncmp (url, "all/", 4) == 0)
     {
-      byName = true;
-      url += 5;
+      cmd = url + 4;
+      if (strlen (cmd))
+      {
+        result = allCommand
+          (svc, cmd, method, upload_data, upload_data_size, reply, reply_type);
+      }
+      else
+      {
+        iot_log_error (svc->logger, "No command specified in url");
+      }
     }
-    cmd = strchr (url, '/');
-    if (cmd == NULL || strlen (cmd + 1) == 0)
+    else
     {
-      iot_log_error (svc->logger, "No command specified in url");
-      return MHD_HTTP_NOT_FOUND;
+      bool byName = false;
+      if (strncmp (url, "name/", 4) == 0)
+      {
+        byName = true;
+        url += 5;
+      }
+      cmd = strchr (url, '/');
+      if (cmd == NULL || strlen (cmd + 1) == 0)
+      {
+        iot_log_error (svc->logger, "No command specified in url");
+      }
+      *cmd = '\0';
+      result = oneCommand
+      (
+        svc,
+        url, byName, cmd + 1, method,
+        upload_data, upload_data_size,
+        reply, reply_type
+      );
+      *cmd = '/';
     }
-    *cmd++ = '\0';
-    return oneCommand
-    (
-      svc,
-      url, byName, cmd, method,
-      upload_data, upload_data_size,
-      reply, reply_type
-    );
   }
+  return result;
 }
