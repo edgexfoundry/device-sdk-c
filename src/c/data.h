@@ -9,9 +9,8 @@
 #ifndef _EDGEX_DATA_H_
 #define _EDGEX_DATA_H_ 1
 
-#include "edgex/edgex.h"
-#include "edgex/edgex_logging.h"
-#include "edgex/error.h"
+#include "edgex/devsdk.h"
+#include "parson.h"
 
 typedef struct edgex_reading
 {
@@ -56,13 +55,20 @@ typedef struct
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
+JSON_Value *edgex_data_generate_event
+(
+  const char *device_name,
+  uint32_t nreadings,
+  const edgex_device_commandrequest *sources,
+  const edgex_device_commandresult *values,
+  bool doTransforms
+);
+
 void edgex_data_client_add_event
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
-  char *device,
-  uint64_t origin,
-  edgex_reading *readings,
+  JSON_Value *eventval,
   edgex_error *err
 );
 

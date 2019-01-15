@@ -319,18 +319,6 @@ static bool populateValue
   return false;
 }
 
-static bool checkAssertion (const char *value, const char *test)
-{
-  if (test && *test)
-  {
-    return (strcmp (value, test));
-  }
-  else
-  {
-    return false;
-  }
-}
-
 static const edgex_command *findCommand
   (const char *name, const edgex_command *cmd)
 {
@@ -438,7 +426,7 @@ static int runOneGet
   JSON_Value **reply
 )
 {
-  bool assertfail = false;
+  int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
   edgex_device_commandrequest *requests =
     malloc (nops * sizeof (edgex_device_commandrequest));
   memset (requests, 0, nops * sizeof (edgex_device_commandrequest));
@@ -460,65 +448,30 @@ static int runOneGet
       (svc->userdata, dev->addressable, nops, requests, results)
   )
   {
-    edgex_error err = EDGEX_OK;
-    uint64_t timenow = edgex_device_millitime ();
-    edgex_reading *rdgs = malloc (nops * sizeof (edgex_reading));
-    *reply = json_value_init_object ();
-    JSON_Object *jobj = json_value_get_object (*reply);
-    for (uint32_t i = 0; i < nops; i++)
-    {
-      /* TODO: Transform & mapping for results[i] */
-      rdgs[i].created = timenow;
-      rdgs[i].modified = timenow;
-      rdgs[i].pushed = timenow;
-      rdgs[i].name = requests[i].devobj->name;
-      rdgs[i].id = NULL;
-      rdgs[i].value = edgex_value_tostring
-      (
-        results[i].value,
-        svc->config.device.datatransform,
-        requests[i].devobj->properties->value,
-        requests[i].ro->mappings
-      );
-      rdgs[i].origin = results[i].origin;
-      rdgs[i].next = (i == nops - 1) ? NULL : rdgs + i + 1;
-      if (requests[i].devobj->properties->value->type != Binary)
-      {
-        assertfail |= checkAssertion
-          (rdgs[i].value, requests[i].devobj->properties->value->assertion);
-      }
-      json_object_set_string (jobj, rdgs[i].name, rdgs[i].value);
-    }
+    *reply = edgex_data_generate_event
+      (dev->name, nops, requests, results, svc->config.device.datatransform);
 
-    if (!assertfail)
+    if (*reply)
     {
+      edgex_error err = EDGEX_OK;
       edgex_data_client_add_event
-        (svc->logger, &svc->config.endpoints, dev->name, timenow, rdgs, &err);
+        (svc->logger, &svc->config.endpoints, *reply, &err);
+      if (err.code == 0)
+      {
+        retcode = MHD_HTTP_OK;
+      }
     }
     else
     {
-      iot_log_error
-        (svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
+      edgex_error err = EDGEX_OK;
+      iot_log_error (svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
       edgex_metadata_client_set_device_opstate
         (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
-      err = EDGEX_ASSERT_FAIL;
     }
-
-    for (uint32_t i = 0; i < nops; i++)
-    {
-      free (rdgs[i].value);
-    }
-    free (rdgs);
-    free (results);
-    free (requests);
-    return (err.code == 0) ? MHD_HTTP_OK : MHD_HTTP_INTERNAL_SERVER_ERROR;
   }
-  else
-  {
-    free (results);
-    free (requests);
-    return MHD_HTTP_INTERNAL_SERVER_ERROR;
-  }
+  free (results);
+  free (requests);
+  return retcode;
 }
 
 static int runOne
