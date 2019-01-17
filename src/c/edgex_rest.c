@@ -153,7 +153,7 @@ static const char *edgex_adminstate_tostring (edgex_device_adminstate ad)
 
 static edgex_device_adminstate edgex_adminstate_fromstring (const char *str)
 {
-  return (strcmp (str, adstatetypes[LOCKED]) == 0) ? LOCKED : UNLOCKED;
+  return (str && strcmp (str, adstatetypes[LOCKED]) == 0) ? LOCKED : UNLOCKED;
 }
 
 static const char *opstatetypes[] = { "ENABLED", "DISABLED" };
@@ -167,7 +167,7 @@ static const char *edgex_operatingstate_tostring
 static edgex_device_operatingstate edgex_operatingstate_fromstring
   (const char *str)
 {
-  return (strcmp (str, opstatetypes[DISABLED]) == 0) ? DISABLED : ENABLED;
+  return (str && strcmp (str, opstatetypes[DISABLED]) == 0) ? DISABLED : ENABLED;
 }
 
 static bool get_transformArg
@@ -1184,7 +1184,7 @@ static edgex_deviceservice *deviceservice_read (const JSON_Object *obj)
   result->addressable = addressable_read
     (json_object_get_object (obj, "addressable"));;
   result->adminState = edgex_adminstate_fromstring
-    (get_string (obj, "adminState"));
+    (json_object_get_string (obj, "adminState"));
   result->created = json_object_get_number (obj, "created");
   result->description = get_string (obj, "description");
   result->id = get_string (obj, "id");
@@ -1194,7 +1194,7 @@ static edgex_deviceservice *deviceservice_read (const JSON_Object *obj)
   result->modified = json_object_get_number (obj, "modified");
   result->name = get_string (obj, "name");
   result->operatingState = edgex_operatingstate_fromstring
-    (get_string (obj, "operatingState"));
+    (json_object_get_string (obj, "operatingState"));
   result->origin = json_object_get_number (obj, "origin");
 
   return result;
@@ -1353,7 +1353,7 @@ static edgex_device *device_read
   result->addressable = addressable_read
     (json_object_get_object (obj, "addressable"));;
   result->adminState = edgex_adminstate_fromstring
-    (get_string (obj, "adminState"));
+    (json_object_get_string (obj, "adminState"));
   result->created = json_object_get_number (obj, "created");
   result->description = get_string (obj, "description");
   result->id = get_string (obj, "id");
@@ -1363,7 +1363,7 @@ static edgex_device *device_read
   result->modified = json_object_get_number (obj, "modified");
   result->name = get_string (obj, "name");
   result->operatingState = edgex_operatingstate_fromstring
-    (get_string (obj, "operatingState"));
+    (json_object_get_string (obj, "operatingState"));
   result->origin = json_object_get_number (obj, "origin");
   result->profile = deviceprofile_read
     (lc, json_object_get_object (obj, "profile"));
