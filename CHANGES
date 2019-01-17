@@ -12,6 +12,7 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Support EdgeX System Management API
 - Initial support for binary data, marshalled as base64 strings.
 - Assertions on data readings are implemented.
 - Some parts of the edgex model are now held in appropriate types rather

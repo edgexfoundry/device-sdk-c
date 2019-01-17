@@ -10,6 +10,7 @@
 #include "device.h"
 #include "discovery.h"
 #include "callback.h"
+#include "metrics.h"
 #include "errorlist.h"
 #include "rest_server.h"
 #include "profiles.h"
@@ -31,6 +32,9 @@
 #define EDGEX_DEV_API_DISCOVERY "/api/v1/discovery"
 #define EDGEX_DEV_API_DEVICE "/api/v1/device/"
 #define EDGEX_DEV_API_CALLBACK "/api/v1/callback"
+#define EDGEX_DEV_API_CONFIG "/api/v1/config"
+#define EDGEX_DEV_API_METRICS "/api/v1/metrics"
+
 #define ADDR_EXT "_addr"
 
 #define POOL_THREADS 8
@@ -662,8 +666,16 @@ void edgex_device_service_start
 
   iot_scheduler_start (svc->scheduler);
 
-  /* Ready. Enable ping and log that we have started */
+  /* Ready. Enable SMA handlers and log that we have started */
 
+  edgex_rest_server_register_handler
+  (
+    svc->daemon, EDGEX_DEV_API_METRICS, GET, svc, edgex_device_handler_metrics
+  );
+  edgex_rest_server_register_handler
+  (
+    svc->daemon, EDGEX_DEV_API_CONFIG, GET, svc, edgex_device_handler_config
+  );
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_PING, GET, svc, ping_handler

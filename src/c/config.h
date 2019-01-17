@@ -10,6 +10,7 @@
 #define _EDGEX_DEVICE_CONFIG_H_ 1
 
 #include "edgex/devsdk.h"
+#include "rest_server.h"
 #include "toml.h"
 #include "map.h"
 
@@ -114,5 +115,16 @@ void edgex_device_freeConfig (edgex_device_service *svc);
 
 void edgex_device_process_configured_devices
   (edgex_device_service *svc, toml_array_t *devs, edgex_error *err);
+
+int edgex_device_handler_config
+(
+  void *ctx,
+  char *url,
+  edgex_http_method method,
+  const char *upload_data,
+  size_t upload_data_size,
+  char **reply,
+  const char **reply_type
+);
 
 #endif
