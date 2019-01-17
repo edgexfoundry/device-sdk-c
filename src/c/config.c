@@ -11,6 +11,8 @@
 #include "errorlist.h"
 #include "edgex_rest.h"
 
+#include <microhttpd.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -928,6 +930,106 @@ void edgex_device_freeConfig (edgex_device_service *svc)
     free (watcher->ids);
   }
   edgex_map_deinit (&svc->config.watchers);
+}
+
+int edgex_device_handler_config
+(
+  void *ctx,
+  char *url,
+  edgex_http_method method,
+  const char *upload_data,
+  size_t upload_data_size,
+  char **reply,
+  const char **reply_type
+)
+{
+  edgex_device_service *svc = (edgex_device_service *)ctx;
+
+  JSON_Value *val = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (val);
+
+  JSON_Value *cval = json_value_init_object ();
+  JSON_Object *cobj = json_value_get_object (cval);
+
+  JSON_Value *mval = json_value_init_object ();
+  JSON_Object *mobj = json_value_get_object (mval);
+  json_object_set_string (mobj, "Host", svc->config.endpoints.metadata.host);
+  json_object_set_number (mobj, "Port", svc->config.endpoints.metadata.port);
+  json_object_set_value (cobj, "Metadata", mval);
+
+  JSON_Value *dval = json_value_init_object ();
+  JSON_Object *dobj = json_value_get_object (dval);
+  json_object_set_string (dobj, "Host", svc->config.endpoints.data.host);
+  json_object_set_number (dobj, "Port", svc->config.endpoints.data.port);
+  json_object_set_value (cobj, "Data", dval);
+
+  json_object_set_value (obj, "Clients", cval);
+
+  JSON_Value *lval = json_value_init_object ();
+  JSON_Object *lobj = json_value_get_object (lval);
+  json_object_set_string (lobj, "File", svc->config.logging.file);
+  json_object_set_string (lobj, "RemoteURL", svc->config.logging.remoteurl);
+  json_object_set_value (obj, "Logging", lval);
+
+  JSON_Value *sval = json_value_init_object ();
+  JSON_Object *sobj = json_value_get_object (sval);
+  json_object_set_string (sobj, "Host", svc->config.service.host);
+  json_object_set_number (sobj, "Port", svc->config.service.port);
+  json_object_set_number (sobj, "Timeout", svc->config.service.timeout);
+  json_object_set_number
+    (sobj, "ConnectRetries", svc->config.service.connectretries);
+  json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
+  json_object_set_number
+    (sobj, "ReadMaxLimit", svc->config.service.readmaxlimit);
+  json_object_set_string
+    (sobj, "CheckInterval", svc->config.service.checkinterval);
+
+  lval = json_value_init_array ();
+  JSON_Array *larr = json_value_get_array (lval);
+  for (int i = 0; svc->config.service.labels[i]; i++)
+  {
+    json_array_append_string (larr, svc->config.service.labels[i]);
+  }
+  json_object_set_value (sobj, "Labels", lval);
+
+  json_object_set_value (obj, "Service", sval);
+
+  dval = json_value_init_object ();
+  dobj = json_value_get_object (dval);
+  json_object_set_boolean
+    (dobj, "DataTransform", svc->config.device.datatransform);
+  json_object_set_boolean (dobj, "Discovery", svc->config.device.discovery);
+  json_object_set_string (dobj, "InitCmd", svc->config.device.initcmd);
+  json_object_set_string (dobj, "InitCmdArgs", svc->config.device.initcmdargs);
+  json_object_set_number (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
+  json_object_set_number
+    (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
+  json_object_set_string (dobj, "RemoveCmd", svc->config.device.removecmd);
+  json_object_set_string
+    (dobj, "RemoveCmdArgs", svc->config.device.removecmdargs);
+  json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
+  json_object_set_boolean
+    (dobj, "SendReadingsOnChanged", svc->config.device.sendreadingsonchanged);
+  json_object_set_value (obj, "Device", dval);
+
+  edgex_nvpairs *iter = svc->config.driverconf;
+  if (iter)
+  {
+    dval = json_value_init_object ();
+    dobj = json_value_get_object (dval);
+    while (iter)
+    {
+      json_object_set_string (dobj, iter->name, iter->value);
+      iter = iter->next;
+    }
+    json_object_set_value (obj, "Driver", dval);
+  }
+
+  *reply = json_serialize_to_string (val);
+  *reply_type = "application/json";
+  json_value_free (val);
+
+  return MHD_HTTP_OK;
 }
 
 void edgex_device_process_configured_devices
