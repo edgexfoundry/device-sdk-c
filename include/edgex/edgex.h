@@ -106,13 +106,14 @@ typedef struct edgex_resourceoperation
 typedef struct
 {
   edgex_propertytype type;
-  char *readwrite;
+  bool readable;
+  bool writable;
   char *minimum;
   char *maximum;
   char *defaultvalue;
   char *lsb;
-  char *mask;
-  char *shift;
+  edgex_transformArg mask;
+  edgex_transformArg shift;
   edgex_transformArg scale;
   edgex_transformArg offset;
   edgex_transformArg base;

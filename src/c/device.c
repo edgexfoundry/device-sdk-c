@@ -121,6 +121,18 @@ static bool transformResult
       case Int64: result = value->i64_result; break;
       default: assert (0);
     }
+    if (props->mask.enabled) result &= props->mask.value.ival;
+    if (props->shift.enabled)
+    {
+      if (props->shift.value.ival < 0)
+      {
+        result <<= -props->shift.value.ival;
+      }
+      else
+      {
+        result >>= props->shift.value.ival;
+      }
+    }
     if (props->base.enabled) result = powl (props->base.value.ival, result);
     if (props->scale.enabled) result *= props->scale.value.ival;
     if (props->offset.enabled) result += props->offset.value.ival;
@@ -205,7 +217,8 @@ char *edgex_value_tostring
   {
     if (xform)
     {
-      if (props->offset.enabled || props->scale.enabled || props->base.enabled)
+      if (props->offset.enabled || props->scale.enabled ||
+          props->base.enabled || props->shift.enabled || props->mask.enabled)
       {
         if (!transformResult (&value, props))
         {
@@ -372,6 +385,18 @@ static int runOnePut
   {
     reqs[i].ro = op;
     reqs[i].devobj = findDevObj (dev->profile->device_resources, op->object);
+    if (!reqs[i].devobj->properties->value->writable)
+    {
+      iot_log_error
+      (
+        svc->logger,
+        "Attempt to write unwritable value %s",
+        reqs[i].devobj->name
+      );
+      retcode = MHD_HTTP_METHOD_NOT_ALLOWED;
+      break;
+    }
+
     value = json_object_get_string (jobj, op->object);
     if (value == NULL)
     {
@@ -439,6 +464,18 @@ static int runOneGet
     requests[i].ro = op;
     requests[i].devobj =
       findDevObj (dev->profile->device_resources, op->object);
+    if (!requests[i].devobj->properties->value->readable)
+    {
+      iot_log_error
+      (
+        svc->logger,
+        "Attempt to read unreadable value %s",
+        requests[i].devobj->name
+      );
+      free (results);
+      free (requests);
+      return MHD_HTTP_METHOD_NOT_ALLOWED;
+    }
     op = op->next;
   }
 
