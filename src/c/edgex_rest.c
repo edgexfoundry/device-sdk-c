@@ -16,6 +16,8 @@
 #define SAFE_STR(s) (s ? s : "NULL")
 #define SAFE_STRDUP(s) (s ? strdup(s) : NULL)
 
+static const char *rwstrings[2][2] = { { "", "W" }, { "R", "RW" } };
+
 static char *get_string (const JSON_Object *obj, const char *name)
 {
   const char *str = json_object_get_string (obj, name);
@@ -135,7 +137,7 @@ bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
 {
   for (edgex_propertytype i = Bool; i <= Float64; i++)
   {
-    if (strcmp (str, proptypes[i]) == 0)
+    if (strcasecmp (str, proptypes[i]) == 0)
     {
       *res = i;
       return true;
@@ -188,6 +190,8 @@ static bool get_transformArg
   if (str && *str)
   {
 // TODO: the workaround below can be removed when edgex-go #855 is resolved
+if (strcmp (name, "mask") == 0 && strcmp (str, "0x00") == 0) return true;
+if (strcmp (name, "shift") == 0 && strcmp (str, "0") == 0) return true;
 if (strcmp (name, "scale") == 0 && strcmp (str, "1.0") == 0) return true;
 if (strcmp (name, "offset") == 0 && strcmp (str, "0.0") == 0) return true;
 if (strcmp (name, "base") == 0 && strcmp (str, "0") == 0) return true;
@@ -263,19 +267,37 @@ static edgex_propertyvalue *propertyvalue_read
     ok &= get_transformArg (lc, obj, "scale", pt, &result->scale);
     ok &= get_transformArg (lc, obj, "offset", pt, &result->offset);
     ok &= get_transformArg (lc, obj, "base", pt, &result->base);
+    ok &= get_transformArg (lc, obj, "mask", pt, &result->mask);
+    ok &= get_transformArg (lc, obj, "shift", pt, &result->shift);
+    if (result->mask.enabled || result->shift.enabled)
+    {
+      if (pt == Float32 || pt == Float64)
+      {
+        iot_log_error (lc, "Mask/Shift transform specified for float data");
+        ok = false;
+      }
+    }
     if (!ok)
     {
       free (result);
       return NULL;
     }
     result->type = pt;
-    result->readwrite = get_string (obj, "readWrite");
+    const char *rwstring = json_object_get_string (obj, "readWrite");
+    if (rwstring && *rwstring)
+    {
+      result->readable = strchr (rwstring, 'R');
+      result->writable = strchr (rwstring, 'W');
+    }
+    else
+    {
+      result->readable = true;
+      result->writable = true;
+    }
     result->minimum = get_string (obj, "minimum");
     result->maximum = get_string (obj, "maximum");
     result->defaultvalue = get_string (obj, "defaultValue");
     result->lsb = get_string (obj, "lsb");
-    result->mask = get_string (obj, "mask");
-    result->shift = get_string (obj, "shift");
     result->assertion = get_string (obj, "assertion");
     result->precision = get_string (obj, "precision");
   }
@@ -314,13 +336,14 @@ static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
   json_object_set_string (obj, "type", edgex_propertytype_tostring (e->type));
-  json_object_set_string (obj, "readWrite", e->readwrite);
+  json_object_set_string
+    (obj, "readWrite", rwstrings[e->readable][e->writable]);
   json_object_set_string (obj, "minimum", e->minimum);
   json_object_set_string (obj, "maximum", e->maximum);
   json_object_set_string (obj, "defaultValue", e->defaultvalue);
   json_object_set_string (obj, "lsb", e->lsb);
-  json_object_set_string (obj, "mask", e->mask);
-  json_object_set_string (obj, "shift", e->shift);
+  set_arg (obj, "mask", e->mask, e->type);
+  set_arg (obj, "shift", e->shift, e->type);
   set_arg (obj, "scale", e->scale, e->type);
   set_arg (obj, "offset", e->offset, e->type);
   set_arg (obj, "base", e->base, e->type);
@@ -336,13 +359,14 @@ static edgex_propertyvalue *propertyvalue_dup (edgex_propertyvalue *pv)
   {
     result = malloc (sizeof (edgex_propertyvalue));
     result->type = pv->type;
-    result->readwrite = strdup (pv->readwrite);
+    result->readable = pv->readable;
+    result->writable = pv->writable;
     result->minimum = strdup (pv->minimum);
     result->maximum = strdup (pv->maximum);
     result->defaultvalue = strdup (pv->defaultvalue);
     result->lsb = strdup (pv->lsb);
-    result->mask = strdup (pv->mask);
-    result->shift = strdup (pv->shift);
+    result->mask = pv->mask;
+    result->shift = pv->shift;
     result->scale = pv->scale;
     result->offset = pv->offset;
     result->base = pv->base;
@@ -354,13 +378,10 @@ static edgex_propertyvalue *propertyvalue_dup (edgex_propertyvalue *pv)
 
 static void propertyvalue_free (edgex_propertyvalue *e)
 {
-  free (e->readwrite);
   free (e->minimum);
   free (e->maximum);
   free (e->defaultvalue);
   free (e->lsb);
-  free (e->mask);
-  free (e->shift);
   free (e->assertion);
   free (e->precision);
   free (e);
@@ -1905,7 +1926,7 @@ void edgex_deviceprofile_dump (edgex_deviceprofile * e)
     printf ("tag %s\n", dr->tag);
     printf ("properties\n");
     printf ("type %s\n", dr->properties->value->type);
-    printf ("readwrite %s\n", dr->properties->value->readwrite);
+    printf ("readwrite %s\n", rwstrings[dr->properties->value->readable][dr->properties->value->writable]);
     printf ("minimum %s\n", dr->properties->value->minimum);
     printf ("maximum %s\n", dr->properties->value->maximum);
     printf ("defaultvalue %s\n", dr->properties->value->defaultvalue);
