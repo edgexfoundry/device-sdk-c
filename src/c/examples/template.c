@@ -185,9 +185,9 @@ static void usage (void)
 
 int main (int argc, char *argv[])
 {
-  bool useRegistry = false;
   char *profile = "";
   char *confdir = "";
+  char *regURL = NULL;
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
 
@@ -201,7 +201,7 @@ int main (int argc, char *argv[])
     }
     if (strcmp (argv[n], "-r") == 0 || strcmp (argv[n], "--registry") == 0)
     {
-      useRegistry = true;
+      regURL = "consul://localhost:8500";
       n++;
       continue;
     }
@@ -248,8 +248,7 @@ int main (int argc, char *argv[])
   ERR_CHECK (e);
 
   /* Start the device service*/
-  edgex_device_service_start
-    (service, useRegistry, NULL, 0, profile, confdir, &e);
+  edgex_device_service_start (service, regURL, profile, confdir, &e);
   ERR_CHECK (e);
 
   signal (SIGINT, inthandler);

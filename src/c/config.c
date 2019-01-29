@@ -878,7 +878,6 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   edgex_map_iter iter;
   const char *key;
 
-  free (svc->config.endpoints.consul.host);
   free (svc->config.endpoints.data.host);
   free (svc->config.endpoints.metadata.host);
   free (svc->config.logging.file);

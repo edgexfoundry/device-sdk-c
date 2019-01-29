@@ -12,12 +12,15 @@ differs as follows:
 
 Changes for 1.0.0:
 
-- Support EdgeX System Management API
+- The registry service is now identified by a URL, eg "consul://localhost:8500".
+  - Support for consul as the registry service is built-in, but other
+    implementations may be added using the API in edgex/registry.h
+- Support EdgeX System Management API.
 - Initial support for binary data, marshalled as base64 strings.
 - Assertions on data readings are implemented.
 - Some parts of the edgex model are now held in appropriate types rather
   than strings.
--   edgex_device_resulttype is renamed to edgex_propertytype, reflecting its
+  - edgex_device_resulttype is renamed to edgex_propertytype, reflecting its
     broader usage.
 
 Changes for 0.7.2
@@ -34,11 +37,11 @@ Changes for 0.7.1:
 Changes for Delhi release (0.7.0):
 
 - Consul is supported for registration and configuration.
--   New configuration option Service.CheckInterval controlling how frequently
+  - New configuration option Service.CheckInterval controlling how frequently
     the registry polls the device service for liveliness.
--   Driver init functions get their configuration as a name-value pair list
+  - Driver init functions get their configuration as a name-value pair list
     rather than a TOML table.
--   SDK start function now takes parameters for Consul's hostname and port. They
+  - SDK start function now takes parameters for Consul's hostname and port. They
     are no longer included in the configuration file.
 
 - "Discovery", "DataTransform" and "ReadMaxLimit" configuration options are now effective.
