@@ -22,51 +22,51 @@
 
 bool edgex_string_to_resulttype (const char *str, edgex_device_resulttype *res)
 {
-  if (strcmp (str, "String") == 0)
+  if (strcasecmp (str, "String") == 0)
   {
     *res = String;
   }
-  else if (strcmp (str, "Bool") == 0)
+  else if (strcasecmp (str, "Bool") == 0)
   {
     *res = Bool;
   }
-  else if (strcmp (str, "Uint8") == 0)
+  else if (strcasecmp (str, "Uint8") == 0)
   {
     *res = Uint8;
   }
-  else if (strcmp (str, "Uint16") == 0)
+  else if (strcasecmp (str, "Uint16") == 0)
   {
     *res = Uint16;
   }
-  else if (strcmp (str, "Uint32") == 0)
+  else if (strcasecmp (str, "Uint32") == 0)
   {
     *res = Uint32;
   }
-  else if (strcmp (str, "Uint64") == 0)
+  else if (strcasecmp (str, "Uint64") == 0)
   {
     *res = Uint64;
   }
-  else if (strcmp (str, "Int8") == 0)
+  else if (strcasecmp (str, "Int8") == 0)
   {
     *res = Int8;
   }
-  else if (strcmp (str, "Int16") == 0)
+  else if (strcasecmp (str, "Int16") == 0)
   {
     *res = Int16;
   }
-  else if (strcmp (str, "Int32") == 0)
+  else if (strcasecmp (str, "Int32") == 0)
   {
     *res = Int32;
   }
-  else if (strcmp (str, "Int64") == 0)
+  else if (strcasecmp (str, "Int64") == 0)
   {
     *res = Int64;
   }
-  else if (strcmp (str, "Float32") == 0)
+  else if (strcasecmp (str, "Float32") == 0)
   {
     *res = Float32;
   }
-  else if (strcmp (str, "Float64") == 0)
+  else if (strcasecmp (str, "Float64") == 0)
   {
     *res = Float64;
   }

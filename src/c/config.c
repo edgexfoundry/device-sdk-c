@@ -375,7 +375,11 @@ void edgex_device_populateConfig
       namestr = NULL;
       toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
       toml_rtos2 (toml_raw_in (table, "Schedule"), &info.schedule);
-      toml_rtos2 (toml_raw_in (table, "Path"), &info.path);
+      toml_table_t *adtab = toml_table_in (table, "Addressable");
+      if (adtab)
+      {
+        toml_rtos2 (toml_raw_in (adtab, "Path"), &info.path);
+      }
 
       if (namestr && info.schedule && info.path)
       {

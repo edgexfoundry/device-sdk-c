@@ -284,13 +284,13 @@ char *edgex_value_tostring
 static bool populateValue
   (edgex_device_commandresult *cres, const char *val, const char *type)
 {
-  if (strcmp (type, "String") == 0)
+  if (strcasecmp (type, "String") == 0)
   {
     cres->type = String;
     cres->value.string_result = strdup (val);
     return true;
   }
-  if (strcmp (type, "Bool") == 0)
+  if (strcasecmp (type, "Bool") == 0)
   {
     cres->type = Bool;
     if (strcasecmp (val, "true") == 0)
@@ -305,52 +305,52 @@ static bool populateValue
     }
     return false;
   }
-  if (strcmp (type, "Uint8") == 0)
+  if (strcasecmp (type, "Uint8") == 0)
   {
     cres->type = Uint8;
     return (sscanf (val, "%" SCNu8, &cres->value.ui8_result) == 1);
   }
-  if (strcmp (type, "Uint16") == 0)
+  if (strcasecmp (type, "Uint16") == 0)
   {
     cres->type = Uint16;
     return (sscanf (val, "%" SCNu16, &cres->value.ui16_result) == 1);
   }
-  if (strcmp (type, "Uint32") == 0)
+  if (strcasecmp (type, "Uint32") == 0)
   {
     cres->type = Uint32;
     return (sscanf (val, "%" SCNu32, &cres->value.ui32_result) == 1);
   }
-  if (strcmp (type, "Uint64") == 0)
+  if (strcasecmp (type, "Uint64") == 0)
   {
     cres->type = Uint64;
     return (sscanf (val, "%" SCNu64, &cres->value.ui64_result) == 1);
   }
-  if (strcmp (type, "Int8") == 0)
+  if (strcasecmp (type, "Int8") == 0)
   {
     cres->type = Int8;
     return (sscanf (val, "%" SCNi8, &cres->value.i8_result) == 1);
   }
-  if (strcmp (type, "Int16") == 0)
+  if (strcasecmp (type, "Int16") == 0)
   {
     cres->type = Int16;
     return (sscanf (val, "%" SCNi16, &cres->value.i16_result) == 1);
   }
-  if (strcmp (type, "Int32") == 0)
+  if (strcasecmp (type, "Int32") == 0)
   {
     cres->type = Int32;
     return (sscanf (val, "%" SCNi32, &cres->value.i32_result) == 1);
   }
-  if (strcmp (type, "Int64") == 0)
+  if (strcasecmp (type, "Int64") == 0)
   {
     cres->type = Int64;
     return (sscanf (val, "%" SCNi64, &cres->value.i64_result) == 1);
   }
-  if (strcmp (type, "Float32") == 0)
+  if (strcasecmp (type, "Float32") == 0)
   {
     cres->type = Float32;
     return (sscanf (val, "%e", &cres->value.f32_result) == 1);
   }
-  if (strcmp (type, "Float64") == 0)
+  if (strcasecmp (type, "Float64") == 0)
   {
     cres->type = Float64;
     return (sscanf (val, "%le", &cres->value.f64_result) == 1);
