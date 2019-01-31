@@ -124,8 +124,8 @@ void edgex_nvpairs_free (edgex_nvpairs *p)
 
 static const char *proptypes[] =
 {
-  "Bool", "String", "Binary", "Uint8", "Uint16", "Uint32", "Uint64",
-  "Int8", "Int16", "Int32", "Int64", "Float32", "Float64"
+  "bool", "string", "binary", "uint8", "uint16", "uint32", "uint64",
+  "int8", "int16", "int32", "int64", "float32", "float64"
 };
 
 const char *edgex_propertytype_tostring (edgex_propertytype pt)

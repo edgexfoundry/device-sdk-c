@@ -506,6 +506,11 @@ static int runOneGet
         (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
     }
   }
+  else
+  {
+    iot_log_error
+      (svc->logger, "Driver for %s failed on GET", dev->name);
+  }
   free (results);
   free (requests);
   return retcode;
