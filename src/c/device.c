@@ -561,7 +561,7 @@ static int runOne
       "Command %s found for device %s but no %s version",
       command->name, dev->name, methStr (method)
     );
-    return MHD_HTTP_NOT_FOUND;
+    return MHD_HTTP_METHOD_NOT_ALLOWED;
   }
 
   edgex_profileresource *res = dev->profile->resources;
@@ -824,15 +824,18 @@ int edgex_device_handler_device
       {
         iot_log_error (svc->logger, "No command specified in url");
       }
-      *cmd = '\0';
-      result = oneCommand
-      (
-        svc,
-        url, byName, cmd + 1, method,
-        upload_data, upload_data_size,
-        reply, reply_type
-      );
-      *cmd = '/';
+      else
+      {
+         *cmd = '\0';
+         result = oneCommand
+         (
+           svc,
+           url, byName, cmd + 1, method,
+           upload_data, upload_data_size,
+           reply, reply_type
+         );
+         *cmd = '/';
+      }
     }
   }
   return result;
