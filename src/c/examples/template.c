@@ -67,7 +67,7 @@ static void template_discover (void *impl) {}
  * query the device accordingly and write the resulting value into the
  * commandresult.
  *
- * Note - In a commandrequest, the DeviceObject represents a deviceResource
+ * Note - In a commandrequest, the DeviceResource represents a deviceResource
  * which is defined in the device profile.
 */
 static bool template_get_handler
@@ -130,7 +130,7 @@ static bool template_get_handler
  * written. The implementation of this method should effect the write to the
  * device.
  *
- * Note - In a commandrequest, the DeviceObject represents a deviceResource
+ * Note - In a commandrequest, the DeviceResource represents a deviceResource
  * which is defined in the device profile.
 */
 static bool template_put_handler

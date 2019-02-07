@@ -12,6 +12,8 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- The edgex_deviceobject type is renamed to edgex_deviceresource to reflect its
+  naming in the profile definition.
 - The registry service is now identified by a URL, eg "consul://localhost:8500".
   - Support for consul as the registry service is built-in, but other
     implementations may be added using the API in edgex/registry.h

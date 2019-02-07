@@ -33,7 +33,7 @@ static void generate_value_descriptors
 {
   uint64_t timenow = edgex_device_millitime ();
 
-  for (edgex_deviceobject *res = dp->device_resources; res; res = res->next)
+  for (edgex_deviceresource *res = dp->device_resources; res; res = res->next)
   {
     edgex_propertyvalue *pv = res->properties->value;
     edgex_units *units = res->properties->units;
