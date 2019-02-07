@@ -33,6 +33,7 @@ char * edgex_device_add_device
   char **dev_id;
   char *result = NULL;
 
+  *err = EDGEX_OK;
   pthread_rwlock_rdlock (&svc->deviceslock);
   dev_id = edgex_map_get (&svc->name_to_id, name);
   pthread_rwlock_unlock (&svc->deviceslock);
@@ -108,6 +109,7 @@ char * edgex_device_add_device
 edgex_device * edgex_device_devices
   (edgex_device_service *svc, edgex_error *err)
 {
+  *err = EDGEX_OK;
   edgex_device *result = edgex_metadata_client_get_devices
     (svc->logger, &svc->config.endpoints, svc->name, err);
 
@@ -146,6 +148,7 @@ edgex_device * edgex_device_devices
 void edgex_device_remove_device
   (edgex_device_service *svc, const char *id, edgex_error *err)
 {
+  *err = EDGEX_OK;
   edgex_metadata_client_delete_device
     (svc->logger, &svc->config.endpoints, id, err);
   if (err->code != 0)
@@ -157,6 +160,7 @@ void edgex_device_remove_device
 void edgex_device_remove_device_byname
   (edgex_device_service *svc, const char *name, edgex_error *err)
 {
+  *err = EDGEX_OK;
   edgex_metadata_client_delete_device_byname
     (svc->logger, &svc->config.endpoints, name, err);
   if (err->code != 0)

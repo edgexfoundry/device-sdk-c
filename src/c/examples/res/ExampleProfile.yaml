@@ -13,9 +13,9 @@ deviceResources:
             { SensorID: "Sen1" , SensorType: "1" }
         properties:
             value:
-                { type: "Uint64", readWrite: "R", defaultValue: "0" }
+                { type: "uint64", readWrite: "R", defaultValue: "0" }
             units:
-                { type: "String", readWrite: "R", defaultValue: "Random" }
+                { type: "string", readWrite: "R", defaultValue: "Random" }
 
       -
         name: SensorTwo
@@ -24,9 +24,9 @@ deviceResources:
           { SensorID: "Sen2", SensorType: "2" }
         properties:
           value:
-            { type: "Uint64", readWrite: "R", defaultValue: "0" }
+            { type: "uint64", readWrite: "R", defaultValue: "0" }
           units:
-            { type: "String", readWrite: "R", defaultValue: "Random" }
+            { type: "string", readWrite: "R", defaultValue: "Random" }
 
       - name: Switch
         description: "A generic switch"
@@ -34,9 +34,9 @@ deviceResources:
           { SwitchID: "Switch1" }
         properties:
           value:
-            { type: "Bool", readWrite: "RW", defaultValue: "true" }
+            { type: "bool", readWrite: "RW", defaultValue: "true" }
           units:
-            { type: "String", readWrite: "R", defaultValue: "State" }
+            { type: "string", readWrite: "R", defaultValue: "State" }
 
 
 resources:

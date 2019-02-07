@@ -19,6 +19,7 @@
 #include "rest.h"
 #include "edgex_rest.h"
 #include "edgex_time.h"
+#include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +83,7 @@ edgex_device_service *edgex_device_service_new
     return NULL;
   }
 
+  *err = EDGEX_OK;
   edgex_device_service *result = malloc (sizeof (edgex_device_service));
   memset (result, 0, sizeof (edgex_device_service));
   result->name = name;
@@ -191,6 +193,8 @@ static void startConfigured
     "Starting %s device service, version %s",
     svc->name, svc->version
   );
+  iot_log_debug
+    (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
   edgex_device_dumpConfig (svc);
 
   svc->adminstate = UNLOCKED;
@@ -739,6 +743,7 @@ void edgex_device_post_readings
 void edgex_device_service_stop
   (edgex_device_service *svc, bool force, edgex_error *err)
 {
+  *err = EDGEX_OK;
   iot_log_debug (svc->logger, "Stop device service");
   if (svc->scheduler)
   {
