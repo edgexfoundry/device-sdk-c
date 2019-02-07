@@ -13,19 +13,17 @@
 #include "edgex/edgex_logging.h"
 #include "edgex/error.h"
 
-typedef struct edgex_service_endpoints edgex_service_endpoints;
-
 bool edgex_consul_client_ping
 (
-  iot_logging_client * lc,
-  edgex_service_endpoints * endpoints,
-  edgex_error * err
+  iot_logging_client *lc,
+  void *location,
+  edgex_error *err
 );
 
 edgex_nvpairs *edgex_consul_client_get_config
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   const char *servicename,
   const char *profile,
   edgex_error *err
@@ -34,7 +32,7 @@ edgex_nvpairs *edgex_consul_client_get_config
 void edgex_consul_client_write_config
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   const char *servicename,
   const char *profile,
   const edgex_nvpairs *config,
@@ -44,7 +42,7 @@ void edgex_consul_client_write_config
 void edgex_consul_client_register_service
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   const char *servicename,
   const char *host,
   uint16_t port,

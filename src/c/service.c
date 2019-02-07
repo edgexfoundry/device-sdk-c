@@ -14,7 +14,6 @@
 #include "errorlist.h"
 #include "rest_server.h"
 #include "profiles.h"
-#include "consul.h"
 #include "metadata.h"
 #include "data.h"
 #include "rest.h"
@@ -147,104 +146,18 @@ static void dev_invoker (void *p)
   free (reply);
 }
 
-void edgex_device_service_start
+static void startConfigured
 (
   edgex_device_service *svc,
-  bool useRegistry,
-  const char *regHost,
-  uint16_t regPort,
+  edgex_registry *registry,
+  toml_table_t *config,
   const char *profile,
-  const char *confDir,
   edgex_error *err
 )
 {
-  toml_table_t *config = NULL;
-  bool uploadConfig = false;
-
-  svc->logger = iot_logging_client_create (svc->name);
-  if (confDir == NULL || *confDir == '\0')
-  {
-    confDir = "res";
-  }
-  *err = EDGEX_OK;
-
-  if (useRegistry)
-  {
-    svc->config.endpoints.consul.host =
-      strdup (regHost ? regHost : "localhost");
-    svc->config.endpoints.consul.port = regPort ? regPort : 8500;
-
-    // Wait for consul to be ready
-
-    int retries = 5;
-    struct timespec delay = { .tv_sec = 1, .tv_nsec = 0 };
-    while
-    (
-      !edgex_consul_client_ping (svc->logger, &svc->config.endpoints, err) &&
-      --retries
-    )
-    {
-      nanosleep (&delay, NULL);
-    }
-    if (retries == 0)
-    {
-      iot_log_error (svc->logger, "consul registry service not running");
-      *err = EDGEX_REMOTE_SERVER_DOWN;
-      return;
-    }
-
-    edgex_nvpairs *consulConf = edgex_consul_client_get_config
-    (
-      svc->logger,
-      &svc->config.endpoints,
-      svc->name,
-      profile,
-      err
-    );
-
-    if (consulConf)
-    {
-      edgex_device_populateConfigNV (svc, consulConf, err);
-      edgex_nvpairs_free (consulConf);
-      if (err->code)
-      {
-        return;
-      }
-    }
-    else
-    {
-      iot_log_info (svc->logger, "Unable to get configuration from registry.");
-      iot_log_info (svc->logger, "Will load from file.");
-      uploadConfig = true;
-      *err = EDGEX_OK;
-    }
-  }
-
-  if (uploadConfig || !useRegistry)
-  {
-    config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
-    if (err->code)
-    {
-      return;
-    }
-
-    edgex_device_populateConfig (svc, config, err);
-    if (err->code)
-    {
-      toml_free (config);
-      return;
-    }
-  }
-
-  if (svc->config.device.profilesdir == NULL)
-  {
-    svc->config.device.profilesdir = strdup (confDir);
-  }
-
   edgex_device_validateConfig (svc, err);
   if (err->code)
   {
-    toml_free (config);
     return;
   }
 
@@ -259,17 +172,15 @@ void edgex_device_service_start
       (svc->logger, edgex_log_torest, svc->config.logging.remoteurl);
   }
 
-  if (uploadConfig)
+  if (profile)
   {
     iot_log_info (svc->logger, "Uploading configuration to registry.");
     edgex_nvpairs *c = edgex_device_getConfig (svc);
-    edgex_consul_client_write_config
-      (svc->logger, &svc->config.endpoints, svc->name, profile, c, err);
+    edgex_registry_put_config (registry, svc->name, profile, c, err);
     edgex_nvpairs_free (c);
     if (err->code)
     {
       iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
-      toml_free (config);
       return;
     }
   }
@@ -302,7 +213,6 @@ void edgex_device_service_start
   {
     iot_log_error (svc->logger, "core-data service not running");
     *err = EDGEX_REMOTE_SERVER_DOWN;
-    toml_free (config);
     return;
   }
 
@@ -317,7 +227,6 @@ void edgex_device_service_start
   {
     iot_log_error (svc->logger, "core-metadata service not running");
     *err = EDGEX_REMOTE_SERVER_DOWN;
-    toml_free (config);
     return;
   }
 
@@ -331,7 +240,6 @@ void edgex_device_service_start
   if (err->code)
   {
     iot_log_error (svc->logger, "get_deviceservice failed");
-    toml_free (config);
     return;
   }
 
@@ -343,7 +251,6 @@ void edgex_device_service_start
     if (err->code)
     {
       iot_log_error (svc->logger, "get_addressable failed");
-      toml_free (config);
       return;
     }
     if (addr == NULL)
@@ -363,7 +270,6 @@ void edgex_device_service_start
       if (err->code)
       {
         iot_log_error (svc->logger, "create_addressable failed");
-        toml_free (config);
         return;
       }
     }
@@ -390,7 +296,6 @@ void edgex_device_service_start
     {
       iot_log_error
         (svc->logger, "Unable to create device service in metadata");
-      toml_free (config);
       return;
     }
   }
@@ -401,7 +306,6 @@ void edgex_device_service_start
   edgex_device_profiles_upload (svc, err);
   if (err->code)
   {
-    toml_free (config);
     return;
   }
 
@@ -410,7 +314,6 @@ void edgex_device_service_start
   edgex_device_free (edgex_device_devices (svc, err));
   if (err->code)
   {
-    toml_free (config);
     return;
   }
 
@@ -420,7 +323,6 @@ void edgex_device_service_start
     (svc->logger, svc->config.service.port, err);
   if (err->code)
   {
-    toml_free (config);
     return;
   }
 
@@ -436,7 +338,6 @@ void edgex_device_service_start
   {
     edgex_device_process_configured_devices
       (svc, toml_array_in (config, "DeviceList"), err);
-    toml_free (config);
     if (err->code)
     {
       return;
@@ -681,12 +582,11 @@ void edgex_device_service_start
     svc->daemon, EDGEX_DEV_API_PING, GET, svc, ping_handler
   );
 
-  if (useRegistry && svc->config.service.checkinterval)
+  if (registry && svc->config.service.checkinterval)
   {
-    edgex_consul_client_register_service
+    edgex_registry_register_service
     (
-      svc->logger,
-      &svc->config.endpoints,
+      registry,
       svc->name,
       svc->config.service.host,
       svc->config.service.port,
@@ -695,7 +595,7 @@ void edgex_device_service_start
     );
     if (err->code)
     {
-      iot_log_error (svc->logger, "Unable to register service in consul");
+      iot_log_error (svc->logger, "Unable to register service in registry");
       return;
     }
   }
@@ -704,6 +604,99 @@ void edgex_device_service_start
   {
     iot_log_debug (svc->logger, svc->config.service.startupmsg);
   }
+}
+
+void edgex_device_service_start
+(
+  edgex_device_service *svc,
+  const char *registryURL,
+  const char *profile,
+  const char *confDir,
+  edgex_error *err
+)
+{
+  toml_table_t *config = NULL;
+  edgex_registry *registry = NULL;
+  bool uploadConfig = false;
+
+  svc->logger = iot_logging_client_create (svc->name);
+  if (confDir == NULL || *confDir == '\0')
+  {
+    confDir = "res";
+  }
+  *err = EDGEX_OK;
+
+  if (registryURL)
+  {
+    registry = edgex_registry_get_registry (svc->logger, registryURL);
+    if (registry == NULL)
+    {
+      *err = EDGEX_INVALID_ARG;
+      return;
+    }
+  }
+
+  if (registry)
+  {
+    // Wait for registry to be ready
+
+    int retries = 5;
+    struct timespec delay = { .tv_sec = 1, .tv_nsec = 0 };
+    while (!edgex_registry_ping (registry, err) && --retries)
+    {
+      nanosleep (&delay, NULL);
+    }
+    if (retries == 0)
+    {
+      iot_log_error (svc->logger, "registry service not running");
+      *err = EDGEX_REMOTE_SERVER_DOWN;
+      edgex_registry_free (registry);
+      return;
+    }
+
+    edgex_nvpairs *confpairs =
+      edgex_registry_get_config (registry, svc->name, profile, err);
+
+    if (confpairs)
+    {
+      edgex_device_populateConfigNV (svc, confpairs, err);
+      edgex_nvpairs_free (confpairs);
+      if (err->code)
+      {
+        edgex_registry_free (registry);
+        return;
+      }
+    }
+    else
+    {
+      iot_log_info (svc->logger, "Unable to get configuration from registry.");
+      iot_log_info (svc->logger, "Will load from file.");
+      uploadConfig = true;
+      *err = EDGEX_OK;
+    }
+  }
+
+  if (uploadConfig || (registry == NULL))
+  {
+    config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
+    if (err->code)
+    {
+      edgex_registry_free (registry);
+      return;
+    }
+
+    edgex_device_populateConfig (svc, config, err);
+  }
+
+  if (svc->config.device.profilesdir == NULL)
+  {
+    svc->config.device.profilesdir = strdup (confDir);
+  }
+
+  startConfigured (svc, registry, config, uploadConfig ? profile : NULL, err);
+
+  edgex_registry_free (registry);
+  toml_free (config);
 }
 
 static void doPost (void *p)
@@ -785,5 +778,6 @@ void edgex_device_service_stop
     edgex_deviceprofile_free (*p);
   }
   edgex_map_deinit (&svc->profiles);
+  edgex_registry_fini ();
   free (svc);
 }

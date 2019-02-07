@@ -7,6 +7,7 @@
  */
 
 #include "consul.h"
+#include "edgex/registry.h"
 #include "edgex_rest.h"
 #include "rest.h"
 #include "errorlist.h"
@@ -110,7 +111,7 @@ static edgex_nvpairs *read_pairs
 edgex_nvpairs *edgex_consul_client_get_config
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   const char *servicename,
   const char *profile,
   edgex_error *err
@@ -119,6 +120,7 @@ edgex_nvpairs *edgex_consul_client_get_config
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
   edgex_nvpairs *result = NULL;
+  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   if (profile && *profile)
@@ -127,7 +129,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     (
       url, URL_BUF_SIZE - 1,
       "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse",
-      endpoints->consul.host, endpoints->consul.port,
+      endpoint->host, endpoint->port,
       servicename, profile
     );
   }
@@ -137,7 +139,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     (
       url, URL_BUF_SIZE - 1,
       "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse",
-      endpoints->consul.host, endpoints->consul.port, servicename
+      endpoint->host, endpoint->port, servicename
     );
   }
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
@@ -159,7 +161,7 @@ edgex_nvpairs *edgex_consul_client_get_config
 void edgex_consul_client_write_config
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   const char *servicename,
   const char *profile,
   const edgex_nvpairs *config,
@@ -168,12 +170,13 @@ void edgex_consul_client_write_config
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
+  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/txn",
-    endpoints->consul.host, endpoints->consul.port
+    endpoint->host, endpoint->port
   );
 
   JSON_Value *jresult = json_value_init_array ();
@@ -231,7 +234,7 @@ void edgex_consul_client_write_config
 void edgex_consul_client_register_service
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   const char *servicename,
   const char *host,
   uint16_t port,
@@ -243,12 +246,13 @@ void edgex_consul_client_register_service
   char url[URL_BUF_SIZE];
   char myUrl[URL_BUF_SIZE];
   char checkName[URL_BUF_SIZE];
+  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/register",
-    endpoints->consul.host, endpoints->consul.port
+    endpoint->host, endpoint->port
   );
   snprintf
     (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, port);
@@ -283,12 +287,13 @@ void edgex_consul_client_register_service
 bool edgex_consul_client_ping
 (
   iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
+  void *location,
   edgex_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
+  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -296,8 +301,8 @@ bool edgex_consul_client_ping
     url,
     URL_BUF_SIZE - 1,
     "http://%s:%u/v1/status/leader",
-    endpoints->consul.host,
-    endpoints->consul.port
+    endpoint->host,
+    endpoint->port
   );
 
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);

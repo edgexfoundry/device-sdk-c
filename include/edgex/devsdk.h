@@ -17,6 +17,7 @@
 #include "edgex/edgex.h"
 #include "edgex/error.h"
 #include "edgex/edgex_logging.h"
+#include "edgex/registry.h"
 
 typedef struct edgex_blob
 {
@@ -202,12 +203,11 @@ edgex_device_service *edgex_device_service_new
 /**
  * @brief Start a device service.
  * @param svc The service to start.
- * @param useRegistry If set, obtain configuration from the Consul Key-Value
- *                    store and register the service with it. If no
+ * @param registryURL If set, this identifies a registry implementation for the
+ *                    service to use. The service will register itself and
+                      obtain configuration from this registry. If no
  *                    configuration is available, it will be read from file and
- *                    uploaded to Consul ready for subsequent runs.
- * @param regHost Host on which to find Consul. Defaults to localhost if NULL.
- * @param regPort Port on which to find Consul. Defaults to 8500 if zero.
+ *                    uploaded to the registry ready for subsequent runs.
  * @param profile Configuration profile to use (may be null).
  * @param confDir Directory containing configuration files.
  * @param err Nonzero reason codes will be set here in the event of errors.
@@ -216,9 +216,7 @@ edgex_device_service *edgex_device_service_new
 void edgex_device_service_start
 (
   edgex_device_service *svc,
-  bool useRegistry,
-  const char *regHost,
-  uint16_t regPort,
+  const char *registryURL,
   const char *profile,
   const char *confDir,
   edgex_error *err
