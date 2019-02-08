@@ -51,7 +51,7 @@ typedef struct edgex_device_commandrequest
   /** Corresponds to a get or set line in a resource of the device profile. */
   const edgex_resourceoperation *ro;
   /** Corresponds to a deviceResource in the device profile. */
-  const edgex_deviceobject *devobj;
+  const edgex_deviceresource *devobj;
 } edgex_device_commandrequest;
 
 /**

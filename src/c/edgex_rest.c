@@ -471,10 +471,10 @@ static void profileproperty_free (edgex_profileproperty *e)
   free (e);
 }
 
-static edgex_deviceobject *deviceobject_read
+static edgex_deviceresource *deviceresource_read
   (iot_logging_client *lc, const JSON_Object *obj)
 {
-  edgex_deviceobject *result = NULL;
+  edgex_deviceresource *result = NULL;
   edgex_profileproperty *pp = profileproperty_read
     (lc, json_object_get_object (obj, "properties"));
   char *name = get_string (obj, "name");
@@ -486,7 +486,7 @@ static edgex_deviceobject *deviceobject_read
     edgex_nvpairs *nv;
     edgex_nvpairs **nv_last;
 
-    result = malloc (sizeof (edgex_deviceobject));
+    result = malloc (sizeof (edgex_deviceresource));
     result->name = name;
     result->description = get_string (obj, "description");
     result->tag = get_string (obj, "tag");
@@ -514,7 +514,7 @@ static edgex_deviceobject *deviceobject_read
   return result;
 }
 
-static JSON_Value *deviceobject_write (const edgex_deviceobject *e)
+static JSON_Value *deviceresource_write (const edgex_deviceresource *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
@@ -526,27 +526,27 @@ static JSON_Value *deviceobject_write (const edgex_deviceobject *e)
   return result;
 }
 
-static edgex_deviceobject *edgex_deviceobject_dup (edgex_deviceobject *edo)
+static edgex_deviceresource *edgex_deviceresource_dup (edgex_deviceresource *e)
 {
-  edgex_deviceobject *result = NULL;
-  if (edo)
+  edgex_deviceresource *result = NULL;
+  if (e)
   {
-    result = malloc (sizeof (edgex_deviceobject));
-    result->name = strdup (edo->name);
-    result->description = strdup (edo->description);
-    result->tag = strdup (edo->tag);
-    result->properties = profileproperty_dup (edo->properties);
-    result->attributes = edgex_nvpairs_dup (edo->attributes);
-    result->next = edgex_deviceobject_dup (edo->next);
+    result = malloc (sizeof (edgex_deviceresource));
+    result->name = strdup (e->name);
+    result->description = strdup (e->description);
+    result->tag = strdup (e->tag);
+    result->properties = profileproperty_dup (e->properties);
+    result->attributes = edgex_nvpairs_dup (e->attributes);
+    result->next = edgex_deviceresource_dup (e->next);
   }
   return result;
 }
 
-static void deviceobject_free (edgex_deviceobject *e)
+static void deviceresource_free (edgex_deviceresource *e)
 {
   while (e)
   {
-    edgex_deviceobject *current = e;
+    edgex_deviceresource *current = e;
     free (e->name);
     free (e->description);
     free (e->tag);
@@ -968,7 +968,7 @@ static edgex_deviceprofile *deviceprofile_read
   edgex_deviceprofile *result = malloc (sizeof (edgex_deviceprofile));
   size_t count;
   JSON_Array *array;
-  edgex_deviceobject **last_ptr = &result->device_resources;
+  edgex_deviceresource **last_ptr = &result->device_resources;
   edgex_command **last_ptr2 = &result->commands;
   edgex_profileresource **last_ptr3 = &result->resources;
 
@@ -988,7 +988,7 @@ static edgex_deviceprofile *deviceprofile_read
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
-    edgex_deviceobject *temp = deviceobject_read
+    edgex_deviceresource *temp = deviceresource_read
       (lc, json_array_get_object (array, i));
     if (temp)
     {
@@ -1047,9 +1047,9 @@ deviceprofile_write (const edgex_deviceprofile *e, bool create)
   json_object_set_string (obj, "model", e->model);
   json_object_set_value (obj, "labels", strings_to_array (e->labels));
 
-  for (edgex_deviceobject *temp = e->device_resources; temp; temp = temp->next)
+  for (edgex_deviceresource *temp = e->device_resources; temp; temp = temp->next)
   {
-    json_array_append_value (array, deviceobject_write (temp));
+    json_array_append_value (array, deviceresource_write (temp));
   }
 
   json_object_set_value (obj, "deviceResources", array_val);
@@ -1317,7 +1317,7 @@ edgex_deviceprofile *edgex_deviceprofile_dup (edgex_deviceprofile *dp)
     result->manufacturer = strdup (dp->manufacturer);
     result->model = strdup (dp->model);
     result->labels = edgex_strings_dup (dp->labels);
-    result->device_resources = edgex_deviceobject_dup (dp->device_resources);
+    result->device_resources = edgex_deviceresource_dup (dp->device_resources);
     result->commands = command_dup (dp->commands);
     result->resources = profileresource_dup (dp->resources);
   }
@@ -1332,7 +1332,7 @@ void edgex_deviceprofile_free (edgex_deviceprofile *e)
   free (e->manufacturer);
   free (e->model);
   edgex_strings_free (e->labels);
-  deviceobject_free (e->device_resources);
+  deviceresource_free (e->device_resources);
   command_free (e->commands);
   profileresource_free (e->resources);
   free (e);
@@ -1919,7 +1919,7 @@ void edgex_deviceprofile_dump (edgex_deviceprofile * e)
   printf ("name %s\n", SAFE_STR(e->name));
   printf ("origin %lu\n", e->origin);
   printf ("device resources:\n");
-  for (edgex_deviceobject * dr = e->device_resources; dr; dr = dr->next)
+  for (edgex_deviceresource * dr = e->device_resources; dr; dr = dr->next)
   {
     printf ("name %s\n", dr->name);
     printf ("description %s\n", dr->description);

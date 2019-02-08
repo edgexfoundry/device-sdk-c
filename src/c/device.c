@@ -342,8 +342,8 @@ static const edgex_command *findCommand
   return cmd;
 }
 
-static edgex_deviceobject *findDevObj
-  (edgex_deviceobject *list, const char *name)
+static edgex_deviceresource *findDevResource
+  (edgex_deviceresource *list, const char *name)
 {
   while (list && strcmp (list->name, name))
   {
@@ -384,7 +384,8 @@ static int runOnePut
   for (int i = 0; i < nops; i++)
   {
     reqs[i].ro = op;
-    reqs[i].devobj = findDevObj (dev->profile->device_resources, op->object);
+    reqs[i].devobj =
+      findDevResource (dev->profile->device_resources, op->object);
     if (!reqs[i].devobj->properties->value->writable)
     {
       iot_log_error
@@ -463,7 +464,7 @@ static int runOneGet
   {
     requests[i].ro = op;
     requests[i].devobj =
-      findDevObj (dev->profile->device_resources, op->object);
+      findDevResource (dev->profile->device_resources, op->object);
     if (!requests[i].devobj->properties->value->readable)
     {
       iot_log_error
@@ -586,12 +587,12 @@ static int runOne
   uint32_t n = 0;
   for (op = (method == GET) ? res->get : res->set; op; op = op->next)
   {
-    if (findDevObj (dev->profile->device_resources, op->object) == NULL)
+    if (findDevResource (dev->profile->device_resources, op->object) == NULL)
     {
       iot_log_error
       (
         svc->logger,
-        "No device object %s for device %s",
+        "No device resource %s for device %s",
         op->object, dev->name
       );
       return MHD_HTTP_NOT_FOUND;

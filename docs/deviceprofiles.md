@@ -101,12 +101,12 @@ structure.
 
 * edgex_resourceoperation represents a get or set line of an operation within
 the resource section.
-* edgex_deviceobject represents a deviceResource.
+* edgex_deviceresource represents a deviceResource.
 
 In most cases the required information will be
 
 * The "property" field in edgex_resourceoperation. This names the property of
 the deviceResource that is to be read or written, usually "value".
-* The "attributes" field in the edgex_deviceobject.
-* The datatype required, found in edgex_deviceobject->properties->value->type.
+* The "attributes" field in the edgex_deviceresource.
+* The datatype required, found in edgex_deviceresource->properties->value->type.
 
