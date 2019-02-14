@@ -350,6 +350,33 @@ edgex_device * edgex_device_devices
 );
 
 /**
+ * @brief Retrieve device information.
+ * @param svc The device service.
+ * @param id The device id.
+ * @returns The requested device metadata or null if the device was not found.
+ */
+
+edgex_device * edgex_device_get_device
+  (edgex_device_service *svc, const char *id);
+
+/**
+ * @brief Retrieve device information.
+ * @param svc The device service.
+ * @param name The device name.
+ * @returns The requested device metadata or null if the device was not found.
+ */
+
+edgex_device * edgex_device_get_device_byname
+  (edgex_device_service *svc, const char *name);
+
+/**
+ * @brief Free a device structure or list of device structures.
+ * @param The device or the first device in the list.
+ */
+
+void edgex_device_free_device (edgex_device *e);
+
+/**
  * @brief Retrieve the device profiles currently known in the SDK.
  * @param svc The device service.
  * @param count Is set to the number of profiles returned.

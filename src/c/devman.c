@@ -145,6 +145,34 @@ edgex_device * edgex_device_devices
   return result;
 }
 
+edgex_device * edgex_device_get_device
+  (edgex_device_service *svc, const char *id)
+{
+  edgex_device *result = NULL;
+  pthread_rwlock_rdlock (&svc->deviceslock);
+  edgex_device **orig = edgex_map_get (&svc->devices, id);
+  if (orig)
+  {
+    result = edgex_device_dup (*orig);
+  }
+  pthread_rwlock_unlock (&svc->deviceslock);
+  return result;
+}
+
+edgex_device * edgex_device_get_device_byname
+  (edgex_device_service *svc, const char *name)
+{
+  edgex_device *result = NULL;
+  pthread_rwlock_rdlock (&svc->deviceslock);
+  char **id = edgex_map_get (&svc->name_to_id, name);
+  if (id)
+  {
+    result = edgex_device_dup (*edgex_map_get (&svc->devices, *id));
+  }
+  pthread_rwlock_unlock (&svc->deviceslock);
+  return result;
+}
+
 void edgex_device_remove_device
   (edgex_device_service *svc, const char *id, edgex_error *err)
 {
@@ -197,4 +225,9 @@ void edgex_device_update_device
   {
     iot_log_error (svc->logger, "Unable to update device %s", id ? id : name);
   }
+}
+
+void edgex_device_free_device (edgex_device *e)
+{
+  edgex_device_free (e);
 }
