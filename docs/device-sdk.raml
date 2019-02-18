@@ -9,7 +9,11 @@ schemas:
     -
         responseobjects: '{"type":"array","$schema":"http://json-schema.org/draft-06/schema#","title":"responseobjects","items":{"type":"object","required":false,"$ref":"#/schemas/responseobject"}}'
     -
-        responseobject: '{"type":"object","$schema":"http://json-schema.org/draft-06/schema#","title":"responseobject","additionalProperties":{"type":"string"}}'
+        responseobject: '{"type":"object","$schema":"http://json-schema.org/draft-06/schema#","title":"responseobject","properties": {"device":{"description":"the name of the device","type":"string"}, "origin":{"description":"timestamp indicating when the readings were taken","type":"integer"}, "readings":{"type":"array","items":{"type":"object","$ref":"#/schemas/reading"}}}}'
+    -
+        reading: '{"type":"object","$schema":"http://json-schema.org/draft-06/schema#","title":"reading","properties":{"name":{"type":"string"},"value":{"type":"string"}}}'
+    -
+        setting: '{"type":"object","$schema":"http://json-schema.org/draft-06/schema#","title":"setting","additionalProperties":{"type":"string"}}'
     -
         callbackalert: '{"type": "object","$schema": "http://json-schema.org/draft-06/schema#","title": "Notification Schema","properties": {"id": {"description": "the identifier of the object which is called back","type": "string"},"actionType": {"description": "the type of the called back object","enum":["PROFILE","DEVICE","PROVISIONWATCHER","SCHEDULE","SCHEDULEEVENT"],"type": "string"}},"required": ["id"]}'
     -
@@ -47,7 +51,7 @@ schemas:
                 body:
                     application/json:
                         schema: responseobject
-                        example: '{"VDS-CurrentTemperature": "32.5"}'
+                        example: '{"device":"TestDevice","origin":1550485943000,"readings":[{"name":"VDS-CurrentTemperature","value":"32.5"}]}'
             "404":
                 description: If no device exists by the ID provided.
             "423":
@@ -58,7 +62,7 @@ schemas:
         description: Issues the PUT command referenced by the command to the device/sensor (referenced by database-generated ID) to which it is associated through the Device Service.
         body:
             application/json:
-                schema: responseobject
+                schema: setting
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
@@ -73,7 +77,7 @@ schemas:
         description: Issues the POST command referenced by the command to the device/sensor (referenced by database generated ID) to which it is associated through the device service.
         body:
             application/json:
-                schema: responseobject
+                schema: setting
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
@@ -103,7 +107,7 @@ schemas:
                 body:
                     application/json:
                         schema: responseobject
-                        example: '{"VDS-CurrentTemperature": "32.5"}'
+                        example: '{"device":"TestDevice","origin":1550485943000,"readings":[{"name":"VDS-CurrentTemperature","value":"32.5"}]}'
             "404":
                 description: If no device exists by the name provided.
             "423":
@@ -114,7 +118,7 @@ schemas:
         description: Issues the PUT command referenced by the command to the device/sensor (referenced by name) to which it is associated through the Device Service.
         body:
             application/json:
-                schema: responseobject
+                schema: setting
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
@@ -129,7 +133,7 @@ schemas:
         description: Issues the POST command referenced by the command to the device/sensor (referenced by name) to which it is associated through the device service.
         body:
             application/json:
-                schema: responseobject
+                schema: setting
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
@@ -156,7 +160,7 @@ schemas:
                 body:
                     application/json:
                         schema: responseobjects
-                        example: '[{"VDS-CurrentTemperature": "32.5"},{"VDS-CurrentTemperature": "33.1"}]'
+                        example: '[{"device":"TestDevice1","origin":1550485943000,"readings":[{"name":"VDS-CurrentTemperature","value":"32.5"}]},{"device":"TestDevice2","origin":1550485945000,"readings":[{"name":"VDS-CurrentTemperature","value":"33.1"}]}]'
             "423":
                 description: If the device service is locked (admin state).
             "503": 
@@ -165,7 +169,7 @@ schemas:
         description: Issues the PUT command referenced by the command to all operational device(s)/sensor(s) that are associated to the device service and have this command.
         body:
             application/json:
-                schema: responseobject
+                schema: setting
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
@@ -178,7 +182,7 @@ schemas:
         description: Issues the POST command referenced by the command to all operational device(s)/sensor(s) that are associated to the Device Service and have this command.
         body:
             application/json:
-                schema: responseobject
+                schema: setting
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
