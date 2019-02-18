@@ -52,7 +52,7 @@ SendReadingsOnChanged | Bool | Not implemented. To be used to suppress the submi
 Option | Type | Notes
 :--- | :--- | :---
 RemoteURL | String | If this option is set, logs will be submitted to a logging service at the specified URL.
-File | String | If this option is set, logs will be written to the named file.
+File | String | If this option is set, logs will be written to the named file. Setting a value of "-" causes logs to be written to standard output.
 
 ## Driver section
 
