@@ -213,7 +213,11 @@ static void startConfigured
   {
     nanosleep (&delay, NULL);
   }
-  if (retries == 0)
+  if (retries)
+  {
+    iot_log_debug (svc->logger, "Found core-data service at %s:%d", svc->config.endpoints.data.host, svc->config.endpoints.data.port);
+  }
+  else
   {
     iot_log_error (svc->logger, "core-data service not running");
     *err = EDGEX_REMOTE_SERVER_DOWN;
@@ -227,7 +231,11 @@ static void startConfigured
   {
     nanosleep (&delay, NULL);
   }
-  if (retries == 0)
+  if (retries)
+  {
+    iot_log_debug (svc->logger, "Found core-metadata service at %s:%d", svc->config.endpoints.metadata.host, svc->config.endpoints.metadata.port);
+  }
+  else
   {
     iot_log_error (svc->logger, "core-metadata service not running");
     *err = EDGEX_REMOTE_SERVER_DOWN;
@@ -690,6 +698,13 @@ void edgex_device_service_start
     }
 
     edgex_device_populateConfig (svc, config, err);
+  }
+
+  if (registry)
+  {
+    edgex_error e; // errors will be picked up in validateConfig
+    edgex_registry_query_service (registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
+    edgex_registry_query_service (registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
   }
 
   if (svc->config.device.profilesdir == NULL)

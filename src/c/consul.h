@@ -50,4 +50,14 @@ void edgex_consul_client_register_service
   edgex_error *err
 );
 
+void edgex_consul_client_query_service
+(
+  iot_logging_client *lc,
+  void *location,
+  const char *servicename,
+  char **host,
+  uint16_t *port,
+  edgex_error *err
+);
+
 #endif

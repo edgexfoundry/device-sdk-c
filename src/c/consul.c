@@ -284,6 +284,70 @@ void edgex_consul_client_register_service
   free (ctx.buff);
 }
 
+void edgex_consul_client_query_service
+(
+  iot_logging_client *lc,
+  void *location,
+  const char *servicename,
+  char **host,
+  uint16_t *port,
+  edgex_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url, URL_BUF_SIZE - 1,
+    "http://%s:%u/v1/catalog/service/%s",
+    endpoint->host, endpoint->port, servicename
+  );
+
+  *err = EDGEX_OK;
+
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  if (err->code == 0)
+  {
+    JSON_Value *val = json_parse_string (ctx.buff);
+    JSON_Array *svcs = json_value_get_array (val);
+
+    size_t nsvcs = json_array_get_count (svcs);
+    if (nsvcs)
+    {
+      if (nsvcs != 1)
+      {
+        iot_log_warning
+          (lc, "Multiple instances of %s found, using first.", servicename);
+      }
+      JSON_Object *obj = json_array_get_object (svcs, 0);
+      const char *name = json_object_get_string (obj, "ServiceAddress");
+      if (name)
+      {
+        *host = strdup (name);
+        *port = json_object_get_number (obj, "ServicePort");
+      }
+      else
+      {
+        iot_log_error (lc, "consul: no ServiceAddress for %s", servicename);
+        *err = EDGEX_BAD_CONFIG;
+      }
+    }
+    else
+    {
+      iot_log_error (lc, "consul: no service named %s", servicename);
+      *err = EDGEX_BAD_CONFIG;
+    }
+
+    json_value_free (val);
+  }
+
+  free (ctx.buff);
+}
+
 bool edgex_consul_client_ping
 (
   iot_logging_client *lc,

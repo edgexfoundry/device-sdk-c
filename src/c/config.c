@@ -598,15 +598,6 @@ void edgex_device_populateConfigNV
     svc->config.service.labels[0] = NULL;
   }
 
-  svc->config.endpoints.data.host =
-    get_nv_config_string (config, "Clients/Data/Host");
-  svc->config.endpoints.data.port =
-    get_nv_config_uint16 (svc->logger, config, "Clients/Data/Port", err);
-  svc->config.endpoints.metadata.host =
-    get_nv_config_string (config, "Clients/Metadata/Host");
-  svc->config.endpoints.metadata.port =
-    get_nv_config_uint16 (svc->logger, config, "Clients/Metadata/Port", err);
-
   svc->config.device.datatransform =
     get_nv_config_bool (config, "Device/DataTransform", true);
   svc->config.device.discovery =
@@ -684,11 +675,6 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
     free (labels);
   }
 
-  PUT_CONFIG_STRING(Clients/Data/Host, endpoints.data.host);
-  PUT_CONFIG_UINT(Clients/Data/Port, endpoints.data.port);
-  PUT_CONFIG_STRING(Clients/Metadata/Host, endpoints.metadata.host);
-  PUT_CONFIG_UINT(Clients/Metadata/Port, endpoints.metadata.port);
-
   PUT_CONFIG_BOOL(Device/DataTransform, device.datatransform);
   PUT_CONFIG_BOOL(Device/Discovery, device.discovery);
   PUT_CONFIG_STRING(Device/InitCmd, device.initcmd);
@@ -720,22 +706,22 @@ void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err)
 {
   if (svc->config.endpoints.data.host == 0)
   {
-    iot_log_error (svc->logger, "config: clients.data hostname unset");
+    iot_log_error (svc->logger, "config: no hostname for core-data");
     *err = EDGEX_BAD_CONFIG;
   }
   if (svc->config.endpoints.data.port == 0)
   {
-    iot_log_error (svc->logger, "config: clients.data port unset");
+    iot_log_error (svc->logger, "config: no port for core-data");
     *err = EDGEX_BAD_CONFIG;
   }
   if (svc->config.endpoints.metadata.host == 0)
   {
-    iot_log_error (svc->logger, "config: clients.metadata hostname unset");
+    iot_log_error (svc->logger, "config: no hostname for core-metadata");
     *err = EDGEX_BAD_CONFIG;
   }
   if (svc->config.endpoints.metadata.port == 0)
   {
-    iot_log_error (svc->logger, "config: clients.metadata port unset");
+    iot_log_error (svc->logger, "config: no port for core-metadata");
     *err = EDGEX_BAD_CONFIG;
   }
   const edgex_device_scheduleeventinfo *evt;
