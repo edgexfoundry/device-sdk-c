@@ -35,7 +35,7 @@ JSON_Value *edgex_data_generate_event
       values[i].value,
       doTransforms,
       sources[i].devobj->properties->value,
-      sources[i].ro->mappings
+      sources[i].ro ? sources[i].ro->mappings : NULL
     );
     const char *assertion = sources[i].devobj->properties->value->assertion;
     if (assertion && *assertion && strcmp (reading, assertion))

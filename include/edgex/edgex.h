@@ -82,14 +82,6 @@ typedef struct
   uint64_t origin;
 } edgex_deviceservice;
 
-typedef struct edgex_response
-{
-  char *code;
-  char *description;
-  edgex_strings *expectedvalues;
-  struct edgex_response *next;
-} edgex_response;
-
 typedef struct edgex_resourceoperation
 {
   char *index;
@@ -144,31 +136,6 @@ typedef struct edgex_deviceresource
   struct edgex_deviceresource *next;
 } edgex_deviceresource;
 
-typedef struct
-{
-  char *path;
-  edgex_response *responses;
-} edgex_get;
-
-typedef struct
-{
-  char *path;
-  edgex_response *responses;
-  edgex_strings *parameter_names;
-} edgex_put;
-
-typedef struct edgex_command
-{
-  char *id;
-  uint64_t created;
-  uint64_t modified;
-  uint64_t origin;
-  char *name;
-  edgex_put *put;
-  edgex_get *get;
-  struct edgex_command *next;
-} edgex_command;
-
 typedef struct edgex_profileresource
 {
   char *name;
@@ -176,6 +143,8 @@ typedef struct edgex_profileresource
   edgex_resourceoperation *get;
   struct edgex_profileresource *next;
 } edgex_profileresource;
+
+struct edgex_cmdinfo;
 
 typedef struct
 {
@@ -188,9 +157,9 @@ typedef struct
   char *manufacturer;
   char *model;
   edgex_strings *labels;
-  edgex_command *commands;
   edgex_deviceresource *device_resources;
   edgex_profileresource *resources;
+  struct edgex_cmdinfo *cmdinfo;
 } edgex_deviceprofile;
 
 typedef struct edgex_device

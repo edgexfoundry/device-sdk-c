@@ -7,6 +7,7 @@
  */
 
 #include "edgex_rest.h"
+#include "cmdinfo.h"
 #include "parson.h"
 #include <string.h>
 #include <stdlib.h>
@@ -557,232 +558,6 @@ static void deviceresource_free (edgex_deviceresource *e)
   }
 }
 
-static edgex_response *response_read (const JSON_Object *obj)
-{
-  edgex_response *result = malloc (sizeof (edgex_response));
-  result->code = get_string (obj, "code");
-  result->description = get_string (obj, "description");
-  result->expectedvalues = array_to_strings
-    (json_object_get_array (obj, "expectedValues"));
-  result->next = NULL;
-  return result;
-}
-
-static JSON_Value *response_write (const edgex_response *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  json_object_set_string (obj, "code", e->code);
-  json_object_set_string (obj, "description", e->description);
-  json_object_set_value
-    (obj, "expectedValues", strings_to_array (e->expectedvalues));
-  return result;
-}
-
-static edgex_response *response_dup (edgex_response *r)
-{
-  edgex_response *result = NULL;
-  if (r)
-  {
-    result = malloc (sizeof (edgex_response));
-    result->code = strdup (r->code);
-    result->description = strdup (r->description);
-    result->expectedvalues = edgex_strings_dup (r->expectedvalues);
-    result->next = response_dup (r->next);
-  }
-  return result;
-}
-
-static void response_free (edgex_response *e)
-{
-  while (e)
-  {
-    edgex_response *current = e;
-    free (e->code);
-    free (e->description);
-    edgex_strings_free (e->expectedvalues);
-    e = e->next;
-    free (current);
-  }
-}
-
-static edgex_get *get_read (const JSON_Object *obj)
-{
-  edgex_get *result = malloc (sizeof (edgex_get));
-  size_t i, count;
-  JSON_Array *array;
-  edgex_response **last_ptr = &result->responses;
-  edgex_response *temp;
-  result->path = get_string (obj, "path");
-  array = json_object_get_array (obj, "responses");
-  result->responses = NULL;
-  count = json_array_get_count (array);
-  for (i = 0; i < count; i++)
-  {
-    temp = response_read (json_array_get_object (array, i));
-    *last_ptr = temp;
-    last_ptr = &(temp->next);
-  }
-  return result;
-}
-
-static JSON_Value *get_write (const edgex_get *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  JSON_Value *array_val = json_value_init_array ();
-  JSON_Array *array = json_value_get_array (array_val);
-  edgex_response *temp;
-  json_object_set_string (obj, "path", e->path);
-  for (temp = e->responses; temp; temp = temp->next)
-  {
-    json_array_append_value (array, response_write (temp));
-  }
-  json_object_set_value (obj, "responses", array_val);
-  return result;
-}
-
-static edgex_get *get_dup (edgex_get *p)
-{
-  edgex_get *result = NULL;
-  if (p)
-  {
-    result = malloc (sizeof (edgex_get));
-    result->path = strdup (p->path);
-    result->responses = response_dup (p->responses);
-  }
-  return result;
-}
-
-static void get_free (edgex_get *e)
-{
-  free (e->path);
-  response_free (e->responses);
-  free (e);
-}
-
-static edgex_put *put_read (const JSON_Object *obj)
-{
-  edgex_put *result = malloc (sizeof (edgex_put));
-  size_t i, count;
-  JSON_Array *array;
-  edgex_response **last_ptr = &result->responses;
-  edgex_response *temp;
-  result->path = get_string (obj, "path");
-  array = json_object_get_array (obj, "responses");
-  result->responses = NULL;
-  count = json_array_get_count (array);
-  for (i = 0; i < count; i++)
-  {
-    temp = response_read (json_array_get_object (array, i));
-    *last_ptr = temp;
-    last_ptr = &(temp->next);
-  }
-  result->parameter_names = array_to_strings
-    (json_object_get_array (obj, "parameterNames"));
-  return result;
-}
-
-static JSON_Value *put_write (const edgex_put *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  JSON_Value *array_val = json_value_init_array ();
-  JSON_Array *array = json_value_get_array (array_val);
-  edgex_response *temp;
-  json_object_set_string (obj, "path", e->path);
-  for (temp = e->responses; temp; temp = temp->next)
-  {
-    json_array_append_value (array, response_write (temp));
-  }
-  json_object_set_value (obj, "responses", array_val);
-  json_object_set_value
-    (obj, "expectedValues", strings_to_array (e->parameter_names));
-  return result;
-}
-
-static edgex_put *put_dup (edgex_put *p)
-{
-  edgex_put *result = NULL;
-  if (p)
-  {
-    result = malloc (sizeof (edgex_put));
-    result->path = strdup (p->path);
-    result->responses = response_dup (p->responses);
-    result->parameter_names = edgex_strings_dup (p->parameter_names);
-  }
-  return result;
-}
-
-static void put_free (edgex_put *e)
-{
-  free (e->path);
-  response_free (e->responses);
-  edgex_strings_free (e->parameter_names);
-  free (e);
-}
-
-static edgex_command *command_read (const JSON_Object *obj)
-{
-  edgex_command *result = malloc (sizeof (edgex_command));
-
-  result->id = get_string (obj, "id");
-  result->name = get_string (obj, "name");
-  result->created = (uint64_t) json_object_get_number (obj, "created");
-  result->modified = (uint64_t) json_object_get_number (obj, "modified");
-  result->origin = (uint64_t) json_object_get_number (obj, "origin");
-  result->get = get_read (json_object_get_object (obj, "get"));
-  result->put = put_read (json_object_get_object (obj, "put"));
-  result->next = NULL;
-  return result;
-}
-
-static JSON_Value *command_write (const edgex_command *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  json_object_set_string (obj, "id", e->id);
-  json_object_set_string (obj, "name", e->name);
-  json_object_set_number (obj, "created", e->created);
-  json_object_set_number (obj, "modified", e->modified);
-  json_object_set_number (obj, "origin", e->origin);
-  json_object_set_value (obj, "get", get_write (e->get));
-  json_object_set_value (obj, "put", put_write (e->put));
-  return result;
-}
-
-static edgex_command *command_dup (edgex_command *c)
-{
-  edgex_command *result = NULL;
-  if (c)
-  {
-    result = malloc (sizeof (edgex_command));
-    result->id = strdup (c->id);
-    result->name = strdup (c->name);
-    result->created = c->created;
-    result->modified = c->modified;
-    result->origin = c->origin;
-    result->put = put_dup (c->put);
-    result->get = get_dup (c->get);
-    result->next = command_dup (c->next);
-  }
-  return result;
-}
-
-static void command_free (edgex_command *e)
-{
-  while (e)
-  {
-    edgex_command *current = e;
-    free (e->id);
-    free (e->name);
-    get_free (e->get);
-    put_free (e->put);
-    e = e->next;
-    free (current);
-  }
-}
-
 static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
 {
   edgex_resourceoperation *result = malloc (sizeof (edgex_resourceoperation));
@@ -969,8 +744,7 @@ static edgex_deviceprofile *deviceprofile_read
   size_t count;
   JSON_Array *array;
   edgex_deviceresource **last_ptr = &result->device_resources;
-  edgex_command **last_ptr2 = &result->commands;
-  edgex_profileresource **last_ptr3 = &result->resources;
+  edgex_profileresource **last_ptr2 = &result->resources;
 
   result->id = get_string (obj, "id");
   result->name = get_string (obj, "name");
@@ -983,8 +757,8 @@ static edgex_deviceprofile *deviceprofile_read
   result->labels = array_to_strings (json_object_get_array (obj, "labels"));
   array = json_object_get_array (obj, "deviceResources");
   result->device_resources = NULL;
-  result->commands = NULL;
   result->resources = NULL;
+  result->cmdinfo = NULL;
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
@@ -1002,22 +776,14 @@ static edgex_deviceprofile *deviceprofile_read
       return NULL;
     }
   }
-  array = json_object_get_array (obj, "commands");
-  count = json_array_get_count (array);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_command *temp = command_read (json_array_get_object (array, i));
-    *last_ptr2 = temp;
-    last_ptr2 = &(temp->next);
-  }
   array = json_object_get_array (obj, "resources");
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
     edgex_profileresource *temp = profileresource_read
       (json_array_get_object (array, i));
-    *last_ptr3 = temp;
-    last_ptr3 = &(temp->next);
+    *last_ptr2 = temp;
+    last_ptr2 = &(temp->next);
   }
   return result;
 }
@@ -1031,8 +797,6 @@ deviceprofile_write (const edgex_deviceprofile *e, bool create)
   JSON_Array *array = json_value_get_array (array_val);
   JSON_Value *array_val2 = json_value_init_array ();
   JSON_Array *array2 = json_value_get_array (array_val2);
-  JSON_Value *array_val3 = json_value_init_array ();
-  JSON_Array *array3 = json_value_get_array (array_val2);
 
   if (!create)
   {
@@ -1054,19 +818,12 @@ deviceprofile_write (const edgex_deviceprofile *e, bool create)
 
   json_object_set_value (obj, "deviceResources", array_val);
 
-  for (edgex_command *temp = e->commands; temp; temp = temp->next)
-  {
-    json_array_append_value (array2, command_write (temp));
-  }
-
-  json_object_set_value (obj, "commands", array_val2);
-
   for (edgex_profileresource *temp = e->resources; temp; temp = temp->next)
   {
-    json_array_append_value (array3, profileresource_write (temp));
+    json_array_append_value (array2, profileresource_write (temp));
   }
 
-  json_object_set_value (obj, "resources", array_val3);
+  json_object_set_value (obj, "resources", array_val2);
   return result;
 }
 
@@ -1318,10 +1075,20 @@ edgex_deviceprofile *edgex_deviceprofile_dup (edgex_deviceprofile *dp)
     result->model = strdup (dp->model);
     result->labels = edgex_strings_dup (dp->labels);
     result->device_resources = edgex_deviceresource_dup (dp->device_resources);
-    result->commands = command_dup (dp->commands);
     result->resources = profileresource_dup (dp->resources);
+    result->cmdinfo = NULL;
   }
   return result;
+}
+
+static void cmdinfo_free (edgex_cmdinfo *inf)
+{
+  if (inf)
+  {
+    cmdinfo_free (inf->next);
+    free (inf->reqs);
+    free (inf);
+  }
 }
 
 void edgex_deviceprofile_free (edgex_deviceprofile *e)
@@ -1333,8 +1100,8 @@ void edgex_deviceprofile_free (edgex_deviceprofile *e)
   free (e->model);
   edgex_strings_free (e->labels);
   deviceresource_free (e->device_resources);
-  command_free (e->commands);
   profileresource_free (e->resources);
+  cmdinfo_free (e->cmdinfo);
   free (e);
 }
 
@@ -1944,50 +1711,6 @@ void edgex_deviceprofile_dump (edgex_deviceprofile * e)
     printf ("type %s\n", dr->properties->units->type);
     printf ("readwrite %s\n", dr->properties->units->readwrite);
     printf ("defaultvalue %s\n", dr->properties->units->defaultvalue);
-  }
-  printf ("commands:\n");
-  for (edgex_command * cmd = e->commands; cmd; cmd = cmd->next)
-  {
-    edgex_response * response;
-    printf ("id %s\n", cmd->id);
-    printf ("name %s\n", cmd->name);
-    printf ("created %lu\n", (long unsigned) cmd->created);
-    printf ("modified %lu\n", (long unsigned) cmd->modified);
-    printf ("origin %lu\n", (long unsigned) cmd->origin);
-    printf ("get:\n");
-    printf ("path %s\n", cmd->get->path);
-    printf ("responses:\n");
-    for (response = cmd->get->responses; response; response = response->next)
-    {
-      printf ("code %s\n", response->code);
-      printf ("description %s\n", response->description);
-      printf ("expected values");
-      for (edgex_strings * tmp = response->expectedvalues; tmp; tmp = tmp->next)
-      {
-        printf (" %s", tmp->str);
-      }
-      printf ("\n");
-    }
-    printf ("put:\n");
-    printf ("path %s\n", cmd->put->path);
-    printf ("responses:\n");
-    for (response = cmd->put->responses; response; response = response->next)
-    {
-      printf ("code %s\n", response->code);
-      printf ("description %s\n", response->description);
-      printf ("expected values");
-      for (edgex_strings * tmp = response->expectedvalues; tmp; tmp = tmp->next)
-      {
-        printf (" %s", tmp->str);
-      }
-      printf ("\n");
-    }
-    printf ("parameter names");
-    for (edgex_strings * tmp = cmd->put->parameter_names; tmp; tmp = tmp->next)
-    {
-      printf (" %s", tmp->str);
-    }
-    printf ("\n");
   }
   printf ("resources:\n");
   for (edgex_profileresource * resource = e->resources; resource; resource = resource->next)

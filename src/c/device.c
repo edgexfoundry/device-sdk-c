@@ -14,6 +14,7 @@
 #include "metadata.h"
 #include "edgex_rest.h"
 #include "edgex_time.h"
+#include "cmdinfo.h"
 #include "base64.h"
 
 #include <inttypes.h>
@@ -332,16 +333,6 @@ static bool populateValue
   return false;
 }
 
-static const edgex_command *findCommand
-  (const char *name, const edgex_command *cmd)
-{
-  while (cmd && strcmp (cmd->name, name))
-  {
-    cmd = cmd->next;
-  }
-  return cmd;
-}
-
 static edgex_deviceresource *findDevResource
   (edgex_deviceresource *list, const char *name)
 {
@@ -352,12 +343,125 @@ static edgex_deviceresource *findDevResource
   return list;
 }
 
+static edgex_cmdinfo *infoForRes
+  (edgex_deviceprofile *prof, edgex_profileresource *res, bool forGet)
+{
+  edgex_cmdinfo *result = malloc (sizeof (edgex_cmdinfo));
+  result->name = res->name;
+  result->isget = forGet;
+  unsigned n = 0;
+  edgex_resourceoperation *ro;
+  for (ro = forGet ? res->get : res->set; ro; ro = ro->next)
+  {
+    n++;
+  }
+  result->nreqs = n;
+  result->reqs = malloc (n * sizeof (edgex_device_commandrequest));
+  for (n = 0, ro = forGet ? res->get : res->set; ro; n++, ro = ro->next)
+  {
+    result->reqs[n].ro = ro;
+    result->reqs[n].devobj =
+      findDevResource (prof->device_resources, ro->object);
+  }
+  result->next = NULL;
+  return result;
+}
+
+static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
+{
+  edgex_cmdinfo *result = malloc (sizeof (edgex_cmdinfo));
+  result->name = devres->name;
+  result->isget = forGet;
+  result->nreqs = 1;
+  result->reqs = malloc (sizeof (edgex_device_commandrequest));
+  result->reqs->ro = NULL;
+  result->reqs->devobj = devres;
+  result->next = NULL;
+  return result;
+}
+
+static void populateCmdInfo (edgex_deviceprofile *prof)
+{
+  edgex_cmdinfo **head = &prof->cmdinfo;
+  edgex_profileresource *res = prof->resources;
+  while (res)
+  {
+    if (res->get)
+    {
+      *head = infoForRes (prof, res, true);
+      head = &((*head)->next);
+    }
+    if (res->set)
+    {
+      *head = infoForRes (prof, res, false);
+      head = &((*head)->next);
+    }
+    res = res->next;
+  }
+  edgex_deviceresource *devres = prof->device_resources;
+  while (devres)
+  {
+    edgex_profileresource *r;
+    for (r = prof->resources; r; r = r->next)
+    {
+      if (strcmp (r->name, devres->name) == 0)
+      {
+        break;
+      }
+    }
+    if (r == NULL)
+    {
+      if (devres->properties->value->readable)
+      {
+        *head = infoForDevRes (devres, true);
+        head = &((*head)->next);
+      }
+      if (devres->properties->value->writable)
+      {
+        *head = infoForDevRes (devres, false);
+        head = &((*head)->next);
+      }
+    }
+    devres = devres->next;
+  }
+}
+
+static const edgex_cmdinfo *findCommand
+  (const char *name, edgex_deviceprofile *prof, bool forGet)
+{
+  if (prof->cmdinfo == NULL)
+  {
+    populateCmdInfo (prof);
+  }
+
+  edgex_cmdinfo *result = prof->cmdinfo;
+  while (result && (strcmp (result->name, name) || forGet != result->isget))
+  {
+    result = result->next;
+  }
+  return result;
+}
+
+static bool commandExists (const char *name, edgex_deviceprofile *prof)
+{
+  if (prof->cmdinfo == NULL)
+  {
+    populateCmdInfo (prof);
+  }
+
+  edgex_cmdinfo *result = prof->cmdinfo;
+  while (result && strcmp (result->name, name))
+  {
+    result = result->next;
+  }
+  return result != NULL;
+}
+
 static int runOnePut
 (
   edgex_device_service *svc,
   edgex_device *dev,
-  uint32_t nops,
-  edgex_resourceoperation *ops,
+  const edgex_cmdinfo *commandinfo,
   const char *data,
   JSON_Value **reply
 )
@@ -374,25 +478,18 @@ static int runOnePut
 
   JSON_Object *jobj = json_value_get_object (jval);
 
-  edgex_device_commandrequest *reqs =
-    malloc (nops * sizeof (edgex_device_commandrequest));
-  memset (reqs, 0, nops * sizeof (edgex_device_commandrequest));
   edgex_device_commandresult *results =
-    malloc (nops * sizeof (edgex_device_commandresult));
-  memset (results, 0, nops * sizeof (edgex_device_commandresult));
-  edgex_resourceoperation *op = ops;
-  for (int i = 0; i < nops; i++)
+    calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
+  for (int i = 0; i < commandinfo->nreqs; i++)
   {
-    reqs[i].ro = op;
-    reqs[i].devobj =
-      findDevResource (dev->profile->device_resources, op->object);
-    if (!reqs[i].devobj->properties->value->writable)
+    const edgex_resourceoperation *op = commandinfo->reqs[i].ro;
+    if (!commandinfo->reqs[i].devobj->properties->value->writable)
     {
       iot_log_error
       (
         svc->logger,
         "Attempt to write unwritable value %s",
-        reqs[i].devobj->name
+        commandinfo->reqs[i].devobj->name
       );
       retcode = MHD_HTTP_METHOD_NOT_ALLOWED;
       break;
@@ -405,7 +502,7 @@ static int runOnePut
       iot_log_error (svc->logger, "No value supplied for %s", op->object);
       break;
     }
-    results[i].type = reqs[i].devobj->properties->value->type;
+    results[i].type = commandinfo->reqs[i].devobj->properties->value->type;
     if (!populateValue (&results[i], value))
     {
       retcode = MHD_HTTP_BAD_REQUEST;
@@ -413,19 +510,18 @@ static int runOnePut
         (svc->logger, "Unable to parse \"%s\" for %s", value, op->object);
       break;
     }
-    op = op->next;
   }
 
   if (retcode == MHD_HTTP_OK)
   {
-    if (!svc->userfns.puthandler (svc->userdata, dev->addressable, nops, reqs, results))
+    if (!svc->userfns.puthandler (svc->userdata, dev->addressable, commandinfo->nreqs, commandinfo->reqs, results))
     {
       retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
       iot_log_error (svc->logger, "Driver for %s failed on PUT", dev->name);
     }
   }
 
-  for (int i = 0; i < nops; i++)
+  for (int i = 0; i < commandinfo->nreqs; i++)
   {
     if (results[i].type == String)
     {
@@ -436,7 +532,6 @@ static int runOnePut
       free (results[i].value.binary_result.bytes);
     }
   }
-  free (reqs);
   free (results);
   json_value_free (jval);
 
@@ -447,47 +542,36 @@ static int runOneGet
 (
   edgex_device_service *svc,
   edgex_device *dev,
-  uint32_t nops,
-  edgex_resourceoperation *ops,
+  const edgex_cmdinfo *commandinfo,
   JSON_Value **reply
 )
 {
   int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
-  edgex_device_commandrequest *requests =
-    malloc (nops * sizeof (edgex_device_commandrequest));
-  memset (requests, 0, nops * sizeof (edgex_device_commandrequest));
   edgex_device_commandresult *results =
-    malloc (nops * sizeof (edgex_device_commandresult));
-  memset (results, 0, nops * sizeof (edgex_device_commandresult));
-  edgex_resourceoperation *op = ops;
-  for (int i = 0; i < nops; i++)
+    calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
+  for (int i = 0; i < commandinfo->nreqs; i++)
   {
-    requests[i].ro = op;
-    requests[i].devobj =
-      findDevResource (dev->profile->device_resources, op->object);
-    if (!requests[i].devobj->properties->value->readable)
+    if (!commandinfo->reqs[i].devobj->properties->value->readable)
     {
       iot_log_error
       (
         svc->logger,
         "Attempt to read unreadable value %s",
-        requests[i].devobj->name
+        commandinfo->reqs[i].devobj->name
       );
       free (results);
-      free (requests);
       return MHD_HTTP_METHOD_NOT_ALLOWED;
     }
-    op = op->next;
   }
 
   if
   (
     svc->userfns.gethandler
-      (svc->userdata, dev->addressable, nops, requests, results)
+      (svc->userdata, dev->addressable, commandinfo->nreqs, commandinfo->reqs, results)
   )
   {
     *reply = edgex_data_generate_event
-      (dev->name, nops, requests, results, svc->config.device.datatransform);
+      (dev->name, commandinfo->nreqs, commandinfo->reqs, results, svc->config.device.datatransform);
 
     if (*reply)
     {
@@ -513,7 +597,6 @@ static int runOneGet
       (svc->logger, "Driver for %s failed on GET", dev->name);
   }
   free (results);
-  free (requests);
   return retcode;
 }
 
@@ -521,8 +604,7 @@ static int runOne
 (
   edgex_device_service *svc,
   edgex_device *dev,
-  const edgex_command *command,
-  edgex_http_method method,
+  const edgex_cmdinfo *command,
   const char *upload_data,
   size_t upload_data_size,
   JSON_Value **reply
@@ -550,70 +632,20 @@ static int runOne
     return MHD_HTTP_LOCKED;
   }
 
-  if
-  (
-    (method == GET && command->get == NULL) ||
-    (method != GET && command->put == NULL)
-  )
+  if (command->nreqs > svc->config.device.maxcmdops)
   {
     iot_log_error
     (
       svc->logger,
-      "Command %s found for device %s but no %s version",
-      command->name, dev->name, methStr (method)
-    );
-    return MHD_HTTP_METHOD_NOT_ALLOWED;
-  }
-
-  edgex_profileresource *res = dev->profile->resources;
-  while (res)
-  {
-    if (strcmp (res->name, command->name) == 0)
-    { break; }
-    res = res->next;
-  }
-  if (res == NULL)
-  {
-    iot_log_error
-    (
-      svc->logger,
-      "Profile resource %s not found for device %s",
-      command->name, dev->name
-    );
-    return MHD_HTTP_NOT_FOUND;
-  }
-
-  edgex_resourceoperation *op;
-  uint32_t n = 0;
-  for (op = (method == GET) ? res->get : res->set; op; op = op->next)
-  {
-    if (findDevResource (dev->profile->device_resources, op->object) == NULL)
-    {
-      iot_log_error
-      (
-        svc->logger,
-        "No device resource %s for device %s",
-        op->object, dev->name
-      );
-      return MHD_HTTP_NOT_FOUND;
-    }
-    n++;
-  }
-  if (n > svc->config.device.maxcmdops)
-  {
-    iot_log_error
-    (
-      svc->logger,
-      "MaxCmdOps (%d) exceeded for dev: %s cmd: %s method: %s",
-      svc->config.device.maxcmdops, dev->name, command->name,
-      methStr (method)
+      "MaxCmdOps (%d) exceeded for dev: %s cmd: %s",
+      svc->config.device.maxcmdops, dev->name, command->name
     );
     return MHD_HTTP_INTERNAL_SERVER_ERROR;
   }
 
-  if (method == GET)
+  if (command->isget)
   {
-    return runOneGet (svc, dev, n, res->get, reply);
+    return runOneGet (svc, dev, command, reply);
   }
   else
   {
@@ -622,14 +654,14 @@ static int runOne
       iot_log_error (svc->logger, "PUT command recieved with no data");
       return MHD_HTTP_BAD_REQUEST;
     }
-    return runOnePut (svc, dev, n, res->set, upload_data, reply);
+    return runOnePut (svc, dev, command, upload_data, reply);
   }
 }
 
 typedef struct devlist
 {
    edgex_device *dev;
-   const edgex_command *cmd;
+   const edgex_cmdinfo *cmd;
    struct devlist *next;
 } devlist;
 
@@ -646,7 +678,7 @@ static int allCommand
 {
   const char *key;
   edgex_device *dev;
-  const edgex_command *command;
+  const edgex_cmdinfo *command;
   int ret = MHD_HTTP_NOT_FOUND;
   int retOne;
   JSON_Value *jresult;
@@ -667,7 +699,7 @@ static int allCommand
     dev = *edgex_map_get (&svc->devices, key);
     if (dev->operatingState == ENABLED && dev->adminState == UNLOCKED)
     {
-      command = findCommand (cmd, dev->profile->commands);
+      command = findCommand (cmd, dev->profile, method == GET);
       if (command)
       {
         d = malloc (sizeof (devlist));
@@ -687,7 +719,7 @@ static int allCommand
   {
     JSON_Value *jreply = NULL;
     retOne = runOne
-      (svc, d->dev, d->cmd, method, upload_data, upload_data_size, &jreply);
+      (svc, d->dev, d->cmd, upload_data, upload_data_size, &jreply);
     if (jreply && (maxret == 0 || nret++ < maxret))
     {
       json_array_append_value (jarray, jreply);
@@ -728,6 +760,7 @@ static int oneCommand
 {
   int result = MHD_HTTP_NOT_FOUND;
   edgex_device **dev = NULL;
+  const edgex_cmdinfo *command = NULL;
 
   iot_log_debug
   (
@@ -749,31 +782,48 @@ static int oneCommand
   {
     dev = edgex_map_get (&svc->devices, id);
   }
-  pthread_rwlock_unlock (&svc->deviceslock);
   if (dev)
   {
-    const edgex_command *command = findCommand (cmd, (*dev)->profile->commands);
-    if (command)
+    command = findCommand (cmd, (*dev)->profile, method == GET);
+  }
+  pthread_rwlock_unlock (&svc->deviceslock);
+
+  if (command)
+  {
+    JSON_Value *jreply = NULL;
+    result = runOne
+      (svc, *dev, command, upload_data, upload_data_size, &jreply);
+    if (jreply)
     {
-      JSON_Value *jreply = NULL;
-      result = runOne
-        (svc, *dev, command, method, upload_data, upload_data_size, &jreply);
-      if (jreply)
-      {
-        *reply = json_serialize_to_string (jreply);
-        *reply_type = "application/json";
-        json_value_free (jreply);
-      }
-    }
-    else
-    {
-      iot_log_error
-        (svc->logger, "Command %s not found for device %s", cmd, (*dev)->name);
+      *reply = json_serialize_to_string (jreply);
+      *reply_type = "application/json";
+      json_value_free (jreply);
     }
   }
   else
   {
-    iot_log_error (svc->logger, "No such device {%s}", id);
+    if (dev)
+    {
+      if (commandExists (cmd, (*dev)->profile))
+      {
+        iot_log_error
+        (
+          svc->logger,
+          "Wrong method for command %s, device %s",
+          cmd, (*dev)->name
+        );
+        result = MHD_HTTP_METHOD_NOT_ALLOWED;
+      }
+      else
+      {
+        iot_log_error
+          (svc->logger, "No command %s for device %s", cmd, (*dev)->name);
+      }
+    }
+    else
+    {
+      iot_log_error (svc->logger, "No such device {%s}", id);
+    }
   }
   return result;
 }
