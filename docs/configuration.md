@@ -18,6 +18,9 @@ CheckInterval | String | The checking interval to request if registering with Co
 
 ## Clients section
 
+Defines the endpoints for other microservices in an EdgeX system. If using a
+registry service this section is not required.
+
 ### Data
 
 Option | Type | Notes

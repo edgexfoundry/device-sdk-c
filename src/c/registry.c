@@ -32,6 +32,7 @@ static void reginit (void)
     consulimpl.get_config = edgex_consul_client_get_config;
     consulimpl.put_config = edgex_consul_client_write_config;
     consulimpl.register_service = edgex_consul_client_register_service;
+    consulimpl.query_service = edgex_consul_client_query_service;
     consulimpl.parser = edgex_registry_parse_simple_url;
     consulimpl.free_location = edgex_registry_free_simple_url;
     regmap = malloc (sizeof (edgex_map_registry));
@@ -159,6 +160,26 @@ void edgex_registry_register_service
     hostname,
     port,
     checkInterval,
+    err
+  );
+}
+
+void edgex_registry_query_service
+(
+  edgex_registry *registry,
+  const char *servicename,
+  char **hostname,
+  uint16_t *port,
+  edgex_error *err
+)
+{
+  registry->impl.query_service
+  (
+    registry->logger,
+    registry->location,
+    servicename,
+    hostname,
+    port,
     err
   );
 }

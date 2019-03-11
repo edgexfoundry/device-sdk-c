@@ -12,6 +12,8 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Endpoints for other EdgeX microservices are obtained from the registry (if
+  enabled) rather than configuration.
 - Metadata for individual devices can be obtained in the device management API.
 - The edgex_deviceobject type is renamed to edgex_deviceresource to reflect its
   naming in the profile definition.

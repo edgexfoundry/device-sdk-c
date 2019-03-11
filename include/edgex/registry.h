@@ -95,6 +95,27 @@ typedef void (*edgex_registry_register_service_impl)
 );
 
 /**
+ * @brief Retrieve microservice endpoint from the registry.
+ * @param lc A logging client to use.
+ * @param location The address of the registry service.
+ * @param servicename The name of the microservice to query for.
+ * @param hostname The host on which the requested service is running. This
+ *                 string should be freed after use.
+ * @param port The port on which the requested service may be contacted.
+ * @param err Nonzero reason codes may be set here in the event of errors.
+ */
+
+typedef void (*edgex_registry_query_service_impl)
+(
+  iot_logging_client *lc,
+  void *location,
+  const char *servicename,
+  char **hostname,
+  uint16_t *port,
+  edgex_error *err
+);
+
+/**
  * @brief Parse a location string.
  * @param lc A logging client to use.
  * @param location Part of a URL following the "://" separator.
@@ -118,6 +139,7 @@ typedef struct edgex_registry_impl
   edgex_registry_get_config_impl get_config;
   edgex_registry_put_config_impl put_config;
   edgex_registry_register_service_impl register_service;
+  edgex_registry_query_service_impl query_service;
   edgex_registry_parse_location_impl parser;
   edgex_registry_free_location_impl free_location;
 } edgex_registry_impl;
@@ -225,6 +247,25 @@ void edgex_registry_register_service
   const char *hostname,
   uint16_t port,
   const char *checkInterval,
+  edgex_error *err
+);
+
+/**
+ * @brief Retrieve microservice endpoint from the registry.
+ * @param registry The registry instance.
+ * @param servicename The name of the microservice to query for.
+ * @param hostname The host on which the requested service is running. This
+ *                 string should be freed after use.
+ * @param port The port on which the requested service may be contacted.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void edgex_registry_query_service
+(
+  edgex_registry *registry,
+  const char *servicename,
+  char **hostname,
+  uint16_t *port,
   edgex_error *err
 );
 

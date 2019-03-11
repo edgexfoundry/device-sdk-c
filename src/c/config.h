@@ -36,7 +36,6 @@ typedef struct edgex_service_endpoints
 {
   edgex_device_service_endpoint data;
   edgex_device_service_endpoint metadata;
-  edgex_device_service_endpoint command;
 } edgex_service_endpoints;
 
 typedef struct edgex_device_deviceinfo
