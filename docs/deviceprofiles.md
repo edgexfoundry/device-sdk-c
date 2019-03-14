@@ -22,27 +22,25 @@ and "commands".
 Commands
 --------
 
-This section specifies the commands which are available via the REST API, for
-reading and writing to the device. These are presented at the "device" endpoint,
-```
-http://<device-service>:<port>/api/v1/device/<device id>/<command name>
-```
+This section specifies the commands which are available via the core-command
+microservice, for reading and writing to the device.
+
 Commands may allow get or put methods (or both). For a get type, the returned
 values are specified in the "expectedValues" field, for a put type, the
 parameters to be given are specified in "parameterNames". In either case, the
 different http response codes that the service may generate are shown.
 
-Note that in the current implementation, only the command name and its get/put
-nature are processed by the device service: the other information is indicative
-only.
-
 Resources
 ---------
 
-In this section the relationship between commands and the values on the device
-(device resources) to which they apply is defined. Each resource corresponds
-to a command, with which it shares its name. It should contain a get and/or a
-set section, describing the get or put command respectively.
+These are presented at the "device" endpoint,
+```
+http://<device-service>:<port>/api/v1/device/<device id>/<resource name>
+```
+
+This section defines access to reads and writes for multiple simultaneous
+values. Each resource should contain a get and/or a set section, describing
+the read or write operation respectively.
 
 Each line of a get section indicates a deviceResource which is to be read, and
 the lines in a set section indicate deviceResources to be written. The values
@@ -59,6 +57,14 @@ written. This is generally "value".
 
 deviceResources
 ---------------
+
+These are also presented at the "device" endpoint,
+```
+http://<device-service>:<port>/api/v1/device/<device id>/<deviceResource name>
+```
+
+however if a profile contains a resource with the same name as a deviceResource,
+the resource will take precedence.
 
 A deviceResource specifies an individual value within a device that may be
 read from or written to as part of a command. It has a name, which identifies
@@ -100,13 +106,14 @@ which pertain to the request are passed in the edgex_device_commandrequest
 structure.
 
 * edgex_resourceoperation represents a get or set line of an operation within
-the resource section.
+the resource section, if the request was for a resource.
 * edgex_deviceresource represents a deviceResource.
 
 In most cases the required information will be
 
 * The "property" field in edgex_resourceoperation. This names the property of
-the deviceResource that is to be read or written, usually "value".
+the deviceResource that is to be read or written. This is usually "value" and
+if an edgex_resourceoperation is not supplied, "value" should be assumed.
 * The "attributes" field in the edgex_deviceresource.
 * The datatype required, found in edgex_deviceresource->properties->value->type.
 

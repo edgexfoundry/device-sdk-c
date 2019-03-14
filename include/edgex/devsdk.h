@@ -48,7 +48,10 @@ typedef union edgex_device_resultvalue
 
 typedef struct edgex_device_commandrequest
 {
-  /** Corresponds to a get or set line in a resource of the device profile. */
+  /**
+   * Corresponds to a get or set line in a resource of the device profile.
+   * This is NULL when a deviceResource is accessed directly
+   */
   const edgex_resourceoperation *ro;
   /** Corresponds to a deviceResource in the device profile. */
   const edgex_deviceresource *devobj;
