@@ -29,6 +29,19 @@ static void inthandler (int i)
   running = (i != SIGINT);
 }
 
+static void dump_protocols
+  (iot_logging_client *lc, const edgex_protocols *prots)
+{
+  for (const edgex_protocols *p = prots; p; p = p->next)
+  {
+    iot_log_debug (lc, " [%s] protocol:", p->name);
+    for (const edgex_nvpairs *nv = p->properties; nv; nv = nv->next)
+    {
+      iot_log_debug (lc, "    %s = %s", nv->name, nv->value);
+    }
+  }
+}
+
 
 /* --- Initialize ---- */
 /* Initialize performs protocol-specific initialization for the device
@@ -60,7 +73,7 @@ static void template_discover (void *impl) {}
 
 /* ---- Get ---- */
 /* Get triggers an asynchronous protocol specific GET operation.
- * The device to query is specified by the addressable devaddr. nreadings is
+ * The device to query is specified by the protocols. nreadings is
  * the number of values being requested and defines the size of the requests
  * and readings arrays. For each value, the commandrequest holds information
  * as to what is being requested. The implementation of this method should
@@ -73,7 +86,7 @@ static void template_discover (void *impl) {}
 static bool template_get_handler
 (
   void *impl,
-  const edgex_addressable *devaddr,
+  const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
   edgex_device_commandresult *readings
@@ -81,8 +94,9 @@ static bool template_get_handler
 {
   template_driver *driver = (template_driver *) impl;
 
-  /* Access the address of the device to be accessed and log it */
-  iot_log_debug(driver->lc, "GET on address: %s",devaddr->address);
+  /* Access the location of the device to be accessed and log it */
+  iot_log_debug(driver->lc, "GET on device:");
+  dump_protocols (driver->lc, protocols);
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
@@ -123,7 +137,7 @@ static bool template_get_handler
 
 /* ---- Put ---- */
 /* Put triggers an asynchronous protocol specific SET operation.
- * The device to set values on is specified by the addressable devaddr.
+ * The device to set values on is specified by the protocols.
  * nvalues is the number of values to be set and defines the size of the
  * requests and values arrays. For each value, the commandresult holds the
  * value, and the commandrequest holds information as to where it is to be
@@ -136,7 +150,7 @@ static bool template_get_handler
 static bool template_put_handler
 (
   void *impl,
-  const edgex_addressable *devaddr,
+  const edgex_protocols *protocols,
   uint32_t nvalues,
   const edgex_device_commandrequest *requests,
   const edgex_device_commandresult *values
@@ -144,8 +158,9 @@ static bool template_put_handler
 {
   template_driver *driver = (template_driver *) impl;
 
-  /* Access the address of the device to be accessed and log it */
-  iot_log_debug(driver->lc, "PUT on address: %s",devaddr->address);
+  /* Access the location of the device to be accessed and log it */
+  iot_log_debug (driver->lc, "PUT on device:");
+  dump_protocols (driver->lc, protocols);
 
   for (uint32_t i = 0; i < nvalues; i++)
   {

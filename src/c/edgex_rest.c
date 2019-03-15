@@ -93,6 +93,34 @@ void edgex_strings_free (edgex_strings *strs)
   }
 }
 
+static JSON_Value *nvpairs_write (const edgex_nvpairs *e)
+{
+  JSON_Value *result = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (result);
+
+  for (const edgex_nvpairs *nv = e; nv; nv = nv->next)
+  {
+    json_object_set_string (obj, nv->name, nv->value);
+  }
+
+  return result;
+}
+
+static edgex_nvpairs *nvpairs_read (const JSON_Object *obj)
+{
+  edgex_nvpairs *result = NULL;
+  size_t count = json_object_get_count (obj);
+  for (size_t i = 0; i < count; i++)
+  {
+    edgex_nvpairs *nv = malloc (sizeof (edgex_nvpairs));
+    nv->name = strdup (json_object_get_name (obj, i));
+    nv->value = strdup (json_value_get_string (json_object_get_value_at (obj, i)));
+    nv->next = result;
+    result = nv;
+  }
+  return result;
+}
+
 edgex_nvpairs *edgex_nvpairs_dup (edgex_nvpairs *p)
 {
   edgex_nvpairs *result = NULL;
@@ -190,13 +218,6 @@ static bool get_transformArg
   str = json_object_get_string (obj, name);
   if (str && *str)
   {
-// TODO: the workaround below can be removed when edgex-go #855 is resolved
-if (strcmp (name, "mask") == 0 && strcmp (str, "0x00") == 0) return true;
-if (strcmp (name, "shift") == 0 && strcmp (str, "0") == 0) return true;
-if (strcmp (name, "scale") == 0 && strcmp (str, "1.0") == 0) return true;
-if (strcmp (name, "offset") == 0 && strcmp (str, "0.0") == 0) return true;
-if (strcmp (name, "base") == 0 && strcmp (str, "0") == 0) return true;
-
     switch (type)
     {
       case Int8:
@@ -483,29 +504,14 @@ static edgex_deviceresource *deviceresource_read
   if (pp)
   {
     JSON_Object *attributes_obj;
-    size_t count;
-    edgex_nvpairs *nv;
-    edgex_nvpairs **nv_last;
 
     result = malloc (sizeof (edgex_deviceresource));
     result->name = name;
     result->description = get_string (obj, "description");
     result->tag = get_string (obj, "tag");
     result->properties = pp;
-    result->attributes = NULL;
     attributes_obj = json_object_get_object (obj, "attributes");
-    count = json_object_get_count (attributes_obj);
-    nv_last = &result->attributes;
-    for (size_t i = 0; i < count; i++)
-    {
-      nv = malloc (sizeof (edgex_nvpairs));
-      nv->name = strdup (json_object_get_name (attributes_obj, i));
-      nv->value = strdup
-        (json_value_get_string (json_object_get_value_at (attributes_obj, i)));
-      nv->next = NULL;
-      *nv_last = nv;
-      nv_last = &nv->next;
-    }
+    result->attributes = nvpairs_read (attributes_obj);
     result->next = NULL;
   }
   else
@@ -524,6 +530,7 @@ static JSON_Value *deviceresource_write (const edgex_deviceresource *e)
   json_object_set_string (obj, "tag", e->tag);
   json_object_set_value
     (obj, "properties", profileproperty_write (e->properties));
+  json_object_set_value (obj, "attributes", nvpairs_write (e->attributes));
   return result;
 }
 
@@ -561,9 +568,6 @@ static void deviceresource_free (edgex_deviceresource *e)
 static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
 {
   edgex_resourceoperation *result = malloc (sizeof (edgex_resourceoperation));
-  size_t count;
-  edgex_nvpairs *nv;
-  edgex_nvpairs **nv_last = &result->mappings;
   JSON_Object *mappings_obj;
 
   result->index = get_string (obj, "index");
@@ -574,19 +578,8 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   result->resource = get_string (obj, "resource");
   result->secondary = array_to_strings
     (json_object_get_array (obj, "secondary"));
-  result->mappings = NULL;
   mappings_obj = json_object_get_object (obj, "mappings");
-  count = json_object_get_count (mappings_obj);
-  for (size_t i = 0; i < count; i++)
-  {
-    nv = malloc (sizeof (edgex_nvpairs));
-    nv->name = strdup (json_object_get_name (mappings_obj, i));
-    nv->value = strdup
-      (json_value_get_string (json_object_get_value_at (mappings_obj, i)));
-    nv->next = NULL;
-    *nv_last = nv;
-    nv_last = &nv->next;
-  }
+  result->mappings = nvpairs_read (mappings_obj);
   result->next = NULL;
   return result;
 }
@@ -595,8 +588,6 @@ static JSON_Value *resourceoperation_write (const edgex_resourceoperation *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
-  JSON_Value *mappings_val = json_value_init_object ();
-  JSON_Object *mappings_obj = json_value_get_object (mappings_val);
 
   json_object_set_string (obj, "index", e->index);
   json_object_set_string (obj, "operation", e->operation);
@@ -605,11 +596,7 @@ static JSON_Value *resourceoperation_write (const edgex_resourceoperation *e)
   json_object_set_string (obj, "parameter", e->parameter);
   json_object_set_string (obj, "resource", e->resource);
   json_object_set_value (obj, "secondary", strings_to_array (e->secondary));
-  for (edgex_nvpairs *nv = e->mappings; nv; nv = nv->next)
-  {
-    json_object_set_string (mappings_obj, nv->name, nv->value);
-  }
-  json_object_set_value (obj, "mappings", mappings_val);
+  json_object_set_value (obj, "mappings", nvpairs_write (e->mappings));
   return result;
 }
 
@@ -854,6 +841,59 @@ edgex_deviceprofile *edgex_deviceprofile_read
   json_value_free (val);
 
   return result;
+}
+
+static edgex_protocols *protocols_read (const JSON_Object *obj)
+{
+  edgex_protocols *result = NULL;
+  size_t count = json_object_get_count (obj);
+  for (size_t i = 0; i < count; i++)
+  {
+    JSON_Value *pval = json_object_get_value_at (obj, i);
+    edgex_protocols *prot = malloc (sizeof (edgex_protocols));
+    prot->name = strdup (json_object_get_name (obj, i));
+    prot->properties = nvpairs_read (json_value_get_object (pval));
+    prot->next = result;
+    result = prot;
+  }
+  return result;
+}
+
+static JSON_Value *protocols_write (const edgex_protocols *e)
+{
+  JSON_Value *result = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (result);
+
+  for (const edgex_protocols *prot = e; prot; prot = prot->next)
+  {
+    json_object_set_value (obj, prot->name, nvpairs_write (prot->properties));
+  }
+  return result;
+}
+
+edgex_protocols *edgex_protocols_dup (const edgex_protocols *e)
+{
+  edgex_protocols *result = NULL;
+  for (const edgex_protocols *p = e; p; p = p->next)
+  {
+    edgex_protocols *newprot = malloc (sizeof (edgex_protocols));
+    newprot->name = strdup (p->name);
+    newprot->properties = edgex_nvpairs_dup (p->properties);
+    newprot->next = result;
+    result = newprot;
+  }
+  return result;
+}
+
+void edgex_protocols_free (edgex_protocols *e)
+{
+  if (e)
+  {
+    free (e->name);
+    edgex_nvpairs_free (e->properties);
+    edgex_protocols_free (e->next);
+    free (e);
+  }
 }
 
 static edgex_addressable *addressable_read (const JSON_Object *obj)
@@ -1138,8 +1178,8 @@ static edgex_device *device_read
   (iot_logging_client *lc, const JSON_Object *obj)
 {
   edgex_device *result = malloc (sizeof (edgex_device));
-  result->addressable = addressable_read
-    (json_object_get_object (obj, "addressable"));;
+  result->protocols = protocols_read
+    (json_object_get_object (obj, "protocols"));;
   result->adminState = edgex_adminstate_fromstring
     (json_object_get_string (obj, "adminState"));
   result->created = json_object_get_number (obj, "created");
@@ -1170,7 +1210,7 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
   if (create)
   {
     json_object_set_value
-      (obj, "addressable", addressable_write_name (e->addressable));
+      (obj, "protocols", protocols_write (e->protocols));
     json_object_set_value
       (obj, "profile", deviceprofile_write_name (e->profile));
     json_object_set_value
@@ -1181,7 +1221,7 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
   else
   {
     json_object_set_value
-      (obj, "addressable", addressable_write (e->addressable, false));
+      (obj, "protocols", protocols_write (e->protocols));
     json_object_set_string
       (obj, "adminState", edgex_adminstate_tostring (e->adminState));
     json_object_set_string
@@ -1216,7 +1256,7 @@ edgex_device *edgex_device_dup (const edgex_device *e)
   result->id = strdup (e->id);
   result->description = strdup (e->description);
   result->labels = edgex_strings_dup (e->labels);
-  result->addressable = edgex_addressable_dup (e->addressable);
+  result->protocols = edgex_protocols_dup (e->protocols);
   result->adminState = e->adminState;
   result->operatingState = e->operatingState;
   result->origin = e->origin;
@@ -1235,7 +1275,7 @@ void edgex_device_free (edgex_device *e)
   while (e)
   {
     edgex_device *current = e;
-    edgex_addressable_free (e->addressable);
+    edgex_protocols_free (e->protocols);
     free (e->description);
     free (e->id);
     edgex_strings_free (e->labels);
@@ -1331,181 +1371,6 @@ edgex_device *edgex_devices_read (iot_logging_client *lc, const char *json)
 
   return result;
 }
-
-static edgex_scheduleevent *scheduleevent_read (const JSON_Object *obj)
-{
-  edgex_scheduleevent *result = malloc (sizeof (edgex_scheduleevent));
-  result->name = get_string (obj, "name");
-  result->id = get_string (obj, "id");
-  result->origin = json_object_get_number (obj, "origin");
-  result->created = json_object_get_number (obj, "created");
-  result->modified = json_object_get_number (obj, "modified");
-  result->schedule = get_string (obj, "schedule");
-  result->addressable = addressable_read
-    (json_object_get_object (obj, "addressable"));
-  result->parameters = get_string (obj, "parameters");
-  result->service = get_string (obj, "service");
-  result->next = NULL;
-
-  return result;
-}
-
-edgex_scheduleevent *edgex_scheduleevents_read (const char *json)
-{
-  edgex_scheduleevent *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Array *array = json_value_get_array (val);
-  edgex_scheduleevent **last_ptr = &result;
-
-  if (array)
-  {
-    size_t count = json_array_get_count (array);
-    for (size_t i = 0; i < count; i++)
-    {
-      edgex_scheduleevent *temp = scheduleevent_read
-        (json_array_get_object (array, i));
-      *last_ptr = temp;
-      last_ptr = &(temp->next);
-    }
-  }
-
-  json_value_free (val);
-
-  return result;
-}
-
-static JSON_Value *scheduleevent_write
-  (const edgex_scheduleevent *e, bool create)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-
-  json_object_set_string (obj, "name", e->name);
-  json_object_set_number (obj, "origin", e->origin);
-  json_object_set_string (obj, "schedule", e->schedule);
-  json_object_set_string (obj, "parameters", e->parameters);
-  json_object_set_string (obj, "service", e->service);
-
-  if (create)
-  {
-    json_object_set_value
-      (obj, "addressable", addressable_write_name (e->addressable));
-  }
-  else
-  {
-    json_object_set_value
-      (obj, "addressable", addressable_write (e->addressable, false));
-    json_object_set_number (obj, "created", e->created);
-    json_object_set_number (obj, "modified", e->modified);
-    json_object_set_string (obj, "id", e->id);
-  }
-
-  return result;
-}
-
-char *edgex_scheduleevent_write (const edgex_scheduleevent *e, bool create)
-{
-  char *result;
-  JSON_Value *val;
-
-  val = scheduleevent_write (e, create);
-  result = json_serialize_to_string (val);
-  json_value_free (val);
-  return result;
-}
-
-void edgex_scheduleevent_free (edgex_scheduleevent *e)
-{
-  free (e->name);
-  free (e->id);
-  free (e->schedule);
-  free (e->parameters);
-  free (e->service);
-  edgex_addressable_free (e->addressable);
-  free (e);
-}
-
-
-static edgex_schedule *schedule_read (const JSON_Object *obj)
-{
-  edgex_schedule *result = malloc (sizeof (edgex_schedule));
-  result->name = get_string (obj, "name");
-  result->id = get_string (obj, "id");
-  result->origin = json_object_get_number (obj, "origin");
-  result->created = json_object_get_number (obj, "created");
-  result->modified = json_object_get_number (obj, "modified");
-  result->start = get_string (obj, "start");
-  result->end = get_string (obj, "end");
-  result->frequency = get_string (obj, "frequency");
-  result->cron = get_string (obj, "cron");
-  result->runOnce = json_object_get_boolean (obj, "runOnce");
-
-  return result;
-}
-
-edgex_schedule *edgex_schedule_read (const char *json)
-{
-  edgex_schedule *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Object *obj;
-
-  obj = json_value_get_object (val);
-
-  if (obj)
-  {
-    result = schedule_read (obj);
-  }
-
-  json_value_free (val);
-
-  return result;
-}
-
-static JSON_Value *schedule_write (const edgex_schedule *e, bool create)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-
-  json_object_set_string (obj, "name", e->name);
-  json_object_set_number (obj, "origin", e->origin);
-  json_object_set_string (obj, "start", e->start);
-  json_object_set_string (obj, "end", e->end);
-  json_object_set_string (obj, "frequency", e->frequency);
-  json_object_set_string (obj, "cron", e->cron);
-  json_object_set_boolean (obj, "runOnce", e->runOnce);
-
-  if (!create)
-  {
-    json_object_set_number (obj, "created", e->created);
-    json_object_set_number (obj, "modified", e->modified);
-    json_object_set_string (obj, "id", e->id);
-  }
-
-  return result;
-}
-
-char *edgex_schedule_write (const edgex_schedule *e, bool create)
-{
-  char *result;
-  JSON_Value *val;
-
-  val = schedule_write (e, create);
-  result = json_serialize_to_string (val);
-  json_value_free (val);
-  return result;
-}
-
-void edgex_schedule_free (edgex_schedule *e)
-{
-  free (e->name);
-  free (e->id);
-  free (e->start);
-  free (e->end);
-  free (e->frequency);
-  free (e->cron);
-  free (e);
-}
-
 
 edgex_addressable *edgex_addressable_read (const char *json)
 {

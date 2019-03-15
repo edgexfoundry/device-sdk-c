@@ -271,192 +271,6 @@ edgex_device *edgex_metadata_client_get_devices
   return result;
 }
 
-edgex_scheduleevent *edgex_metadata_client_get_scheduleevents
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
-  const char *servicename,
-  edgex_error *err
-)
-{
-  edgex_ctx ctx;
-  edgex_scheduleevent *result = 0;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/scheduleevent/servicename/%s",
-    endpoints->metadata.host,
-    endpoints->metadata.port,
-    servicename
-  );
-
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
-
-  if (err->code)
-  {
-    return 0;
-  }
-
-  result = edgex_scheduleevents_read (ctx.buff);
-  free (ctx.buff);
-  *err = EDGEX_OK;
-  return result;
-}
-
-edgex_scheduleevent *edgex_metadata_client_create_scheduleevent
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
-  const char *name,
-  uint64_t origin,
-  const char *schedule_name,
-  const char *addressable_name,
-  const char *parameters,
-  const char *service_name,
-  edgex_error *err
-)
-{
-  edgex_scheduleevent *result = malloc (sizeof (edgex_scheduleevent));
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-  char *json;
-
-  memset (result, 0, sizeof (edgex_scheduleevent));
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/scheduleevent",
-    endpoints->metadata.host,
-    endpoints->metadata.port
-  );
-  result->name = strdup (name);
-  result->origin = origin;
-  result->schedule = strdup (schedule_name);
-  result->addressable = malloc (sizeof (edgex_addressable));
-  memset (result->addressable, 0, sizeof (edgex_addressable));
-  result->addressable->name = strdup (addressable_name);
-  result->parameters = strdup (parameters);
-  result->service = strdup (service_name);
-  json = edgex_scheduleevent_write (result, true);
-  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  if (err->code == 0)
-  {
-    result->id = ctx.buff;
-  }
-  else
-  {
-    iot_log_info
-    (
-      lc,
-      "edgex_metadata_client_create_scheduleevent: %s: %s",
-      err->reason,
-      ctx.buff
-    );
-    free (ctx.buff);
-  }
-  free (json);
-
-  return result;
-}
-
-edgex_schedule *edgex_metadata_client_get_schedule
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints *endpoints,
-  const char *schedulename,
-  edgex_error *err
-)
-{
-  edgex_ctx ctx;
-  edgex_schedule *result = 0;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/schedule/name/%s",
-    endpoints->metadata.host,
-    endpoints->metadata.port,
-    schedulename
-  );
-
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
-
-  if (err->code)
-  {
-    return 0;
-  }
-
-  result = edgex_schedule_read (ctx.buff);
-  free (ctx.buff);
-  *err = EDGEX_OK;
-  return result;
-}
-
-edgex_schedule *edgex_metadata_client_create_schedule
-  (
-    iot_logging_client *lc,
-    edgex_service_endpoints *endpoints,
-    const char *name,
-    uint64_t origin,
-    const char *frequency,
-    const char *start,
-    const char *end,
-    bool runOnce,
-    edgex_error *err
-  )
-{
-  edgex_schedule *result = malloc (sizeof (edgex_schedule));
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-  char *json;
-
-  memset (result, 0, sizeof (edgex_schedule));
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/schedule",
-    endpoints->metadata.host,
-    endpoints->metadata.port
-  );
-  result->name = strdup (name);
-  result->origin = origin;
-  result->frequency = strdup (frequency);
-  result->start = strdup (start);
-  result->end = strdup (end);
-  result->runOnce = runOnce;
-  json = edgex_schedule_write (result, true);
-  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  if (err->code == 0)
-  {
-    result->id = ctx.buff;
-  }
-  else
-  {
-    iot_log_info
-    (
-      lc,
-      "edgex_metadata_client_create_schedule: %s: %s",
-      err->reason,
-      ctx.buff
-    );
-    free (ctx.buff);
-  }
-  free (json);
-
-  return result;
-}
-
 edgex_device *edgex_metadata_client_add_device
 (
   iot_logging_client *lc,
@@ -464,8 +278,7 @@ edgex_device *edgex_metadata_client_add_device
   const char *name,
   const char *description,
   const edgex_strings *labels,
-  uint64_t origin,
-  const char *addressable_name,
+  const edgex_protocols *protocols,
   const char *service_name,
   const char *profile_name,
   edgex_error *err
@@ -491,9 +304,7 @@ edgex_device *edgex_metadata_client_add_device
   result->adminState = UNLOCKED;
   result->operatingState = ENABLED;
   result->labels = edgex_strings_dup (labels);
-  result->addressable = malloc (sizeof (edgex_addressable));
-  memset (result->addressable, 0, sizeof (edgex_addressable));
-  result->addressable->name = strdup (addressable_name);
+  result->protocols = edgex_protocols_dup (protocols);
   result->service = malloc (sizeof (edgex_deviceservice));
   memset (result->service, 0, sizeof (edgex_deviceservice));
   result->service->name = strdup (service_name);

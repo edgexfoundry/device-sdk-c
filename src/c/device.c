@@ -514,7 +514,7 @@ static int runOnePut
 
   if (retcode == MHD_HTTP_OK)
   {
-    if (!svc->userfns.puthandler (svc->userdata, dev->addressable, commandinfo->nreqs, commandinfo->reqs, results))
+    if (!svc->userfns.puthandler (svc->userdata, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results))
     {
       retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
       iot_log_error (svc->logger, "Driver for %s failed on PUT", dev->name);
@@ -567,7 +567,7 @@ static int runOneGet
   if
   (
     svc->userfns.gethandler
-      (svc->userdata, dev->addressable, commandinfo->nreqs, commandinfo->reqs, results)
+      (svc->userdata, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results)
   )
   {
     *reply = edgex_data_generate_event

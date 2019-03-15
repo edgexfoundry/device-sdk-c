@@ -25,11 +25,10 @@ char * edgex_device_add_device
   const char *description,
   const edgex_strings *labels,
   const char *profile_name,
-  edgex_addressable *address,
+  edgex_protocols *protocols,
   edgex_error *err
 )
 {
-  const char *postfix = "_addr";
   char **dev_id;
   char *result = NULL;
 
@@ -44,39 +43,6 @@ char * edgex_device_add_device
     return strdup (*dev_id);
   }
 
-  edgex_addressable *newaddr = edgex_addressable_dup (address);
-  if (newaddr->name == NULL)
-  {
-    newaddr->name = malloc (strlen (name) + strlen (postfix) + 1);
-    strcpy (newaddr->name, name);
-    strcat (newaddr->name, postfix);
-  }
-
-  /* Check for existing addressable */
-
-  iot_log_debug
-    (svc->logger, "Checking existence of Addressable %s", newaddr->name);
-  edgex_addressable *existingaddr =
-    edgex_metadata_client_get_addressable
-      (svc->logger, &svc->config.endpoints, newaddr->name, err);
-
-  if (existingaddr)
-  {
-    iot_log_info (svc->logger, "Addressable %s already exists", newaddr->name);
-    edgex_addressable_free (existingaddr);
-  }
-  else
-  {
-    if (newaddr->origin == 0)
-    {
-      newaddr->origin = edgex_device_millitime ();
-    }
-    newaddr->id = edgex_metadata_client_create_addressable
-      (svc->logger, &svc->config.endpoints, newaddr, err);
-    iot_log_info (svc->logger, "New addressable %s created", newaddr->name);
-  }
-
-  err->code = 0;
   edgex_device *newdev = edgex_metadata_client_add_device
   (
     svc->logger,
@@ -84,8 +50,7 @@ char * edgex_device_add_device
     name,
     description,
     labels,
-    newaddr->origin,
-    newaddr->name,
+    protocols,
     svc->name,
     profile_name,
     err
@@ -102,7 +67,6 @@ char * edgex_device_add_device
       (svc->logger, "Failed to add Device in core-metadata: %s", err->reason);
   }
   edgex_device_free (newdev);
-  edgex_addressable_free (newaddr);
   return result;
 }
 

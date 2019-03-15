@@ -26,7 +26,7 @@ Get
 The Get handler deals with incoming requests to get data from a device. The following information is provided to the device service developer:
 
 * void *impl - The impldata pointer given as part of edgex_device_service.
-* edgex_addressable *devaddr - This provides information about the endpoint that this get request is seeking to access. Typically this is mapped to a device-specific client/connection etc.
+* edgex_protocols *protocols - This provides information about the device that this get request is seeking to access. A list of protocols is supplied, each consists of a name and a set of name-value pairs representing the attributes required for that protocol.
 * uint32_t nreadings - The following requests and reading parameters are arrays of size nreadings.
 * edgex_device_commandrequest *requests - The deviceresource and resourceoperation supplied are pointers into the lists of such objects held in the relevant device profile. As such, each contains a "next" pointer. This should be ignored - each edgex_device_commandrequest describes only one operation. Here a device service would typically drill down to the attributes used to describe device resources, it would use these attributes to understand how to query the device for the requested data. Note that if a deviceresource is accessed directly, the resourceoperation will be NULL.
 * edgex_device_commandresult * readings - Once a reading has been taken from a device, the resulting value is placed into the readings. This is used by the SDK to return the result to EdgeX. If a reading is of String or Binary type, memory ownership is taken by the SDK.
