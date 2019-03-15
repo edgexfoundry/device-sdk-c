@@ -218,13 +218,6 @@ static bool get_transformArg
   str = json_object_get_string (obj, name);
   if (str && *str)
   {
-// TODO: the workaround below can be removed when edgex-go #855 is resolved
-if (strcmp (name, "mask") == 0 && strcmp (str, "0x00") == 0) return true;
-if (strcmp (name, "shift") == 0 && strcmp (str, "0") == 0) return true;
-if (strcmp (name, "scale") == 0 && strcmp (str, "1.0") == 0) return true;
-if (strcmp (name, "offset") == 0 && strcmp (str, "0.0") == 0) return true;
-if (strcmp (name, "base") == 0 && strcmp (str, "0") == 0) return true;
-
     switch (type)
     {
       case Int8:
