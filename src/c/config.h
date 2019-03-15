@@ -58,12 +58,6 @@ typedef struct edgex_device_logginginfo
   char *remoteurl;
 } edgex_device_logginginfo;
 
-typedef struct edgex_device_scheduleeventinfo
-{
-  char *schedule;
-  char *path;
-} edgex_device_scheduleeventinfo;
-
 typedef struct edgex_device_watcherinfo
 {
   char *profile;
@@ -72,7 +66,6 @@ typedef struct edgex_device_watcherinfo
   char *matchstring;
 } edgex_device_watcherinfo;
 
-typedef edgex_map(edgex_device_scheduleeventinfo) edgex_map_device_scheduleeventinfo;
 typedef edgex_map(edgex_device_watcherinfo) edgex_map_device_watcherinfo;
 
 typedef struct edgex_device_config
@@ -82,8 +75,6 @@ typedef struct edgex_device_config
   edgex_device_deviceinfo device;
   edgex_device_logginginfo logging;
   edgex_nvpairs *driverconf;
-  edgex_map_string schedules;
-  edgex_map_device_scheduleeventinfo scheduleevents;
   edgex_map_device_watcherinfo watchers;
 } edgex_device_config;
 
@@ -94,8 +85,6 @@ toml_table_t *edgex_device_loadConfig
   const char *profile,
   edgex_error *err
 );
-
-const char *edgex_device_config_parse8601 (const char *str, int *result);
 
 void edgex_device_populateConfig
   (edgex_device_service *svc, toml_table_t *config, edgex_error *err);

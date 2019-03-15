@@ -72,80 +72,6 @@ toml_table_t *edgex_device_loadConfig
   return result;
 }
 
-/* Extract a frequency in seconds from an ISO8601 period */
-
-typedef struct pmap
-{
-  char p;
-  int factor;
-} pmap;
-
-static const pmap dates[] =
-{
-  {'Y', 31536000},    // 365d
-  {'M', 16934400},    // 28d
-  {'W', 604800},
-  {'D', 86400},
-  {0,   0}
-};
-
-static const pmap times[] =
-{
-  {'H', 3600},
-  {'M', 60},
-  {'S', 1},
-  {0,   0}
-};
-
-const char *edgex_device_config_parse8601 (const char *str, int *result)
-{
-  char *endptr;
-  int component;
-  const pmap *curmap = dates;
-  const char *iter = str;
-
-  if (*iter++ != 'P')
-  {
-    return "Period string must begin with 'P'";
-  }
-
-  *result = 0;
-  while (*iter)
-  {
-    if (*iter == 'T')
-    {
-      if (curmap == dates)
-      {
-        curmap = times;
-        iter++;
-      }
-      else
-      {
-        return "Time separator 'T' can only be used once";
-      }
-    }
-    component = strtol (iter, &endptr, 10);
-    if (endptr == iter)
-    {
-      return "Unable to parse decimal";
-    }
-    for (int i = 0; curmap[i].p; i++)
-    {
-      if (*endptr == curmap[i].p)
-      {
-        *result += component * curmap[i].factor;
-        iter = endptr + 1;
-        break;
-      }
-    }
-    if (iter <= endptr)
-    {
-      return "Unrecognized suffix - Use [YMWD] in the date position and [HMS] in the time position";
-    }
-  }
-  return NULL;
-}
-
 /* As toml_rtos but return null instead of a zero-length string */
 
 static void toml_rtos2 (const char *s, char **ret)
@@ -326,76 +252,6 @@ void edgex_device_populateConfig
   {
     GET_CONFIG_STRING(RemoteURL, logging.remoteurl);
     GET_CONFIG_STRING(File, logging.file);
-  }
-
-  arr = toml_array_in (config, "Schedules");
-  if (arr)
-  {
-    int n = 0;
-    while ((table = toml_table_at (arr, n++)))
-    {
-      char *freqstr = NULL;
-      namestr = NULL;
-      int interval = 0;
-      toml_rtos2 (toml_raw_in (table, "Frequency"), &freqstr);
-      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
-      if (namestr && freqstr)
-      {
-        const char *errmsg = edgex_device_config_parse8601 (freqstr, &interval);
-        if (errmsg)
-        {
-          iot_log_error
-            (svc->logger, "Parse error for schedule %s: %s", namestr, err);
-          *err = EDGEX_BAD_CONFIG;
-          free (freqstr);
-        }
-        else
-        {
-          edgex_map_set (&svc->config.schedules, namestr, freqstr);
-        }
-      }
-      else
-      {
-        iot_log_error
-          (svc->logger, "Parse error: Schedule requires Name and Frequency");
-        *err = EDGEX_BAD_CONFIG;
-        free (freqstr);
-      }
-      free (namestr);
-    }
-  }
-
-  arr = toml_array_in (config, "ScheduleEvents");
-  if (arr)
-  {
-    int n = 0;
-    while ((table = toml_table_at (arr, n++)))
-    {
-      edgex_device_scheduleeventinfo info;
-      info.schedule = NULL;
-      info.path = NULL;
-      namestr = NULL;
-      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
-      toml_rtos2 (toml_raw_in (table, "Schedule"), &info.schedule);
-      toml_rtos2 (toml_raw_in (table, "Path"), &info.path);
-
-      if (namestr && info.schedule && info.path)
-      {
-        edgex_map_set (&svc->config.scheduleevents, namestr, info);
-      }
-      else
-      {
-        free (info.schedule);
-        free (info.path);
-        iot_log_error
-        (
-          svc->logger,
-          "Parse error: ScheduleEvent requires Name, Schedule and Path"
-        );
-        *err = EDGEX_BAD_CONFIG;
-      }
-      free (namestr);
-    }
   }
 
   arr = toml_array_in (config, "Watchers");
@@ -724,20 +580,6 @@ void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err)
     iot_log_error (svc->logger, "config: no port for core-metadata");
     *err = EDGEX_BAD_CONFIG;
   }
-  const edgex_device_scheduleeventinfo *evt;
-  const char *key;
-  edgex_map_iter i = edgex_map_iter (svc->config.scheduleevents);
-  while ((key = edgex_map_next (&svc->config.scheduleevents, &i)))
-  {
-    evt = edgex_map_get (&svc->config.scheduleevents, key);
-    if (edgex_map_get (&svc->config.schedules, evt->schedule) == NULL)
-    {
-      iot_log_error (svc->logger,
-                     "config: In ScheduleEvent %s, no such Schedule %s",
-                     key, evt->schedule);
-      *err = EDGEX_BAD_CONFIG;
-    }
-  }
 }
 
 static void dumpArray (iot_logging_client *, const char *, char **);
@@ -776,7 +618,6 @@ void dumpArray (iot_logging_client *log, const char *name, char **list)
 void edgex_device_dumpConfig (edgex_device_service *svc)
 {
   const char *key;
-  edgex_device_scheduleeventinfo *schedevt;
   edgex_device_watcherinfo *watcher;
 
   iot_log_debug (svc->logger, "Service configuration follows:");
@@ -823,26 +664,7 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
     iter = iter->next;
   }
 
-  edgex_map_iter i = edgex_map_iter (svc->config.schedules);
-  while ((key = edgex_map_next (&svc->config.schedules, &i)))
-  {
-    DUMP_LIT ("[[Schedules]]");
-    iot_log_debug (svc->logger, "  Name = \"%s\"", key);
-    iot_log_debug (svc->logger, "  Frequency = \"%s\"",
-                   *edgex_map_get (&svc->config.schedules, key));
-  }
-
-  i = edgex_map_iter (svc->config.scheduleevents);
-  while ((key = edgex_map_next (&svc->config.scheduleevents, &i)))
-  {
-    DUMP_LIT ("[[ScheduleEvents]]");
-    iot_log_debug (svc->logger, "  Name = \"%s\"", key);
-    schedevt = edgex_map_get (&svc->config.scheduleevents, key);
-    iot_log_debug (svc->logger, "  Schedule = \"%s\"", schedevt->schedule);
-    iot_log_debug (svc->logger, "  Path = \"%s\"", schedevt->path);
-  }
-
-  i = edgex_map_iter (svc->config.watchers);
+  edgex_map_iter i = edgex_map_iter (svc->config.watchers);
   while ((key = edgex_map_next (&svc->config.watchers, &i)))
   {
     DUMP_LIT ("[[Watchers]]");
@@ -859,7 +681,6 @@ void edgex_device_dumpConfig (edgex_device_service *svc)
 
 void edgex_device_freeConfig (edgex_device_service *svc)
 {
-  edgex_device_scheduleeventinfo *schedevt;
   edgex_device_watcherinfo *watcher;
   edgex_map_iter iter;
   const char *key;
@@ -884,22 +705,6 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   free (svc->config.service.labels);
 
   edgex_nvpairs_free (svc->config.driverconf);
-
-  iter = edgex_map_iter (svc->config.schedules);
-  while ((key = edgex_map_next (&svc->config.schedules, &iter)))
-  {
-    free (*edgex_map_get (&svc->config.schedules, key));
-  }
-  edgex_map_deinit (&svc->config.schedules);
-
-  iter = edgex_map_iter (svc->config.scheduleevents);
-  while ((key = edgex_map_next (&svc->config.scheduleevents, &iter)))
-  {
-    schedevt = edgex_map_get (&svc->config.scheduleevents, key);
-    free (schedevt->schedule);
-    free (schedevt->path);
-  }
-  edgex_map_deinit (&svc->config.scheduleevents);
 
   iter = edgex_map_iter (svc->config.watchers);
   while ((key = edgex_map_next (&svc->config.watchers, &iter)))

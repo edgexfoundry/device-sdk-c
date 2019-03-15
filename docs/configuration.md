@@ -61,23 +61,6 @@ File | String | If this option is set, logs will be written to the named file. S
 
 This section is for driver-specific options. Any configuration specified here will be passed to the driver implementation during initialization.
 
-## Schedules section
-
-Schedules specified here will be posted to core-metadata if they do not already exist.
-
-Option | Type | Notes
-:--- | :--- | :---
-Name | String | Name of the schedule.
-Frequency | String | Frequency of execution. Only ISO8601 Period format is accepted.
-
-## ScheduleEvents section
-
-ScheduleEvents specified here will be posted to core-metadata if they do not already exist. A number of limitations apply to these ScheduleEvents:
-
-* Specification of parameters is not implemented.
-* Only local discovery and device GET commands are supported. Paths should therefore be `/api/v1/discovery` or begin with `/api/v1/device/`.
-* ScheduleEvents will be configured for implementation within the device service, not by support-scheduler.
-
 ## Watchers section
 
 Watchers are not supported in this release.

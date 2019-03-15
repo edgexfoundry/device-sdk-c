@@ -35,8 +35,6 @@
 #define EDGEX_DEV_API_CONFIG "/api/v1/config"
 #define EDGEX_DEV_API_METRICS "/api/v1/metrics"
 
-#define ADDR_EXT "_addr"
-
 #define POOL_THREADS 8
 
 typedef struct postparams
@@ -329,7 +327,7 @@ static void startConfigured
     return;
   }
 
-  /* Start REST server */
+  /* Start REST server now so that we get the callbacks on device addition */
 
   svc->daemon = edgex_rest_server_create
     (svc->logger, svc->config.service.port, err);
@@ -344,7 +342,7 @@ static void startConfigured
     edgex_device_handler_callback
   );
 
-  /* Obtain Devices from configuration */
+  /* Add Devices from configuration */
 
   if (config)
   {
@@ -365,234 +363,40 @@ static void startConfigured
     return;
   }
 
-  /* Handle device and discovery requests */
+  /* Start scheduled events */
+
+  iot_scheduler_start (svc->scheduler);
+
+  /* Register REST handlers */
 
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_DEVICE, GET | PUT | POST, svc,
     edgex_device_handler_device
   );
+
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_DISCOVERY, POST, svc,
     edgex_device_handler_discovery
   );
 
-  /* Upload Schedules and ScheduleEvents */
-
-  const char *key;
-  edgex_map_iter i = edgex_map_iter (svc->config.schedules);
-
-  while ((key = edgex_map_next (&svc->config.schedules, &i)))
-  {
-    *err = EDGEX_OK;
-    edgex_schedule_free (edgex_metadata_client_create_schedule
-    (
-      svc->logger,
-      &svc->config.endpoints,
-      key,
-      0,
-      *edgex_map_get (&svc->config.schedules, key),
-      "",
-      "",
-      false,
-      err
-    ));
-    if (err->code == 0)
-    {
-      iot_log_info (svc->logger, "Created schedule %s", key);
-    }
-    else if (err->code == EDGEX_HTTP_CONFLICT.code)
-    {
-      iot_log_info (svc->logger, "Skipping already existing schedule %s", key);
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unable to create schedule %s", key);
-      return;
-    }
-  }
-
-  i = edgex_map_iter (svc->config.scheduleevents);
-  while ((key = edgex_map_next (&svc->config.scheduleevents, &i)))
-  {
-    edgex_device_scheduleeventinfo *schedevt =
-      edgex_map_get (&svc->config.scheduleevents, key);
-    if
-    (
-      strcmp (schedevt->path, EDGEX_DEV_API_DISCOVERY) &&
-      strncmp (schedevt->path, EDGEX_DEV_API_DEVICE,
-        strlen (EDGEX_DEV_API_DEVICE))
-    )
-    {
-      iot_log_error
-        (svc->logger, "Scheduled Event %s not valid, only discovery and device commands are allowed", key);
-      *err = EDGEX_BAD_CONFIG;
-      return;
-    }
-
-    *err = EDGEX_OK;
-    edgex_addressable add;
-    char *addr_name = malloc (strlen (key) + strlen (ADDR_EXT) + 1);
-    strcpy (addr_name, key);
-    strcat (addr_name, ADDR_EXT);
-    memset (&add, 0, sizeof (edgex_addressable));
-    add.name = addr_name;
-    add.address = svc->config.service.host;
-    add.method = "GET";
-    add.path = schedevt->path;
-    add.port = svc->config.service.port;
-    add.protocol = "HTTP";
-    free
-      (edgex_metadata_client_create_addressable
-        (svc->logger, &svc->config.endpoints, &add, err));
-    if (err->code == 0)
-    {
-      iot_log_info (svc->logger, "Created addressable %s", addr_name);
-    }
-    else if (err->code == EDGEX_HTTP_CONFLICT.code)
-    {
-      iot_log_info
-        (svc->logger, "Skipping already existing addressable %s", addr_name);
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unable to create addressable %s", addr_name);
-      free (addr_name);
-      return;
-    }
-
-    *err = EDGEX_OK;
-    edgex_scheduleevent_free (edgex_metadata_client_create_scheduleevent 
-    (
-      svc->logger,
-      &svc->config.endpoints,
-      key,
-      0,
-      schedevt->schedule,
-      addr_name,
-      "",
-      svc->name,
-      err
-    ));
-    free (addr_name);
-    if (err->code == 0)
-    {
-      iot_log_info (svc->logger, "Created ScheduleEvent %s", key);
-    }
-    else if (err->code == EDGEX_HTTP_CONFLICT.code)
-    {
-      iot_log_info
-        (svc->logger, "Skipping already existing ScheduleEvent %s", key);
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unable to create ScheduleEvent %s", key);
-      return;
-    }
-  }
-
-  /* Retrieve schedule events */
-
-  int interval;
-  iot_schedule sched = NULL;
-  edgex_device_service_job *job;
-  *err = EDGEX_OK;
-  edgex_scheduleevent *events = edgex_metadata_client_get_scheduleevents
-    (svc->logger, &svc->config.endpoints, svc->name, err);
-  if (err->code)
-  {
-    iot_log_error
-      (svc->logger, "Unable to obtain ScheduleEvents from metadata");
-    return;
-  }
-
-  while (events)
-  {
-    sched = NULL;
-    edgex_schedule *schedule = edgex_metadata_client_get_schedule
-    (
-      svc->logger,
-      &svc->config.endpoints,
-      events->schedule,
-      err
-    );
-    if (err->code)
-    {
-      iot_log_error
-      (
-        svc->logger,
-        "Unable to obtain Schedule %s from metadata",
-        events->schedule
-      );
-      return;
-    }
-    const char *estr =
-      edgex_device_config_parse8601 (schedule->frequency, &interval);
-    edgex_schedule_free (schedule);
-    if (estr)
-    {
-      iot_log_error (svc->logger, "Unable to parse frequency for schedule %s, %s", events->schedule, estr);
-      *err = EDGEX_BAD_CONFIG;
-      return;
-    }
-
-    if (strcmp (events->addressable->path, EDGEX_DEV_API_DISCOVERY) == 0)
-    {
-      sched = iot_schedule_create
-      (
-        svc->scheduler,
-        edgex_device_handler_do_discovery,
-        svc,
-        IOT_SEC_TO_NS (interval),
-        0,
-        0
-      );
-    }
-    else if (strncmp (events->addressable->path, EDGEX_DEV_API_DEVICE,
-                      strlen (EDGEX_DEV_API_DEVICE)) == 0)
-    {
-      job = malloc (sizeof (edgex_device_service_job));
-      job->svc = svc;
-      job->url =
-        strdup (events->addressable->path + strlen (EDGEX_DEV_API_DEVICE));
-      job->next = svc->sjobs;
-      svc->sjobs = job;
-      sched = iot_schedule_create
-        (svc->scheduler, dev_invoker, job, IOT_SEC_TO_NS (interval), 0, 0);
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Scheduled Event %s is invalid, only discovery and device commands are allowed", key);
-      *err = EDGEX_BAD_CONFIG;
-      return;
-    }
-
-    iot_schedule_add (svc->scheduler, sched);
-
-    edgex_scheduleevent *tmp = events->next;
-    edgex_scheduleevent_free (events);
-    events = tmp;
-  }
-
-  /* Start scheduled events */
-
-  iot_scheduler_start (svc->scheduler);
-
-  /* Ready. Enable SMA handlers and log that we have started */
-
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_METRICS, GET, svc, edgex_device_handler_metrics
   );
+
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_CONFIG, GET, svc, edgex_device_handler_config
   );
+
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_PING, GET, svc, ping_handler
   );
+
+  /* Ready. Register ourselves and log that we have started. */
 
   if (registry && svc->config.service.checkinterval)
   {

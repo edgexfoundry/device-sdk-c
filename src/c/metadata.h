@@ -12,7 +12,6 @@
 #include "edgex/edgex.h"
 #include "edgex/edgex_logging.h"
 #include "edgex/error.h"
-#include "schedules.h"
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
@@ -65,44 +64,6 @@ char * edgex_metadata_client_create_deviceservice
   iot_logging_client *lc,
   edgex_service_endpoints * endpoints,
   const edgex_deviceservice * newds,
-  edgex_error *err
-);
-edgex_scheduleevent * edgex_metadata_client_get_scheduleevents
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints * endpoints,
-  const char * servicename,
-  edgex_error *err
-);
-edgex_scheduleevent * edgex_metadata_client_create_scheduleevent
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints * endpoints,
-  const char * name,
-  uint64_t origin,
-  const char *schedule_name,
-  const char *addressable_name,
-  const char *parameters,
-  const char *service_name,
-  edgex_error *err
-);
-edgex_schedule * edgex_metadata_client_get_schedule
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints * endpoints,
-  const char * schedulename,
-  edgex_error *err
-);
-edgex_schedule * edgex_metadata_client_create_schedule
-(
-  iot_logging_client *lc,
-  edgex_service_endpoints * endpoints,
-  const char * name,
-  uint64_t origin,
-  const char *frequency,
-  const char *start,
-  const char *end,
-  bool runOnce,
   edgex_error *err
 );
 edgex_device * edgex_metadata_client_get_devices
