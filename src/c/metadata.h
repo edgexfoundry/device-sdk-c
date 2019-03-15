@@ -119,8 +119,7 @@ edgex_device * edgex_metadata_client_add_device
   const char * name,
   const char * description,
   const edgex_strings * labels,
-  uint64_t origin,
-  const char * addressable_name,
+  const edgex_protocols * protocols,
   const char * service_name,
   const char * profile_name,
   edgex_error *err

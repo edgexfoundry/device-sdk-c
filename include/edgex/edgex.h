@@ -66,6 +66,13 @@ typedef struct
   char *user;
 } edgex_addressable;
 
+typedef struct edgex_protocols
+{
+  char *name;
+  edgex_nvpairs *properties;
+  struct edgex_protocols *next;
+} edgex_protocols;
+
 typedef struct
 {
   edgex_addressable *addressable;
@@ -164,7 +171,7 @@ typedef struct
 
 typedef struct edgex_device
 {
-  edgex_addressable *addressable;
+  edgex_protocols *protocols;
   edgex_device_adminstate adminState;
   uint64_t created;
   char *description;

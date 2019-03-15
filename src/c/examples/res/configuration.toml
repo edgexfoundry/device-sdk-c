@@ -31,7 +31,7 @@
 
 [Logging]
   RemoteURL = ""
-  File = "./device-simple.log"
+  File = "-"
 
 [[Schedules]]
   Name = "Schedule"
@@ -52,7 +52,7 @@
   Profile = "Example Sensor"
   Description = "An Example Template Device"
   Labels = [ "One", "Two", "Three" ]
-  [DeviceList.Addressable]
-    Address = "someSensorEndpoint"
-    Port = 502
-    Protocol = "OTHER"
+  [DeviceList.Protocols]
+    [DeviceList.Protocols.Other]
+      Address = "someSensorEndpoint"
+      Port = 502

@@ -464,8 +464,7 @@ edgex_device *edgex_metadata_client_add_device
   const char *name,
   const char *description,
   const edgex_strings *labels,
-  uint64_t origin,
-  const char *addressable_name,
+  const edgex_protocols *protocols,
   const char *service_name,
   const char *profile_name,
   edgex_error *err
@@ -491,9 +490,7 @@ edgex_device *edgex_metadata_client_add_device
   result->adminState = UNLOCKED;
   result->operatingState = ENABLED;
   result->labels = edgex_strings_dup (labels);
-  result->addressable = malloc (sizeof (edgex_addressable));
-  memset (result->addressable, 0, sizeof (edgex_addressable));
-  result->addressable->name = strdup (addressable_name);
+  result->protocols = edgex_protocols_dup (protocols);
   result->service = malloc (sizeof (edgex_deviceservice));
   memset (result->service, 0, sizeof (edgex_deviceservice));
   result->service->name = strdup (service_name);

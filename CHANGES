@@ -5,13 +5,12 @@ differs as follows:
   rather than directly returning the new devices.
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
-* A "Driver" section in the configuration file is introduced for driver-specific
-  configuration elements. A list of name-value pairs is passed to the
-  implementation during startup.
 * The API for adding, removing and updating Device Profiles is NYI.
 
 Changes for 1.0.0:
 
+- The get and set handlers now take an edgex_protocols object rather than an
+  edgex_addressable.
 - The device endpoint can be used to access either resources or deviceResources.
   The commands section of a device profile is not used.
   - *** This results in the possibility that NULL resourceoperations are passed

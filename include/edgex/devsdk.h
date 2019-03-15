@@ -118,7 +118,7 @@ typedef void (*edgex_device_discover)
 typedef bool (*edgex_device_handle_get)
 (
   void *impl,
-  const edgex_addressable *devaddr,
+  const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
   edgex_device_commandresult *readings
@@ -137,7 +137,7 @@ typedef bool (*edgex_device_handle_get)
 typedef bool (*edgex_device_handle_put)
 (
   void *impl,
-  const edgex_addressable *devaddr,
+  const edgex_protocols *protocols,
   uint32_t nvalues,
   const edgex_device_commandrequest *requests,
   const edgex_device_commandresult *values
@@ -287,7 +287,7 @@ char * edgex_device_add_device
   const char *description,
   const edgex_strings *labels,
   const char *profile_name,
-  edgex_addressable *address,
+  edgex_protocols *protocols,
   edgex_error *err
 );
 

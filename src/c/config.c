@@ -1027,11 +1027,11 @@ void edgex_device_process_configured_devices
     char **existing;
     char *profile_name;
     char *description;
-    edgex_addressable *address;
+    edgex_protocols *protocols = NULL;
     edgex_strings *labels;
     edgex_strings *newlabel;
     toml_table_t *table;
-    toml_table_t *addtable;
+    toml_table_t *pptable;
     toml_array_t *arr;
     int n = 0;
 
@@ -1044,39 +1044,44 @@ void edgex_device_process_configured_devices
       pthread_rwlock_unlock (&svc->deviceslock);
       if (existing == NULL)
       {
-        /* Addressable */
+        /* Protocols */
 
-        addtable = toml_table_in (table, "Addressable");
-        if (addtable)
+        pptable = toml_table_in (table, "Protocols");
+        if (pptable)
         {
-          address = malloc (sizeof (edgex_addressable));
-          memset (address, 0, sizeof (edgex_addressable));
-          raw = toml_raw_in (addtable, "Name");
-          toml_rtos2 (raw, &address->name);
-          raw = toml_raw_in (addtable, "Address");
-          toml_rtos2 (raw, &address->address);
-          raw = toml_raw_in (addtable, "Method");
-          toml_rtos2 (raw, &address->method);
-          raw = toml_raw_in (addtable, "Path");
-          toml_rtos2 (raw, &address->path);
-          raw = toml_raw_in (addtable, "User");
-          toml_rtos2 (raw, &address->user);
-          raw = toml_raw_in (addtable, "Password");
-          toml_rtos2 (raw, &address->password);
-          raw = toml_raw_in (addtable, "Protocol");
-          toml_rtos2 (raw, &address->protocol);
-          raw = toml_raw_in (addtable, "Publisher");
-          toml_rtos2 (raw, &address->publisher);
-          raw = toml_raw_in (addtable, "Topic");
-          toml_rtos2 (raw, &address->topic);
-          raw = toml_raw_in (addtable, "Port");
-          if (raw)
+          const char *key;
+          for (int i = 0; 0 != (key = toml_key_in (pptable, i)); i++)
           {
-            int64_t p;
-            toml_rtoi (raw, &p);
-            if (p > 0)
+            toml_table_t *pprops = toml_table_in (pptable, key);
+            if (pprops)
             {
-              address->port = p;
+              edgex_protocols *newprots = malloc (sizeof (edgex_protocols));
+              newprots->name = strdup (key);
+              newprots->properties = NULL;
+              newprots->next = protocols;
+              for (int j = 0; 0 != (key = toml_key_in (pprops, j)); j++)
+              {
+                raw = toml_raw_in (pprops, key);
+                if (raw)
+                {
+                  edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
+                  pair->name = strdup (key);
+                  if (toml_rtos (raw, &pair->value) == -1)
+                  {
+                    pair->value = strdup (raw);
+                  }
+                  pair->next = newprots->properties;
+                  newprots->properties = pair;
+                }
+              }
+              protocols = newprots;
+            }
+            else
+            {
+              iot_log_error
+                (svc->logger, "Arrays and subtables not supported in Protocol");
+              *err = EDGEX_BAD_CONFIG;
+              return;
             }
           }
 
@@ -1103,10 +1108,10 @@ void edgex_device_process_configured_devices
 
           *err = EDGEX_OK;
           free (edgex_device_add_device
-            (svc, devname, description, labels, profile_name, address, err));
+            (svc, devname, description, labels, profile_name, protocols, err));
 
           edgex_strings_free (labels);
-          edgex_addressable_free (address);
+          edgex_protocols_free (protocols);
           free (profile_name);
           free (description);
 
@@ -1119,7 +1124,7 @@ void edgex_device_process_configured_devices
         else
         {
           iot_log_error
-            (svc->logger, "No Addressable section for device %s", devname);
+            (svc->logger, "No Protocols section for device %s", devname);
           *err = EDGEX_BAD_CONFIG;
           break;
         }

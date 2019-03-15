@@ -20,6 +20,8 @@ edgex_nvpairs *edgex_nvpairs_dup (edgex_nvpairs *p);
 void edgex_nvpairs_free (edgex_nvpairs *p);
 const char *edgex_propertytype_tostring (edgex_propertytype pt);
 bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str);
+edgex_protocols *edgex_protocols_dup (const edgex_protocols *e);
+void edgex_protocols_free (edgex_protocols *e);
 edgex_deviceprofile *edgex_deviceprofile_read (iot_logging_client *lc, const char *json);
 char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create);
 edgex_deviceprofile *edgex_deviceprofile_dup (edgex_deviceprofile *e);
