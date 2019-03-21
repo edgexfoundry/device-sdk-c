@@ -9,6 +9,8 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Float data is marshalled as base64 unless specified otherwise in the
+  floatEncoding field of the device profile.
 - Schedules and ScheduleEvents are removed.
 - The get and set handlers now take an edgex_protocols object rather than an
   edgex_addressable.

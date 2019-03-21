@@ -278,6 +278,7 @@ static bool get_transformArg
 static edgex_propertyvalue *propertyvalue_read
   (iot_logging_client *lc, const JSON_Object *obj)
 {
+  const char *fe;
   edgex_propertytype pt;
   edgex_propertyvalue *result = NULL;
   const char *tstr = json_object_get_string (obj, "type");
@@ -322,6 +323,12 @@ static edgex_propertyvalue *propertyvalue_read
     result->lsb = get_string (obj, "lsb");
     result->assertion = get_string (obj, "assertion");
     result->precision = get_string (obj, "precision");
+    fe = get_string (obj, "floatEncoding");
+#ifdef LEGIBLE_FLOATS
+    result->floatAsBinary = (strcmp (fe, "base64") == 0);
+#else
+    result->floatAsBinary = (strcmp (fe, "eNotation") != 0);
+#endif
   }
   else
   {
@@ -371,6 +378,8 @@ static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
   set_arg (obj, "base", e->base, e->type);
   json_object_set_string (obj, "assertion", e->assertion);
   json_object_set_string (obj, "precision", e->precision);
+  json_object_set_string
+    (obj, "floatEncoding", e->floatAsBinary ? "base64" : "eNotation");
   return result;
 }
 
@@ -394,6 +403,7 @@ static edgex_propertyvalue *propertyvalue_dup (edgex_propertyvalue *pv)
     result->base = pv->base;
     result->assertion = strdup (pv->assertion);
     result->precision = strdup (pv->precision);
+    result->floatAsBinary = pv->floatAsBinary;
   }
   return result;
 }

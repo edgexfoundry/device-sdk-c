@@ -211,6 +211,8 @@ char *edgex_value_tostring
   edgex_nvpairs *mappings
 )
 {
+#define BUFSIZE 32
+
   size_t sz;
   char *res = NULL;
 
@@ -228,7 +230,7 @@ char *edgex_value_tostring
       }
     }
 
-    res = malloc (32);
+    res = malloc (BUFSIZE);
   }
 
   switch (props->type)
@@ -261,10 +263,24 @@ char *edgex_value_tostring
       sprintf (res, "%" PRIi64, value.i64_result);
       break;
     case Float32:
-      sprintf (res, "%.8e", value.f32_result);
+      if (props->floatAsBinary)
+      {
+        edgex_b64_encode (&value.f32_result, sizeof (float), res, BUFSIZE);
+      }
+      else
+      {
+        sprintf (res, "%.8e", value.f32_result);
+      }
       break;
     case Float64:
-      sprintf (res, "%.16e", value.f64_result);
+      if (props->floatAsBinary)
+      {
+        edgex_b64_encode (&value.f64_result, sizeof (double), res, BUFSIZE);
+      }
+      else
+      {
+        sprintf (res, "%.16e", value.f64_result);
+      }
       break;
     case String:
       res = xform ?
@@ -320,9 +336,25 @@ static bool populateValue
     case Int64:
       return (sscanf (val, "%" SCNi64, &cres->value.i64_result) == 1);
     case Float32:
-      return (sscanf (val, "%e", &cres->value.f32_result) == 1);
+      if (strlen (val) == 8 && val[6] == '=' && val[7] == '=')
+      {
+        size_t sz = sizeof (float);
+        return edgex_b64_decode (val, &cres->value.f32_result, &sz);
+      }
+      else
+      {
+        return (sscanf (val, "%e", &cres->value.f32_result) == 1);
+      }
     case Float64:
-      return (sscanf (val, "%le", &cres->value.f64_result) == 1);
+      if (strlen (val) == 12 && val[11] == '=')
+      {
+        size_t sz = sizeof (double);
+        return edgex_b64_decode (val, &cres->value.f64_result, &sz);
+      }
+      else
+      {
+        return (sscanf (val, "%le", &cres->value.f64_result) == 1);
+      }
     case Binary:
       sz = edgex_b64_maxdecodesize (val);
       cres->value.binary_result.size = sz;
