@@ -1,0 +1,284 @@
+/*
+ * Copyright (c) 2019
+ * IoTech Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ */
+
+/* Device / profile map implementation. We maintain 3 maps: device by id,
+ * device id by name and profile by name. The devices in the device map
+ * reference profiles in the profile map by pointer.
+ */
+
+#include "devmap.h"
+#include "map.h"
+#include "edgex_rest.h"
+#include "device.h"
+
+typedef edgex_map(edgex_device *) edgex_map_device;
+typedef edgex_map(edgex_deviceprofile *) edgex_map_profile;
+
+struct edgex_devmap_t
+{
+  pthread_rwlock_t lock;
+  edgex_map_device devices;
+  edgex_map_string name_to_id;
+  edgex_map_profile profiles;
+};
+
+edgex_devmap_t *edgex_devmap_alloc ()
+{
+  pthread_rwlockattr_t rwatt;
+  pthread_rwlockattr_init (&rwatt);
+#ifdef  __GLIBC_PREREQ
+#if __GLIBC_PREREQ(2, 1)
+  /* Avoid heavy readlock use (eg spammed "all" commands) blocking updates */
+  pthread_rwlockattr_setkind_np
+    (&rwatt, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+#endif
+#endif
+
+  edgex_devmap_t *res = malloc (sizeof (edgex_devmap_t));
+  pthread_rwlock_init (&res->lock, &rwatt);
+  pthread_rwlockattr_destroy (&rwatt);
+  edgex_map_init (&res->devices);
+  edgex_map_init (&res->name_to_id);
+  edgex_map_init (&res->profiles);
+  return res;
+}
+
+void edgex_devmap_free (edgex_devmap_t *map)
+{
+  edgex_map_deinit (&map->name_to_id);
+  edgex_map_iter i = edgex_map_iter (map->devices);
+  const char *key;
+  while ((key = edgex_map_next (&map->devices, &i)))
+  {
+    edgex_device **e = edgex_map_get (&map->devices, key);
+    edgex_device_release (*e);
+  }
+  edgex_map_deinit (&map->devices);
+  i = edgex_map_iter (map->profiles);
+  while ((key = edgex_map_next (&map->profiles, &i)))
+  {
+    edgex_deviceprofile **p = edgex_map_get (&map->profiles, key);
+    edgex_deviceprofile_free (*p);
+  }
+  edgex_map_deinit (&map->profiles);
+  pthread_rwlock_destroy (&map->lock);
+  free (map);
+}
+
+static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
+{
+  edgex_device *dup = edgex_device_dup (newdev);
+  atomic_store (&dup->refs, 1);
+  edgex_deviceprofile **pp = edgex_map_get (&map->profiles, dup->profile->name);
+  if (pp)
+  {
+    edgex_deviceprofile_free (dup->profile);
+    dup->profile = *pp;
+  }
+  else
+  {
+    edgex_map_set (&map->profiles, dup->profile->name, dup->profile);
+  }
+  edgex_map_set (&map->devices, dup->id, dup);
+  edgex_map_set (&map->name_to_id, dup->name, dup->id);
+}
+
+void edgex_devmap_populate_devices
+  (edgex_devmap_t *map, const edgex_device *devs)
+{
+  pthread_rwlock_wrlock (&map->lock);
+  for (const edgex_device *d = devs; d; d = d->next)
+  {
+    if (edgex_map_get (&map->name_to_id, d->name) == NULL)
+    {
+      add_locked (map, d);
+    }
+  }
+  pthread_rwlock_unlock (&map->lock);
+}
+
+edgex_device *edgex_devmap_copydevices (edgex_devmap_t *map)
+{
+  edgex_device *result = NULL;
+  edgex_device *dup;
+  const char *key;
+
+  pthread_rwlock_rdlock (&map->lock);
+  edgex_map_iter iter = edgex_map_iter (map->devices);
+  while ((key = edgex_map_next (&map->devices, &iter)))
+  {
+    dup = edgex_device_dup (*edgex_map_get (&map->devices, key));
+    dup->next = result;
+    result = dup;
+  }
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
+uint32_t edgex_devmap_copyprofiles
+  (edgex_devmap_t *map, edgex_deviceprofile **profiles)
+{
+  edgex_deviceprofile *arr;
+  const char *key;
+  uint32_t count = 0;
+
+  pthread_rwlock_rdlock (&map->lock);
+  edgex_map_iter iter = edgex_map_iter (map->profiles);
+  while (edgex_map_next (&map->profiles, &iter))
+  {
+    count++;
+  }
+  arr = malloc (count * sizeof (edgex_deviceprofile));
+
+  iter = edgex_map_iter (map->profiles);
+  for (uint32_t i = 0; i < count; i++)
+  {
+    key = edgex_map_next (&map->profiles, &iter);
+    edgex_deviceprofile_cpy (arr + i, *edgex_map_get (&map->profiles, key));
+  }
+  pthread_rwlock_unlock (&map->lock);
+
+  *profiles = arr;
+  return count;
+}
+
+const edgex_deviceprofile *edgex_devmap_profile
+  (edgex_devmap_t *map, const char *name)
+{
+  edgex_deviceprofile **dpp;
+  pthread_rwlock_rdlock (&map->lock);
+  dpp = edgex_map_get (&map->profiles, name);
+  pthread_rwlock_unlock (&map->lock);
+  return dpp ? *dpp : NULL;
+}
+
+static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
+{
+  edgex_map_remove (&map->name_to_id, olddev->name);
+  edgex_map_remove (&map->devices, olddev->id);
+  edgex_device_release (olddev);
+}
+
+void edgex_devmap_replace_device (edgex_devmap_t *map, const edgex_device *dev)
+{
+  edgex_device **olddev;
+
+  pthread_rwlock_wrlock (&map->lock);
+  olddev = edgex_map_get (&map->devices, dev->id);
+  if (olddev)
+  {
+    remove_locked (map, *olddev);
+  }
+  add_locked (map, dev);
+  pthread_rwlock_unlock (&map->lock);
+}
+
+edgex_device *edgex_devmap_device_byid (edgex_devmap_t *map, const char *id)
+{
+  edgex_device **dev;
+  edgex_device *result = NULL;
+
+  pthread_rwlock_rdlock (&map->lock);
+  dev = edgex_map_get (&map->devices, id);
+  if (dev)
+  {
+    result = *dev;
+    atomic_fetch_add (&result->refs, 1);
+  }
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
+edgex_device *edgex_devmap_device_byname (edgex_devmap_t *map, const char *name)
+{
+  char **id;
+  edgex_device *result = NULL;
+
+  pthread_rwlock_rdlock (&map->lock);
+  id = edgex_map_get (&map->name_to_id, name);
+  if (id)
+  {
+    result = *edgex_map_get (&map->devices, *id);
+    atomic_fetch_add (&result->refs, 1);
+  }
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
+void edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
+{
+  edgex_device **olddev;
+  char **id;
+
+  pthread_rwlock_wrlock (&map->lock);
+  id = edgex_map_get (&map->name_to_id, name);
+  if (id)
+  {
+    olddev = edgex_map_get (&map->devices, *id);
+    remove_locked (map, *olddev);
+  }
+  pthread_rwlock_unlock (&map->lock);
+}
+
+void edgex_devmap_removedevice_byid (edgex_devmap_t *map, const char *id)
+{
+  edgex_device **olddev;
+  pthread_rwlock_wrlock (&map->lock);
+  olddev = edgex_map_get (&map->devices, id);
+  remove_locked (map, *olddev);
+  pthread_rwlock_unlock (&map->lock);
+}
+
+void edgex_devmap_add_profile (edgex_devmap_t *map, edgex_deviceprofile *dp)
+{
+  pthread_rwlock_wrlock (&map->lock);
+  edgex_map_set (&map->profiles, dp->name, dp);
+  pthread_rwlock_unlock (&map->lock);
+}
+
+edgex_cmdqueue_t *edgex_devmap_device_forcmd
+  (edgex_devmap_t *map, const char *cmd, bool forGet)
+{
+  edgex_device *dev;
+  const char *key;
+  const struct edgex_cmdinfo *command;
+  edgex_cmdqueue_t *result = NULL;
+  edgex_cmdqueue_t *q;
+
+  pthread_rwlock_rdlock (&map->lock);
+  edgex_map_iter iter = edgex_map_iter (map->devices);
+  while ((key = edgex_map_next (&map->devices, &iter)))
+  {
+    dev = *edgex_map_get (&map->devices, key);
+    if (dev->operatingState == ENABLED && dev->adminState == UNLOCKED)
+    {
+      command = edgex_deviceprofile_findcommand (cmd, dev->profile, forGet);
+      if (command)
+      {
+        q = malloc (sizeof (edgex_cmdqueue_t));
+        q->dev = dev;
+        q->cmd = command;
+        q->next = result;
+        result = q;
+        atomic_fetch_add (&dev->refs, 1);
+      }
+    }
+  }
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
+void edgex_device_release (edgex_device *dev)
+{
+  if (atomic_fetch_add (&dev->refs, -1) == 1)
+  {
+    dev->profile = NULL;
+    edgex_device_free (dev);
+  }
+}
+

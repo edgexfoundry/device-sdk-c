@@ -187,6 +187,7 @@ typedef struct edgex_device
   edgex_deviceservice *service;
   edgex_deviceprofile *profile;
   struct edgex_device *next;
+  atomic_uint_fast32_t refs;
 } edgex_device;
 
 #endif

@@ -121,7 +121,7 @@ static edgex_nvpairs *nvpairs_read (const JSON_Object *obj)
   return result;
 }
 
-edgex_nvpairs *edgex_nvpairs_dup (edgex_nvpairs *p)
+edgex_nvpairs *edgex_nvpairs_dup (const edgex_nvpairs *p)
 {
   edgex_nvpairs *result = NULL;
   edgex_nvpairs *copy;
@@ -323,11 +323,11 @@ static edgex_propertyvalue *propertyvalue_read
     result->lsb = get_string (obj, "lsb");
     result->assertion = get_string (obj, "assertion");
     result->precision = get_string (obj, "precision");
-    fe = get_string (obj, "floatEncoding");
+    fe = json_object_get_string (obj, "floatEncoding");
 #ifdef LEGIBLE_FLOATS
-    result->floatAsBinary = (strcmp (fe, "base64") == 0);
+    result->floatAsBinary = fe && (strcmp (fe, "base64") == 0);
 #else
-    result->floatAsBinary = (strcmp (fe, "eNotation") != 0);
+    result->floatAsBinary = fe && (strcmp (fe, "eNotation") != 0);
 #endif
   }
   else
@@ -383,7 +383,7 @@ static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
   return result;
 }
 
-static edgex_propertyvalue *propertyvalue_dup (edgex_propertyvalue *pv)
+static edgex_propertyvalue *propertyvalue_dup (const edgex_propertyvalue *pv)
 {
   edgex_propertyvalue *result = NULL;
   if (pv)
@@ -484,7 +484,7 @@ static JSON_Value *profileproperty_write (edgex_profileproperty *e)
   return result;
 }
 
-static edgex_profileproperty *profileproperty_dup (edgex_profileproperty *pp)
+static edgex_profileproperty *profileproperty_dup (const edgex_profileproperty *pp)
 {
   edgex_profileproperty *result = NULL;
   if (pp)
@@ -544,7 +544,7 @@ static JSON_Value *deviceresource_write (const edgex_deviceresource *e)
   return result;
 }
 
-static edgex_deviceresource *edgex_deviceresource_dup (edgex_deviceresource *e)
+static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresource *e)
 {
   edgex_deviceresource *result = NULL;
   if (e)
@@ -611,7 +611,7 @@ static JSON_Value *resourceoperation_write (const edgex_resourceoperation *e)
 }
 
 static edgex_resourceoperation *resourceoperation_dup
-  (edgex_resourceoperation *ro)
+  (const edgex_resourceoperation *ro)
 {
   edgex_resourceoperation *result = NULL;
   if (ro)
@@ -707,7 +707,7 @@ static JSON_Value *profileresource_write (const edgex_profileresource *e)
   return result;
 }
 
-static edgex_profileresource *profileresource_dup (edgex_profileresource *pr)
+static edgex_profileresource *profileresource_dup (const edgex_profileresource *pr)
 {
   edgex_profileresource *result = NULL;
   if (pr)
@@ -964,7 +964,7 @@ static JSON_Value *addressable_write_name (const edgex_addressable *e)
   return result;
 }
 
-edgex_addressable *edgex_addressable_dup (edgex_addressable *addr)
+edgex_addressable *edgex_addressable_dup (const edgex_addressable *addr)
 {
   edgex_addressable *result = NULL;
   if (addr)
@@ -1109,26 +1109,31 @@ char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create)
   return result;
 }
 
-edgex_deviceprofile *edgex_deviceprofile_dup (edgex_deviceprofile *dp)
+edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *dp)
 {
   edgex_deviceprofile *result = NULL;
   if (dp)
   {
     result = malloc (sizeof (edgex_deviceprofile));
-    result->id = strdup (dp->id);
-    result->name = strdup (dp->name);
-    result->description = strdup (dp->description);
-    result->created = dp->created;
-    result->modified = dp->modified;
-    result->origin = dp->origin;
-    result->manufacturer = strdup (dp->manufacturer);
-    result->model = strdup (dp->model);
-    result->labels = edgex_strings_dup (dp->labels);
-    result->device_resources = edgex_deviceresource_dup (dp->device_resources);
-    result->resources = profileresource_dup (dp->resources);
-    result->cmdinfo = NULL;
+    edgex_deviceprofile_cpy (result, dp);
   }
   return result;
+}
+
+void edgex_deviceprofile_cpy (edgex_deviceprofile *dest, const edgex_deviceprofile *src)
+{
+  dest->id = strdup (src->id);
+  dest->name = strdup (src->name);
+  dest->description = strdup (src->description);
+  dest->created = src->created;
+  dest->modified = src->modified;
+  dest->origin = src->origin;
+  dest->manufacturer = strdup (src->manufacturer);
+  dest->model = strdup (src->model);
+  dest->labels = edgex_strings_dup (src->labels);
+  dest->device_resources = edgex_deviceresource_dup (src->device_resources);
+  dest->resources = profileresource_dup (src->resources);
+  dest->cmdinfo = NULL;
 }
 
 static void cmdinfo_free (edgex_cmdinfo *inf)
@@ -1141,18 +1146,26 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
   }
 }
 
+void edgex_deviceprofile_free_array (edgex_deviceprofile *e, unsigned count)
+{
+  for (unsigned i = 0; i < count; i++)
+  {
+    free (e[i].id);
+    free (e[i].name);
+    free (e[i].description);
+    free (e[i].manufacturer);
+    free (e[i].model);
+    edgex_strings_free (e[i].labels);
+    deviceresource_free (e[i].device_resources);
+    profileresource_free (e[i].resources);
+    cmdinfo_free (e[i].cmdinfo);
+  }
+  free (e);
+}
+
 void edgex_deviceprofile_free (edgex_deviceprofile *e)
 {
-  free (e->id);
-  free (e->name);
-  free (e->description);
-  free (e->manufacturer);
-  free (e->model);
-  edgex_strings_free (e->labels);
-  deviceresource_free (e->device_resources);
-  profileresource_free (e->resources);
-  cmdinfo_free (e->cmdinfo);
-  free (e);
+  edgex_deviceprofile_free_array (e, 1);
 }
 
 edgex_deviceservice *edgex_deviceservice_read (const char *json)
@@ -1290,7 +1303,10 @@ void edgex_device_free (edgex_device *e)
     free (e->id);
     edgex_strings_free (e->labels);
     free (e->name);
-    edgex_deviceprofile_free (e->profile);
+    if (e->profile)
+    {
+      edgex_deviceprofile_free (e->profile);
+    }
     edgex_deviceservice_free (e->service);
     e = e->next;
     free (current);

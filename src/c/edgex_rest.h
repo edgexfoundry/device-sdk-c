@@ -15,7 +15,7 @@
 
 edgex_strings *edgex_strings_dup (const edgex_strings *strs);
 void edgex_strings_free (edgex_strings *strs);
-edgex_nvpairs *edgex_nvpairs_dup (edgex_nvpairs *p);
+edgex_nvpairs *edgex_nvpairs_dup (const edgex_nvpairs *p);
 void edgex_nvpairs_free (edgex_nvpairs *p);
 const char *edgex_propertytype_tostring (edgex_propertytype pt);
 bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str);
@@ -23,7 +23,8 @@ edgex_protocols *edgex_protocols_dup (const edgex_protocols *e);
 void edgex_protocols_free (edgex_protocols *e);
 edgex_deviceprofile *edgex_deviceprofile_read (iot_logging_client *lc, const char *json);
 char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create);
-edgex_deviceprofile *edgex_deviceprofile_dup (edgex_deviceprofile *e);
+edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *e);
+void edgex_deviceprofile_cpy (edgex_deviceprofile *dest, const edgex_deviceprofile *src);
 void edgex_deviceprofile_free (edgex_deviceprofile *e);
 edgex_deviceservice *edgex_deviceservice_read (const char *json);
 char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create);
@@ -37,7 +38,7 @@ void edgex_device_free (edgex_device *e);
 edgex_device *edgex_devices_read (iot_logging_client *lc, const char *json);
 edgex_addressable *edgex_addressable_read (const char *json);
 char *edgex_addressable_write (const edgex_addressable *e, bool create);
-edgex_addressable *edgex_addressable_dup (edgex_addressable *e);
+edgex_addressable *edgex_addressable_dup (const edgex_addressable *e);
 void edgex_addressable_free (edgex_addressable *e);
 edgex_valuedescriptor *edgex_valuedescriptor_read (const char *json);
 char *edgex_valuedescriptor_write (const edgex_valuedescriptor *e);

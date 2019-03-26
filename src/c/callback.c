@@ -43,134 +43,34 @@ int edgex_device_handler_callback
   if (action && strcmp (action, "DEVICE") == 0)
   {
     const char *id = json_object_get_string (jobj, "id");
-    pthread_rwlock_rdlock (&svc->deviceslock);
-    edgex_device **ourdev = edgex_map_get (&svc->devices, id);
-    pthread_rwlock_unlock (&svc->deviceslock);
-    edgex_device *newdev = edgex_metadata_client_get_device
-      (svc->logger, &svc->config.endpoints, id, &err);
-    if (newdev)
+    if (id)
     {
-      if (ourdev)
+      switch (method)
       {
-        if (method == PUT)
-        {
-          iot_log_info
-            (svc->logger, "callback: Update device %s", newdev->name);
-          edgex_deviceprofile *profile = edgex_deviceprofile_get
-            (svc, newdev->profile->name, &err);
-          if (profile)
+        case DELETE:
+          iot_log_info (svc->logger, "callback: Delete device %s", id);
+          edgex_devmap_removedevice_byid (svc->devices, id);
+          break;
+        case POST:
+        case PUT:
+          iot_log_info (svc->logger, "callback: New or updated device %s", id);
+          edgex_device *newdev = edgex_metadata_client_get_device
+            (svc->logger, &svc->config.endpoints, id, &err);
+          if (newdev)
           {
-            edgex_deviceprofile_free (newdev->profile);
-            newdev->profile = profile;
-          }
-          pthread_rwlock_wrlock (&svc->deviceslock);
-          edgex_map_remove (&svc->name_to_id, (*ourdev)->name);
-          edgex_map_remove (&svc->devices, id);
-          edgex_map_set (&svc->devices, newdev->id, newdev);
-          edgex_map_set (&svc->name_to_id, newdev->name, newdev->id);
-          pthread_rwlock_unlock (&svc->deviceslock);
-          edgex_device_free (*ourdev);
-          if (!profile)
-          {
-            status = MHD_HTTP_NOT_FOUND;
-            iot_log_error
-            (
-              svc->logger,
-              "callback: No device profile %s found, device %s unavailable",
-              newdev->profile->name,
-              newdev->name
-            );
+            edgex_devmap_replace_device (svc->devices, newdev);
             edgex_device_free (newdev);
           }
-        }
-        else
-        {
-          status = MHD_HTTP_BAD_REQUEST;
-          iot_log_error
-          (
-            svc->logger,
-            "callback: Ignoring non-PUT request for existing device %s",
-            newdev->name
-          );
-        }
-        edgex_device_free (newdev);
-      }
-      else
-      {
-        if (method == POST)
-        {
-          iot_log_info (svc->logger, "callback: New device %s", newdev->name);
-          edgex_deviceprofile *profile = edgex_deviceprofile_get
-            (svc, newdev->profile->name, &err);
-          if (profile)
-          {
-            edgex_deviceprofile_free (newdev->profile);
-            newdev->profile = profile;
-            pthread_rwlock_wrlock (&svc->deviceslock);
-            edgex_map_set (&svc->devices, newdev->id, newdev);
-            edgex_map_set (&svc->name_to_id, newdev->name, newdev->id);
-            pthread_rwlock_unlock (&svc->deviceslock);
-          }
-          else
-          {
-            status = MHD_HTTP_NOT_FOUND;
-            iot_log_error
-            (
-              svc->logger,
-              "callback: No device profile %s found, device %s unavailable",
-              newdev->profile->name,
-              newdev->name
-            );
-            edgex_device_free (newdev);
-          }
-        }
-        else
-        {
-          status = MHD_HTTP_BAD_REQUEST;
-          iot_log_error
-          (
-            svc->logger,
-            "callback: Ignoring non-POST request for new device %s",
-            newdev->name
-          );
-        }
+          break;
+        default:
+          status = MHD_HTTP_NOT_IMPLEMENTED;
+          break;
       }
     }
     else
     {
-      if (method == DELETE)
-      {
-        if (ourdev)
-        {
-          iot_log_info
-            (svc->logger, "callback: Delete device %s", (*ourdev)->name);
-          pthread_rwlock_wrlock (&svc->deviceslock);
-          edgex_map_remove (&svc->name_to_id, (*ourdev)->name);
-          edgex_map_remove (&svc->devices, id);
-          pthread_rwlock_unlock (&svc->deviceslock);
-          edgex_device_free (*ourdev);
-        }
-        else
-        {
-          status = MHD_HTTP_NOT_FOUND;
-          iot_log_error
-          (
-            svc->logger,
-            "callback: DELETE request for unknown device %s",
-            id
-          );
-        }
-      }
-      else
-      {
-        status = MHD_HTTP_BAD_REQUEST;;
-        iot_log_error
-        (
-          svc->logger,
-          "callback: Ignoring non-DELETE request for missing device %s",
-          ourdev ? (*ourdev)->name : id
-        );
-      }
+      iot_log_error (svc->logger, "No device id given for DEVICE callback");
+      status = MHD_HTTP_BAD_REQUEST;
     }
   }
   else
