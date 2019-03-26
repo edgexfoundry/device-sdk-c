@@ -268,14 +268,12 @@ void edgex_rest_server_destroy (edgex_rest_server *svr)
   {
     MHD_stop_daemon (svr->daemon);
   }
-  pthread_mutex_lock (&svr->lock);
   while (svr->handlers)
   {
     tmp = svr->handlers->next;
     free (svr->handlers);
     svr->handlers = tmp;
   }
-  pthread_mutex_unlock (&svr->lock);
   pthread_mutex_destroy (&svr->lock);
   free (svr);
 }

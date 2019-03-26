@@ -92,6 +92,7 @@ edgex_device_service *edgex_device_service_new
   result->sjobs = NULL;
   result->thpool = thpool_init (POOL_THREADS);
   result->scheduler = iot_scheduler_init (&result->thpool);
+  pthread_mutex_init (&result->discolock, NULL);
   return result;
 }
 
@@ -568,7 +569,6 @@ void edgex_device_service_stop
   }
   svc->userfns.stop (svc->userdata, force);
   thpool_destroy (svc->thpool);
-  iot_log_debug (svc->logger, "Stopped device service");
   edgex_device_service_job *j;
   while (svc->sjobs)
   {
@@ -577,9 +577,11 @@ void edgex_device_service_stop
     free (svc->sjobs);
     svc->sjobs = j;
   }
-  edgex_device_freeConfig (svc);
-  iot_logging_client_destroy (svc->logger);
   edgex_devmap_free (svc->devices);
   edgex_registry_fini ();
+  pthread_mutex_destroy (&svc->discolock);
+  iot_log_debug (svc->logger, "Stopped device service");
+  iot_logging_client_destroy (svc->logger);
+  edgex_device_freeConfig (svc);
   free (svc);
 }

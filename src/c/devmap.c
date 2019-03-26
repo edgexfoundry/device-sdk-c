@@ -41,6 +41,7 @@ edgex_devmap_t *edgex_devmap_alloc ()
 
   edgex_devmap_t *res = malloc (sizeof (edgex_devmap_t));
   pthread_rwlock_init (&res->lock, &rwatt);
+  pthread_rwlockattr_destroy (&rwatt);
   edgex_map_init (&res->devices);
   edgex_map_init (&res->name_to_id);
   edgex_map_init (&res->profiles);
@@ -49,7 +50,6 @@ edgex_devmap_t *edgex_devmap_alloc ()
 
 void edgex_devmap_free (edgex_devmap_t *map)
 {
-  pthread_rwlock_wrlock (&map->lock);
   edgex_map_deinit (&map->name_to_id);
   edgex_map_iter i = edgex_map_iter (map->devices);
   const char *key;
@@ -66,7 +66,7 @@ void edgex_devmap_free (edgex_devmap_t *map)
     edgex_deviceprofile_free (*p);
   }
   edgex_map_deinit (&map->profiles);
-  pthread_rwlock_unlock (&map->lock);
+  pthread_rwlock_destroy (&map->lock);
   free (map);
 }
 
