@@ -67,6 +67,29 @@ static void generate_value_descriptors
   }
 }
 
+static const edgex_deviceprofile *edgex_deviceprofile_get_internal
+(
+  edgex_device_service *svc,
+  const char *name,
+  edgex_error *err
+)
+{
+  const edgex_deviceprofile *dp;
+
+  dp = edgex_devmap_profile (svc->devices, name);
+  if (dp == NULL)
+  {
+    edgex_deviceprofile *newdp = edgex_metadata_client_get_deviceprofile
+      (svc->logger, &svc->config.endpoints, name, err);
+    if (newdp)
+    {
+      edgex_devmap_add_profile (svc->devices, newdp);
+      dp = newdp;
+    }
+  }
+  return dp;
+}
+
 void edgex_device_profiles_upload
 (
   edgex_device_service *svc,
@@ -82,7 +105,7 @@ void edgex_device_profiles_upload
   yaml_parser_t parser;
   yaml_event_t event;
   bool lastWasName;
-  edgex_deviceprofile *dp;
+  const edgex_deviceprofile *dp;
   const char *profileDir = svc->config.device.profilesdir;
   edgex_service_endpoints *endpoints = &svc->config.endpoints;
   iot_logging_client *lc = svc->logger;
@@ -173,25 +196,10 @@ void edgex_device_profiles_upload
       {
         iot_log_debug
           (lc, "Checking existence of DeviceProfile %s", profname);
-        dp = edgex_metadata_client_get_deviceprofile
-          (lc, endpoints, profname, err);
-        if (err->code == EDGEX_PROFILE_PARSE_ERROR.code)
-        {
-          iot_log_error (lc, "Profile %s exists but has errors", profname);
-          break;
-        }
-        if (dp)
+        if (edgex_deviceprofile_get_internal (svc, profname, err))
         {
           iot_log_debug
             (lc, "DeviceProfile %s already exists: skipped", profname);
-          if (edgex_map_get (&svc->profiles, profname))
-          {
-            edgex_deviceprofile_free (dp);
-          }
-          else
-          {
-            edgex_map_set (&svc->profiles, profname, dp);
-          }
         }
         else
         {
@@ -208,14 +216,12 @@ void edgex_device_profiles_upload
           {
             iot_log_debug
               (lc, "Device profile upload successful, will now retrieve it");
-            dp = edgex_metadata_client_get_deviceprofile
-              (lc, endpoints, profname, err);
+            dp = edgex_deviceprofile_get_internal (svc, profname, err);
             if (dp)
             {
               iot_log_debug
                 (lc, "Generating value descriptors DeviceProfile %s", profname);
               generate_value_descriptors (svc, dp);
-              edgex_map_set (&svc->profiles, profname, dp);
             }
             else
             {
@@ -253,51 +259,16 @@ edgex_deviceprofile *edgex_deviceprofile_get
   edgex_error *err
 )
 {
-  edgex_deviceprofile **dpp;
-  edgex_deviceprofile *dp;
-
-  pthread_mutex_lock (&svc->profileslock);
-  dpp = edgex_map_get (&svc->profiles, name);
-  if (dpp == NULL)
-  {
-    dp = edgex_metadata_client_get_deviceprofile
-      (svc->logger, &svc->config.endpoints, name, err);
-    if (dp)
-    {
-      edgex_map_set (&svc->profiles, name, edgex_deviceprofile_dup (dp));
-    }
-  }
-  else
-  {
-    dp = edgex_deviceprofile_dup (*dpp);
-  }
-  pthread_mutex_unlock (&svc->profileslock);
-  return dp;
+  *err = EDGEX_OK;
+  return edgex_deviceprofile_dup
+    (edgex_deviceprofile_get_internal (svc, name, err));
 }
 
-void edgex_device_service_getprofiles
+uint32_t edgex_device_service_getprofiles
 (
   edgex_device_service *svc,
-  uint32_t *count,
   edgex_deviceprofile **profiles
 )
 {
-  edgex_map_iter iter = edgex_map_iter (svc->profiles);
-  uint32_t i = 0;
-  pthread_mutex_lock (&svc->profileslock);
-  while (edgex_map_next (&svc->profiles, &iter))
-  {
-    i++;
-  }
-  *count = i;
-  *profiles = malloc (i * sizeof (edgex_deviceprofile));
-
-  const char *key;
-  i = 0;
-  iter = edgex_map_iter (svc->profiles);
-  while ((key = edgex_map_next (&svc->profiles, &iter)))
-  {
-    (*profiles)[i++] = **edgex_map_get (&svc->profiles, key);
-  }
-  pthread_mutex_unlock (&svc->profileslock);
+  return edgex_devmap_copyprofiles (svc->devices, profiles);
 }

@@ -12,13 +12,10 @@
 #include "edgex/devsdk.h"
 #include "edgex/edgex_logging.h"
 #include "config.h"
-#include "map.h"
+#include "devmap.h"
 #include "rest_server.h"
 #include "thpool.h"
 #include "iot/scheduler.h"
-
-typedef edgex_map(edgex_device *) edgex_map_device;
-typedef edgex_map(edgex_deviceprofile *) edgex_map_profile;
 
 struct edgex_device_service_job;
 
@@ -34,13 +31,7 @@ struct edgex_device_service
   edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;
 
-  edgex_map_device devices;
-  edgex_map_string name_to_id;
-  pthread_rwlock_t deviceslock;
-
-  edgex_map_profile profiles;
-  pthread_mutex_t profileslock;
-
+  edgex_devmap_t *devices;
   threadpool thpool;
   iot_scheduler scheduler;
   struct edgex_device_service_job *sjobs;

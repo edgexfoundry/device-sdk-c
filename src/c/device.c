@@ -458,7 +458,7 @@ static void populateCmdInfo (edgex_deviceprofile *prof)
   }
 }
 
-static const edgex_cmdinfo *findCommand
+const edgex_cmdinfo *edgex_deviceprofile_findcommand
   (const char *name, edgex_deviceprofile *prof, bool forGet)
 {
   if (prof->cmdinfo == NULL)
@@ -708,15 +708,12 @@ static int allCommand
   const char **reply_type
 )
 {
-  const char *key;
-  edgex_device *dev;
-  const edgex_cmdinfo *command;
   int ret = MHD_HTTP_NOT_FOUND;
   int retOne;
   JSON_Value *jresult;
   JSON_Array *jarray;
-  devlist *devs = NULL;
-  devlist *d;
+  edgex_cmdqueue_t *cmdq = NULL;
+  edgex_cmdqueue_t *iter;
 
   iot_log_debug
     (svc->logger, "Incoming %s command %s for all", methStr (method), cmd);
@@ -724,34 +721,17 @@ static int allCommand
   jresult = json_value_init_array ();
   jarray = json_value_get_array (jresult);
 
-  pthread_rwlock_rdlock (&svc->deviceslock);
-  edgex_map_iter iter = edgex_map_iter (svc->devices);
-  while ((key = edgex_map_next (&svc->devices, &iter)))
-  {
-    dev = *edgex_map_get (&svc->devices, key);
-    if (dev->operatingState == ENABLED && dev->adminState == UNLOCKED)
-    {
-      command = findCommand (cmd, dev->profile, method == GET);
-      if (command)
-      {
-        d = malloc (sizeof (devlist));
-        d->dev = dev;
-        d->cmd = command;
-        d->next = devs;
-        devs = d;
-      }
-    }
-  }
-  pthread_rwlock_unlock (&svc->deviceslock);
+  cmdq = edgex_devmap_device_forcmd (svc->devices, cmd, method == GET);
 
   uint32_t nret = 0;
   uint32_t maxret = svc->config.service.readmaxlimit;
 
-  for (d = devs; d; d = d->next)
+  for (iter = cmdq; iter; iter = iter->next)
   {
     JSON_Value *jreply = NULL;
     retOne = runOne
-      (svc, d->dev, d->cmd, upload_data, upload_data_size, &jreply);
+      (svc, iter->dev, iter->cmd, upload_data, upload_data_size, &jreply);
+    edgex_device_release (iter->dev);
     if (jreply && (maxret == 0 || nret++ < maxret))
     {
       json_array_append_value (jarray, jreply);
@@ -768,11 +748,11 @@ static int allCommand
     *reply_type = "application/json";
   }
   json_value_free (jresult);
-  while (devs)
+  while (cmdq)
   {
-    d = devs->next;
-    free (devs);
-    devs = d;
+    iter = cmdq->next;
+    free (cmdq);
+    cmdq = iter;
   }
   return ret;
 }
@@ -791,7 +771,7 @@ static int oneCommand
 )
 {
   int result = MHD_HTTP_NOT_FOUND;
-  edgex_device **dev = NULL;
+  edgex_device *dev = NULL;
   const edgex_cmdinfo *command = NULL;
 
   iot_log_debug
@@ -801,30 +781,27 @@ static int oneCommand
     id, cmd, methStr (method)
   );
 
-  pthread_rwlock_rdlock (&svc->deviceslock);
   if (byName)
   {
-    char **found = edgex_map_get (&svc->name_to_id, id);
-    if (found)
-    {
-      dev = edgex_map_get (&svc->devices, *found);
-    }
+    dev = edgex_devmap_device_byname (svc->devices, id);
   }
   else
   {
-    dev = edgex_map_get (&svc->devices, id);
+    dev = edgex_devmap_device_byid (svc->devices, id);
   }
+
   if (dev)
   {
-    command = findCommand (cmd, (*dev)->profile, method == GET);
+    command = edgex_deviceprofile_findcommand
+      (cmd, dev->profile, method == GET);
   }
-  pthread_rwlock_unlock (&svc->deviceslock);
 
   if (command)
   {
     JSON_Value *jreply = NULL;
     result = runOne
-      (svc, *dev, command, upload_data, upload_data_size, &jreply);
+      (svc, dev, command, upload_data, upload_data_size, &jreply);
+    edgex_device_release (dev);
     if (jreply)
     {
       *reply = json_serialize_to_string (jreply);
@@ -836,21 +813,22 @@ static int oneCommand
   {
     if (dev)
     {
-      if (commandExists (cmd, (*dev)->profile))
+      if (commandExists (cmd, dev->profile))
       {
         iot_log_error
         (
           svc->logger,
           "Wrong method for command %s, device %s",
-          cmd, (*dev)->name
+          cmd, dev->name
         );
         result = MHD_HTTP_METHOD_NOT_ALLOWED;
       }
       else
       {
         iot_log_error
-          (svc->logger, "No command %s for device %s", cmd, (*dev)->name);
+          (svc->logger, "No command %s for device %s", cmd, dev->name);
       }
+      edgex_device_release (dev);
     }
     else
     {

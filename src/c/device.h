@@ -10,6 +10,7 @@
 #define _EDGEX_DEVICE_DEVICE_H_ 1
 
 #include "edgex/devsdk.h"
+#include "edgex/edgex.h"
 #include "rest_server.h"
 
 extern int edgex_device_handler_device
@@ -30,5 +31,8 @@ extern char *edgex_value_tostring
   edgex_propertyvalue *props,
   edgex_nvpairs *mappings
 );
+
+extern const struct edgex_cmdinfo *edgex_deviceprofile_findcommand
+  (const char *name, edgex_deviceprofile *prof, bool forGet);
 
 #endif

@@ -829,7 +829,7 @@ void edgex_device_process_configured_devices
   {
     char *devname;
     const char *raw;
-    char **existing;
+    edgex_device *existing;
     char *profile_name;
     char *description;
     edgex_protocols *protocols = NULL;
@@ -844,10 +844,12 @@ void edgex_device_process_configured_devices
     {
       raw = toml_raw_in (table, "Name");
       toml_rtos2 (raw, &devname);
-      pthread_rwlock_rdlock (&svc->deviceslock);
-      existing = edgex_map_get (&svc->name_to_id, devname);
-      pthread_rwlock_unlock (&svc->deviceslock);
-      if (existing == NULL)
+      existing = edgex_devmap_device_byname (svc->devices, devname);
+      if (existing)
+      {
+        edgex_device_release (existing);
+      }
+      else
       {
         /* Protocols */
 

@@ -339,18 +339,11 @@ void edgex_device_update_device
 );
 
 /**
- * @brief Obtain a list of devices known to the system. This function calls
- *        core-metadata to retrieve all devices associated with this device
- *        service.
+ * @brief Obtain a list of devices known to the system.
  * @param svc The device service.
- * @param err Nonzero reason codes will be set here in the event of errors.
  */
 
-edgex_device * edgex_device_devices
-(
-  edgex_device_service *svc,
-  edgex_error *err
-);
+edgex_device * edgex_device_devices (edgex_device_service *svc);
 
 /**
  * @brief Retrieve device information.
@@ -382,16 +375,23 @@ void edgex_device_free_device (edgex_device *e);
 /**
  * @brief Retrieve the device profiles currently known in the SDK.
  * @param svc The device service.
- * @param count Is set to the number of profiles returned.
  * @param profiles Is set to an array of device profiles. This should be
- *        free()d after use.
+ *        freed using edgex_deviceprofile_free_array() after use.
+ * @returns the size of the returned array.
  */
 
-void edgex_device_service_getprofiles
+uint32_t edgex_device_service_getprofiles
 (
   edgex_device_service *svc,
-  uint32_t *count,
   edgex_deviceprofile **profiles
 );
+
+/**
+ * @brief Free an array of device profiles.
+ * @param e The array.
+ * @param count The number of elements in the array.
+ */
+
+void edgex_deviceprofile_free_array (edgex_deviceprofile *e, unsigned count);
 
 #endif

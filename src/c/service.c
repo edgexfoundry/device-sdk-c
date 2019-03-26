@@ -88,20 +88,7 @@ edgex_device_service *edgex_device_service_new
   result->version = version;
   result->userdata = impldata;
   result->userfns = implfns;
-  pthread_rwlockattr_t rwatt;
-  pthread_rwlockattr_init (&rwatt);
-#ifdef  __GLIBC_PREREQ
-#if __GLIBC_PREREQ(2, 1)
-  /* Avoid heavy readlock use (eg spammed "all" commands) blocking discovery */
-  pthread_rwlockattr_setkind_np
-    (&rwatt, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
-#endif
-#endif
-  pthread_rwlock_init (&result->deviceslock, &rwatt);
-  pthread_mutex_init (&result->discolock, NULL);
-  pthread_mutex_init (&result->profileslock, NULL);
-  edgex_map_init (&result->devices);
-  edgex_map_init (&result->name_to_id);
+  result->devices = edgex_devmap_alloc ();
   result->sjobs = NULL;
   result->thpool = thpool_init (POOL_THREADS);
   result->scheduler = iot_scheduler_init (&result->thpool);
@@ -321,11 +308,17 @@ static void startConfigured
 
   /* Obtain Devices from metadata */
 
-  edgex_device_free (edgex_device_devices (svc, err));
+  edgex_device *devs = edgex_metadata_client_get_devices
+    (svc->logger, &svc->config.endpoints, svc->name, err);
+
   if (err->code)
   {
+    iot_log_error (svc->logger, "Unable to retrieve device list from metadata");
     return;
   }
+
+  edgex_devmap_populate_devices (svc->devices, devs);
+  edgex_device_free (devs);
 
   /* Start REST server now so that we get the callbacks on device addition */
 
@@ -586,22 +579,7 @@ void edgex_device_service_stop
   }
   edgex_device_freeConfig (svc);
   iot_logging_client_destroy (svc->logger);
-  edgex_map_deinit (&svc->name_to_id);
-  edgex_map_iter i = edgex_map_iter (svc->devices);
-  const char *key;
-  while ((key = edgex_map_next (&svc->devices, &i)))
-  {
-    edgex_device **e = edgex_map_get (&svc->devices, key);
-    edgex_device_free (*e);
-  }
-  edgex_map_deinit (&svc->devices);
-  i = edgex_map_iter (svc->profiles);
-  while ((key = edgex_map_next (&svc->profiles, &i)))
-  {
-    edgex_deviceprofile **p = edgex_map_get (&svc->profiles, key);
-    edgex_deviceprofile_free (*p);
-  }
-  edgex_map_deinit (&svc->profiles);
+  edgex_devmap_free (svc->devices);
   edgex_registry_fini ();
   free (svc);
 }

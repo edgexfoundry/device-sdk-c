@@ -29,18 +29,19 @@ char * edgex_device_add_device
   edgex_error *err
 )
 {
-  char **dev_id;
+  edgex_device *existing;
   char *result = NULL;
 
   *err = EDGEX_OK;
-  pthread_rwlock_rdlock (&svc->deviceslock);
-  dev_id = edgex_map_get (&svc->name_to_id, name);
-  pthread_rwlock_unlock (&svc->deviceslock);
 
-  if (dev_id)
+  existing = edgex_devmap_device_byname (svc->devices, name);
+
+  if (existing)
   {
     iot_log_info (svc->logger, "Device %s already present", name);
-    return strdup (*dev_id);
+    result = strdup (existing->id);
+    edgex_device_release (existing);
+    return result;
   }
 
   edgex_device *newdev = edgex_metadata_client_add_device
@@ -56,9 +57,10 @@ char * edgex_device_add_device
     err
   );
 
-  if (err->code == 0)
+  if (newdev)
   {
     result = strdup (newdev->id);
+    edgex_device_free (newdev);
     iot_log_info (svc->logger, "Device %s added with id %s", name, result);
   }
   else
@@ -66,74 +68,41 @@ char * edgex_device_add_device
     iot_log_error
       (svc->logger, "Failed to add Device in core-metadata: %s", err->reason);
   }
-  edgex_device_free (newdev);
   return result;
 }
 
-edgex_device * edgex_device_devices
-  (edgex_device_service *svc, edgex_error *err)
+edgex_device * edgex_device_devices (edgex_device_service *svc)
 {
-  *err = EDGEX_OK;
-  edgex_device *result = edgex_metadata_client_get_devices
-    (svc->logger, &svc->config.endpoints, svc->name, err);
-
-  if (err->code)
-  {
-    iot_log_error (svc->logger, "Unable to retrieve device list from metadata");
-    return NULL;
-  }
-
-  pthread_rwlock_wrlock (&svc->deviceslock);
-  for (edgex_device *d = result; d; d = d->next)
-  {
-    if (edgex_map_get (&svc->name_to_id, d->name) == NULL)
-    {
-      edgex_device *dup = edgex_device_dup (d);
-      edgex_map_set (&svc->devices, dup->id, dup);
-      edgex_map_set (&svc->name_to_id, dup->name, dup->id);
-    }
-  }
-  pthread_rwlock_unlock (&svc->deviceslock);
-
-  pthread_mutex_lock (&svc->profileslock);
-  for (edgex_device *d = result; d; d = d->next)
-  {
-    if (edgex_map_get (&svc->profiles, d->profile->name) == NULL)
-    {
-      edgex_deviceprofile *dup = edgex_deviceprofile_dup (d->profile);
-      edgex_map_set (&svc->profiles, dup->name, dup);
-    }
-  }
-  pthread_mutex_unlock (&svc->profileslock);
-
-  return result;
+  return edgex_devmap_copydevices (svc->devices);
 }
 
 edgex_device * edgex_device_get_device
   (edgex_device_service *svc, const char *id)
 {
+  edgex_device *internal;
   edgex_device *result = NULL;
-  pthread_rwlock_rdlock (&svc->deviceslock);
-  edgex_device **orig = edgex_map_get (&svc->devices, id);
-  if (orig)
+
+  internal = edgex_devmap_device_byid (svc->devices, id);
+  if (internal)
   {
-    result = edgex_device_dup (*orig);
+    result = edgex_device_dup (internal);
+    edgex_device_release (internal);
   }
-  pthread_rwlock_unlock (&svc->deviceslock);
   return result;
 }
 
 edgex_device * edgex_device_get_device_byname
   (edgex_device_service *svc, const char *name)
 {
+  edgex_device *internal;
   edgex_device *result = NULL;
-  pthread_rwlock_rdlock (&svc->deviceslock);
-  char **id = edgex_map_get (&svc->name_to_id, name);
-  if (id)
+
+  internal = edgex_devmap_device_byname (svc->devices, name);
+  if (internal)
   {
-    result = edgex_device_dup (*edgex_map_get (&svc->devices, *id));
+    result = edgex_device_dup (internal);
+    edgex_device_release (internal);
   }
-  pthread_rwlock_unlock (&svc->deviceslock);
   return result;
 }
 
