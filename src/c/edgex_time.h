@@ -12,6 +12,8 @@
 #include <inttypes.h>
 
 #define EDGEX_MILLIS 1000
+#define EDGEX_MICROS 1000000
+#define EDGEX_NANOS 1000000000
 
 extern uint64_t edgex_device_millitime(void);
 

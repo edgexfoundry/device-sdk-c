@@ -11,5 +11,13 @@
 
 uint64_t edgex_device_millitime()
 {
-  return (uint64_t)time (NULL) * EDGEX_MILLIS;
+  struct timespec ts;
+  if (clock_gettime (CLOCK_REALTIME, &ts) == 0)
+  {
+    return ts.tv_sec * EDGEX_MILLIS + ts.tv_nsec / (EDGEX_NANOS / EDGEX_MILLIS);
+  }
+  else
+  {
+    return (uint64_t)time (NULL) * EDGEX_MILLIS;
+  }
 }

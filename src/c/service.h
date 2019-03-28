@@ -30,6 +30,7 @@ struct edgex_device_service
   edgex_rest_server *daemon;
   edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;
+  uint64_t starttime;
 
   edgex_devmap_t *devices;
   threadpool thpool;
