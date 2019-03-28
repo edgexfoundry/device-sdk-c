@@ -327,8 +327,9 @@ static edgex_propertyvalue *propertyvalue_read
 #ifdef LEGIBLE_FLOATS
     result->floatAsBinary = fe && (strcmp (fe, "base64") == 0);
 #else
-    result->floatAsBinary = fe && (strcmp (fe, "eNotation") != 0);
+    result->floatAsBinary = !(fe && (strcmp (fe, "eNotation") == 0));
 #endif
+    result->mediaType = get_string (obj, "mediaType");
   }
   else
   {
@@ -380,6 +381,7 @@ static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
   json_object_set_string (obj, "precision", e->precision);
   json_object_set_string
     (obj, "floatEncoding", e->floatAsBinary ? "base64" : "eNotation");
+  json_object_set_string (obj, "mediaType", e->mediaType);
   return result;
 }
 
@@ -403,6 +405,7 @@ static edgex_propertyvalue *propertyvalue_dup (const edgex_propertyvalue *pv)
     result->base = pv->base;
     result->assertion = strdup (pv->assertion);
     result->precision = strdup (pv->precision);
+    result->mediaType = strdup (pv->mediaType);
     result->floatAsBinary = pv->floatAsBinary;
   }
   return result;
@@ -416,6 +419,7 @@ static void propertyvalue_free (edgex_propertyvalue *e)
   free (e->lsb);
   free (e->assertion);
   free (e->precision);
+  free (e->mediaType);
   free (e);
 }
 
@@ -1443,6 +1447,8 @@ static edgex_valuedescriptor *valuedescriptor_read (const JSON_Object *obj)
   result->origin = json_object_get_number (obj, "origin");
   result->type = get_string (obj, "type");
   result->uomLabel = get_string (obj, "uomLabel");
+  result->mediaType = get_string (obj, "mediaType");
+  result->floatEncoding = get_string (obj, "floatEncoding");
 
   return result;
 }
@@ -1464,6 +1470,8 @@ static JSON_Value *valuedescriptor_write (const edgex_valuedescriptor *e)
   json_object_set_number (obj, "origin", e->origin);
   json_object_set_string (obj, "type", e->type);
   json_object_set_string (obj, "uomLabel", e->uomLabel);
+  json_object_set_string (obj, "floatEncoding", e->floatEncoding);
+  json_object_set_string (obj, "mediaType", e->mediaType);
 
   return result;
 }
@@ -1480,6 +1488,8 @@ void edgex_valuedescriptor_free (edgex_valuedescriptor *e)
   free (e->name);
   free (e->type);
   free (e->uomLabel);
+  free (e->floatEncoding);
+  free (e->mediaType);
   free (e);
 }
 

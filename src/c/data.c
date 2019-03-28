@@ -106,6 +106,8 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   const char *defaultValue,
   const char *formatting,
   const char *description,
+  const char *mediaType,
+  const char *floatEncoding,
   edgex_error *err
 )
 {
@@ -133,6 +135,8 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   result->defaultValue = strdup (defaultValue);
   result->formatting = strdup (formatting);
   result->description = strdup (description);
+  result->mediaType = strdup (mediaType);
+  result->floatEncoding = strdup (floatEncoding);
   json = edgex_valuedescriptor_write (result);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
   result->id = ctx.buff;

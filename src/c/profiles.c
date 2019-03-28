@@ -57,6 +57,8 @@ static void generate_value_descriptors
       pv->defaultvalue,
       "%s",
       res->description,
+      pv->mediaType,
+      pv->floatAsBinary ? "base64" : "eNotation",
       &err
     );
     if (err.code)
