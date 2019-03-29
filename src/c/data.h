@@ -51,6 +51,8 @@ typedef struct
   uint64_t origin;
   char *type;
   char *uomLabel;
+  char *mediaType;
+  char *floatEncoding;
 } edgex_valuedescriptor;
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
@@ -85,6 +87,8 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   const char *defaultValue,
   const char *formatting,
   const char *description,
+  const char *mediaType,
+  const char *floatEncoding,
   edgex_error *err
 );
 

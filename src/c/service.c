@@ -428,6 +428,7 @@ void edgex_device_service_start
   toml_table_t *config = NULL;
   edgex_registry *registry = NULL;
   bool uploadConfig = false;
+  svc->starttime = edgex_device_millitime();
 
   svc->logger = iot_logging_client_create (svc->name);
   if (confDir == NULL || *confDir == '\0')
@@ -514,6 +515,12 @@ void edgex_device_service_start
 
   edgex_registry_free (registry);
   toml_free (config);
+
+  if (err->code == 0)
+  {
+    iot_log_info (svc->logger, "Service started in: %dms", edgex_device_millitime() - svc->starttime);
+    iot_log_info (svc->logger, "Listening on port: %d", svc->config.service.port);
+  }
 }
 
 static void doPost (void *p)

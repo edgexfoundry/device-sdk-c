@@ -118,6 +118,7 @@ typedef struct
   edgex_transformArg base;
   char *assertion;
   char *precision;
+  char *mediaType;
   bool floatAsBinary;
 } edgex_propertyvalue;
 
