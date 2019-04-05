@@ -1,5 +1,4 @@
 [Service]
-  Host = "localhost"
   Port = 49990
   Timeout = 5000
   ConnectRetries = 3

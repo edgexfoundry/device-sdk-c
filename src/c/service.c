@@ -25,6 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <dirent.h>
+#include <sys/utsname.h>
 
 #include <microhttpd.h>
 
@@ -143,6 +144,19 @@ static void startConfigured
   edgex_error *err
 )
 {
+  char *myhost;
+  struct utsname buffer;
+
+  if (svc->config.service.host)
+  {
+    myhost = svc->config.service.host;
+  }
+  else
+  {
+    uname (&buffer);
+    myhost = buffer.nodename;
+  }
+
   edgex_device_validateConfig (svc, err);
   if (err->code)
   {
@@ -259,7 +273,7 @@ static void startConfigured
       addr->name = strdup (svc->name);
       addr->method = strdup ("POST");
       addr->protocol = strdup ("HTTP");
-      addr->address = strdup (svc->config.service.host);
+      addr->address = strdup (myhost);
       addr->port = svc->config.service.port;
       addr->path = strdup (EDGEX_DEV_API_CALLBACK);
 
@@ -398,7 +412,7 @@ static void startConfigured
     (
       registry,
       svc->name,
-      svc->config.service.host,
+      myhost,
       svc->config.service.port,
       svc->config.service.checkinterval,
       err
