@@ -9,6 +9,8 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Example implementation includes setting service name and registry location
+  from the command line and environment.
 - Float data is marshalled as base64 unless specified otherwise in the
   floatEncoding field of the device profile.
 - Schedules and ScheduleEvents are removed.

@@ -192,17 +192,20 @@ static void template_stop (void *impl, bool force) {}
 static void usage (void)
 {
   printf ("Options: \n");
-  printf ("   -h, --help           : Show this text\n");
-  printf ("   -r, --registry       : Use the registry service\n");
-  printf ("   -p, --profile <name> : Set the profile name\n");
-  printf ("   -c, --confdir <dir>  : Set the configuration directory\n");
+  printf ("   -h, --help                 : Show this text\n");
+  printf ("   -n, --name <name>          : Set the device service name\n");
+  printf ("   -r [url], --registry [url] : Use the registry service\n");
+  printf ("   -p, --profile <name>       : Set the profile name\n");
+  printf ("   -c, --confdir <dir>        : Set the configuration directory\n");
 }
 
 int main (int argc, char *argv[])
 {
   char *profile = "";
   char *confdir = "";
-  char *regURL = NULL;
+  const char *svcname = "device-template";
+  char *regURL = getenv ("EDGEX_REGISTRY");
+
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
 
@@ -216,8 +219,24 @@ int main (int argc, char *argv[])
     }
     if (strcmp (argv[n], "-r") == 0 || strcmp (argv[n], "--registry") == 0)
     {
-      regURL = "consul://localhost:8500";
       n++;
+      if (n < argc && argv[n][0] != '-')
+      {
+        regURL = argv[n++];
+      }
+      else
+      {
+        if (regURL == NULL)
+        {
+          regURL = "consul://localhost:8500";
+        }
+      }
+      continue;
+    }
+    if (strcmp (argv[n], "-n") == 0 || strcmp (argv[n], "--name") == 0)
+    {
+      svcname = argv[n + 1];
+      n += 2;
       continue;
     }
     if (strcmp (argv[n], "-p") == 0 || strcmp (argv[n], "--profile") == 0)
@@ -254,7 +273,7 @@ int main (int argc, char *argv[])
   /* Initalise a new device service */
   edgex_device_service *service = edgex_device_service_new
   (
-    "device-template",
+    svcname,
     "1.0",
     impl,
     templateImpls,
