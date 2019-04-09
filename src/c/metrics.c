@@ -16,6 +16,7 @@
 
 #ifdef __GNU_LIBRARY__
 #include <malloc.h>
+#include <sys/sysinfo.h>
 #endif
 
 #include <microhttpd.h>
@@ -37,16 +38,23 @@ int edgex_device_handler_metrics
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
 
+#ifdef __GNU_LIBRARY__
   JSON_Value *memval = json_value_init_object ();
   JSON_Object *memobj = json_value_get_object (memval);
 
-#ifdef __GNU_LIBRARY__
   struct mallinfo mi = mallinfo ();
   json_object_set_number (memobj, "Alloc", mi.uordblks);
-  json_object_set_number (memobj, "Heap", mi.arena + mi.hblkhd);
-#endif
+  json_object_set_number (memobj, "TotalAlloc", mi.arena + mi.hblkhd);
 
   json_object_set_value (obj, "Memory", memval);
+
+  double loads[1];
+  if (getloadavg (loads, 1) == 1)
+  {
+    json_object_set_number (obj, "CpuBusyAvg", loads[0] * 100.0 / get_nprocs());
+  }
+#endif
+
 
   if (getrusage (RUSAGE_SELF, &rstats) == 0)
   {
