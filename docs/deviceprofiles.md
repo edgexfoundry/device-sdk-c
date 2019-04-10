@@ -16,11 +16,11 @@ The profile contains some identification information - it has a name and
 a description, and a set of labels. It also indicates the brand name of the
 device to which it applies, and the manufacturer of that device.
 
-This information is followed by three sections, "deviceResources", "resources"
-and "commands".
+This information is followed by three sections, "deviceResources",
+"deviceCommands" and "coreCommands".
 
-Commands
---------
+coreCommands
+------------
 
 This section specifies the commands which are available via the core-command
 microservice, for reading and writing to the device.
@@ -30,16 +30,16 @@ values are specified in the "expectedValues" field, for a put type, the
 parameters to be given are specified in "parameterNames". In either case, the
 different http response codes that the service may generate are shown.
 
-Resources
----------
+deviceCommands
+--------------
 
 These are presented at the "device" endpoint,
 ```
-http://<device-service>:<port>/api/v1/device/<device id>/<resource name>
+http://<device-service>:<port>/api/v1/device/<device id>/<command name>
 ```
 
 This section defines access to reads and writes for multiple simultaneous
-values. Each resource should contain a get and/or a set section, describing
+values. Each deviceCommand should contain a get and/or a set section, describing
 the read or write operation respectively.
 
 Each line of a get section indicates a deviceResource which is to be read, and
@@ -50,10 +50,8 @@ in these lines are as follows:
 * operation - get or set. Ignored in this implementation, mixing of get and set
 operations is not supported.
 * object - the name of the deviceResource to access.
-* parameter - the name of the corresponding parameter in a PUT request, or the
-returned reading in a GET request.
-* property - the property within the deviceResource which is to be read or
-written. This is generally "value".
+* parameter - the name of the corresponding parameter in a PUT request. This
+should match the deviceResource name.
 
 deviceResources
 ---------------
@@ -63,12 +61,12 @@ These are also presented at the "device" endpoint,
 http://<device-service>:<port>/api/v1/device/<device id>/<deviceResource name>
 ```
 
-however if a profile contains a resource with the same name as a deviceResource,
-the resource will take precedence.
+however if a profile contains a deviceCommand with the same name as a
+deviceResource, the deviceCommand will take precedence.
 
 A deviceResource specifies an individual value within a device that may be
-read from or written to as part of a command. It has a name, which identifies
-it in a Resource, and a description for informational purposes.
+read from or written to as part of a command. It has a name for identification
+and a description for informational purposes.
 
 The Attributes in a deviceResource are the device-service-specific parameters
 required to access the particular value. Each device service implementation
@@ -90,9 +88,11 @@ writable.
 * base - a value to be raised to the power of the raw reading before it is returned.
 * scale - a factor by which to multiply a reading before it is returned.
 * offset - a value to be added to a reading before it is returned.
+* mask - a binary mask which will be applied to an integer reading.
+* shift - a number of bits by which an integer reading will be shifted right.
 
-The processing defined by base, scale and offset is applied in that order. This
-is done within the SDK.
+The processing defined by base, scale, offset, mask and shift is applied in
+that order. This is done within the SDK.
 
 The units property is used to indicate the units of the value, eg Amperes,
 degrees C, etc. It should have a type of String, readWrite "R" indicating
@@ -103,17 +103,6 @@ The Device Profile in the C SDK
 
 When the SDK invokes the get or set handler method, parts of the device profile
 which pertain to the request are passed in the edgex_device_commandrequest
-structure.
-
-* edgex_resourceoperation represents a get or set line of an operation within
-the resource section, if the request was for a resource.
-* edgex_deviceresource represents a deviceResource.
-
-In most cases the required information will be
-
-* The "property" field in edgex_resourceoperation. This names the property of
-the deviceResource that is to be read or written. This is usually "value" and
-if an edgex_resourceoperation is not supplied, "value" should be assumed.
-* The "attributes" field in the edgex_deviceresource.
-* The datatype required, found in edgex_deviceresource->properties->value->type.
+structure. This consists of the name, attributes and type of the deviceResource
+which is being queried or set.
 

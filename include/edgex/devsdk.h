@@ -234,7 +234,7 @@ void edgex_device_service_start
  *        to be generated other than in response to a device GET invocation.
  * @param svc The device service.
  * @param device_name The name of the device that the readings have come from.
- * @param resource_name Name of the resource which defines the Event.
+ * @param resource_name Name of the resource or command which defines the Event.
  * @param values An array of readings. These will be combined into an Event
  *        and submitted to core-data. For readings of String or Binary type,
  *        the SDK takes ownership of the memory containing the string or
