@@ -39,7 +39,7 @@ deviceResources:
             { type: "string", readWrite: "R", defaultValue: "State" }
 
 
-resources:
+deviceCommands:
   -
     name: SensorOne
     get:
@@ -57,7 +57,7 @@ resources:
     set:
     - { index: "1", operation: "set", object: "Switch", parameter: "Switch", property: "value" }
 
-commands:
+coreCommands:
   -
     name: SensorOne
     get:

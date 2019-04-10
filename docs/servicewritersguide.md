@@ -26,16 +26,17 @@ Get
 The Get handler deals with incoming requests to get data from a device. The following information is provided to the device service developer:
 
 * void *impl - The impldata pointer given as part of edgex_device_service.
+* char *devname - The name of the device being queried.
 * edgex_protocols *protocols - This provides information about the device that this get request is seeking to access. A list of protocols is supplied, each consists of a name and a set of name-value pairs representing the attributes required for that protocol.
 * uint32_t nreadings - The following requests and reading parameters are arrays of size nreadings.
-* edgex_device_commandrequest *requests - The deviceresource and resourceoperation supplied are pointers into the lists of such objects held in the relevant device profile. As such, each contains a "next" pointer. This should be ignored - each edgex_device_commandrequest describes only one operation. Here a device service would typically drill down to the attributes used to describe device resources, it would use these attributes to understand how to query the device for the requested data. Note that if a deviceresource is accessed directly, the resourceoperation will be NULL.
+* edgex_device_commandrequest *requests - The name, attributes and type of each resource being requested.
 * edgex_device_commandresult * readings - Once a reading has been taken from a device, the resulting value is placed into the readings. This is used by the SDK to return the result to EdgeX. If a reading is of String or Binary type, memory ownership is taken by the SDK.
 
 In general the GET handler should implement a translation between a GET request from edgex and a read/get via the protocol-specific mechanism. Multiple sources of metadata are provided to allow the device-service to identify what it should query on receipt of the callback.
 
 Put
 ---
-The Put handler deals with requests to write/transmit data to a specific device. It is provided with the same set of metadata as the GET callback. However, this time the put handler should write the data provided to the device associated with the addressable. The process of drilling into the metadata provided and using this to perform the correct protocol-specific write/put action is similar to that of performing a get.
+The Put handler deals with requests to write/transmit data to a specific device. It is provided with the same set of metadata as the GET callback. However, this time the put handler should write the data provided to the device associated with the addressable. The process of using the metadata provided to perform the correct protocol-specific write/put action is similar to that of performing a get.
 
 Disconnect
 ----------

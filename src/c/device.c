@@ -376,14 +376,14 @@ static edgex_deviceresource *findDevResource
 }
 
 static edgex_cmdinfo *infoForRes
-  (edgex_deviceprofile *prof, edgex_profileresource *res, bool forGet)
+  (edgex_deviceprofile *prof, edgex_devicecommand *cmd, bool forGet)
 {
   edgex_cmdinfo *result = malloc (sizeof (edgex_cmdinfo));
-  result->name = res->name;
+  result->name = cmd->name;
   result->isget = forGet;
   unsigned n = 0;
   edgex_resourceoperation *ro;
-  for (ro = forGet ? res->get : res->set; ro; ro = ro->next)
+  for (ro = forGet ? cmd->get : cmd->set; ro; ro = ro->next)
   {
     n++;
   }
@@ -391,7 +391,7 @@ static edgex_cmdinfo *infoForRes
   result->reqs = malloc (n * sizeof (edgex_device_commandrequest));
   result->pvals = malloc (n * sizeof (edgex_propertyvalue *));
   result->maps = malloc (n * sizeof (edgex_nvpairs *));
-  for (n = 0, ro = forGet ? res->get : res->set; ro; n++, ro = ro->next)
+  for (n = 0, ro = forGet ? cmd->get : cmd->set; ro; n++, ro = ro->next)
   {
     edgex_deviceresource *devres =
       findDevResource (prof->device_resources, ro->object);
@@ -426,33 +426,33 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
 static void populateCmdInfo (edgex_deviceprofile *prof)
 {
   edgex_cmdinfo **head = &prof->cmdinfo;
-  edgex_profileresource *res = prof->resources;
-  while (res)
+  edgex_devicecommand *cmd = prof->device_commands;
+  while (cmd)
   {
-    if (res->get)
+    if (cmd->get)
     {
-      *head = infoForRes (prof, res, true);
+      *head = infoForRes (prof, cmd, true);
       head = &((*head)->next);
     }
-    if (res->set)
+    if (cmd->set)
     {
-      *head = infoForRes (prof, res, false);
+      *head = infoForRes (prof, cmd, false);
       head = &((*head)->next);
     }
-    res = res->next;
+    cmd = cmd->next;
   }
   edgex_deviceresource *devres = prof->device_resources;
   while (devres)
   {
-    edgex_profileresource *r;
-    for (r = prof->resources; r; r = r->next)
+    edgex_devicecommand *dc;
+    for (dc = prof->device_commands; dc; dc = dc->next)
     {
-      if (strcmp (r->name, devres->name) == 0)
+      if (strcmp (dc->name, devres->name) == 0)
       {
         break;
       }
     }
-    if (r == NULL)
+    if (dc == NULL)
     {
       if (devres->properties->value->readable)
       {

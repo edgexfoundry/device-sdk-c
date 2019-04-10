@@ -652,9 +652,9 @@ static void resourceoperation_free (edgex_resourceoperation *e)
   }
 }
 
-static edgex_profileresource *profileresource_read (const JSON_Object *obj)
+static edgex_devicecommand *devicecommand_read (const JSON_Object *obj)
 {
-  edgex_profileresource *result = malloc (sizeof (edgex_profileresource));
+  edgex_devicecommand *result = malloc (sizeof (edgex_devicecommand));
   size_t count;
   JSON_Array *array;
   edgex_resourceoperation **last_ptr = &result->set;
@@ -686,7 +686,7 @@ static edgex_profileresource *profileresource_read (const JSON_Object *obj)
   return result;
 }
 
-static JSON_Value *profileresource_write (const edgex_profileresource *e)
+static JSON_Value *devicecommand_write (const edgex_devicecommand *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
@@ -711,25 +711,25 @@ static JSON_Value *profileresource_write (const edgex_profileresource *e)
   return result;
 }
 
-static edgex_profileresource *profileresource_dup (const edgex_profileresource *pr)
+static edgex_devicecommand *devicecommand_dup (const edgex_devicecommand *pr)
 {
-  edgex_profileresource *result = NULL;
+  edgex_devicecommand *result = NULL;
   if (pr)
   {
-    result = malloc (sizeof (edgex_profileresource));
+    result = malloc (sizeof (edgex_devicecommand));
     result->name = strdup (pr->name);
     result->set = resourceoperation_dup (pr->set);
     result->get = resourceoperation_dup (pr->get);
-    result->next = profileresource_dup (pr->next);
+    result->next = devicecommand_dup (pr->next);
   }
   return result;
 }
 
-static void profileresource_free (edgex_profileresource *e)
+static void devicecommand_free (edgex_devicecommand *e)
 {
   while (e)
   {
-    edgex_profileresource *current = e;
+    edgex_devicecommand *current = e;
     free (e->name);
     resourceoperation_free (e->set);
     resourceoperation_free (e->get);
@@ -745,7 +745,7 @@ static edgex_deviceprofile *deviceprofile_read
   size_t count;
   JSON_Array *array;
   edgex_deviceresource **last_ptr = &result->device_resources;
-  edgex_profileresource **last_ptr2 = &result->resources;
+  edgex_devicecommand **last_ptr2 = &result->device_commands;
 
   result->id = get_string (obj, "id");
   result->name = get_string (obj, "name");
@@ -758,7 +758,7 @@ static edgex_deviceprofile *deviceprofile_read
   result->labels = array_to_strings (json_object_get_array (obj, "labels"));
   array = json_object_get_array (obj, "deviceResources");
   result->device_resources = NULL;
-  result->resources = NULL;
+  result->device_commands = NULL;
   result->cmdinfo = NULL;
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
@@ -777,11 +777,11 @@ static edgex_deviceprofile *deviceprofile_read
       return NULL;
     }
   }
-  array = json_object_get_array (obj, "resources");
+  array = json_object_get_array (obj, "deviceCommands");
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
-    edgex_profileresource *temp = profileresource_read
+    edgex_devicecommand *temp = devicecommand_read
       (json_array_get_object (array, i));
     *last_ptr2 = temp;
     last_ptr2 = &(temp->next);
@@ -819,12 +819,12 @@ deviceprofile_write (const edgex_deviceprofile *e, bool create)
 
   json_object_set_value (obj, "deviceResources", array_val);
 
-  for (edgex_profileresource *temp = e->resources; temp; temp = temp->next)
+  for (edgex_devicecommand *temp = e->device_commands; temp; temp = temp->next)
   {
-    json_array_append_value (array2, profileresource_write (temp));
+    json_array_append_value (array2, devicecommand_write (temp));
   }
 
-  json_object_set_value (obj, "resources", array_val2);
+  json_object_set_value (obj, "deviceCommands", array_val2);
   return result;
 }
 
@@ -1136,7 +1136,7 @@ void edgex_deviceprofile_cpy (edgex_deviceprofile *dest, const edgex_deviceprofi
   dest->model = strdup (src->model);
   dest->labels = edgex_strings_dup (src->labels);
   dest->device_resources = edgex_deviceresource_dup (src->device_resources);
-  dest->resources = profileresource_dup (src->resources);
+  dest->device_commands = devicecommand_dup (src->device_commands);
   dest->cmdinfo = NULL;
 }
 
@@ -1163,7 +1163,7 @@ void edgex_deviceprofile_free_array (edgex_deviceprofile *e, unsigned count)
     free (e[i].model);
     edgex_strings_free (e[i].labels);
     deviceresource_free (e[i].device_resources);
-    profileresource_free (e[i].resources);
+    devicecommand_free (e[i].device_commands);
     cmdinfo_free (e[i].cmdinfo);
   }
   free (e);
@@ -1615,14 +1615,14 @@ void edgex_deviceprofile_dump (edgex_deviceprofile * e)
     printf ("readwrite %s\n", dr->properties->units->readwrite);
     printf ("defaultvalue %s\n", dr->properties->units->defaultvalue);
   }
-  printf ("resources:\n");
-  for (edgex_profileresource * resource = e->resources; resource; resource = resource->next)
+  printf ("device commands:\n");
+  for (edgex_devicecommand * cmd = e->device_commands; cmd; cmd = cmd->next)
   {
-    printf ("name %s\n", resource->name);
+    printf ("name %s\n", cmd->name);
     printf ("get:\n");
-    resourceoperation_dump (resource->get);
+    resourceoperation_dump (cmd->get);
     printf ("put:\n");
-    resourceoperation_dump (resource->put);
+    resourceoperation_dump (cmd->put);
   }
 }
 

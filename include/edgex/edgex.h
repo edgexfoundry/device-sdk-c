@@ -145,13 +145,13 @@ typedef struct edgex_deviceresource
   struct edgex_deviceresource *next;
 } edgex_deviceresource;
 
-typedef struct edgex_profileresource
+typedef struct edgex_devicecommand
 {
   char *name;
   edgex_resourceoperation *set;
   edgex_resourceoperation *get;
-  struct edgex_profileresource *next;
-} edgex_profileresource;
+  struct edgex_devicecommand *next;
+} edgex_devicecommand;
 
 struct edgex_cmdinfo;
 
@@ -167,7 +167,7 @@ typedef struct
   char *model;
   edgex_strings *labels;
   edgex_deviceresource *device_resources;
-  edgex_profileresource *resources;
+  edgex_devicecommand *device_commands;
   struct edgex_cmdinfo *cmdinfo;
 } edgex_deviceprofile;
 
