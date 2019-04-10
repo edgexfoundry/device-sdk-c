@@ -17,8 +17,7 @@
 JSON_Value *edgex_data_generate_event
 (
   const char *device_name,
-  uint32_t nreadings,
-  const edgex_device_commandrequest *sources,
+  const edgex_cmdinfo *commandinfo,
   const edgex_device_commandresult *values,
   bool doTransforms
 )
@@ -28,16 +27,16 @@ JSON_Value *edgex_data_generate_event
   JSON_Object *jobj = json_value_get_object (jevent);
   JSON_Value *arrval = json_value_init_array ();
   JSON_Array *jrdgs = json_value_get_array (arrval);
-  for (uint32_t i = 0; i < nreadings; i++)
+  for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
     char *reading = edgex_value_tostring
     (
       values[i].value,
       doTransforms,
-      sources[i].devobj->properties->value,
-      sources[i].ro ? sources[i].ro->mappings : NULL
+      commandinfo->pvals[i],
+      commandinfo->maps[i]
     );
-    const char *assertion = sources[i].devobj->properties->value->assertion;
+    const char *assertion = commandinfo->pvals[i]->assertion;
     if (assertion && *assertion && strcmp (reading, assertion))
     {
        free (reading);
@@ -48,7 +47,7 @@ JSON_Value *edgex_data_generate_event
     JSON_Value *rval = json_value_init_object ();
     JSON_Object *robj = json_value_get_object (rval);
 
-    json_object_set_string (robj, "name", sources[i].devobj->name);
+    json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
     json_object_set_string (robj, "value", reading);
     if (values[i].origin)
     {

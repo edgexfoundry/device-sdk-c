@@ -86,6 +86,7 @@ static void template_discover (void *impl) {}
 static bool template_get_handler
 (
   void *impl,
+  const char *devname,
   const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
@@ -102,7 +103,7 @@ static bool template_get_handler
   {
   /* Drill into the attributes to differentiate between resources via the
    * SensorType NVP */
-    edgex_nvpairs * current = requests->devobj->attributes;
+    const edgex_nvpairs * current = requests->attributes;
     while (current!=NULL)
     {
       if (strcmp (current->name, "SensorType") ==0 )
@@ -150,6 +151,7 @@ static bool template_get_handler
 static bool template_put_handler
 (
   void *impl,
+  const char *devname,
   const edgex_protocols *protocols,
   uint32_t nvalues,
   const edgex_device_commandrequest *requests,
@@ -167,7 +169,7 @@ static bool template_put_handler
     /* A Device Service again makes use of the data provided to perform a PUT */
 
     /* In this case we set a boolean flag */
-    if (strcmp (requests[i].devobj->name,"Switch") ==0 )
+    if (strcmp (requests[i].resname,"Switch") ==0 )
     {
       pthread_mutex_lock (&driver->mutex);
       driver->state_flag=values->value.bool_result;

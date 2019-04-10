@@ -9,6 +9,8 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- The device name is passed to the Get and Set handlers. The commandrequest
+  structure is simplified.
 - Example implementation includes setting service name and registry location
   from the command line and environment.
 - Float data is marshalled as base64 unless specified otherwise in the

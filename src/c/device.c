@@ -389,11 +389,17 @@ static edgex_cmdinfo *infoForRes
   }
   result->nreqs = n;
   result->reqs = malloc (n * sizeof (edgex_device_commandrequest));
+  result->pvals = malloc (n * sizeof (edgex_propertyvalue *));
+  result->maps = malloc (n * sizeof (edgex_nvpairs *));
   for (n = 0, ro = forGet ? res->get : res->set; ro; n++, ro = ro->next)
   {
-    result->reqs[n].ro = ro;
-    result->reqs[n].devobj =
+    edgex_deviceresource *devres =
       findDevResource (prof->device_resources, ro->object);
+    result->reqs[n].resname = devres->name;
+    result->reqs[n].attributes = devres->attributes;
+    result->reqs[n].type = devres->properties->value->type;
+    result->pvals[n] = devres->properties->value;
+    result->maps[n] = ro->mappings;
   }
   result->next = NULL;
   return result;
@@ -406,8 +412,13 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->isget = forGet;
   result->nreqs = 1;
   result->reqs = malloc (sizeof (edgex_device_commandrequest));
-  result->reqs->ro = NULL;
-  result->reqs->devobj = devres;
+  result->pvals = malloc (sizeof (edgex_propertyvalue *));
+  result->maps = malloc (sizeof (edgex_nvpairs *));
+  result->reqs[0].resname = devres->name;;
+  result->reqs[0].attributes = devres->attributes;
+  result->reqs[0].type = devres->properties->value->type;
+  result->pvals[0] = devres->properties->value;
+  result->maps[0] = NULL;
   result->next = NULL;
   return result;
 }
@@ -514,39 +525,35 @@ static int runOnePut
     calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
   for (int i = 0; i < commandinfo->nreqs; i++)
   {
-    const edgex_resourceoperation *op = commandinfo->reqs[i].ro;
-    if (!commandinfo->reqs[i].devobj->properties->value->writable)
+    const char *resname = commandinfo->reqs[i].resname;
+    if (!commandinfo->pvals[i]->writable)
     {
       iot_log_error
-      (
-        svc->logger,
-        "Attempt to write unwritable value %s",
-        commandinfo->reqs[i].devobj->name
-      );
+        (svc->logger, "Attempt to write unwritable value %s", resname);
       retcode = MHD_HTTP_METHOD_NOT_ALLOWED;
       break;
     }
 
-    value = json_object_get_string (jobj, op->object);
+    value = json_object_get_string (jobj, resname);
     if (value == NULL)
     {
       retcode = MHD_HTTP_BAD_REQUEST;
-      iot_log_error (svc->logger, "No value supplied for %s", op->object);
+      iot_log_error (svc->logger, "No value supplied for %s", resname);
       break;
     }
-    results[i].type = commandinfo->reqs[i].devobj->properties->value->type;
+    results[i].type = commandinfo->pvals[i]->type;
     if (!populateValue (&results[i], value))
     {
       retcode = MHD_HTTP_BAD_REQUEST;
       iot_log_error
-        (svc->logger, "Unable to parse \"%s\" for %s", value, op->object);
+        (svc->logger, "Unable to parse \"%s\" for %s", value, resname);
       break;
     }
   }
 
   if (retcode == MHD_HTTP_OK)
   {
-    if (!svc->userfns.puthandler (svc->userdata, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results))
+    if (!svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results))
     {
       retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
       iot_log_error (svc->logger, "Driver for %s failed on PUT", dev->name);
@@ -583,13 +590,13 @@ static int runOneGet
     calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
   for (int i = 0; i < commandinfo->nreqs; i++)
   {
-    if (!commandinfo->reqs[i].devobj->properties->value->readable)
+    if (!commandinfo->pvals[i]->readable)
     {
       iot_log_error
       (
         svc->logger,
         "Attempt to read unreadable value %s",
-        commandinfo->reqs[i].devobj->name
+        commandinfo->reqs[i].resname
       );
       free (results);
       return MHD_HTTP_METHOD_NOT_ALLOWED;
@@ -599,11 +606,11 @@ static int runOneGet
   if
   (
     svc->userfns.gethandler
-      (svc->userdata, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results)
+      (svc->userdata, dev->name, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results)
   )
   {
     *reply = edgex_data_generate_event
-      (dev->name, commandinfo->nreqs, commandinfo->reqs, results, svc->config.device.datatransform);
+      (dev->name, commandinfo, results, svc->config.device.datatransform);
 
     if (*reply)
     {
