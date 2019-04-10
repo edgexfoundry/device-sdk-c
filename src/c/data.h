@@ -11,6 +11,7 @@
 
 #include "edgex/devsdk.h"
 #include "parson.h"
+#include "cmdinfo.h"
 
 typedef struct edgex_reading
 {
@@ -60,8 +61,7 @@ typedef struct edgex_service_endpoints edgex_service_endpoints;
 JSON_Value *edgex_data_generate_event
 (
   const char *device_name,
-  uint32_t nreadings,
-  const edgex_device_commandrequest *sources,
+  const edgex_cmdinfo *commandinfo,
   const edgex_device_commandresult *values,
   bool doTransforms
 );

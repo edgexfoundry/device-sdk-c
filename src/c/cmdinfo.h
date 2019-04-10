@@ -18,6 +18,8 @@ typedef struct edgex_cmdinfo
   bool isget;
   unsigned nreqs;
   edgex_device_commandrequest *reqs;
+  edgex_propertyvalue **pvals;
+  edgex_nvpairs **maps;
   struct edgex_cmdinfo *next;
 } edgex_cmdinfo;
 

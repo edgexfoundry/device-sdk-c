@@ -43,18 +43,18 @@ typedef union edgex_device_resultvalue
 } edgex_device_resultvalue;
 
 /**
- * @brief Structure containing information about a get or set request.
+ * @brief Structure containing information about a device resource which is
+ *        the subject of a get or set request.
  */
 
 typedef struct edgex_device_commandrequest
 {
-  /**
-   * Corresponds to a get or set line in a resource of the device profile.
-   * This is NULL when a deviceResource is accessed directly
-   */
-  const edgex_resourceoperation *ro;
-  /** Corresponds to a deviceResource in the device profile. */
-  const edgex_deviceresource *devobj;
+  /** The device resource's name */
+  const char *resname;
+  /** Attributes of the device resource */
+  const edgex_nvpairs *attributes;
+  /** Type of the data to be read or written */
+  edgex_propertytype type;
 } edgex_device_commandrequest;
 
 /**
@@ -108,7 +108,8 @@ typedef void (*edgex_device_discover)
 /**
  * @brief Callback issued to handle GET requests for device readings.
  * @param impl The context data passed in when the service was created.
- * @param devaddr The address of the device to be queried.
+ * @param devname The name of the device to be queried.
+ * @param protocols The location of the device to be queried.
  * @param nreadings The number of readings requested.
  * @param requests An array specifying the readings that have been requested.
  * @param readings An array in which to return the requested readings.
@@ -118,6 +119,7 @@ typedef void (*edgex_device_discover)
 typedef bool (*edgex_device_handle_get)
 (
   void *impl,
+  const char *devname,
   const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
@@ -127,7 +129,8 @@ typedef bool (*edgex_device_handle_get)
 /**
  * @brief Callback issued to handle PUT requests for setting device values.
  * @param impl The context data passed in when the service was created.
- * @param devaddr The address of the device to be written to.
+ * @param devname The name of the device to be queried.
+ * @param protocols The location of the device to be queried.
  * @param nvalues The number of set operations requested.
  * @param requests An array specifying the resources to which to write.
  * @param values An array specifying the values to be written.
@@ -137,6 +140,7 @@ typedef bool (*edgex_device_handle_get)
 typedef bool (*edgex_device_handle_put)
 (
   void *impl,
+  const char *devname,
   const edgex_protocols *protocols,
   uint32_t nvalues,
   const edgex_device_commandrequest *requests,
@@ -230,9 +234,7 @@ void edgex_device_service_start
  *        to be generated other than in response to a device GET invocation.
  * @param svc The device service.
  * @param device_name The name of the device that the readings have come from.
- * @param nreadings Number of readings being submitted.
- * @param sources An array specifying the resources from which the readings
- *        have been taken.
+ * @param resource_name Name of the resource which defines the Event.
  * @param values An array of readings. These will be combined into an Event
  *        and submitted to core-data. For readings of String or Binary type,
  *        the SDK takes ownership of the memory containing the string or
@@ -243,8 +245,7 @@ void edgex_device_post_readings
 (
   edgex_device_service *svc,
   const char *device_name,
-  uint32_t nreadings,
-  const edgex_device_commandrequest *sources,
+  const char *resource_name,
   const edgex_device_commandresult *values
 );
 

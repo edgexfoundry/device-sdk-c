@@ -556,21 +556,38 @@ static void doPost (void *p)
 void edgex_device_post_readings
 (
   edgex_device_service *svc,
-  const char *device_name,
-  uint32_t nreadings,
-  const edgex_device_commandrequest *sources,
+  const char *devname,
+  const char *resname,
   const edgex_device_commandresult *values
 )
 {
-  JSON_Value *jevent = edgex_data_generate_event
-    (device_name, nreadings, sources, values, svc->config.device.datatransform);
-
-  if (jevent)
+  edgex_device *dev = edgex_devmap_device_byname (svc->devices, devname);
+  if (dev == NULL)
   {
-    postparams *pp = malloc (sizeof (postparams));
-    pp->svc = svc;
-    pp->jevent = jevent;
-    thpool_add_work (svc->thpool, doPost, pp);
+    iot_log_error (svc->logger, "Post readings: no such device %s", devname);
+    return;
+  }
+
+  const edgex_cmdinfo *command = edgex_deviceprofile_findcommand
+    (resname, dev->profile, false);
+  edgex_device_release (dev);
+
+  if (command)
+  {
+    JSON_Value *jevent = edgex_data_generate_event
+      (devname, command, values, svc->config.device.datatransform);
+
+    if (jevent)
+    {
+      postparams *pp = malloc (sizeof (postparams));
+      pp->svc = svc;
+      pp->jevent = jevent;
+      thpool_add_work (svc->thpool, doPost, pp);
+    }
+  }
+  else
+  {
+    iot_log_error (svc->logger, "Post readings: no such resource %s", resname);
   }
 }
 
