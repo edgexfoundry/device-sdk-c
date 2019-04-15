@@ -51,7 +51,7 @@ int edgex_device_handler_metrics
   double loads[1];
   if (getloadavg (loads, 1) == 1)
   {
-    json_object_set_number (obj, "CpuBusyAvg", loads[0] * 100.0 / get_nprocs());
+    json_object_set_number (obj, "CpuLoadAvg", loads[0] * 100.0 / get_nprocs());
   }
 #endif
 
