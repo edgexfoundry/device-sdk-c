@@ -7,6 +7,7 @@
  */
 
 #include "edgex_rest.h"
+#include "edgex/device-mgmt.h"
 #include "cmdinfo.h"
 #include "parson.h"
 #include <string.h>

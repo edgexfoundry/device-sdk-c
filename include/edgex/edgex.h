@@ -9,34 +9,11 @@
 #ifndef _EDGEX_EDGEX_H_
 #define _EDGEX_EDGEX_H_
 
-#include "edgex/os.h"
-
-typedef enum
-{
-  Bool,
-  String,
-  Binary,
-  Uint8, Uint16, Uint32, Uint64,
-  Int8, Int16, Int32, Int64,
-  Float32, Float64
-} edgex_propertytype;
+#include "edgex/edgex-base.h"
 
 typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
 
 typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
-
-typedef struct edgex_nvpairs
-{
-  char *name;
-  char *value;
-  struct edgex_nvpairs *next;
-} edgex_nvpairs;
-
-typedef struct edgex_strings
-{
-  char *str;
-  struct edgex_strings *next;
-} edgex_strings;
 
 typedef struct
 {
@@ -65,13 +42,6 @@ typedef struct
   char *topic;
   char *user;
 } edgex_addressable;
-
-typedef struct edgex_protocols
-{
-  char *name;
-  edgex_nvpairs *properties;
-  struct edgex_protocols *next;
-} edgex_protocols;
 
 typedef struct
 {

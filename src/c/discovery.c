@@ -30,6 +30,11 @@ int edgex_device_handler_discovery
 {
   edgex_device_service *svc = (edgex_device_service *) ctx;
 
+  if (svc->userfns.discover == NULL)
+  {
+    return MHD_HTTP_NOT_IMPLEMENTED;
+  }
+
   if (svc->adminstate == LOCKED || svc->opstate == DISABLED)
   {
     return MHD_HTTP_LOCKED;

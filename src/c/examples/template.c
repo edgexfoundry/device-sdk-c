@@ -181,7 +181,7 @@ static bool template_put_handler
 
 /* ---- Disconnect ---- */
 /* Disconnect handles protocol-specific cleanup when a device is removed. */
-static bool template_disconnect (void *impl, edgex_addressable *device)
+static bool template_disconnect (void *impl, edgex_protocols *device)
 {
   return true;
 }

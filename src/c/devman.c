@@ -12,6 +12,7 @@
 #include "edgex_rest.h"
 #include "errorlist.h"
 #include "edgex_time.h"
+#include "edgex/device-mgmt.h"
 
 #include <string.h>
 #include <stdlib.h>
