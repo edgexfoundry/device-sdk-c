@@ -20,6 +20,7 @@
 #include "edgex_rest.h"
 #include "edgex_time.h"
 #include "edgex/csdk-defs.h"
+#include "edgex/registry.h"
 
 #include <stdlib.h>
 #include <string.h>

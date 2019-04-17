@@ -6,6 +6,7 @@
  *
  */
 
+#include "edgex/device-mgmt.h"
 #include "profiles.h"
 #include "service.h"
 #include "metadata.h"

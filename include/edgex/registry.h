@@ -15,7 +15,7 @@
  *        pluggable registries.
  */
 
-#include "edgex/edgex.h"
+#include "edgex/edgex-base.h"
 #include "edgex/error.h"
 #include "edgex/edgex_logging.h"
 

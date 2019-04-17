@@ -10,6 +10,7 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex_rest.h"
+#include "edgex/device-mgmt.h"
 
 #include <microhttpd.h>
 
