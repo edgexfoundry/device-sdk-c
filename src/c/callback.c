@@ -27,6 +27,7 @@ int edgex_device_handler_callback
   const char **reply_type
 )
 {
+  edgex_device *newdev;
   edgex_error err = EDGEX_OK;
   int status = MHD_HTTP_OK;
   edgex_device_service *svc = (edgex_device_service *) ctx;
@@ -53,12 +54,21 @@ int edgex_device_handler_callback
           break;
         case POST:
         case PUT:
-          iot_log_info (svc->logger, "callback: New or updated device %s", id);
-          edgex_device *newdev = edgex_metadata_client_get_device
+          newdev = edgex_metadata_client_get_device
             (svc->logger, &svc->config.endpoints, id, &err);
           if (newdev)
           {
-            edgex_devmap_replace_device (svc->devices, newdev);
+            if (strcmp (newdev->service->name, svc->name))
+            {
+              iot_log_info (svc->logger, "callback: Device %s moved to %s", id, newdev->service->name);
+              edgex_devmap_removedevice_byid (svc->devices, id);
+            }
+            else
+            {
+              iot_log_info
+                (svc->logger, "callback: New or updated device %s", id);
+              edgex_devmap_replace_device (svc->devices, newdev);
+            }
             edgex_device_free (newdev);
           }
           break;

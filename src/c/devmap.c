@@ -12,6 +12,7 @@
  */
 
 #include "devmap.h"
+#include "devutil.h"
 #include "map.h"
 #include "edgex_rest.h"
 #include "device.h"
@@ -164,17 +165,62 @@ static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
   edgex_device_release (olddev);
 }
 
+/* Update a device, but fail if there could be effects on autoevents or
+ * operations in progress. For such attempts we will remove the device and
+ * add a new one.
+ */
+
+static bool update_in_place (edgex_device *dest, const edgex_device *src)
+{
+  if (strcmp (dest->name, src->name))
+  {
+    return false;
+  }
+  if (strcmp (dest->profile->name, src->profile->name))
+  {
+    return false;
+  }
+  if (!edgex_device_autoevents_equal (dest->autos, src->autos))
+  {
+    return false;
+  }
+  if (!edgex_protocols_equal (dest->protocols, src->protocols))
+  {
+    return false;
+  }
+  dest->adminState = src->adminState;
+  dest->operatingState = src->operatingState;
+  dest->created = src->created;
+  dest->lastConnected = src->lastConnected;
+  dest->lastReported = src->lastReported;
+  dest->modified = src->modified;
+  dest->origin = src->origin;
+  free (dest->description);
+  dest->description = strdup (src->description);
+  edgex_strings_free (dest->labels);
+  dest->labels = edgex_strings_dup (src->labels);
+
+  return true;
+}
+
 void edgex_devmap_replace_device (edgex_devmap_t *map, const edgex_device *dev)
 {
   edgex_device **olddev;
 
   pthread_rwlock_wrlock (&map->lock);
   olddev = edgex_map_get (&map->devices, dev->id);
-  if (olddev)
+  if (olddev == NULL)
   {
-    remove_locked (map, *olddev);
+    add_locked (map, dev);
   }
-  add_locked (map, dev);
+  else
+  {
+    if (!update_in_place (*olddev, dev))
+    {
+      remove_locked (map, *olddev);
+      add_locked (map, dev);
+    }
+  }
   pthread_rwlock_unlock (&map->lock);
 }
 
