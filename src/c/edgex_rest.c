@@ -9,6 +9,7 @@
 #include "edgex_rest.h"
 #include "edgex/device-mgmt.h"
 #include "cmdinfo.h"
+#include "autoevent.h"
 #include "parson.h"
 #include <string.h>
 #include <stdlib.h>
@@ -30,6 +31,12 @@ static char *get_array_string (const JSON_Array *array, size_t index)
 {
   const char *str = json_array_get_string (array, index);
   return strdup (str ? str : "");
+}
+
+static bool get_boolean (const JSON_Object *obj, const char *name, bool dflt)
+{
+  int i = json_object_get_boolean (obj, name);
+  return (i == -1) ? dflt : i;
 }
 
 static edgex_strings *array_to_strings (const JSON_Array *array)
@@ -858,6 +865,69 @@ edgex_deviceprofile *edgex_deviceprofile_read
   return result;
 }
 
+static void cmdinfo_free (edgex_cmdinfo *inf)
+{
+  if (inf)
+  {
+    cmdinfo_free (inf->next);
+    free (inf->reqs);
+    free (inf->pvals);
+    free (inf->maps);
+    free (inf);
+  }
+}
+
+static edgex_device_autoevents *autoevent_read (const JSON_Object *obj)
+{
+  edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
+  result->resource = get_string (obj, "resource");
+  result->onChange = get_boolean (obj, "onChange", false);
+  result->frequency = get_string  (obj, "frequency");
+  result->impl = NULL;
+  result->next = NULL;
+  return result;
+}
+
+static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
+{
+  JSON_Value *result = json_value_init_array ();
+  JSON_Array *arr = json_value_get_array (result);
+
+  for (const edgex_device_autoevents *ae = e; ae; ae = ae->next)
+  {
+    JSON_Value *pval = json_value_init_object ();
+    JSON_Object *pobj = json_value_get_object (pval);
+    json_object_set_string (pobj, "resource", ae->resource);
+    json_object_set_string (pobj, "frequency", ae->frequency);
+    json_object_set_boolean (pobj, "onChange", ae->onChange);
+    json_array_append_value (arr, pval);
+  }
+  return result;
+}
+
+static edgex_device_autoevents *autoevents_dup
+  (const edgex_device_autoevents *e)
+{
+  edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
+  result->resource = strdup (e->resource);
+  result->frequency = strdup (e->frequency);
+  result->onChange = e->onChange;
+  result->impl = NULL;
+  result->next = e->next ? autoevents_dup (e->next) : NULL;
+  return result;
+}
+
+void edgex_device_autoevents_free (edgex_device_autoevents *e)
+{
+  if (e)
+  {
+    free (e->resource);
+    free (e->frequency);
+    edgex_device_autoevents_free (e->next);
+    free (e);
+  }
+}
+
 static edgex_protocols *protocols_read (const JSON_Object *obj)
 {
   edgex_protocols *result = NULL;
@@ -955,16 +1025,6 @@ static JSON_Value *addressable_write (const edgex_addressable *e, bool create)
   json_object_set_string (obj, "publisher", e->publisher);
   json_object_set_string (obj, "topic", e->topic);
   json_object_set_string (obj, "user", e->user);
-
-  return result;
-}
-
-static JSON_Value *addressable_write_name (const edgex_addressable *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-
-  json_object_set_string (obj, "name", e->name);
 
   return result;
 }
@@ -1141,18 +1201,6 @@ void edgex_deviceprofile_cpy (edgex_deviceprofile *dest, const edgex_deviceprofi
   dest->cmdinfo = NULL;
 }
 
-static void cmdinfo_free (edgex_cmdinfo *inf)
-{
-  if (inf)
-  {
-    cmdinfo_free (inf->next);
-    free (inf->reqs);
-    free (inf->pvals);
-    free (inf->maps);
-    free (inf);
-  }
-}
-
 void edgex_deviceprofile_free_array (edgex_deviceprofile *e, unsigned count)
 {
   for (unsigned i = 0; i < count; i++)
@@ -1209,7 +1257,7 @@ static edgex_device *device_read
 {
   edgex_device *result = malloc (sizeof (edgex_device));
   result->protocols = protocols_read
-    (json_object_get_object (obj, "protocols"));;
+    (json_object_get_object (obj, "protocols"));
   result->adminState = edgex_adminstate_fromstring
     (json_object_get_string (obj, "adminState"));
   result->created = json_object_get_number (obj, "created");
@@ -1223,6 +1271,16 @@ static edgex_device *device_read
   result->operatingState = edgex_operatingstate_fromstring
     (json_object_get_string (obj, "operatingState"));
   result->origin = json_object_get_number (obj, "origin");
+  result->autos = NULL;
+  JSON_Array *array = json_object_get_array (obj, "autoEvents");
+  size_t count = json_array_get_count (array);
+  for (size_t i = 0; i < count; i++)
+  {
+    edgex_device_autoevents *temp = autoevent_read
+      (json_array_get_object (array, i));
+    temp->next = result->autos;
+    result->autos = temp;
+  }
   result->profile = deviceprofile_read
     (lc, json_object_get_object (obj, "profile"));
   result->service = deviceservice_read
@@ -1240,8 +1298,6 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
   if (create)
   {
     json_object_set_value
-      (obj, "protocols", protocols_write (e->protocols));
-    json_object_set_value
       (obj, "profile", deviceprofile_write_name (e->profile));
     json_object_set_value
       (obj, "service", deviceservice_write_name (e->service));
@@ -1250,8 +1306,6 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
   }
   else
   {
-    json_object_set_value
-      (obj, "protocols", protocols_write (e->protocols));
     json_object_set_string
       (obj, "adminState", edgex_adminstate_tostring (e->adminState));
     json_object_set_string
@@ -1267,6 +1321,10 @@ static JSON_Value *device_write (const edgex_device *e, bool create)
     json_object_set_number (obj, "lastReported", e->lastReported);
   }
 
+  json_object_set_value
+    (obj, "protocols", protocols_write (e->protocols));
+  json_object_set_value
+    (obj, "autoevents", autoevents_write (e->autos));
   json_object_set_string
     (obj, "adminState", edgex_adminstate_tostring (e->adminState));
   json_object_set_string (obj, "name", e->name);
@@ -1287,6 +1345,7 @@ edgex_device *edgex_device_dup (const edgex_device *e)
   result->description = strdup (e->description);
   result->labels = edgex_strings_dup (e->labels);
   result->protocols = edgex_protocols_dup (e->protocols);
+  result->autos = autoevents_dup (e->autos);
   result->adminState = e->adminState;
   result->operatingState = e->operatingState;
   result->origin = e->origin;
@@ -1306,6 +1365,7 @@ void edgex_device_free (edgex_device *e)
   {
     edgex_device *current = e;
     edgex_protocols_free (e->protocols);
+    edgex_device_autoevents_free (e->autos);
     free (e->description);
     free (e->id);
     edgex_strings_free (e->labels);

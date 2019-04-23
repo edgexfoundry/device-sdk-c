@@ -10,6 +10,7 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex_rest.h"
+#include "autoevent.h"
 #include "edgex/device-mgmt.h"
 
 #include <microhttpd.h>
@@ -834,9 +835,11 @@ void edgex_device_process_configured_devices
     char *profile_name;
     char *description;
     edgex_protocols *protocols;
+    edgex_device_autoevents *autos;
     edgex_strings *labels;
     edgex_strings *newlabel;
     toml_table_t *table;
+    toml_table_t *aetable;
     toml_table_t *pptable;
     toml_array_t *arr;
     int n = 0;
@@ -894,6 +897,28 @@ void edgex_device_process_configured_devices
             }
           }
 
+          /* AutoEvents */
+
+          autos = NULL;
+          arr = toml_array_in (table, "AutoEvents");
+          if (arr)
+          {
+            int i = 0;
+            while ((aetable = toml_table_at (arr, i++)))
+            {
+              edgex_device_autoevents *newauto =
+                calloc (sizeof (edgex_device_autoevents), 1);
+              toml_rtos2
+                (toml_raw_in (aetable, "Resource"), &newauto->resource);
+              toml_rtos2
+                (toml_raw_in (aetable, "Frequency"), &newauto->frequency);
+              toml_rtob2
+                (toml_raw_in (aetable, "OnChange"), &newauto->onChange);
+              newauto->next = autos;
+              autos = newauto;
+            }
+          }
+
           /* The rest of the device */
 
           labels = NULL;
@@ -916,11 +941,11 @@ void edgex_device_process_configured_devices
           }
 
           *err = EDGEX_OK;
-          free (edgex_device_add_device
-            (svc, devname, description, labels, profile_name, protocols, err));
+          free (edgex_device_add_device (svc, devname, description, labels, profile_name, protocols, autos, err));
 
           edgex_strings_free (labels);
           edgex_protocols_free (protocols);
+          edgex_device_autoevents_free (autos);
           free (profile_name);
           free (description);
 

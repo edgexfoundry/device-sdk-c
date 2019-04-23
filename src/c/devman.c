@@ -27,6 +27,7 @@ char * edgex_device_add_device
   const edgex_strings *labels,
   const char *profile_name,
   edgex_protocols *protocols,
+  edgex_device_autoevents *autos,
   edgex_error *err
 )
 {
@@ -45,7 +46,7 @@ char * edgex_device_add_device
     return result;
   }
 
-  edgex_device *newdev = edgex_metadata_client_add_device
+  result = edgex_metadata_client_add_device
   (
     svc->logger,
     &svc->config.endpoints,
@@ -53,15 +54,14 @@ char * edgex_device_add_device
     description,
     labels,
     protocols,
+    autos,
     svc->name,
     profile_name,
     err
   );
 
-  if (newdev)
+  if (result)
   {
-    result = strdup (newdev->id);
-    edgex_device_free (newdev);
     iot_log_info (svc->logger, "Device %s added with id %s", name, result);
   }
   else

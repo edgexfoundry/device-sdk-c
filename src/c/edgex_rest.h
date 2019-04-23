@@ -30,6 +30,7 @@ edgex_deviceservice *edgex_deviceservice_read (const char *json);
 char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create);
 edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e);
 void edgex_deviceservice_free (edgex_deviceservice *e);
+void edgex_device_autoevents_free (edgex_device_autoevents *e);
 edgex_device *edgex_device_read (iot_logging_client *lc, const char *json);
 char *edgex_device_write (const edgex_device *e, bool create);
 char *edgex_device_write_sparse (const char *name, const char *id, const char *description, const edgex_strings *labels, const char *profile_name);

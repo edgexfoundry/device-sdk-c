@@ -43,6 +43,7 @@ char * edgex_device_add_device
   const edgex_strings *labels,
   const char *profile_name,
   edgex_protocols *protocols,
+  edgex_device_autoevents *autos,
   edgex_error *err
 );
 
