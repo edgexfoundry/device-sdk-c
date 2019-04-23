@@ -124,6 +124,7 @@ typedef struct edgex_devicecommand
 } edgex_devicecommand;
 
 struct edgex_cmdinfo;
+struct edgex_autoimpl;
 
 typedef struct
 {
@@ -141,6 +142,15 @@ typedef struct
   struct edgex_cmdinfo *cmdinfo;
 } edgex_deviceprofile;
 
+typedef struct edgex_device_autoevents
+{
+  char *resource;
+  char *frequency;
+  bool onChange;
+  struct edgex_autoimpl *impl;
+  struct edgex_device_autoevents *next;
+} edgex_device_autoevents;
+
 typedef struct edgex_device
 {
   edgex_protocols *protocols;
@@ -155,6 +165,7 @@ typedef struct edgex_device
   char *name;
   edgex_device_operatingstate operatingState;
   uint64_t origin;
+  edgex_device_autoevents *autos;
   edgex_deviceservice *service;
   edgex_deviceprofile *profile;
   struct edgex_device *next;

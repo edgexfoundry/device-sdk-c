@@ -10,6 +10,7 @@
 #define _EDGEX_DEVICE_SERVICE_H_ 1
 
 #include "edgex/devsdk.h"
+#include "edgex/eventgen.h"
 #include "edgex/edgex_logging.h"
 #include "config.h"
 #include "devmap.h"
@@ -25,6 +26,8 @@ struct edgex_device_service
   const char *version;
   void *userdata;
   edgex_device_callbacks userfns;
+  edgex_device_autoevent_start_handler autoevstart;
+  edgex_device_autoevent_stop_handler autoevstop;
   iot_logging_client *logger;
   edgex_device_config config;
   edgex_rest_server *daemon;
@@ -35,7 +38,6 @@ struct edgex_device_service
   edgex_devmap_t *devices;
   threadpool thpool;
   iot_scheduler scheduler;
-  struct edgex_device_service_job *sjobs;
   pthread_mutex_t discolock;
 };
 

@@ -271,25 +271,27 @@ edgex_device *edgex_metadata_client_get_devices
   return result;
 }
 
-edgex_device *edgex_metadata_client_add_device
+char *edgex_metadata_client_add_device
 (
   iot_logging_client *lc,
   edgex_service_endpoints *endpoints,
   const char *name,
   const char *description,
   const edgex_strings *labels,
-  const edgex_protocols *protocols,
+  edgex_protocols *protocols,
+  edgex_device_autoevents *autos,
   const char *service_name,
   const char *profile_name,
   edgex_error *err
 )
 {
-  edgex_device *result = malloc (sizeof (edgex_device));
+  char *result = NULL;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
   char *json;
+  edgex_device *dev = malloc (sizeof (edgex_device));
 
-  memset (result, 0, sizeof (edgex_device));
+  memset (dev, 0, sizeof (edgex_device));
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -299,23 +301,24 @@ edgex_device *edgex_metadata_client_add_device
     endpoints->metadata.host,
     endpoints->metadata.port
   );
-  result->name = strdup (name);
-  result->description = strdup (description);
-  result->adminState = UNLOCKED;
-  result->operatingState = ENABLED;
-  result->labels = edgex_strings_dup (labels);
-  result->protocols = edgex_protocols_dup (protocols);
-  result->service = malloc (sizeof (edgex_deviceservice));
-  memset (result->service, 0, sizeof (edgex_deviceservice));
-  result->service->name = strdup (service_name);
-  result->profile = malloc (sizeof (edgex_deviceprofile));
-  memset (result->profile, 0, sizeof (edgex_deviceprofile));
-  result->profile->name = strdup (profile_name);
-  json = edgex_device_write (result, true);
+  dev->name = (char *)name;
+  dev->description = (char *)description;
+  dev->adminState = UNLOCKED;
+  dev->operatingState = ENABLED;
+  dev->labels = (edgex_strings *)labels;
+  dev->protocols = protocols;
+  dev->service = malloc (sizeof (edgex_deviceservice));
+  memset (dev->service, 0, sizeof (edgex_deviceservice));
+  dev->service->name = (char *)service_name;
+  dev->profile = malloc (sizeof (edgex_deviceprofile));
+  memset (dev->profile, 0, sizeof (edgex_deviceprofile));
+  dev->profile->name = (char *)profile_name;
+  dev->autos = autos;
+  json = edgex_device_write (dev, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
   if (err->code == 0)
   {
-    result->id = ctx.buff;
+    result = ctx.buff;
   }
   else
   {
@@ -328,7 +331,10 @@ edgex_device *edgex_metadata_client_add_device
     );
     free (ctx.buff);
   }
+  free (dev->service);
+  free (dev->profile);
   free (json);
+  free (dev);
 
   return result;
 }

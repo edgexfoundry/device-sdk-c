@@ -9,6 +9,9 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- The API for Event generation other than via device GET requests is split out
+  into a seperate header edgex/eventgen.h
+- Added support for Automatic Events.
 - The API for managing devices and profiles is split out into a seperate header
   edgex/device-mgmt.h
 - The device name is passed to the Get and Set handlers. The commandrequest

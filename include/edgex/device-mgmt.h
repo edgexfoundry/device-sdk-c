@@ -27,9 +27,8 @@
  * @param description Optional description of the new device.
  * @param labels Optional labels for the new device.
  * @param profile_name Name of the device profile to be used with this device.
- * @param address Addressable for this device. The addressable will be created
- *        in metadata. The address' name and origin timestamp will be generated
- *        if not set.
+ * @param protocols Location of the device specified by one or more protocols.
+ * @param autos Automatic Events which are to be generated from the device.
  * @param err Nonzero reason codes will be set here in the event of errors.
  * @returns The id of the newly created or existing device, or NULL if an error
  *          occurred.
@@ -43,6 +42,7 @@ char * edgex_device_add_device
   const edgex_strings *labels,
   const char *profile_name,
   edgex_protocols *protocols,
+  edgex_device_autoevents *autos,
   edgex_error *err
 );
 

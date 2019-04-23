@@ -73,14 +73,15 @@ edgex_device * edgex_metadata_client_get_devices
   const char * servicename,
   edgex_error *err
 );
-edgex_device * edgex_metadata_client_add_device
+char * edgex_metadata_client_add_device
 (
   iot_logging_client *lc,
   edgex_service_endpoints * endpoints,
   const char * name,
   const char * description,
   const edgex_strings * labels,
-  const edgex_protocols * protocols,
+  edgex_protocols * protocols,
+  edgex_device_autoevents * autos,
   const char * service_name,
   const char * profile_name,
   edgex_error *err

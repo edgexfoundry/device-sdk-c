@@ -41,3 +41,11 @@
     [DeviceList.Protocols.Other]
       Address = "someSensorEndpoint"
       Port = 502
+  [[DeviceList.AutoEvents]]
+    Resource = "SensorOne"
+    OnChange = false
+    Frequency = "10s"
+  [[DeviceList.AutoEvents]]
+    Resource = "SensorTwo"
+    OnChange = true
+    Frequency = "15000ms"
