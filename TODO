@@ -1,16 +1,12 @@
 TODO
 ====
 
-Readings - Mask and shift transforms.
+Transforms - for PUT requests.
 
-Discovery endpoint - Only enable new devices which match a provisionwatcher.
-These to be dynamically created according to configuration.
+Discovery - Implement ProvisionWatchers.
 
 Threadpool - Configure number of threads.
 
-Handle resource operations which link to profile resource rather than device
-resource.
-
 Provide device profile management API.
 
-Support system management API.
+Allow configuration changes without restart (when using registry).
