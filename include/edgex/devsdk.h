@@ -206,26 +206,6 @@ void edgex_device_service_start
 );
 
 /**
- * @brief Post readings to the core-data service. This method allows readings
- *        to be generated other than in response to a device GET invocation.
- * @param svc The device service.
- * @param device_name The name of the device that the readings have come from.
- * @param resource_name Name of the resource or command which defines the Event.
- * @param values An array of readings. These will be combined into an Event
- *        and submitted to core-data. For readings of String or Binary type,
- *        the SDK takes ownership of the memory containing the string or
- *        byte array.
- */
-
-void edgex_device_post_readings
-(
-  edgex_device_service *svc,
-  const char *device_name,
-  const char *resource_name,
-  const edgex_device_commandresult *values
-);
-
-/**
  * @brief Stop the event service. Any locally-scheduled events will be
  *        cancelled, the rest api for the device will be shutdown, and
  *        resources will be freed.

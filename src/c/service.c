@@ -45,13 +45,6 @@ typedef struct postparams
   JSON_Value *jevent;
 } postparams;
 
-typedef struct edgex_device_service_job
-{
-  edgex_device_service *svc;
-  char *url;
-  struct edgex_device_service_job *next;
-} edgex_device_service_job;
-
 edgex_device_service *edgex_device_service_new
 (
   const char *name,
@@ -90,8 +83,7 @@ edgex_device_service *edgex_device_service_new
   result->version = version;
   result->userdata = impldata;
   result->userfns = implfns;
-  result->devices = edgex_devmap_alloc ();
-  result->sjobs = NULL;
+  result->devices = edgex_devmap_alloc (result);
   result->thpool = thpool_init (POOL_THREADS);
   result->scheduler = iot_scheduler_init (&result->thpool);
   pthread_mutex_init (&result->discolock, NULL);
@@ -112,28 +104,6 @@ static int ping_handler
   *reply = strdup ("{\"value\":\"pong\"}\n");
   *reply_type = "application/json";
   return MHD_HTTP_OK;
-}
-
-static void dev_invoker (void *p)
-{
-  int rc;
-  char *reply = NULL;
-  const char *reply_type;
-  edgex_device_service_job *job = (edgex_device_service_job *) p;
-
-  rc = edgex_device_handler_device
-    (job->svc, job->url, GET, NULL, 0, &reply, &reply_type);
-
-  if (rc != MHD_HTTP_OK)
-  {
-    iot_log_error
-    (
-      job->svc->logger,
-      "Scheduled request to " EDGEX_DEV_API_DEVICE "%s: HTTP %d",
-      job->url, rc
-    );
-  }
-  free (reply);
 }
 
 static void startConfigured
@@ -600,23 +570,19 @@ void edgex_device_service_stop
   if (svc->scheduler)
   {
     iot_scheduler_stop (svc->scheduler);
-    iot_scheduler_fini (svc->scheduler);
   }
   if (svc->daemon)
   {
     edgex_rest_server_destroy (svc->daemon);
   }
   svc->userfns.stop (svc->userdata, force);
-  thpool_destroy (svc->thpool);
-  edgex_device_service_job *j;
-  while (svc->sjobs)
-  {
-    j = svc->sjobs->next;
-    free (svc->sjobs->url);
-    free (svc->sjobs);
-    svc->sjobs = j;
-  }
   edgex_devmap_free (svc->devices);
+  thpool_wait (svc->thpool);
+  if (svc->scheduler)
+  {
+    iot_scheduler_fini (svc->scheduler);
+  }
+  thpool_destroy (svc->thpool);
   edgex_registry_fini ();
   pthread_mutex_destroy (&svc->discolock);
   iot_log_debug (svc->logger, "Stopped device service");

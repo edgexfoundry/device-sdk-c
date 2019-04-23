@@ -16,6 +16,7 @@
 #include "map.h"
 #include "edgex_rest.h"
 #include "device.h"
+#include "autoevent.h"
 
 typedef edgex_map(edgex_device *) edgex_map_device;
 typedef edgex_map(edgex_deviceprofile *) edgex_map_profile;
@@ -26,9 +27,10 @@ struct edgex_devmap_t
   edgex_map_device devices;
   edgex_map_string name_to_id;
   edgex_map_profile profiles;
+  edgex_device_service *svc;
 };
 
-edgex_devmap_t *edgex_devmap_alloc ()
+edgex_devmap_t *edgex_devmap_alloc (edgex_device_service *svc)
 {
   pthread_rwlockattr_t rwatt;
   pthread_rwlockattr_init (&rwatt);
@@ -46,6 +48,7 @@ edgex_devmap_t *edgex_devmap_alloc ()
   edgex_map_init (&res->devices);
   edgex_map_init (&res->name_to_id);
   edgex_map_init (&res->profiles);
+  res->svc = svc;
   return res;
 }
 
@@ -87,6 +90,7 @@ static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
   }
   edgex_map_set (&map->devices, dup->id, dup);
   edgex_map_set (&map->name_to_id, dup->name, dup->id);
+  edgex_device_autoevent_start (map->svc, dup);
 }
 
 void edgex_devmap_populate_devices
@@ -323,6 +327,7 @@ void edgex_device_release (edgex_device *dev)
 {
   if (atomic_fetch_add (&dev->refs, -1) == 1)
   {
+    edgex_device_autoevent_stop (dev);
     dev->profile = NULL;
     edgex_device_free (dev);
   }

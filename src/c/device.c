@@ -34,9 +34,11 @@
  * Each of these two methods finds the relevant device(s), calls runOne to
  * perform the command(s), uploads any readings and constructs the appropriate
  * JSON response.
- * runOne locates profile resources and calls either runOneGet or runOnePut.
- * runOneGet and runOnePut construct the required parameters, perform the
- * conversions between strings and values, and call the device implementation.
+ * runOne locates profile resources and calls either edgex_device_runget or
+ * edgex_device_runput.
+ * edgex_device_runget and edgex_device_runput construct the required
+ * parameters, perform the conversions between strings and values, and call
+ * the device implementation.
  */
 
 static const char *methStr (edgex_http_method method)
@@ -500,7 +502,7 @@ static bool commandExists (const char *name, edgex_deviceprofile *prof)
   return result != NULL;
 }
 
-static int runOnePut
+static int edgex_device_runput
 (
   edgex_device_service *svc,
   edgex_device *dev,
@@ -577,7 +579,7 @@ static int runOnePut
   return retcode;
 }
 
-static int runOneGet
+int edgex_device_runget
 (
   edgex_device_service *svc,
   edgex_device *dev,
@@ -687,7 +689,7 @@ static int runOne
 
   if (command->isget)
   {
-    return runOneGet (svc, dev, command, NULL, reply);
+    return edgex_device_runget (svc, dev, command, NULL, reply);
   }
   else
   {
@@ -696,7 +698,7 @@ static int runOne
       iot_log_error (svc->logger, "PUT command recieved with no data");
       return MHD_HTTP_BAD_REQUEST;
     }
-    return runOnePut (svc, dev, command, upload_data, reply);
+    return edgex_device_runput (svc, dev, command, upload_data, reply);
   }
 }
 
