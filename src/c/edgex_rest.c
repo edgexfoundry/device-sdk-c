@@ -908,12 +908,16 @@ static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
 static edgex_device_autoevents *autoevents_dup
   (const edgex_device_autoevents *e)
 {
-  edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
-  result->resource = strdup (e->resource);
-  result->frequency = strdup (e->frequency);
-  result->onChange = e->onChange;
-  result->impl = NULL;
-  result->next = e->next ? autoevents_dup (e->next) : NULL;
+  edgex_device_autoevents *result = NULL;
+  if (e)
+  {
+    result = malloc (sizeof (edgex_device_autoevents));
+    result->resource = strdup (e->resource);
+    result->frequency = strdup (e->frequency);
+    result->onChange = e->onChange;
+    result->impl = NULL;
+    result->next = autoevents_dup (e->next);
+  }
   return result;
 }
 
