@@ -27,6 +27,10 @@ find_package (LibYAML REQUIRED)
 if (NOT LIBYAML_FOUND)
   message (FATAL_ERROR "yaml library or header not found")
 endif ()
+find_package (LibUUID REQUIRED)
+if (NOT LIBUUID_FOUND)
+  message (FATAL_ERROR "UUID library or header not found")
+endif ()
 
 message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 

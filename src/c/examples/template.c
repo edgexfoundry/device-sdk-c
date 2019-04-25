@@ -55,7 +55,6 @@ static bool template_init
 )
 {
   template_driver *driver = (template_driver *) impl;
-  lc=iot_log_default;
   driver->lc = lc;
   driver->state_flag=false;
   pthread_mutex_init (&driver->mutex, NULL);

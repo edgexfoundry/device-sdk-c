@@ -23,4 +23,15 @@ extern bool edgex_log_torest
   const char *message
 );
 
+/* Built-in logger: write to a file or stdout */
+
+extern bool edgex_log_tofile
+(
+  const char *destination,
+  const char *subsystem,
+  iot_loglevel l,
+  time_t timestamp,
+  const char *message
+);
+
 #endif

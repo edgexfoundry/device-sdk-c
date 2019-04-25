@@ -25,6 +25,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <stdint.h>
 #include <string.h>
 #include "errorlist.h"
+#include "correlation.h"
 #include "rest.h"
 
 #if (LIBCURL_VERSION_NUM >= 0x073800)
@@ -34,6 +35,21 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #define HTTP_UNAUTH 401
 
 #define MAX_TOKEN_LEN 600
+
+static struct curl_slist *edgex_add_crlid_hdr (struct curl_slist *slist)
+{
+  const char *id = edgex_device_get_crlid ();
+  if (id)
+  {
+    char *bearer = malloc (sizeof (EDGEX_CRLID_HDR) + strlen (id) + 2);
+    strcpy (bearer, EDGEX_CRLID_HDR);
+    strcat (bearer, ": ");
+    strcat (bearer, id);
+    slist = curl_slist_append (slist, bearer);
+    free (bearer);
+  }
+  return slist;
+}
 
 static struct curl_slist *edgex_add_auth_hdr
   (iot_logging_client *lc, edgex_ctx *ctx, struct curl_slist *slist)
@@ -132,7 +148,7 @@ long edgex_http_get (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
    * Create the Authorization header if needed
    */
   slist = edgex_add_auth_hdr (lc, ctx, slist);
-
+  slist = edgex_add_crlid_hdr (slist);
   ctx->buff = malloc (1);
   ctx->size = 0;
 
@@ -247,6 +263,7 @@ long edgex_http_delete (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
    * Create the Authorization header if needed
    */
   slist = edgex_add_auth_hdr (lc, ctx, slist);
+  slist = edgex_add_crlid_hdr (slist);
 
   ctx->buff = malloc (1);
   ctx->size = 0;
@@ -376,6 +393,7 @@ long edgex_http_post
    * Create the Authorization header if needed
    */
   slist = edgex_add_auth_hdr (lc, ctx, slist);
+  slist = edgex_add_crlid_hdr (slist);
 
   ctx->buff = malloc (1);
   ctx->size = 0;
@@ -507,6 +525,7 @@ edgex_http_postfile (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
    */
   slist = NULL;
   slist = edgex_add_auth_hdr (lc, ctx, slist);
+  slist = edgex_add_crlid_hdr (slist);
 
   ctx->buff = malloc (1);
   ctx->size = 0;
@@ -681,6 +700,7 @@ long edgex_http_put
    * Create the Authorization header if needed
    */
   slist = edgex_add_auth_hdr (lc, ctx, slist);
+  slist = edgex_add_crlid_hdr (slist);
 
   ctx->buff = malloc (1);
   ctx->size = 0;

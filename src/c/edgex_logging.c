@@ -17,6 +17,9 @@
 #include "errorlist.h"
 #include "parson.h"
 #include "rest.h"
+#include "correlation.h"
+
+#define EDGEX_TSIZE 32
 
 static const char *levelstrs[] = {"INFO", "TRACE", "DEBUG", "WARNING", "ERROR"};
 
@@ -52,4 +55,49 @@ bool edgex_log_torest
   json_value_free (jval);
 
   return (retcode == 202 && err.code == EDGEX_OK.code);
+}
+
+bool edgex_log_tofile
+(
+   const char *destination,
+   const char *subsystem,
+   iot_loglevel l,
+   time_t timestamp,
+   const char *message
+)
+{
+   FILE *f;
+   if (strcmp (destination, "-") == 0)
+   {
+     f = stdout;
+   }
+   else
+   {
+     f = fopen (destination, "a");
+   }
+   if (f)
+   {
+      struct tm tsparts;
+      char ts8601[EDGEX_TSIZE];
+      const char *crlid = edgex_device_get_crlid ();
+      gmtime_r (&timestamp, &tsparts);
+      strftime (ts8601, EDGEX_TSIZE, "%FT%TZ", &tsparts);
+      fprintf
+      (
+        f,
+        "level=%s ts=%s app=%s%s%s msg=%s\n",
+        levelstrs[l],
+        ts8601,
+        subsystem ? subsystem : "(default)",
+        crlid ? " correlation-id=" : "",
+        crlid ? crlid : "",
+        message
+      );
+      if (f != stdout)
+      {
+        fclose (f);
+      }
+      return true;
+   }
+   return false;
 }
