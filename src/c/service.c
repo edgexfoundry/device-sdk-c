@@ -137,7 +137,7 @@ static void startConfigured
   if (svc->config.logging.file)
   {
     iot_log_addlogger
-      (svc->logger, iot_log_tofile, svc->config.logging.file);
+      (svc->logger, edgex_log_tofile, svc->config.logging.file);
   }
   if (svc->config.logging.remoteurl)
   {
@@ -540,7 +540,7 @@ void edgex_device_post_readings
   }
 
   const edgex_cmdinfo *command = edgex_deviceprofile_findcommand
-    (resname, dev->profile, false);
+    (resname, dev->profile, true);
   edgex_device_release (dev);
 
   if (command)

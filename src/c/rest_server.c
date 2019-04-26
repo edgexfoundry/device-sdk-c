@@ -8,6 +8,7 @@
 
 #include "rest_server.h"
 #include "microhttpd.h"
+#include "correlation.h"
 #include "errorlist.h"
 
 #include <string.h>
@@ -119,6 +120,9 @@ static int http_handler
 
   /* Last call with no data handles request */
 
+  edgex_device_alloc_crlid
+    (MHD_lookup_connection_value (conn, MHD_HEADER_KIND, EDGEX_CRLID_HDR));
+
   edgex_http_method method = method_from_string (methodname);
 
   if (strlen (url) == 0 || strcmp (url, "/") == 0)
@@ -208,6 +212,7 @@ static int http_handler
   if (ctx->m_data)
   { free (ctx->m_data); }
   free (ctx);
+  edgex_device_free_crlid ();
   return MHD_YES;
 }
 

@@ -13,6 +13,7 @@
 #include "device.h"
 #include "parson.h"
 #include "edgex_rest.h"
+#include "correlation.h"
 
 #include <microhttpd.h>
 
@@ -68,6 +69,7 @@ static void ae_runner (void *p)
   int res;
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
   atomic_fetch_add (&ai->refs, 1);
+
   edgex_device *dev = edgex_devmap_device_byname (ai->svc->devices, ai->device);
   if (dev)
   {
@@ -77,6 +79,8 @@ static void ae_runner (void *p)
       edgex_device_release (dev);
       return;
     }
+    edgex_device_alloc_crlid (NULL);
+    iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
     res = edgex_device_runget
       (ai->svc, dev, ai->resource, ai->onChange ? ai->last : NULL, &result);
     if (res == MHD_HTTP_OK)
@@ -91,6 +95,7 @@ static void ae_runner (void *p)
         json_value_free (result);
       }
     }
+    edgex_device_free_crlid ();
     edgex_device_release (dev);
   }
   else
