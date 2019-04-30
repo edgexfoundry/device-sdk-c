@@ -65,7 +65,7 @@ typedef struct edgex_device_commandresult
 typedef bool (*edgex_device_device_initialize)
 (
   void *impl,
-  struct iot_logging_client *lc,
+  struct iot_logger_t *lc,
   const edgex_nvpairs *config
 );
 

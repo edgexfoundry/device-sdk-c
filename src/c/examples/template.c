@@ -17,7 +17,7 @@
 
 typedef struct template_driver
 {
-  iot_logging_client * lc;
+  iot_logger_t * lc;
   bool state_flag;
   pthread_mutex_t mutex;
 } template_driver;
@@ -30,7 +30,7 @@ static void inthandler (int i)
 }
 
 static void dump_protocols
-  (iot_logging_client *lc, const edgex_protocols *prots)
+  (iot_logger_t *lc, const edgex_protocols *prots)
 {
   for (const edgex_protocols *p = prots; p; p = p->next)
   {
@@ -50,7 +50,7 @@ static void dump_protocols
 static bool template_init
 (
   void *impl,
-  struct iot_logging_client *lc,
+  struct iot_logger_t *lc,
   const edgex_nvpairs *config
 )
 {

@@ -30,7 +30,7 @@ size_t edgex_http_write_cb
 
 long edgex_http_get
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   void *writefunc,
@@ -38,7 +38,7 @@ long edgex_http_get
 );
 long edgex_http_delete
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   void *writefunc,
@@ -46,7 +46,7 @@ long edgex_http_delete
 );
 long edgex_http_post
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   const char *data,
@@ -55,7 +55,7 @@ long edgex_http_post
 );
 long edgex_http_postfile
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   const char *fname,
@@ -64,7 +64,7 @@ long edgex_http_postfile
 );
 long edgex_http_put
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   const char *data,

@@ -38,7 +38,7 @@ typedef int (*http_method_handler_fn)
 );
 
 extern edgex_rest_server *edgex_rest_server_create
-  (iot_logging_client *lc, uint16_t port, edgex_error *err);
+  (iot_logger_t *lc, uint16_t port, edgex_error *err);
 
 extern void edgex_rest_server_register_handler
 (

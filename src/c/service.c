@@ -57,21 +57,21 @@ edgex_device_service *edgex_device_service_new
   if (impldata == NULL)
   {
     iot_log_error
-      (iot_log_default, "edgex_device_service_new: no implementation object");
+      (iot_log_default (), "edgex_device_service_new: no implementation object");
     *err = EDGEX_NO_DEVICE_IMPL;
     return NULL;
   }
   if (name == NULL || strlen (name) == 0)
   {
     iot_log_error
-      (iot_log_default, "edgex_device_service_new: no name specified");
+      (iot_log_default (), "edgex_device_service_new: no name specified");
     *err = EDGEX_NO_DEVICE_NAME;
     return NULL;
   }
   if (version == NULL || strlen (version) == 0)
   {
     iot_log_error
-      (iot_log_default, "edgex_device_service_new: no version specified");
+      (iot_log_default (), "edgex_device_service_new: no version specified");
     *err = EDGEX_NO_DEVICE_VERSION;
     return NULL;
   }
@@ -84,8 +84,9 @@ edgex_device_service *edgex_device_service_new
   result->userdata = impldata;
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
-  result->thpool = thpool_init (POOL_THREADS);
-  result->scheduler = iot_scheduler_init (&result->thpool);
+  result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL);
+  iot_threadpool_start (result->thpool);
+  result->scheduler = iot_scheduler_alloc (result->thpool);
   pthread_mutex_init (&result->discolock, NULL);
   return result;
 }
@@ -136,12 +137,12 @@ static void startConfigured
 
   if (svc->config.logging.file)
   {
-    iot_log_addlogger
+    iot_logger_add
       (svc->logger, edgex_log_tofile, svc->config.logging.file);
   }
   if (svc->config.logging.remoteurl)
   {
-    iot_log_addlogger
+    iot_logger_add
       (svc->logger, edgex_log_torest, svc->config.logging.remoteurl);
   }
 
@@ -415,7 +416,7 @@ void edgex_device_service_start
   bool uploadConfig = false;
   svc->starttime = edgex_device_millitime();
 
-  svc->logger = iot_logging_client_create (svc->name);
+  svc->logger = iot_logger_alloc (svc->name);
   if (confDir == NULL || *confDir == '\0')
   {
     confDir = "res";
@@ -553,7 +554,7 @@ void edgex_device_post_readings
       postparams *pp = malloc (sizeof (postparams));
       pp->svc = svc;
       pp->jevent = jevent;
-      thpool_add_work (svc->thpool, doPost, pp);
+      iot_threadpool_add_work (svc->thpool, doPost, pp, NULL);
     }
   }
   else
@@ -577,16 +578,16 @@ void edgex_device_service_stop
   }
   svc->userfns.stop (svc->userdata, force);
   edgex_devmap_free (svc->devices);
-  thpool_wait (svc->thpool);
+  iot_threadpool_wait (svc->thpool);
   if (svc->scheduler)
   {
-    iot_scheduler_fini (svc->scheduler);
+    iot_scheduler_free (svc->scheduler);
   }
-  thpool_destroy (svc->thpool);
+  iot_threadpool_free (svc->thpool);
   edgex_registry_fini ();
   pthread_mutex_destroy (&svc->discolock);
   iot_log_debug (svc->logger, "Stopped device service");
-  iot_logging_client_destroy (svc->logger);
+  iot_logger_free (svc->logger);
   edgex_device_freeConfig (svc);
   free (svc);
 }

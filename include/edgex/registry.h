@@ -30,7 +30,7 @@
  */
 
 typedef bool (*edgex_registry_ping_impl)
-  (iot_logging_client *lc, void *location, edgex_error *err);
+  (iot_logger_t *lc, void *location, edgex_error *err);
 
 /**
  * @brief Retrieve configuration values from the registry.
@@ -44,7 +44,7 @@ typedef bool (*edgex_registry_ping_impl)
 
 typedef edgex_nvpairs *(*edgex_registry_get_config_impl)
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *profile,
@@ -63,7 +63,7 @@ typedef edgex_nvpairs *(*edgex_registry_get_config_impl)
 
 typedef void (*edgex_registry_put_config_impl)
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *profile,
@@ -85,7 +85,7 @@ typedef void (*edgex_registry_put_config_impl)
 
 typedef void (*edgex_registry_register_service_impl)
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *hostname,
@@ -107,7 +107,7 @@ typedef void (*edgex_registry_register_service_impl)
 
 typedef void (*edgex_registry_query_service_impl)
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   char **hostname,
@@ -124,7 +124,7 @@ typedef void (*edgex_registry_query_service_impl)
  */
 
 typedef void *(*edgex_registry_parse_location_impl)
-  (iot_logging_client *lc, const char *location);
+  (iot_logger_t *lc, const char *location);
 
 /**
  * @brief Free the memory used in a location structure.
@@ -152,7 +152,7 @@ typedef struct
   uint16_t port;
 } edgex_registry_hostport;
 
-void *edgex_registry_parse_simple_url (iot_logging_client *lc, const char *url);
+void *edgex_registry_parse_simple_url (iot_logger_t *lc, const char *url);
 void edgex_registry_free_simple_url (void *location);
 
 /* Client functions */
@@ -182,7 +182,7 @@ bool edgex_registry_add_impl (const char *name, edgex_registry_impl impl);
  */
 
 edgex_registry *edgex_registry_get_registry
-  (struct iot_logging_client *lc, const char *url);
+  (struct iot_logger_t *lc, const char *url);
 
 /**
  * @brief Determine whether the registry service is running.

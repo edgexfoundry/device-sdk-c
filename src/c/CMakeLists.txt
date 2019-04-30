@@ -20,7 +20,7 @@ endif ()
 
 # Set default files to compile and libraries
 
-file (GLOB C_FILES *.c)
+file (GLOB C_FILES *.c iot/*.c)
 set (LINK_LIBRARIES ${LIBMICROHTTP_LIBRARIES} ${CURL_LIBRARIES} ${LIBYAML_LIBRARIES} ${LIBUUID_LIBRARIES})
 configure_file ("defs.h.in" "${CMAKE_SOURCE_DIR}/../include/edgex/csdk-defs.h")
 
