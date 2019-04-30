@@ -15,7 +15,7 @@
 #include "config.h"
 #include "devmap.h"
 #include "rest_server.h"
-#include "thpool.h"
+#include "iot/threadpool.h"
 #include "iot/scheduler.h"
 
 struct edgex_device_service_job;
@@ -28,7 +28,7 @@ struct edgex_device_service
   edgex_device_callbacks userfns;
   edgex_device_autoevent_start_handler autoevstart;
   edgex_device_autoevent_stop_handler autoevstop;
-  iot_logging_client *logger;
+  iot_logger_t *logger;
   edgex_device_config config;
   edgex_rest_server *daemon;
   edgex_device_operatingstate opstate;
@@ -36,8 +36,8 @@ struct edgex_device_service
   uint64_t starttime;
 
   edgex_devmap_t *devices;
-  threadpool thpool;
-  iot_scheduler scheduler;
+  iot_threadpool_t *thpool;
+  iot_scheduler_t *scheduler;
   pthread_mutex_t discolock;
 };
 

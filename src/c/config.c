@@ -25,7 +25,7 @@ static void toml_rtos2 (const char *s, char **ret);
 
 toml_table_t *edgex_device_loadConfig
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   const char *dir,
   const char *profile,
   edgex_error *err
@@ -104,7 +104,7 @@ static void toml_rtob2 (const char *raw, bool *ret)
 /* Wrap toml_rtoi for uint16, uint32. */
 
 static void toml_rtoui16
-  (const char *raw, uint16_t *ret, iot_logging_client *lc, edgex_error *err)
+  (const char *raw, uint16_t *ret, iot_logger_t *lc, edgex_error *err)
 {
   if (raw)
   {
@@ -122,7 +122,7 @@ static void toml_rtoui16
 }
 
 static void toml_rtoui32
-  (const char *raw, uint32_t *ret, iot_logging_client *lc, edgex_error *err)
+  (const char *raw, uint32_t *ret, iot_logger_t *lc, edgex_error *err)
 {
   if (raw)
   {
@@ -339,7 +339,7 @@ static char *get_nv_config_string
 
 static uint32_t get_nv_config_uint32
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   const edgex_nvpairs *config,
   const char *key,
   edgex_error *err
@@ -369,7 +369,7 @@ static uint32_t get_nv_config_uint32
 
 static uint16_t get_nv_config_uint16
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   const edgex_nvpairs *config,
   const char *key,
   edgex_error *err
@@ -584,9 +584,9 @@ void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err)
   }
 }
 
-static void dumpArray (iot_logging_client *, const char *, char **);
+static void dumpArray (iot_logger_t *, const char *, char **);
 
-void dumpArray (iot_logging_client *log, const char *name, char **list)
+void dumpArray (iot_logger_t *log, const char *name, char **list)
 {
   char *arr;
   size_t arrlen = 1;

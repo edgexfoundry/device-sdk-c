@@ -65,7 +65,7 @@ JSON_Value *edgex_data_generate_event
 
 void edgex_data_client_add_event
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   JSON_Value *eventval,
   edgex_error *err
@@ -94,7 +94,7 @@ void edgex_data_client_add_event
 
 edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *name,
   uint64_t origin,
@@ -146,7 +146,7 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
 
 bool edgex_data_client_ping
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   edgex_error *err
 )

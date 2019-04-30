@@ -159,12 +159,12 @@ void edgex_device_autoevent_start (edgex_device_service *svc, edgex_device *dev)
     }
     if (ae->impl->svc->autoevstart)
     {
-      thpool_add_work (svc->thpool, starter, ae->impl);
+      iot_threadpool_add_work (svc->thpool, starter, ae->impl, NULL);
     }
     else
     {
       ae->impl->handle = iot_schedule_create
-        (svc->scheduler, ae_runner, ae->impl, IOT_MS_TO_NS(ae->impl->interval), 0, 0);
+        (svc->scheduler, ae_runner, ae->impl, IOT_MS_TO_NS(ae->impl->interval), 0, 0, NULL);
       iot_schedule_add (ae->impl->svc->scheduler, ae->impl->handle);
     }
   }
@@ -189,7 +189,7 @@ void edgex_device_autoevent_stop (edgex_device *dev)
   for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
   {
     edgex_autoimpl *ai = ae->impl;
-    thpool_add_work (ai->svc->thpool, stopper, ai);
+    iot_threadpool_add_work (ai->svc->thpool, stopper, ai, NULL);
   }
 }
 
@@ -210,7 +210,7 @@ void edgex_device_register_autoevent_handlers
   if ((starter == NULL) || (stopper == NULL))
   {
     iot_log_error
-      (iot_log_default, "AutoEvent registration: must specify both handlers");
+      (iot_log_default (), "AutoEvent registration: must specify both handlers");
     return;
   }
   svc->autoevstart = starter;

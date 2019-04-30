@@ -15,14 +15,14 @@
 
 bool edgex_consul_client_ping
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   edgex_error *err
 );
 
 edgex_nvpairs *edgex_consul_client_get_config
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *profile,
@@ -31,7 +31,7 @@ edgex_nvpairs *edgex_consul_client_get_config
 
 void edgex_consul_client_write_config
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *profile,
@@ -41,7 +41,7 @@ void edgex_consul_client_write_config
 
 void edgex_consul_client_register_service
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *host,
@@ -52,7 +52,7 @@ void edgex_consul_client_register_service
 
 void edgex_consul_client_query_service
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   void *location,
   const char *servicename,
   char **host,

@@ -41,7 +41,7 @@ static void generate_value_descriptors
     char type[2];
     edgex_valuedescriptor *vd;
     edgex_error err;
-    iot_logging_client *lc = svc->logger;
+    iot_logger_t *lc = svc->logger;
 
     type[0] = edgex_propertytype_tostring (pv->type)[0];
     type[1] = '\0';
@@ -111,7 +111,7 @@ void edgex_device_profiles_upload
   const edgex_deviceprofile *dp;
   const char *profileDir = svc->config.device.profilesdir;
   edgex_service_endpoints *endpoints = &svc->config.endpoints;
-  iot_logging_client *lc = svc->logger;
+  iot_logger_t *lc = svc->logger;
 
   n = scandir (profileDir, &filenames, yamlselect, NULL);
   if (n < 0)

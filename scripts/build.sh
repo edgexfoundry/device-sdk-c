@@ -4,6 +4,11 @@ set -e -x
 CPPCHECK=false
 DOCGEN=false
 
+IOTECH=IOTechSystems
+CUTILNAME=iotech-c-utils
+CUTILREF=1a0be9f
+CUTILDIR=$IOTECH-$CUTILNAME-$CUTILREF
+
 # Process arguments
 
 while [ $# -gt 0 ]
@@ -39,20 +44,30 @@ then
   wget -O - https://github.com/IOTechSystems/tomlc99/archive/SDK-0.2.tar.gz | tar -C deps -z -x -f -
   cp deps/tomlc99-SDK-0.2/toml.* src/c
 
-  # Thread Pool
-  
-  wget -O - https://github.com/IOTechSystems/C-Thread-Pool/archive/SDK-0.1.tar.gz | tar -C deps -z -x -f -
-  cp deps/C-Thread-Pool-SDK-0.1/thpool.c src/c
-  cp deps/C-Thread-Pool-SDK-0.1/thpool.h include/
-  
   # C Utils
   
-  wget -O - https://github.com/IOTechSystems/iotech-c-utils/archive/v0.1.3.tar.gz | tar -C deps -z -x -f -
-  cp deps/iotech-c-utils-0.1.3/src/c/scheduler.c src/c/scheduler.c
-  cp deps/iotech-c-utils-0.1.3/src/c/logging.c src/c/logging.c
+  wget -O - https://github.com/$IOTECH/$CUTILNAME/tarball/$CUTILREF | tar -C deps -z -x -f -
+  mkdir -p src/c/iot
+  cp deps/$CUTILDIR/src/c/scheduler.c src/c/iot
+  cp deps/$CUTILDIR/src/c/logger.c src/c/iot
+  cp deps/$CUTILDIR/src/c/threadpool.c src/c/iot
+  cp deps/$CUTILDIR/src/c/thread.c src/c/iot
+  cp deps/$CUTILDIR/src/c/data.c src/c/iot
+  cp deps/$CUTILDIR/src/c/json.c src/c/iot
+  cp deps/$CUTILDIR/src/c/container.c src/c/iot
   mkdir -p include/iot
-  cp deps/iotech-c-utils-0.1.3/include/iot/scheduler.h include/iot/scheduler.h
-  cp deps/iotech-c-utils-0.1.3/include/iot/logging.h include/iot/logging.h
+  cp deps/$CUTILDIR/include/iot/scheduler.h include/iot
+  cp deps/$CUTILDIR/include/iot/logger.h include/iot
+  cp deps/$CUTILDIR/include/iot/threadpool.h include/iot
+  cp deps/$CUTILDIR/include/iot/component.h include/iot
+  cp deps/$CUTILDIR/include/iot/data.h include/iot
+  cp deps/$CUTILDIR/include/iot/thread.h include/iot
+  cp deps/$CUTILDIR/include/iot/container.h include/iot
+  cp deps/$CUTILDIR/include/iot/json.h include/iot
+  cp deps/$CUTILDIR/include/iot/os.h include/iot
+  mkdir -p include/iot/os
+  cp deps/$CUTILDIR/include/iot/os/* include/iot/os
+
 fi
 
 # Cmake release build

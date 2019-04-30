@@ -15,7 +15,7 @@ typedef edgex_map(edgex_registry_impl) edgex_map_registry;
 typedef struct edgex_registry
 {
   void *location;
-  struct iot_logging_client *logger;
+  struct iot_logger_t *logger;
   edgex_registry_impl impl;
 } edgex_registry;
 
@@ -43,7 +43,7 @@ static void reginit (void)
 }
 
 edgex_registry *edgex_registry_get_registry
-  (struct iot_logging_client *lc, const char *url)
+  (struct iot_logger_t *lc, const char *url)
 {
   edgex_registry *res = NULL;
   edgex_registry_impl *impl;
@@ -186,7 +186,7 @@ void edgex_registry_query_service
 
 void *edgex_registry_parse_simple_url
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   const char *location
 )
 {

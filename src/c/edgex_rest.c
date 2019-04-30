@@ -211,7 +211,7 @@ static edgex_device_operatingstate edgex_operatingstate_fromstring
 
 static bool get_transformArg
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   const JSON_Object *obj,
   const char *name,
   edgex_propertytype type,
@@ -284,7 +284,7 @@ static bool get_transformArg
 }
 
 static edgex_propertyvalue *propertyvalue_read
-  (iot_logging_client *lc, const JSON_Object *obj)
+  (iot_logger_t *lc, const JSON_Object *obj)
 {
   const char *fe;
   edgex_propertytype pt;
@@ -472,7 +472,7 @@ static void units_free (edgex_units *e)
 }
 
 static edgex_profileproperty *profileproperty_read
-  (iot_logging_client *lc, const JSON_Object *obj)
+  (iot_logger_t *lc, const JSON_Object *obj)
 {
   edgex_propertyvalue *val;
   edgex_profileproperty *result = NULL;
@@ -516,7 +516,7 @@ static void profileproperty_free (edgex_profileproperty *e)
 }
 
 static edgex_deviceresource *deviceresource_read
-  (iot_logging_client *lc, const JSON_Object *obj)
+  (iot_logger_t *lc, const JSON_Object *obj)
 {
   edgex_deviceresource *result = NULL;
   edgex_profileproperty *pp = profileproperty_read
@@ -747,7 +747,7 @@ static void devicecommand_free (edgex_devicecommand *e)
 }
 
 static edgex_deviceprofile *deviceprofile_read
-  (iot_logging_client *lc, const JSON_Object *obj)
+  (iot_logger_t *lc, const JSON_Object *obj)
 {
   edgex_deviceprofile *result = malloc (sizeof (edgex_deviceprofile));
   size_t count;
@@ -847,7 +847,7 @@ static JSON_Value *deviceprofile_write_name (const edgex_deviceprofile *e)
 }
 
 edgex_deviceprofile *edgex_deviceprofile_read
-  (iot_logging_client *lc, const char *json)
+  (iot_logger_t *lc, const char *json)
 {
   edgex_deviceprofile *result = NULL;
   JSON_Value *val = json_parse_string (json);
@@ -1257,7 +1257,7 @@ char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create)
 }
 
 static edgex_device *device_read
-  (iot_logging_client *lc, const JSON_Object *obj)
+  (iot_logger_t *lc, const JSON_Object *obj)
 {
   edgex_device *result = malloc (sizeof (edgex_device));
   result->protocols = protocols_read
@@ -1384,7 +1384,7 @@ void edgex_device_free (edgex_device *e)
   }
 }
 
-edgex_device *edgex_device_read (iot_logging_client *lc, const char *json)
+edgex_device *edgex_device_read (iot_logger_t *lc, const char *json)
 {
   edgex_device *result = NULL;
   JSON_Value *val = json_parse_string (json);
@@ -1446,7 +1446,7 @@ char *edgex_device_write_sparse
   return json;
 }
 
-edgex_device *edgex_devices_read (iot_logging_client *lc, const char *json)
+edgex_device *edgex_devices_read (iot_logger_t *lc, const char *json)
 {
   edgex_device *result = NULL;
   JSON_Value *val = json_parse_string (json);

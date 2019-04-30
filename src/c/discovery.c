@@ -48,7 +48,7 @@ int edgex_device_handler_discovery
 
   if (pthread_mutex_trylock (&svc->discolock) == 0)
   {
-    thpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc);
+    iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc, NULL);
     pthread_mutex_unlock (&svc->discolock);
   }
   // else discovery was already running; ignore this request

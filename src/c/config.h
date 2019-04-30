@@ -80,7 +80,7 @@ typedef struct edgex_device_config
 
 toml_table_t *edgex_device_loadConfig
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   const char *dir,
   const char *profile,
   edgex_error *err

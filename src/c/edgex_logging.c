@@ -21,13 +21,11 @@
 
 #define EDGEX_TSIZE 32
 
-static const char *levelstrs[] = {"INFO", "TRACE", "DEBUG", "WARNING", "ERROR"};
-
 bool edgex_log_torest
 (
   const char *destination,
   const char *subsystem,
-  iot_loglevel l,
+  iot_loglevel_t l,
   time_t timestamp,
   const char *message
 )
@@ -43,13 +41,13 @@ bool edgex_log_torest
   JSON_Object *jobj = json_value_get_object (jval);
 
   json_object_set_string (jobj, "originService", subsystem);
-  json_object_set_string (jobj, "logLevel", levelstrs[l]);
+  json_object_set_string (jobj, "logLevel", iot_logger_levelname (l));
   json_object_set_number (jobj, "created", timestamp);
   json_object_set_string (jobj, "message", message);
 
   json = json_serialize_to_string (jval);
   retcode = edgex_http_post
-    (iot_log_default, &ctx, destination, json, NULL, &err);
+    (iot_log_default (), &ctx, destination, json, NULL, &err);
   json_free_serialized_string (json);
 
   json_value_free (jval);
@@ -61,7 +59,7 @@ bool edgex_log_tofile
 (
    const char *destination,
    const char *subsystem,
-   iot_loglevel l,
+   iot_loglevel_t l,
    time_t timestamp,
    const char *message
 )
@@ -86,7 +84,7 @@ bool edgex_log_tofile
       (
         f,
         "level=%s ts=%s app=%s%s%s msg=%s\n",
-        levelstrs[l],
+        iot_logger_levelname (l),
         ts8601,
         subsystem ? subsystem : "(default)",
         crlid ? " correlation-id=" : "",

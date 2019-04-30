@@ -26,7 +26,7 @@ typedef struct handler_list
 
 struct edgex_rest_server
 {
-  iot_logging_client *lc;
+  iot_logger_t *lc;
   struct MHD_Daemon *daemon;
   handler_list *handlers;
   pthread_mutex_t lock;
@@ -217,7 +217,7 @@ static int http_handler
 }
 
 edgex_rest_server *edgex_rest_server_create
-  (iot_logging_client *lc, uint16_t port, edgex_error *err)
+  (iot_logger_t *lc, uint16_t port, edgex_error *err)
 {
   edgex_rest_server *svr;
   uint16_t flags = MHD_USE_THREAD_PER_CONNECTION;

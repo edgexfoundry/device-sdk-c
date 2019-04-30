@@ -52,7 +52,7 @@ static struct curl_slist *edgex_add_crlid_hdr (struct curl_slist *slist)
 }
 
 static struct curl_slist *edgex_add_auth_hdr
-  (iot_logging_client *lc, edgex_ctx *ctx, struct curl_slist *slist)
+  (iot_logger_t *lc, edgex_ctx *ctx, struct curl_slist *slist)
 {
   int bearer_size;
   char *bearer;
@@ -79,7 +79,7 @@ static struct curl_slist *edgex_add_auth_hdr
 
 
 static void edgex_log_peer_cert
-  (iot_logging_client *lc, edgex_ctx *ctx, CURL *hnd)
+  (iot_logger_t *lc, edgex_ctx *ctx, CURL *hnd)
 {
   int rv;
   union
@@ -135,7 +135,7 @@ size_t edgex_http_write_cb
  * Return value is the HTTP status value from the server
  *	    (e.g. 200 for HTTP OK)
  */
-long edgex_http_get (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
+long edgex_http_get (iot_logger_t *lc, edgex_ctx *ctx, const char *url,
                      void *writefunc, edgex_error *err)
 {
   long http_code = 0;
@@ -197,7 +197,7 @@ long edgex_http_get (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
   rc = curl_easy_perform (hnd);
   if (rc != CURLE_OK)
   {
-    iot_log_error (lc, "curl_easy_perform returned: %d\n", (int) rc);
+    iot_log_error (lc, "curl_easy_perform returned: %d", (int) rc);
     *err = EDGEX_HTTP_GET_ERROR;
     return 0;
   }
@@ -217,7 +217,7 @@ long edgex_http_get (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
 
   if (http_code < 200 || http_code >= 300)
   {
-    iot_log_info (lc, "HTTP response: %d\n", (int) http_code);
+    iot_log_info (lc, "HTTP response: %d", (int) http_code);
     *err = EDGEX_HTTP_GET_ERROR;
   }
   else
@@ -250,7 +250,7 @@ long edgex_http_get (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
  * Return value is the HTTP status value from the server
  *	    (e.g. 200 for HTTP OK)
  */
-long edgex_http_delete (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
+long edgex_http_delete (iot_logger_t *lc, edgex_ctx *ctx, const char *url,
                         void *writefunc, edgex_error *err)
 {
   long http_code = 0;
@@ -314,7 +314,7 @@ long edgex_http_delete (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
   rc = curl_easy_perform (hnd);
   if (rc != CURLE_OK)
   {
-    iot_log_error (lc, "curl_easy_perform returned: %d\n", (int) rc);
+    iot_log_error (lc, "curl_easy_perform returned: %d", (int) rc);
     *err = EDGEX_HTTP_GET_ERROR;
     return 0;
   }
@@ -334,7 +334,7 @@ long edgex_http_delete (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
 
   if (http_code < 200 || http_code >= 300)
   {
-    iot_log_info (lc, "HTTP response: %d\n", (int) http_code);
+    iot_log_info (lc, "HTTP response: %d", (int) http_code);
     *err = EDGEX_HTTP_GET_ERROR;
   }
   else
@@ -370,7 +370,7 @@ long edgex_http_delete (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
  */
 long edgex_http_post
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   const char *data,
@@ -448,7 +448,7 @@ long edgex_http_post
   if (crv != CURLE_OK)
   {
     iot_log_error
-      (lc, "Curl failed with code %d (%s)\n", crv, curl_easy_strerror (crv));
+      (lc, "Curl failed with code %d (%s)", crv, curl_easy_strerror (crv));
     *err = EDGEX_HTTP_POST_ERROR;
     return 0;
   }
@@ -473,7 +473,7 @@ long edgex_http_post
   }
   else if (http_code < 200 || http_code >= 300)
   {
-    iot_log_error (lc, "HTTP response: %d\n", (int) http_code);
+    iot_log_error (lc, "HTTP response: %d", (int) http_code);
     *err = EDGEX_HTTP_POST_ERROR;
   }
   else
@@ -505,7 +505,7 @@ long edgex_http_post
  *	    (e.g. 200 for HTTP OK)
  */
 long
-edgex_http_postfile (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
+edgex_http_postfile (iot_logger_t *lc, edgex_ctx *ctx, const char *url,
                      const char *fname, void *writefunc, edgex_error *err)
 {
   long http_code = 0;
@@ -607,7 +607,7 @@ edgex_http_postfile (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
   if (crv != CURLE_OK)
   {
     iot_log_error
-      (lc, "Curl failed with code %d (%s)\n", crv, curl_easy_strerror (crv));
+      (lc, "Curl failed with code %d (%s)", crv, curl_easy_strerror (crv));
     *err = EDGEX_HTTP_POSTFILE_ERROR;
     http_code = 0;
   }
@@ -628,7 +628,7 @@ edgex_http_postfile (iot_logging_client *lc, edgex_ctx *ctx, const char *url,
 
     if (http_code < 200 || http_code >= 300)
     {
-      iot_log_error (lc, "HTTP response: %d\n", (int) http_code);
+      iot_log_error (lc, "HTTP response: %d", (int) http_code);
       *err = EDGEX_HTTP_POSTFILE_ERROR;
     }
     else
@@ -676,7 +676,7 @@ static size_t read_callback
 
 long edgex_http_put
 (
-  iot_logging_client *lc,
+  iot_logger_t *lc,
   edgex_ctx *ctx,
   const char *url,
   const char *data,
@@ -761,7 +761,7 @@ long edgex_http_put
   crv = curl_easy_perform (hnd);
   if (crv != CURLE_OK)
   {
-    iot_log_error (lc, "Curl failed with code %d (%s)\n", crv,
+    iot_log_error (lc, "Curl failed with code %d (%s)", crv,
                    curl_easy_strerror (crv));
     *err = EDGEX_HTTP_PUT_ERROR;
     return 0;
@@ -782,7 +782,7 @@ long edgex_http_put
 
   if (http_code < 200 || http_code >= 300)
   {
-    iot_log_error (lc, "HTTP response: %d\n", (int) http_code);
+    iot_log_error (lc, "HTTP response: %d", (int) http_code);
     *err = EDGEX_HTTP_PUT_ERROR;
   }
   else
