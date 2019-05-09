@@ -9,6 +9,7 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Initial support for configuration changes without restarting.
 - Support Correlation IDs. This introduces a requirement for libUUID.
 - The API for Event generation other than via device GET requests is split out
   into a seperate header edgex/eventgen.h
@@ -26,8 +27,6 @@ Changes for 1.0.0:
   edgex_addressable.
 - The device endpoint can be used to access either resources or deviceResources.
   The commands section of a device profile is not used.
-  - *** This results in the possibility that NULL resourceoperations are passed
-        to the set or get handlers ***
 - Endpoints for other EdgeX microservices are obtained from the registry (if
   enabled) rather than configuration.
 - Metadata for individual devices can be obtained in the device management API.

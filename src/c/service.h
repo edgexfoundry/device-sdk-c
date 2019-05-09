@@ -30,6 +30,7 @@ struct edgex_device_service
   edgex_device_autoevent_stop_handler autoevstop;
   iot_logger_t *logger;
   edgex_device_config config;
+  atomic_bool *stopconfig;
   edgex_rest_server *daemon;
   edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;

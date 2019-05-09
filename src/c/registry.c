@@ -15,7 +15,8 @@ typedef edgex_map(edgex_registry_impl) edgex_map_registry;
 typedef struct edgex_registry
 {
   void *location;
-  struct iot_logger_t *logger;
+  iot_logger_t *logger;
+  iot_threadpool_t *thpool;
   edgex_registry_impl impl;
 } edgex_registry;
 
@@ -43,7 +44,7 @@ static void reginit (void)
 }
 
 edgex_registry *edgex_registry_get_registry
-  (struct iot_logger_t *lc, const char *url)
+  (iot_logger_t *lc, iot_threadpool_t *tp, const char *url)
 {
   edgex_registry *res = NULL;
   edgex_registry_impl *impl;
@@ -64,6 +65,7 @@ edgex_registry *edgex_registry_get_registry
         res->location = loc;
         res->impl = *impl;
         res->logger = lc;
+        res->thpool = tp;
       }
     }
     else
@@ -122,11 +124,14 @@ edgex_nvpairs *edgex_registry_get_config
   edgex_registry *registry,
   const char *servicename,
   const char *profile,
+  edgex_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
   edgex_error *err
 )
 {
   return registry->impl.get_config
-    (registry->logger, registry->location, servicename, profile, err);
+    (registry->logger, registry->thpool, registry->location, servicename, profile, updater, updatectx, updatedone, err);
 }
 
 void edgex_registry_put_config

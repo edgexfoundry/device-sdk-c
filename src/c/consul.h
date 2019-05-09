@@ -11,6 +11,7 @@
 
 #include "edgex/edgex.h"
 #include "edgex/edgex_logging.h"
+#include "edgex/registry.h"
 #include "edgex/error.h"
 
 bool edgex_consul_client_ping
@@ -23,9 +24,13 @@ bool edgex_consul_client_ping
 edgex_nvpairs *edgex_consul_client_get_config
 (
   iot_logger_t *lc,
+  iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
   const char *profile,
+  edgex_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
   edgex_error *err
 );
 

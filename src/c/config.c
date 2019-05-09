@@ -74,6 +74,29 @@ toml_table_t *edgex_device_loadConfig
   return result;
 }
 
+static void edgex_config_setloglevel (iot_logger_t *lc, const char *lstr, iot_loglevel_t *result)
+{
+  iot_loglevel_t l;
+  for (l = TRACE; l <= ERROR; l++)
+  {
+    if (strcasecmp (lstr, iot_logger_levelname (l)) == 0)
+    {
+      if (*result != l)
+      {
+        *result = l;
+        iot_logger_setlevel (lc, INFO);
+        iot_log_info (lc, "Setting LogLevel to %s", lstr);
+        iot_logger_setlevel (lc, l);
+      }
+      break;
+    }
+  }
+  if (l > ERROR)
+  {
+    iot_log_error (lc, "Invalid LogLevel %s", lstr);
+  }
+}
+
 /* As toml_rtos but return null instead of a zero-length string */
 
 static void toml_rtos2 (const char *s, char **ret)
@@ -252,8 +275,15 @@ void edgex_device_populateConfig
   table = toml_table_in (config, "Logging");
   if (table)
   {
+    char *levelstr = NULL;
     GET_CONFIG_STRING(RemoteURL, logging.remoteurl);
     GET_CONFIG_STRING(File, logging.file);
+    toml_rtos2 (toml_raw_in (table, "LogLevel"), &levelstr);
+    if (levelstr)
+    {
+      edgex_config_setloglevel (svc->logger, levelstr, &svc->config.logging.level);
+      free (levelstr);
+    }
   }
 
   arr = toml_array_in (config, "Watchers");
@@ -490,6 +520,17 @@ void edgex_device_populateConfigNV
   svc->config.logging.file = get_nv_config_string (config, "Logging/File");
 }
 
+void edgex_device_updateConf (void *p, const edgex_nvpairs *config)
+{
+  edgex_device_service *svc = (edgex_device_service *)p;
+  char *lname = get_nv_config_string (config, "Writable/LogLevel");
+  if (lname)
+  {
+    edgex_config_setloglevel (svc->logger, lname, &svc->config.logging.level);
+    free (lname);
+  }
+}
+
 #define PUT_CONFIG_STRING(X,Y) \
   if (svc->config.Y) result = makepair (#X, svc->config.Y, result)
 #define PUT_CONFIG_INT(X,Y) \
@@ -557,6 +598,9 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   PUT_CONFIG_STRING(Logging/RemoteURL, logging.remoteurl);
   PUT_CONFIG_STRING(Logging/File, logging.file);
 
+  result = makepair
+    ("Writable/LogLevel", iot_logger_levelname (svc->config.logging.level), result);
+
   return result;
 }
 
@@ -584,101 +628,17 @@ void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err)
   }
 }
 
-static void dumpArray (iot_logger_t *, const char *, char **);
-
-void dumpArray (iot_logger_t *log, const char *name, char **list)
-{
-  char *arr;
-  size_t arrlen = 1;
-  for (int i = 0; list[i]; i++)
-  {
-    arrlen += strlen (list[i]) + 4;
-  }
-  arr = malloc (arrlen);
-  arr[0] = '\0';
-  for (int i = 0; list[i]; i++)
-  {
-    strcat (arr, "\"");
-    strcat (arr, list[i]);
-    strcat (arr, "\"");
-    if (list[i + 1])
-    {
-      strcat (arr, ", ");
-    }
-  }
-  iot_log_debug (log, "%s = [ %s ]", name, arr);
-  free (arr);
-}
-
-#define DUMP_STR(TEXT, VAR) if (svc->config.VAR) iot_log_debug (svc->logger, TEXT " = \"%s\" ", svc->config.VAR)
-#define DUMP_INT(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %ld", svc->config.VAR)
-#define DUMP_UNS(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %u", svc->config.VAR)
-#define DUMP_LIT(TEXT) iot_log_debug (svc->logger, TEXT)
-#define DUMP_ARR(TEXT, VAR) dumpArray(svc->logger, TEXT, svc->config.VAR)
-#define DUMP_BOO(TEXT, VAR) iot_log_debug (svc->logger, TEXT " = %s", svc->config.VAR ? "true" : "false")
-
 void edgex_device_dumpConfig (edgex_device_service *svc)
 {
-  const char *key;
-  edgex_device_watcherinfo *watcher;
+  edgex_nvpairs *conf;
 
   iot_log_debug (svc->logger, "Service configuration follows:");
-
-  DUMP_LIT ("[Clients]");
-  DUMP_LIT ("   [Clients.Data]");
-  DUMP_STR ("      Host", endpoints.data.host);
-  DUMP_UNS ("      Port", endpoints.data.port);
-  DUMP_LIT ("   [Clients.Metadata]");
-  DUMP_STR ("      Host", endpoints.metadata.host);
-  DUMP_UNS ("      Port", endpoints.metadata.port);
-  DUMP_LIT ("[Logging]");
-  DUMP_STR ("   RemoteURL", logging.remoteurl);
-  DUMP_STR ("   File", logging.file);
-  DUMP_LIT ("[Service]");
-  DUMP_STR ("   Host", service.host);
-  DUMP_UNS ("   Port", service.port);
-  DUMP_UNS ("   Timeout", service.timeout);
-  DUMP_UNS ("   ConnectRetries", service.connectretries);
-  DUMP_STR ("   StartupMsg", service.startupmsg);
-  DUMP_UNS ("   ReadMaxLimit", service.readmaxlimit);
-  DUMP_STR ("   CheckInterval", service.checkinterval);
-  DUMP_ARR ("   Labels", service.labels);
-  DUMP_LIT ("[Device]");
-  DUMP_BOO ("   DataTransform", device.datatransform);
-  DUMP_BOO ("   Discovery", device.discovery);
-  DUMP_STR ("   InitCmd", device.initcmd);
-  DUMP_STR ("   InitCmdArgs", device.initcmdargs);
-  DUMP_UNS ("   MaxCmdOps", device.maxcmdops);
-  DUMP_UNS ("   MaxCmdResultLen", device.maxcmdresultlen);
-  DUMP_STR ("   RemoveCmd", device.removecmd);
-  DUMP_STR ("   RemoveCmdArgs", device.removecmdargs);
-  DUMP_STR ("   ProfilesDir", device.profilesdir);
-  DUMP_BOO ("   SendReadingsOnChanged", device.sendreadingsonchanged);
-
-  edgex_nvpairs *iter = svc->config.driverconf;
-  if (iter)
+  conf = edgex_device_getConfig (svc);
+  for (const edgex_nvpairs *iter = conf; iter; iter = iter->next)
   {
-    DUMP_LIT ("[Driver]");
+    iot_log_debug (svc->logger, "%s=%s", iter->name, iter->value);
   }
-  while (iter)
-  {
-    iot_log_debug (svc->logger, "  %s = \"%s\"", iter->name, iter->value);
-    iter = iter->next;
-  }
-
-  edgex_map_iter i = edgex_map_iter (svc->config.watchers);
-  while ((key = edgex_map_next (&svc->config.watchers, &i)))
-  {
-    DUMP_LIT ("[[Watchers]]");
-    iot_log_debug (svc->logger, "  Name = \"%s\"", key);
-    watcher = edgex_map_get (&svc->config.watchers, key);
-    iot_log_debug (svc->logger, "  DeviceProfile = \"%s\"",
-                   watcher->profile);
-    iot_log_debug (svc->logger, "  Key = \"%s\"", watcher->key);
-    dumpArray (svc->logger, "  Identifiers", watcher->ids);
-    iot_log_debug (svc->logger, "  MatchString = \"%s\"",
-                   watcher->matchstring);
-  }
+  edgex_nvpairs_free (conf);
 }
 
 void edgex_device_freeConfig (edgex_device_service *svc)

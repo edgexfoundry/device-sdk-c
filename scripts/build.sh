@@ -6,7 +6,7 @@ DOCGEN=false
 
 IOTECH=IOTechSystems
 CUTILNAME=iotech-c-utils
-CUTILREF=1a0be9f
+CUTILREF=fc39644
 CUTILDIR=$IOTECH-$CUTILNAME-$CUTILREF
 
 # Process arguments
