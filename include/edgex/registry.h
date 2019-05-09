@@ -18,6 +18,17 @@
 #include "edgex/edgex-base.h"
 #include "edgex/error.h"
 #include "edgex/edgex_logging.h"
+#include "iot/threadpool.h"
+
+/* Callback for dynamic configuration */
+
+/**
+ * @brief A function which is called when the configuration changes.
+ * @param updatectx A context specified when this function was registered.
+ * @param newconfig The updated configuration.
+ */
+
+typedef void (*edgex_registry_updatefn) (void *updatectx, const edgex_nvpairs *newconfig);
 
 /* Registry implementation functions */
 
@@ -35,9 +46,14 @@ typedef bool (*edgex_registry_ping_impl)
 /**
  * @brief Retrieve configuration values from the registry.
  * @param lc A logging client to use.
+ * @param thpool A threadpool to use.
  * @param location The address of the registry service.
  * @param servicename The name of this device service.
  * @param profile The name of the configuration profile (may be NULL).
+ * @param updater A function to be called when the configuration in the registry
+ *                is updated (may be NULL).
+ * @param updatectx A parameter to be passed to the updater function.
+ * @param updatedone Stop checking for updates when this becomes set to true.
  * @param err Nonzero reason codes may be set here in the event of errors.
  * @returns Configuration retrieved for the named service.
  */
@@ -45,9 +61,13 @@ typedef bool (*edgex_registry_ping_impl)
 typedef edgex_nvpairs *(*edgex_registry_get_config_impl)
 (
   iot_logger_t *lc,
+  iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
   const char *profile,
+  edgex_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
   edgex_error *err
 );
 
@@ -175,6 +195,7 @@ bool edgex_registry_add_impl (const char *name, edgex_registry_impl impl);
 /**
  * @brief Obtain a registry instance.
  * @param lc A logging client.
+ * @param thpool A threadpool.
  * @param url A URL specifying the registry service to connect to.
  * @returns A registry instance, or NULL if the URL could not be parsed.
  *          The caller is responsible for disposing of this pointer using
@@ -182,7 +203,7 @@ bool edgex_registry_add_impl (const char *name, edgex_registry_impl impl);
  */
 
 edgex_registry *edgex_registry_get_registry
-  (struct iot_logger_t *lc, const char *url);
+  (iot_logger_t *lc, iot_threadpool_t *thpool, const char *url);
 
 /**
  * @brief Determine whether the registry service is running.
@@ -198,6 +219,10 @@ bool edgex_registry_ping (edgex_registry *registry, edgex_error *err);
  * @param registry The registry instance.
  * @param servicename The name of this device service.
  * @param profile The name of the configuration profile (may be NULL).
+ * @param updater A function to be called when the configuration in the registry
+ *                is updated (may be NULL).
+ * @param updatectx A parameter to be passed to the updater function.
+ * @param updatedone The registry will stop checking for updates when this flag is set.
  * @param err Nonzero reason codes will be set here in the event of errors.
  * @returns Configuration retrieved for the named service.
  */
@@ -207,6 +232,9 @@ edgex_nvpairs *edgex_registry_get_config
   edgex_registry *registry,
   const char *servicename,
   const char *profile,
+  edgex_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
   edgex_error *err
 );
 

@@ -56,6 +56,7 @@ typedef struct edgex_device_logginginfo
 {
   char *file;
   char *remoteurl;
+  iot_loglevel_t level;
 } edgex_device_logginginfo;
 
 typedef struct edgex_device_watcherinfo
@@ -91,6 +92,8 @@ void edgex_device_populateConfig
 
 void edgex_device_populateConfigNV
   (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err);
+
+void edgex_device_updateConf (void *svc, const edgex_nvpairs *config);
 
 void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err);
 

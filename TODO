@@ -8,5 +8,3 @@ Discovery - Implement ProvisionWatchers.
 Threadpool - Configure number of threads.
 
 Provide device profile management API.
-
-Allow configuration changes without restart (when using registry).

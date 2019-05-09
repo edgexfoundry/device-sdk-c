@@ -15,7 +15,7 @@
 #include "parson.h"
 #include "base64.h"
 
-#define CONF_PREFIX "config/V2/"
+#define CONF_PREFIX "edgex/core/1.0/"
 
 static edgex_nvpairs *read_pairs
 (
@@ -44,18 +44,15 @@ static edgex_nvpairs *read_pairs
     key = json_object_get_string (obj, "Key");
     if (key)
     {
-      keyindex = strchr (key, '/');
-      if (keyindex)
+      // Skip the prefix and device name in the key
+      if
+      (
+        strncmp (key, CONF_PREFIX, sizeof (CONF_PREFIX) - 1) == 0 &&
+        (keyindex = strchr (key + sizeof (CONF_PREFIX) - 1, '/')) &&
+        *(++keyindex)
+      )
       {
-        keyindex = strchr (keyindex + 1, '/');
-      }
-      if (keyindex)
-      {
-        keyindex = strchr (keyindex + 1, '/');
-      }
-      if (keyindex)
-      {
-        pair->name = strdup (keyindex + 1);
+        pair->name = strdup (keyindex);
       }
       else
       {
@@ -108,12 +105,78 @@ static edgex_nvpairs *read_pairs
   return result;
 }
 
+struct updatejob
+{
+  char *url;
+  iot_logger_t *lc;
+  edgex_registry_updatefn updater;
+  void *updatectx;
+  atomic_bool *updatedone;
+};
+
+static void poll_consul (void *p)
+{
+  char *urltail;
+  edgex_ctx ctx;
+  edgex_nvpairs index;
+  edgex_nvpairs *conf;
+  edgex_error err;
+
+  struct updatejob *job = (struct updatejob *)p;
+  urltail = job->url + strlen (job->url);
+
+  index.name = "X-Consul-Index";
+  index.value = NULL;
+  index.next = NULL;
+
+  while (true)
+  {
+    memset (&ctx, 0, sizeof (edgex_ctx));
+    err = EDGEX_OK;
+    if (index.value)
+    {
+      sprintf (urltail, "&index=%s", index.value);
+    }
+    free (index.value);
+    index.value = NULL;
+    ctx.rsphdrs = &index;
+    ctx.aborter = job->updatedone;
+    edgex_http_get (job->lc, &ctx, job->url, edgex_http_write_cb, &err);
+    if (*job->updatedone)
+    {
+      free (ctx.buff);
+      break;
+    }
+    if (err.code == 0)
+    {
+      conf = read_pairs (job->lc, ctx.buff, &err);
+      if (err.code == 0)
+      {
+        job->updater (job->updatectx, conf);
+      }
+      edgex_nvpairs_free (conf);
+    }
+    else
+    {
+      sleep (5);
+    }
+    free (ctx.buff);
+  }
+  free (index.value);
+  free (job->url);
+  free (job);
+}
+
 edgex_nvpairs *edgex_consul_client_get_config
 (
   iot_logger_t *lc,
+  iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
   const char *profile,
+  edgex_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
   edgex_error *err
 )
 {
@@ -128,7 +191,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     snprintf
     (
       url, URL_BUF_SIZE - 1,
-      "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse",
+      "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse=true",
       endpoint->host, endpoint->port,
       servicename, profile
     );
@@ -138,7 +201,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     snprintf
     (
       url, URL_BUF_SIZE - 1,
-      "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse",
+      "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true",
       endpoint->host, endpoint->port, servicename
     );
   }
@@ -155,6 +218,16 @@ edgex_nvpairs *edgex_consul_client_get_config
   }
 
   free (ctx.buff);
+
+  struct updatejob *job = malloc (sizeof (struct updatejob));
+  job->url = malloc (URL_BUF_SIZE);
+  strcpy (job->url, url);
+  job->lc = lc;
+  job->updater = updater;
+  job->updatectx = updatectx;
+  job->updatedone = updatedone;
+  iot_threadpool_add_work (thpool, poll_consul, job, NULL);
+
   return result;
 }
 

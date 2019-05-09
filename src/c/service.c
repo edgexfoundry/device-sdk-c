@@ -425,7 +425,7 @@ void edgex_device_service_start
 
   if (registryURL)
   {
-    registry = edgex_registry_get_registry (svc->logger, registryURL);
+    registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
     if (registry == NULL)
     {
       *err = EDGEX_INVALID_ARG;
@@ -451,8 +451,11 @@ void edgex_device_service_start
       return;
     }
 
-    edgex_nvpairs *confpairs =
-      edgex_registry_get_config (registry, svc->name, profile, err);
+    iot_log_info (svc->logger, "Found registry service at %s", registryURL);
+    svc->stopconfig = malloc (sizeof (atomic_bool));
+    atomic_init (svc->stopconfig, false);
+    edgex_nvpairs *confpairs = edgex_registry_get_config
+      (registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
 
     if (confpairs)
     {
@@ -568,6 +571,10 @@ void edgex_device_service_stop
 {
   *err = EDGEX_OK;
   iot_log_debug (svc->logger, "Stop device service");
+  if (svc->stopconfig)
+  {
+    *svc->stopconfig = true;
+  }
   if (svc->scheduler)
   {
     iot_scheduler_stop (svc->scheduler);
@@ -589,5 +596,6 @@ void edgex_device_service_stop
   iot_log_debug (svc->logger, "Stopped device service");
   iot_logger_free (svc->logger);
   edgex_device_freeConfig (svc);
+  free (svc->stopconfig);
   free (svc);
 }
