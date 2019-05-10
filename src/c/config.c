@@ -660,11 +660,14 @@ void edgex_device_freeConfig (edgex_device_service *svc)
   free (svc->config.device.removecmdargs);
   free (svc->config.device.profilesdir);
 
-  for (int i = 0; svc->config.service.labels[i]; i++)
+  if (svc->config.service.labels)
   {
-    free (svc->config.service.labels[i]);
+    for (int i = 0; svc->config.service.labels[i]; i++)
+    {
+      free (svc->config.service.labels[i]);
+    }
+    free (svc->config.service.labels);
   }
-  free (svc->config.service.labels);
 
   edgex_nvpairs_free (svc->config.driverconf);
 
@@ -912,6 +915,7 @@ void edgex_device_process_configured_devices
           if (err->code)
           {
             iot_log_error (svc->logger, "Error registering device %s", devname);
+            free (devname);
             break;
           }
         }
@@ -920,6 +924,7 @@ void edgex_device_process_configured_devices
           iot_log_error
             (svc->logger, "No Protocols section for device %s", devname);
           *err = EDGEX_BAD_CONFIG;
+          free (devname);
           break;
         }
       }

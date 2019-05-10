@@ -9,6 +9,7 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Device service now follows the new/start/stop/free lifecycle pattern.
 - Initial support for configuration changes without restarting.
 - Support Correlation IDs. This introduces a requirement for libUUID.
 - The API for Event generation other than via device GET requests is split out

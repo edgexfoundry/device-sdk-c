@@ -85,7 +85,6 @@ edgex_device_service *edgex_device_service_new
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL);
-  iot_threadpool_start (result->thpool);
   result->scheduler = iot_scheduler_alloc (result->thpool);
   pthread_mutex_init (&result->discolock, NULL);
   return result;
@@ -417,6 +416,8 @@ void edgex_device_service_start
   svc->starttime = edgex_device_millitime();
 
   svc->logger = iot_logger_alloc (svc->name);
+  iot_threadpool_start (svc->thpool);
+
   if (confDir == NULL || *confDir == '\0')
   {
     confDir = "res";
@@ -510,6 +511,10 @@ void edgex_device_service_start
     iot_log_info (svc->logger, "Service started in: %dms", edgex_device_millitime() - svc->starttime);
     iot_log_info (svc->logger, "Listening on port: %d", svc->config.service.port);
   }
+  else
+  {
+    iot_threadpool_stop (svc->thpool);
+  }
 }
 
 static void doPost (void *p)
@@ -584,18 +589,26 @@ void edgex_device_service_stop
     edgex_rest_server_destroy (svc->daemon);
   }
   svc->userfns.stop (svc->userdata, force);
-  edgex_devmap_free (svc->devices);
+  edgex_devmap_clear (svc->devices);
   iot_threadpool_wait (svc->thpool);
-  if (svc->scheduler)
-  {
-    iot_scheduler_free (svc->scheduler);
-  }
-  iot_threadpool_free (svc->thpool);
-  edgex_registry_fini ();
-  pthread_mutex_destroy (&svc->discolock);
   iot_log_debug (svc->logger, "Stopped device service");
-  iot_logger_free (svc->logger);
-  edgex_device_freeConfig (svc);
-  free (svc->stopconfig);
-  free (svc);
+}
+
+void edgex_device_service_free (edgex_device_service *svc)
+{
+  if (svc)
+  {
+    edgex_devmap_free (svc->devices);
+    if (svc->scheduler)
+    {
+      iot_scheduler_free (svc->scheduler);
+    }
+    iot_threadpool_free (svc->thpool);
+    edgex_registry_fini ();
+    pthread_mutex_destroy (&svc->discolock);
+    iot_logger_free (svc->logger);
+    edgex_device_freeConfig (svc);
+    free (svc->stopconfig);
+    free (svc);
+  }
 }

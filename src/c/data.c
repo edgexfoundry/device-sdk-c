@@ -164,8 +164,6 @@ bool edgex_data_client_ping
     endpoints->data.port
   );
 
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
-  free (ctx.buff);
-
+  edgex_http_get (lc, &ctx, url, NULL, err);
   return (err->code == 0);
 }

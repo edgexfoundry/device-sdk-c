@@ -33,6 +33,7 @@ typedef struct edgex_cmdqueue_t
  */
 
 extern edgex_devmap_t *edgex_devmap_alloc (edgex_device_service *svc);
+extern void edgex_devmap_clear (edgex_devmap_t *map);
 extern void edgex_devmap_free (edgex_devmap_t *map);
 
 /*

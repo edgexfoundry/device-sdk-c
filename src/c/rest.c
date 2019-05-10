@@ -138,6 +138,13 @@ size_t edgex_http_write_cb (void *contents, size_t size, size_t nmemb, void *use
   return size;
 }
 
+/* Discard incoming data */
+
+static size_t edgex_discarder (void *contents, size_t size, size_t nmemb, void *userp)
+{
+  return size * nmemb;
+}
+
 /* Kill an ongoing request if our flag becomes set */
 
 static int abort_callback (void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
@@ -219,6 +226,10 @@ static long edgex_run_curl
   {
     curl_easy_setopt(hnd, CURLOPT_WRITEDATA, ctx);
     curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, writefunc);
+  }
+  else
+  {
+    curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, edgex_discarder);
   }
 
   /* Setup header list */
