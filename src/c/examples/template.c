@@ -102,7 +102,7 @@ static bool template_get_handler
   {
   /* Drill into the attributes to differentiate between resources via the
    * SensorType NVP */
-    const edgex_nvpairs * current = requests->attributes;
+    const edgex_nvpairs * current = requests[i].attributes;
     while (current!=NULL)
     {
       if (strcmp (current->name, "SensorType") ==0 )
