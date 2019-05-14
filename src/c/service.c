@@ -158,14 +158,9 @@ static void startConfigured
     }
   }
 
-  iot_log_debug
-  (
-    svc->logger,
-    "Starting %s device service, version %s",
-    svc->name, svc->version
-  );
-  iot_log_debug
-    (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
+  iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
+  iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
+
   edgex_device_dumpConfig (svc);
 
   svc->adminstate = UNLOCKED;
@@ -179,14 +174,13 @@ static void startConfigured
     .tv_sec = svc->config.service.timeout / 1000,
     .tv_nsec = 1000000 * (svc->config.service.timeout % 1000)
   };
-  while (!edgex_data_client_ping (svc->logger, &svc->config.endpoints, err) &&
-         --retries)
+  while (!edgex_data_client_ping (svc->logger, &svc->config.endpoints, err) && --retries)
   {
     nanosleep (&delay, NULL);
   }
   if (retries)
   {
-    iot_log_debug (svc->logger, "Found core-data service at %s:%d", svc->config.endpoints.data.host, svc->config.endpoints.data.port);
+    iot_log_info (svc->logger, "Found core-data service at %s:%d", svc->config.endpoints.data.host, svc->config.endpoints.data.port);
   }
   else
   {
@@ -196,15 +190,13 @@ static void startConfigured
   }
 
   retries = svc->config.service.connectretries;
-  while (
-    !edgex_metadata_client_ping (svc->logger, &svc->config.endpoints, err) &&
-    --retries)
+  while (!edgex_metadata_client_ping (svc->logger, &svc->config.endpoints, err) && --retries)
   {
     nanosleep (&delay, NULL);
   }
   if (retries)
   {
-    iot_log_debug (svc->logger, "Found core-metadata service at %s:%d", svc->config.endpoints.metadata.host, svc->config.endpoints.metadata.port);
+    iot_log_info (svc->logger, "Found core-metadata service at %s:%d", svc->config.endpoints.metadata.host, svc->config.endpoints.metadata.port);
   }
   else
   {
@@ -397,7 +389,7 @@ static void startConfigured
 
   if (svc->config.service.startupmsg)
   {
-    iot_log_debug (svc->logger, svc->config.service.startupmsg);
+    iot_log_info (svc->logger, svc->config.service.startupmsg);
   }
 }
 
@@ -591,7 +583,7 @@ void edgex_device_service_stop
   svc->userfns.stop (svc->userdata, force);
   edgex_devmap_clear (svc->devices);
   iot_threadpool_wait (svc->thpool);
-  iot_log_debug (svc->logger, "Stopped device service");
+  iot_log_info (svc->logger, "Stopped device service");
 }
 
 void edgex_device_service_free (edgex_device_service *svc)

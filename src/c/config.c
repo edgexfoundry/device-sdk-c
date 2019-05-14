@@ -807,6 +807,7 @@ void edgex_device_process_configured_devices
     toml_array_t *arr;
     int n = 0;
 
+    iot_log_info (svc->logger, "Processing DeviceList from configuration");
     while ((table = toml_table_at (devs, n++)))
     {
       raw = toml_raw_in (table, "Name");
@@ -815,6 +816,7 @@ void edgex_device_process_configured_devices
       if (existing)
       {
         edgex_device_release (existing);
+        iot_log_info (svc->logger, "Device %s already exists: skipped", devname);
       }
       else
       {

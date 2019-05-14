@@ -257,12 +257,12 @@ static long edgex_run_curl
 
     if (http_code == 409)
     {
-      iot_log_info (lc, "HTTP response 409 - Conflict");
+      iot_log_debug (lc, "HTTP response 409 - Conflict");
       *err = EDGEX_HTTP_CONFLICT;
     }
     else if (http_code < 200 || http_code >= 300)
     {
-      iot_log_info (lc, "HTTP response: %d", (int)http_code);
+      iot_log_debug (lc, "HTTP response: %d", (int)http_code);
       *err = EDGEX_HTTP_ERROR;
     }
     else

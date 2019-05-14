@@ -118,6 +118,8 @@ void edgex_device_profiles_upload (edgex_device_service *svc, edgex_error *err)
     return;
   }
 
+  iot_log_info (lc, "Processing Device Profiles from %s", profileDir);
+
   while (n--)
   {
     if (err->code == 0)
@@ -220,11 +222,11 @@ void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edg
     iot_log_debug (lc, "Checking existence of DeviceProfile %s", profname);
     if (edgex_deviceprofile_get_internal (svc, profname, err))
     {
-      iot_log_debug (lc, "DeviceProfile %s already exists: skipped", profname);
+      iot_log_info (lc, "DeviceProfile %s already exists: skipped", profname);
     }
     else
     {
-      iot_log_debug (lc, "Uploading deviceprofile from %s", fname);
+      iot_log_info (lc, "Uploading deviceprofile from %s", fname);
       free (edgex_metadata_client_create_deviceprofile_file (lc, endpoints, fname, err));
       if (err->code)
       {
@@ -236,7 +238,7 @@ void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edg
         dp = edgex_deviceprofile_get_internal (svc, profname, err);
         if (dp)
         {
-          iot_log_debug (lc, "Generating value descriptors DeviceProfile %s", profname);
+          iot_log_info (lc, "Generating value descriptors DeviceProfile %s", profname);
           generate_value_descriptors (svc, dp);
         }
         else
