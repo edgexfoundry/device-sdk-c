@@ -24,7 +24,6 @@ void edgex_protocols_free (edgex_protocols *e);
 edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *json);
 char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create);
 edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *e);
-void edgex_deviceprofile_cpy (edgex_deviceprofile *dest, const edgex_deviceprofile *src);
 void edgex_deviceprofile_free (edgex_deviceprofile *e);
 edgex_deviceservice *edgex_deviceservice_read (const char *json);
 char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create);

@@ -135,31 +135,22 @@ edgex_device *edgex_devmap_copydevices (edgex_devmap_t *map)
   return result;
 }
 
-uint32_t edgex_devmap_copyprofiles
-  (edgex_devmap_t *map, edgex_deviceprofile **profiles)
+edgex_deviceprofile *edgex_devmap_copyprofiles (edgex_devmap_t *map)
 {
-  edgex_deviceprofile *arr;
+  edgex_deviceprofile *result = NULL;
+  edgex_deviceprofile *dup;
   const char *key;
-  uint32_t count = 0;
 
   pthread_rwlock_rdlock (&map->lock);
   edgex_map_iter iter = edgex_map_iter (map->profiles);
-  while (edgex_map_next (&map->profiles, &iter))
+  while ((key = edgex_map_next (&map->profiles, &iter)))
   {
-    count++;
-  }
-  arr = malloc (count * sizeof (edgex_deviceprofile));
-
-  iter = edgex_map_iter (map->profiles);
-  for (uint32_t i = 0; i < count; i++)
-  {
-    key = edgex_map_next (&map->profiles, &iter);
-    edgex_deviceprofile_cpy (arr + i, *edgex_map_get (&map->profiles, key));
+    dup = edgex_deviceprofile_dup (*edgex_map_get (&map->profiles, key));
+    dup->next = result;
+    result = dup;
   }
   pthread_rwlock_unlock (&map->lock);
-
-  *profiles = arr;
-  return count;
+  return result;
 }
 
 const edgex_deviceprofile *edgex_devmap_profile

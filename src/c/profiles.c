@@ -93,26 +93,16 @@ static const edgex_deviceprofile *edgex_deviceprofile_get_internal
   return dp;
 }
 
-void edgex_device_profiles_upload
-(
-  edgex_device_service *svc,
-  edgex_error *err
-)
+void edgex_device_profiles_upload (edgex_device_service *svc, edgex_error *err)
 {
   struct dirent **filenames = NULL;
   int n;
   char *fname;
   char pathname[MAX_PATH_SIZE];
-  char *profname;
-  FILE *handle;
-  yaml_parser_t parser;
-  yaml_event_t event;
-  bool lastWasName;
-  const edgex_deviceprofile *dp;
   const char *profileDir = svc->config.device.profilesdir;
-  edgex_service_endpoints *endpoints = &svc->config.endpoints;
   iot_logger_t *lc = svc->logger;
 
+  *err = EDGEX_OK;
   n = scandir (profileDir, &filenames, yamlselect, NULL);
   if (n < 0)
   {
@@ -122,8 +112,7 @@ void edgex_device_profiles_upload
     }
     else
     {
-      iot_log_error
-        (lc, "Error scanning profiles directory: %s", strerror (errno));
+      iot_log_error (lc, "Error scanning profiles directory: %s", strerror (errno));
     }
     *err = EDGEX_PROFILES_DIRECTORY;
     return;
@@ -131,27 +120,35 @@ void edgex_device_profiles_upload
 
   while (n--)
   {
-    profname = NULL;
-
-    if (!yaml_parser_initialize (&parser))
+    if (err->code == 0)
     {
-      iot_log_error
-        (lc, "YAML parser did not initialize - DeviceProfile upload disabled");
-      *err = EDGEX_PROFILE_PARSE_ERROR;
-      break;
+      fname = filenames[n]->d_name;
+      if (snprintf (pathname, MAX_PATH_SIZE, "%s/%s", profileDir, fname) < MAX_PATH_SIZE)
+      {
+        edgex_device_add_profile (svc, pathname, err);
+      }
+      else
+      {
+        iot_log_error (lc, "%s: Pathname too long (max %d chars)", fname, MAX_PATH_SIZE - 1);
+        *err = EDGEX_PROFILE_PARSE_ERROR;
+      }
     }
+    free (filenames[n]);
+  }
+  free (filenames);
+}
 
-    fname = filenames[n]->d_name;
-    if (snprintf (pathname, MAX_PATH_SIZE, "%s/%s", profileDir, fname) >=
-        MAX_PATH_SIZE)
-    {
-      iot_log_error
-        (lc, "%s: Pathname too long (max %d chars)", fname, MAX_PATH_SIZE - 1);
-      *err = EDGEX_PROFILE_PARSE_ERROR;
-      break;
-    }
+static char *getProfName (iot_logger_t *lc, const char *fname, edgex_error *err)
+{
+  FILE *handle;
+  yaml_parser_t parser;
+  yaml_event_t event;
+  bool lastWasName;
+  char *result = NULL;
 
-    handle = fopen (pathname, "r");
+  if (yaml_parser_initialize (&parser))
+  {
+    handle = fopen (fname, "r");
     if (handle)
     {
       lastWasName = false;
@@ -160,8 +157,7 @@ void edgex_device_profiles_upload
       {
         if (!yaml_parser_parse (&parser, &event))
         {
-          iot_log_error
-            (lc, "Parser error %d for file %s", parser.error, fname);
+          iot_log_error (lc, "Parser error %d for file %s", parser.error, fname);
           *err = EDGEX_PROFILE_PARSE_ERROR;
           break;
         }
@@ -169,13 +165,12 @@ void edgex_device_profiles_upload
         {
           if (lastWasName)
           {
-            profname = strdup ((char *) event.data.scalar.value);
+            result = strdup ((char *) event.data.scalar.value);
             break;
           }
           else
           {
-            lastWasName =
-              (strcasecmp ((char *) event.data.scalar.value, "name") == 0);
+            lastWasName = (strcasecmp ((char *) event.data.scalar.value, "name") == 0);
           }
         }
         else
@@ -190,88 +185,83 @@ void edgex_device_profiles_upload
       yaml_event_delete (&event);
 
       fclose (handle);
-      if (err->code)
-      {
-        break;
-      }
-
-      if (profname)
-      {
-        iot_log_debug
-          (lc, "Checking existence of DeviceProfile %s", profname);
-        if (edgex_deviceprofile_get_internal (svc, profname, err))
-        {
-          iot_log_debug
-            (lc, "DeviceProfile %s already exists: skipped", profname);
-        }
-        else
-        {
-          *err = EDGEX_OK;
-          iot_log_debug (lc, "Uploading deviceprofile from %s", pathname);
-          free (edgex_metadata_client_create_deviceprofile_file
-                  (lc, endpoints, pathname, err));
-          if (err->code)
-          {
-            iot_log_error (lc, "Error uploading device profile");
-            break;
-          }
-          else
-          {
-            iot_log_debug
-              (lc, "Device profile upload successful, will now retrieve it");
-            dp = edgex_deviceprofile_get_internal (svc, profname, err);
-            if (dp)
-            {
-              iot_log_debug
-                (lc, "Generating value descriptors DeviceProfile %s", profname);
-              generate_value_descriptors (svc, dp);
-            }
-            else
-            {
-              iot_log_error
-                (lc, "Failed to retrieve DeviceProfile %s", profname);
-              break;
-            }
-          }
-        }
-        free (profname);
-      }
-      else
+      if (result == NULL && err->code == 0)
       {
         iot_log_error (lc, "No device profile name found in %s", fname);
         *err = EDGEX_PROFILE_PARSE_ERROR;
-        break;
       }
     }
     else
     {
       iot_log_error (lc, "Unable to open %s for reading", fname);
       *err = EDGEX_PROFILE_PARSE_ERROR;
-      break;
     }
-    free (filenames[n]);
     yaml_parser_delete (&parser);
   }
-  free (filenames);
+  else
+  {
+    iot_log_error (lc, "YAML parser did not initialize - DeviceProfile upload disabled");
+    *err = EDGEX_PROFILE_PARSE_ERROR;
+  }
+  return result;
 }
 
-edgex_deviceprofile *edgex_deviceprofile_get
-(
-  edgex_device_service *svc,
-  const char *name,
-  edgex_error *err
-)
+void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edgex_error *err)
 {
+  const edgex_deviceprofile *dp;
+  edgex_service_endpoints *endpoints = &svc->config.endpoints;
+  char *profname;
+  iot_logger_t *lc = svc->logger;
+
   *err = EDGEX_OK;
-  return edgex_deviceprofile_dup
-    (edgex_deviceprofile_get_internal (svc, name, err));
+  profname = getProfName (lc, fname, err);
+  if (profname)
+  {
+    iot_log_debug (lc, "Checking existence of DeviceProfile %s", profname);
+    if (edgex_deviceprofile_get_internal (svc, profname, err))
+    {
+      iot_log_debug (lc, "DeviceProfile %s already exists: skipped", profname);
+    }
+    else
+    {
+      iot_log_debug (lc, "Uploading deviceprofile from %s", fname);
+      free (edgex_metadata_client_create_deviceprofile_file (lc, endpoints, fname, err));
+      if (err->code)
+      {
+        iot_log_error (lc, "Error uploading device profile");
+      }
+      else
+      {
+        iot_log_debug (lc, "Device profile upload successful, will now retrieve it");
+        dp = edgex_deviceprofile_get_internal (svc, profname, err);
+        if (dp)
+        {
+          iot_log_debug (lc, "Generating value descriptors DeviceProfile %s", profname);
+          generate_value_descriptors (svc, dp);
+        }
+        else
+        {
+          iot_log_error (lc, "Failed to retrieve DeviceProfile %s", profname);
+        }
+      }
+    }
+    free (profname);
+  }
 }
 
-uint32_t edgex_device_service_getprofiles
-(
-  edgex_device_service *svc,
-  edgex_deviceprofile **profiles
-)
+edgex_deviceprofile *edgex_device_get_deviceprofile_byname
+  (edgex_device_service *svc, const char *name)
 {
-  return edgex_devmap_copyprofiles (svc->devices, profiles);
+  edgex_error err = EDGEX_OK;
+  return edgex_deviceprofile_dup (edgex_deviceprofile_get_internal (svc, name, &err));
+}
+
+edgex_deviceprofile *edgex_device_profiles (edgex_device_service *svc)
+{
+  return edgex_devmap_copyprofiles (svc->devices);
+}
+
+void edgex_device_free_deviceprofile (edgex_deviceprofile *dp)
+{
+  edgex_deviceprofile_free (dp);
 }

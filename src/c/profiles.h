@@ -17,11 +17,4 @@ extern void edgex_device_profiles_upload
   edgex_error *err
 );
 
-edgex_deviceprofile *edgex_deviceprofile_get
-(
-  edgex_device_service *svc,
-  const char *name,
-  edgex_error *err
-);
-
 #endif
