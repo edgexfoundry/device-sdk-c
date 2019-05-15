@@ -99,6 +99,7 @@ coreCommands:
         expectedValues: []
     put:
       path: "/api/v1/device/{deviceId}/Switch"
+      parameterNames: ["Switch"]
       responses:
       - code: "200"
         description: "Successfully set the switch state."
