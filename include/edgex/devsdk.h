@@ -206,9 +206,8 @@ void edgex_device_service_start
 );
 
 /**
- * @brief Stop the event service. Any locally-scheduled events will be
- *        cancelled, the rest api for the device will be shutdown, and
- *        resources will be freed.
+ * @brief Stop the event service. Any automatic events will be cancelled
+          and the rest api for the device service will be shut down.
  * @param svc The device service.
  * @param force Force stop.
  * @param err Nonzero reason codes will be set here in the event of errors.
@@ -221,4 +220,10 @@ void edgex_device_service_stop
   edgex_error *err
 );
 
+/**
+ * @brief Free the device service object and associated resources.
+ * @param svc The device service.
+ */
+
+void edgex_device_service_free (edgex_device_service *svc);
 #endif

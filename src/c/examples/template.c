@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); return x.code; }
+#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); edgex_device_service_free (service); free (impl); return x.code; }
 
 typedef struct template_driver
 {
@@ -297,7 +297,7 @@ int main (int argc, char *argv[])
   edgex_device_service_stop (service, true, &e);
   ERR_CHECK (e);
 
+  edgex_device_service_free (service);
   free (impl);
-  exit (0);
   return 0;
 }

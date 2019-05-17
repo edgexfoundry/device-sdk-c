@@ -442,8 +442,6 @@ bool edgex_consul_client_ping
     endpoint->port
   );
 
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
-  free (ctx.buff);
-
+  edgex_http_get (lc, &ctx, url, NULL, err);
   return (err->code == 0);
 }

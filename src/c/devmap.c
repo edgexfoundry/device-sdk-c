@@ -52,18 +52,28 @@ edgex_devmap_t *edgex_devmap_alloc (edgex_device_service *svc)
   return res;
 }
 
-void edgex_devmap_free (edgex_devmap_t *map)
+void edgex_devmap_clear (edgex_devmap_t *map)
 {
-  edgex_map_deinit (&map->name_to_id);
-  edgex_map_iter i = edgex_map_iter (map->devices);
   const char *key;
-  while ((key = edgex_map_next (&map->devices, &i)))
+  const char *next;
+  edgex_map_iter i = edgex_map_iter (map->devices);
+  key = edgex_map_next (&map->devices, &i);
+  while (key)
   {
     edgex_device **e = edgex_map_get (&map->devices, key);
     edgex_device_release (*e);
+    next = edgex_map_next (&map->devices, &i);
+    edgex_map_remove (&map->devices, key);
+    key = next;
   }
+}
+
+void edgex_devmap_free (edgex_devmap_t *map)
+{
+  const char *key;
+  edgex_map_deinit (&map->name_to_id);
   edgex_map_deinit (&map->devices);
-  i = edgex_map_iter (map->profiles);
+  edgex_map_iter i = edgex_map_iter (map->profiles);
   while ((key = edgex_map_next (&map->profiles, &i)))
   {
     edgex_deviceprofile **p = edgex_map_get (&map->profiles, key);
