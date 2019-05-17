@@ -43,8 +43,7 @@ extern void edgex_devmap_free (edgex_devmap_t *map);
 extern void edgex_devmap_populate_devices
   (edgex_devmap_t *map, const edgex_device *devs);
 extern edgex_device *edgex_devmap_copydevices (edgex_devmap_t *map);
-extern uint32_t edgex_devmap_copyprofiles
-  (edgex_devmap_t *map, edgex_deviceprofile **profiles);
+extern edgex_deviceprofile *edgex_devmap_copyprofiles (edgex_devmap_t *map);
 extern void edgex_devmap_replace_device
   (edgex_devmap_t *map, const edgex_device *dev);
 

@@ -5,10 +5,11 @@ differs as follows:
   rather than directly returning the new devices.
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
-* The API for adding, removing and updating Device Profiles is NYI.
 
 Changes for 1.0.0:
 
+- When querying for Device Profiles they are returned in a list in the same way
+  as devices.
 - Device service now follows the new/start/stop/free lifecycle pattern.
 - Initial support for configuration changes without restarting.
 - Support Correlation IDs. This introduces a requirement for libUUID.

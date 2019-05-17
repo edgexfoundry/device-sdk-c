@@ -126,7 +126,7 @@ typedef struct edgex_devicecommand
 struct edgex_cmdinfo;
 struct edgex_autoimpl;
 
-typedef struct
+typedef struct edgex_deviceprofile
 {
   char *id;
   char *name;
@@ -140,6 +140,7 @@ typedef struct
   edgex_deviceresource *device_resources;
   edgex_devicecommand *device_commands;
   struct edgex_cmdinfo *cmdinfo;
+  struct edgex_deviceprofile *next;
 } edgex_deviceprofile;
 
 typedef struct edgex_device_autoevents

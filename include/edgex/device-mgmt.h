@@ -11,8 +11,7 @@
 
 /**
  * @file
- * @brief This file defines the functions for device and profile management
- *        provided by the SDK.
+ * @brief This file defines the functions for device and profile management provided by the SDK.
  */
 
 #include "edgex/devsdk.h"
@@ -30,8 +29,7 @@
  * @param protocols Location of the device specified by one or more protocols.
  * @param autos Automatic Events which are to be generated from the device.
  * @param err Nonzero reason codes will be set here in the event of errors.
- * @returns The id of the newly created or existing device, or NULL if an error
- *          occurred.
+ * @returns The id of the newly created or existing device, or NULL if an error occurred.
  */
 
 char * edgex_device_add_device
@@ -47,35 +45,29 @@ char * edgex_device_add_device
 );
 
 /**
- * @brief Remove a device from EdgeX. The device will be deleted from the
- *        device service and from core-metadata.
+ * @brief Remove a device from EdgeX. The device will be deleted from the device service and from core-metadata.
  * @param svc The device service.
  * @param id The id of the device to be removed.
  * @param err Nonzero reason codes will be set here in the event of errors.
  */
 
-void edgex_device_remove_device
-  (edgex_device_service *svc, const char *id, edgex_error *err);
+void edgex_device_remove_device (edgex_device_service *svc, const char *id, edgex_error *err);
 
 /**
- * @brief Remove a device from EdgeX. The device will be deleted from the
- *        device service and from core-metadata.
+ * @brief Remove a device from EdgeX. The device will be deleted from the device service and from core-metadata.
  * @param svc The device service.
  * @param name The name of the device to be removed.
  * @param err Nonzero reason codes will be set here in the event of errors.
  */
 
-void edgex_device_remove_device_byname
-  (edgex_device_service *svc, const char *name, edgex_error *err);
+void edgex_device_remove_device_byname (edgex_device_service *svc, const char *name, edgex_error *err);
 
 /**
  * @brief Update a device's details.
  * @param svc The device service.
- * @param id The id of the device to update. If this is unset, the device will
- *           be located by name.
- * @param name If id is unset, this parameter must be set to the name of the
- *             devce to be updated. Otherwise, it is optional and if set,
- *             specifies a new name for the device.
+ * @param id The id of the device to update. If this is unset, the device will be located by name.
+ * @param name If id is unset, this parameter must be set to the name of the device to be updated. Otherwise, it is
+ *             optional and if set specifies a new name for the device.
  * @param description If set, a new description for the device.
  * @param labels If set, a new set of labels for the device.
  * @param profilename If set, a new device profile for the device.
@@ -107,8 +99,7 @@ edgex_device * edgex_device_devices (edgex_device_service *svc);
  * @returns The requested device metadata or null if the device was not found.
  */
 
-edgex_device * edgex_device_get_device
-  (edgex_device_service *svc, const char *id);
+edgex_device * edgex_device_get_device (edgex_device_service *svc, const char *id);
 
 /**
  * @brief Retrieve device information.
@@ -117,36 +108,46 @@ edgex_device * edgex_device_get_device
  * @returns The requested device metadata or null if the device was not found.
  */
 
-edgex_device * edgex_device_get_device_byname
-  (edgex_device_service *svc, const char *name);
+edgex_device * edgex_device_get_device_byname (edgex_device_service *svc, const char *name);
 
 /**
  * @brief Free a device structure or list of device structures.
- * @param The device or the first device in the list.
+ * @param d The device or the first device in the list.
  */
 
-void edgex_device_free_device (edgex_device *e);
+void edgex_device_free_device (edgex_device *d);
 
 /**
  * @brief Retrieve the device profiles currently known in the SDK.
  * @param svc The device service.
- * @param profiles Is set to an array of device profiles. This should be
- *        freed using edgex_deviceprofile_free_array() after use.
- * @returns the size of the returned array.
+ * @returns A list of device profiles.
  */
 
-uint32_t edgex_device_service_getprofiles
-(
-  edgex_device_service *svc,
-  edgex_deviceprofile **profiles
-);
+edgex_deviceprofile *edgex_device_profiles (edgex_device_service *svc);
 
 /**
- * @brief Free an array of device profiles.
- * @param e The array.
- * @param count The number of elements in the array.
+ * @brief Retrieve device profile.
+ * @param svc The device service.
+ * @param name The device profile name.
+ * @returns The requested metadata or null if the profile was not found.
  */
 
-void edgex_deviceprofile_free_array (edgex_deviceprofile *e, unsigned count);
+edgex_deviceprofile *edgex_device_get_deviceprofile_byname (edgex_device_service *svc, const char *name);
+
+/**
+ * @brief Free a device profile or list of device profiles.
+ * @param p The device profile or the first device profile in the list.
+ */
+
+void edgex_device_free_deviceprofile (edgex_deviceprofile *p);
+
+/**
+ * @brief Install a device profile
+ * @param svc The device service.
+ * @param fname The name of a yaml file containing the profile definition.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edgex_error *err);
 
 #endif
