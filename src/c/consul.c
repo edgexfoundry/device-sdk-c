@@ -8,7 +8,7 @@
 
 #include "consul.h"
 #include "edgex/registry.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "rest.h"
 #include "errorlist.h"
 #include "config.h"

@@ -10,7 +10,7 @@
 #define _EDGEX_DEVICE_CONFIG_H_ 1
 
 #include "edgex/devsdk.h"
-#include "rest_server.h"
+#include "rest-server.h"
 #include "toml.h"
 #include "map.h"
 

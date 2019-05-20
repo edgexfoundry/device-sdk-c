@@ -11,7 +11,7 @@
 
 #include "edgex/devsdk.h"
 #include "edgex/edgex.h"
-#include "rest_server.h"
+#include "rest-server.h"
 #include "parson.h"
 #include "cmdinfo.h"
 

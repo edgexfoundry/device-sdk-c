@@ -10,7 +10,7 @@
 #define _EDGEX_CONSUL_H_ 1
 
 #include "edgex/edgex.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 #include "edgex/registry.h"
 #include "edgex/error.h"
 

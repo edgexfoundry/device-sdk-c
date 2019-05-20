@@ -7,7 +7,7 @@
  */
 
 #include <time.h>
-#include "edgex_time.h"
+#include "edgex-time.h"
 
 uint64_t edgex_device_millitime()
 {

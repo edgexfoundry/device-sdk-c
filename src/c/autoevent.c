@@ -9,10 +9,10 @@
 #include "autoevent.h"
 #include "edgex/eventgen.h"
 #include "edgex/edgex.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 #include "device.h"
 #include "parson.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "correlation.h"
 
 #include <microhttpd.h>

@@ -6,7 +6,7 @@
  *
  */
 
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 
 #include <stdio.h>
 #include <string.h>

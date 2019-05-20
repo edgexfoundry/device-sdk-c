@@ -10,7 +10,7 @@
 #define _EDGEX_REST_H_ 1
 
 #include "edgex/edgex.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 #include "data.h"
 
 edgex_strings *edgex_strings_dup (const edgex_strings *strs);

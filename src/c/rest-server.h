@@ -10,7 +10,7 @@
 #define _EDGEX_REST_SERVER_H_ 1
 
 #include "edgex/edgex.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 #include "edgex/error.h"
 
 struct edgex_rest_server;

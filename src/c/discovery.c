@@ -10,7 +10,7 @@
 #include "service.h"
 #include "profiles.h"
 #include "metadata.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 
 #include <string.h>
 #include <stdlib.h>

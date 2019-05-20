@@ -6,12 +6,12 @@
  *
  */
 
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "rest.h"
 #include "data.h"
 #include "errorlist.h"
 #include "config.h"
-#include "edgex_time.h"
+#include "edgex-time.h"
 #include "device.h"
 #include "transform.h"
 

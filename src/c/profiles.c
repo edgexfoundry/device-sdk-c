@@ -11,8 +11,8 @@
 #include "service.h"
 #include "metadata.h"
 #include "data.h"
-#include "edgex_rest.h"
-#include "edgex_time.h"
+#include "edgex-rest.h"
+#include "edgex-time.h"
 #include "errorlist.h"
 
 #include <dirent.h>

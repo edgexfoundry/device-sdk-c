@@ -12,7 +12,7 @@
 #include "parson.h"
 #include "service.h"
 #include "metadata.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 
 #include <microhttpd.h>
 
