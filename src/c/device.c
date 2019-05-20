@@ -16,15 +16,12 @@
 #include "edgex_time.h"
 #include "cmdinfo.h"
 #include "base64.h"
+#include "transform.h"
 
 #include <inttypes.h>
 #include <string.h>
 #include <errno.h>
 #include <microhttpd.h>
-#include <math.h>
-#include <limits.h>
-#include <float.h>
-#include <assert.h>
 
 /* NOTES
  *
@@ -65,236 +62,76 @@ static bool isNumericType (edgex_propertytype type)
   return (type != Bool && type != String && type != Binary);
 }
 
-static char *checkMapping (char *in, const edgex_nvpairs *map)
-{
-  const edgex_nvpairs *pair = map;
-  while (pair)
-  {
-    if (strcmp (in, pair->name) == 0)
-    {
-      free (in);
-      return strdup (pair->value);
-    }
-    pair = pair->next;
-  }
-  return in;
-}
-
-static bool transformResult
-  (edgex_device_resultvalue *value, edgex_propertyvalue *props)
-{
-  if (props->type == Float64 || props->type == Float32)
-  {
-    long double result =
-      (props->type == Float64) ? value->f64_result : value->f32_result;
-    if (props->base.enabled) result = powl (props->base.value.dval, result);
-    if (props->scale.enabled) result *= props->scale.value.dval;
-    if (props->offset.enabled) result += props->offset.value.dval;
-    if (props->type == Float64)
-    {
-      if (result <= DBL_MAX && result >= -DBL_MAX)
-      {
-        value->f64_result = (double)result;
-        return true;
-      }
-      return false;
-    }
-    else
-    {
-      if (result <= FLT_MAX && result >= -FLT_MAX)
-      {
-        value->f32_result = (float)result;
-        return true;
-      }
-      return false;
-    }
-  }
-  else
-  {
-    long long int result = 0;
-    switch (props->type)
-    {
-      case Uint8: result = value->ui8_result; break;
-      case Uint16: result = value->ui16_result; break;
-      case Uint32: result = value->ui32_result; break;
-      case Uint64: result = value->ui64_result; break;
-      case Int8: result = value->i8_result; break;
-      case Int16: result = value->i16_result; break;
-      case Int32: result = value->i32_result; break;
-      case Int64: result = value->i64_result; break;
-      default: assert (0);
-    }
-    if (props->mask.enabled) result &= props->mask.value.ival;
-    if (props->shift.enabled)
-    {
-      if (props->shift.value.ival < 0)
-      {
-        result <<= -props->shift.value.ival;
-      }
-      else
-      {
-        result >>= props->shift.value.ival;
-      }
-    }
-    if (props->base.enabled) result = powl (props->base.value.ival, result);
-    if (props->scale.enabled) result *= props->scale.value.ival;
-    if (props->offset.enabled) result += props->offset.value.ival;
-
-    switch (props->type)
-    {
-      case Uint8:
-        if (result >= 0 && result <= UCHAR_MAX)
-        {
-          value->ui8_result = (uint8_t)result;
-          return true;
-        }
-        break;
-      case Uint16:
-        if (result >= 0 && result <= USHRT_MAX)
-        {
-          value->ui16_result = (uint16_t)result;
-          return true;
-        }
-        break;
-      case Uint32:
-        if (result >= 0 && result <= UINT_MAX)
-        {
-          value->ui32_result = (uint32_t)result;
-          return true;
-        }
-        break;
-      case Uint64:
-        if (result >= 0 && result <= ULLONG_MAX)
-        {
-          value->ui64_result = (uint64_t)result;
-          return true;
-        }
-        break;
-      case Int8:
-        if (result >= SCHAR_MIN && result <= SCHAR_MAX)
-        {
-          value->i8_result = (int8_t)result;
-          return true;
-        }
-        break;
-      case Int16:
-        if (result >= SHRT_MIN && result <= SHRT_MAX)
-        {
-          value->i16_result = (int16_t)result;
-          return true;
-        }
-        break;
-      case Int32:
-        if (result >= INT_MIN && result <= INT_MAX)
-        {
-          value->i32_result = (int32_t)result;
-          return true;
-        }
-        break;
-      case Int64:
-        if (result >= LLONG_MIN && result <= LLONG_MAX)
-        {
-          value->i64_result = (int64_t)result;
-          return true;
-        }
-        break;
-      default:
-        assert (0);
-    }
-  }
-  return false;
-}
-
-char *edgex_value_tostring
-(
-  edgex_device_resultvalue value,
-  bool xform,
-  edgex_propertyvalue *props,
-  edgex_nvpairs *mappings
-)
+char *edgex_value_tostring (const edgex_device_commandresult *value, bool binfloat)
 {
 #define BUFSIZE 32
 
   size_t sz;
   char *res = NULL;
 
-  if (isNumericType (props->type))
+  if (isNumericType (value->type))
   {
-    if (xform)
-    {
-      if (props->offset.enabled || props->scale.enabled ||
-          props->base.enabled || props->shift.enabled || props->mask.enabled)
-      {
-        if (!transformResult (&value, props))
-        {
-          return strdup ("overflow");
-        }
-      }
-    }
-
     res = malloc (BUFSIZE);
   }
 
-  switch (props->type)
+  switch (value->type)
   {
     case Bool:
-      res = strdup (value.bool_result ? "true" : "false");
+      res = strdup (value->value.bool_result ? "true" : "false");
       break;
     case Uint8:
-      sprintf (res, "%" PRIu8, value.ui8_result);
+      sprintf (res, "%" PRIu8, value->value.ui8_result);
       break;
     case Uint16:
-      sprintf (res, "%" PRIu16, value.ui16_result);
+      sprintf (res, "%" PRIu16, value->value.ui16_result);
       break;
     case Uint32:
-      sprintf (res, "%" PRIu32, value.ui32_result);
+      sprintf (res, "%" PRIu32, value->value.ui32_result);
       break;
     case Uint64:
-      sprintf (res, "%" PRIu64, value.ui64_result);
+      sprintf (res, "%" PRIu64, value->value.ui64_result);
       break;
     case Int8:
-      sprintf (res, "%" PRIi8, value.i8_result);
+      sprintf (res, "%" PRIi8, value->value.i8_result);
       break;
     case Int16:
-      sprintf (res, "%" PRIi16, value.i16_result);
+      sprintf (res, "%" PRIi16, value->value.i16_result);
       break;
     case Int32:
-      sprintf (res, "%" PRIi32, value.i32_result);
+      sprintf (res, "%" PRIi32, value->value.i32_result);
       break;
     case Int64:
-      sprintf (res, "%" PRIi64, value.i64_result);
+      sprintf (res, "%" PRIi64, value->value.i64_result);
       break;
     case Float32:
-      if (props->floatAsBinary)
+      if (binfloat)
       {
-        edgex_b64_encode (&value.f32_result, sizeof (float), res, BUFSIZE);
+        edgex_b64_encode (&value->value.f32_result, sizeof (float), res, BUFSIZE);
       }
       else
       {
-        sprintf (res, "%.8e", value.f32_result);
+        sprintf (res, "%.8e", value->value.f32_result);
       }
       break;
     case Float64:
-      if (props->floatAsBinary)
+      if (binfloat)
       {
-        edgex_b64_encode (&value.f64_result, sizeof (double), res, BUFSIZE);
+        edgex_b64_encode (&value->value.f64_result, sizeof (double), res, BUFSIZE);
       }
       else
       {
-        sprintf (res, "%.16e", value.f64_result);
+        sprintf (res, "%.16e", value->value.f64_result);
       }
       break;
     case String:
-      res = xform ?
-        checkMapping (value.string_result, mappings) :
-        value.string_result;
+      res = value->value.string_result;
       break;
     case Binary:
-      sz = edgex_b64_encodesize (value.binary_result.size);
+      sz = edgex_b64_encodesize (value->value.binary_result.size);
       res = malloc (sz);
       edgex_b64_encode
-        (value.binary_result.bytes, value.binary_result.size, res, sz);
-      free (value.binary_result.bytes);
+        (value->value.binary_result.bytes, value->value.binary_result.size, res, sz);
+      free (value->value.binary_result.bytes);
       break;
   }
   return res;
@@ -550,6 +387,15 @@ static int edgex_device_runput
       iot_log_error
         (svc->logger, "Unable to parse \"%s\" for %s", value, resname);
       break;
+    }
+    if (svc->config.device.datatransform)
+    {
+      if (!edgex_transform_incoming (&results[i], commandinfo->pvals[i], commandinfo->maps[i]))
+      {
+        retcode = MHD_HTTP_BAD_REQUEST;
+        iot_log_error (svc->logger, "Value \"%s\" for %s overflows after transformations", value, resname);
+        break;
+      }
     }
   }
 

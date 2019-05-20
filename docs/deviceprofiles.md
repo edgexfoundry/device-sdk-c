@@ -92,7 +92,8 @@ writable.
 * shift - a number of bits by which an integer reading will be shifted right.
 
 The processing defined by base, scale, offset, mask and shift is applied in
-that order. This is done within the SDK.
+that order. This is done within the SDK. A reverse transformation is applied
+by the SDK to incoming data on set operations (NB mask transforms on set are NYI)
 
 The units property is used to indicate the units of the value, eg Amperes,
 degrees C, etc. It should have a type of String, readWrite "R" indicating

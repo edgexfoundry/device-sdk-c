@@ -1,9 +1,0 @@
-TODO
-====
-
-Transforms - for PUT requests.
-
-Discovery - Implement ProvisionWatchers.
-
-Threadpool - Configure number of threads.
-

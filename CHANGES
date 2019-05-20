@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.0.0:
 
+- Data transformations (other than "mask") are applied for device PUT requests.
 - When querying for Device Profiles they are returned in a list in the same way
   as devices.
 - Device service now follows the new/start/stop/free lifecycle pattern.
