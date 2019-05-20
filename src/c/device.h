@@ -26,13 +26,7 @@ extern int edgex_device_handler_device
   const char **reply_type
 );
 
-extern char *edgex_value_tostring
-(
-  edgex_device_resultvalue value,
-  bool xform,
-  edgex_propertyvalue *props,
-  edgex_nvpairs *mappings
-);
+extern char *edgex_value_tostring (const edgex_device_commandresult *value, bool binfloat);
 
 extern const struct edgex_cmdinfo *edgex_deviceprofile_findcommand
   (const char *name, edgex_deviceprofile *prof, bool forGet);

@@ -13,12 +13,13 @@
 #include "config.h"
 #include "edgex_time.h"
 #include "device.h"
+#include "transform.h"
 
 JSON_Value *edgex_data_generate_event
 (
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
-  const edgex_device_commandresult *values,
+  edgex_device_commandresult *values,
   bool doTransforms
 )
 {
@@ -29,13 +30,11 @@ JSON_Value *edgex_data_generate_event
   JSON_Array *jrdgs = json_value_get_array (arrval);
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
-    char *reading = edgex_value_tostring
-    (
-      values[i].value,
-      doTransforms,
-      commandinfo->pvals[i],
-      commandinfo->maps[i]
-    );
+    if (doTransforms)
+    {
+      edgex_transform_outgoing (&values[i], commandinfo->pvals[i], commandinfo->maps[i]);
+    }
+    char *reading = edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary);
     const char *assertion = commandinfo->pvals[i]->assertion;
     if (assertion && *assertion && strcmp (reading, assertion))
     {

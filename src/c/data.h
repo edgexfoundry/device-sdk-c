@@ -62,7 +62,7 @@ JSON_Value *edgex_data_generate_event
 (
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
-  const edgex_device_commandresult *values,
+  edgex_device_commandresult *values,
   bool doTransforms
 );
 

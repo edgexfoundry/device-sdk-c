@@ -36,7 +36,7 @@ void edgex_device_post_readings
   edgex_device_service *svc,
   const char *device_name,
   const char *resource_name,
-  const edgex_device_commandresult *values
+  edgex_device_commandresult *values
 );
 
 /**
