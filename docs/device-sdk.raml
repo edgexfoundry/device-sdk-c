@@ -17,7 +17,6 @@ schemas:
     -
         callbackalert: '{"type": "object","$schema": "http://json-schema.org/draft-06/schema#","title": "Notification Schema","properties": {"id": {"description": "the identifier of the object which is called back","type": "string"},"actionType": {"description": "the type of the called back object","enum":["PROFILE","DEVICE","PROVISIONWATCHER","SCHEDULE","SCHEDULEEVENT"],"type": "string"}},"required": ["id"]}'
     -
-        pingresponse: '{"type":"object", "$schema":"http://json-schema.org/draft-06/schema#", "title":"pingresponse", "properties":{"value":{"type":"string"}}, "required":["value"]}'
 
 /ping:
     displayName: Ping Resource
@@ -28,10 +27,9 @@ schemas:
         responses:
             "200":
                 body:
-                    application/json:
-                        schema: pingresponse
-                        description: Return value of "pong."
-                        example: '{"value":"pong"}'
+                    text/plain:
+                        description: device service version string
+                        example: 'V1.0'
 
 /device/{id}/{command}:
     displayName: Command Device (by ID) with Command Name
@@ -53,11 +51,13 @@ schemas:
                         schema: responseobject
                         example: '{"device":"TestDevice","origin":1550485943000,"readings":[{"name":"VDS-CurrentTemperature","value":"32.5"}]}'
             "404":
-                description: If no device exists by the ID provided.
+                description: If no device exists by the ID provided or the command is unknown.
+            "405":
+                description: If the requested command exists but not for GET, or the resource is marked as write-only.
             "423":
                 description: If the device or service is locked (admin state) or disabled (operating state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request, or too many values were returned.
     put:
         description: Issues the PUT command referenced by the command to the device/sensor (referenced by database-generated ID) to which it is associated through the Device Service.
         body:
@@ -68,11 +68,13 @@ schemas:
             "200":
                 description: The PUT command was successful.
             "404":
-                description: If no device exists for the ID provided.
+                description: If no device exists for the ID provided or the command is unknown.
+            "405":
+                description: If the requested command exists but not for PUT, or the resource is marked as read-only.
             "423":
                 description: If the device or service is locked (admin state) or disabled (operating state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request.
     post:
         description: Issues the POST command referenced by the command to the device/sensor (referenced by database generated ID) to which it is associated through the device service.
         body:
@@ -81,13 +83,15 @@ schemas:
                 example: '{"AHU-TargetTemperature": "28.5"}'
         responses:
             "200":
-                description: The PUT command was successful.
+                description: The POST command was successful.
             "404":
-                description: If no device exists for the ID provided.
+                description: If no device exists for the ID provided or the command is unknown.
+            "405":
+                description: If the requested command exists but not for POST, or the resource is marked as read-only.
             "423":
                 description: If the device or service is locked (admin state) or disabled (operating state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request.
 
 /device/name/{name}/{command}:
     displayName: Command Device (by Name) with Command Name
@@ -109,11 +113,13 @@ schemas:
                         schema: responseobject
                         example: '{"device":"TestDevice","origin":1550485943000,"readings":[{"name":"VDS-CurrentTemperature","value":"32.5"}]}'
             "404":
-                description: If no device exists by the name provided.
+                description: If no device exists by the ID provided or the command is unknown.
+            "405":
+                description: If the requested command exists but not for GET, or the resource is marked as write-only.
             "423":
                 description: If the device or service is locked (admin state) or disabled (operating state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request, or too many values were returned.
     put:
         description: Issues the PUT command referenced by the command to the device/sensor (referenced by name) to which it is associated through the Device Service.
         body:
@@ -124,11 +130,13 @@ schemas:
             "200":
                 description: The PUT command was successful.
             "404":
-                description: If no device exists for the name provided.
+                description: If no device exists for the ID provided or the command is unknown.
+            "405":
+                description: If the requested command exists but not for PUT, or the resource is marked as read-only.
             "423":
                 description: If the device or service is locked (admin state) or disabled (operating state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request.
     post:
         description: Issues the POST command referenced by the command to the device/sensor (referenced by name) to which it is associated through the device service.
         body:
@@ -139,11 +147,13 @@ schemas:
             "200":
                 description: The POST command was successful.
             "404":
-                description: If no device exists for the name provided.
+                description: If no device exists for the ID provided or the command is unknown.
+            "405":
+                description: If the requested command exists but not for POST, or the resource is marked as read-only.
             "423":
                 description: If the device or service is locked (admin state) or disabled (operating state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request.
 
 /device/all/{command}:
     displayName: Command all operational Devices for the service with command name.
@@ -163,8 +173,8 @@ schemas:
                         example: '[{"device":"TestDevice1","origin":1550485943000,"readings":[{"name":"VDS-CurrentTemperature","value":"32.5"}]},{"device":"TestDevice2","origin":1550485945000,"readings":[{"name":"VDS-CurrentTemperature","value":"33.1"}]}]'
             "423":
                 description: If the device service is locked (admin state).
-            "503": 
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request, or too many values were returned.
     put:
         description: Issues the PUT command referenced by the command to all operational device(s)/sensor(s) that are associated to the device service and have this command.
         body:
@@ -176,8 +186,8 @@ schemas:
                 description: The PUT commands were successful.
             "423":
                 description: If the device service is locked (admin state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request.
     post:
         description: Issues the POST command referenced by the command to all operational device(s)/sensor(s) that are associated to the Device Service and have this command.
         body:
@@ -189,8 +199,8 @@ schemas:
                 description: The POST commands were successful.
             "423":
                 description: If the device service is locked (admin state).
-            "503":
-                description: For unanticipated or unknown issues encountered.
+            "500":
+                description: The device driver is unable to process the request.
 
 /callback:
     displayName: Update Callback
@@ -204,10 +214,10 @@ schemas:
         responses:
             "200":
                 description: Boolean indicating success of the operation.
-            "503":
-                description: For unknown or unanticipated issues.
-            "404":
-                description: If the object cannot be found by the ID provided.
+            "400":
+                description: The object ID could not be parsed.
+            "501":
+                description: An actionType other than DEVICE, or a method other than PUT/POST/DELETE was requested.
 
 /discovery:
     displayName: Run device discovery request for all registered Provision Watchers
@@ -219,5 +229,7 @@ schemas:
                 description: The service is running the discovery request.
             "423":
                 description: The service is disabled or administratively locked.
+            "501":
+                description: The device driver does not implement discovery.
             "503":
-                description: Discovery is disabled in the service configuration.
+                description: Discovery is disabled by configuration.

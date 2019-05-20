@@ -91,7 +91,11 @@ bool edgex_log_tofile
         crlid ? crlid : "",
         message
       );
-      if (f != stdout)
+      if (f == stdout)
+      {
+        fflush (f);
+      }
+      else
       {
         fclose (f);
       }

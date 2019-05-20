@@ -101,8 +101,9 @@ static int ping_handler
   const char **reply_type
 )
 {
-  *reply = strdup ("{\"value\":\"pong\"}\n");
-  *reply_type = "application/json";
+  edgex_device_service *svc = (edgex_device_service *) ctx;
+  *reply = strdup (svc->version);
+  *reply_type = "text/plain";
   return MHD_HTTP_OK;
 }
 
