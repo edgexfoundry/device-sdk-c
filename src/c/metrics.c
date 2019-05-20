@@ -9,7 +9,7 @@
 #include "metrics.h"
 #include "parson.h"
 #include "service.h"
-#include "edgex_time.h"
+#include "edgex-time.h"
 
 #include <sys/time.h>
 #include <sys/resource.h>

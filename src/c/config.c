@@ -9,7 +9,7 @@
 #include "config.h"
 #include "service.h"
 #include "errorlist.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "autoevent.h"
 #include "edgex/device-mgmt.h"
 

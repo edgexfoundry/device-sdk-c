@@ -10,7 +10,7 @@
 #define _EDGEX_METADATA_H_ 1
 
 #include "edgex/edgex.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 #include "edgex/error.h"
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;

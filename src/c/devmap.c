@@ -14,7 +14,7 @@
 #include "devmap.h"
 #include "devutil.h"
 #include "map.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "device.h"
 #include "autoevent.h"
 

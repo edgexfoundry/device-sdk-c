@@ -9,7 +9,7 @@
 #ifndef _EDGEX_DEVICE_DISCOVERY_H_
 #define _EDGEX_DEVICE_DISCOVERY_H_ 1
 
-#include "rest_server.h"
+#include "rest-server.h"
 
 #include <stddef.h>
 

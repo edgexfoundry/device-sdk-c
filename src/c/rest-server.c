@@ -6,7 +6,7 @@
  *
  */
 
-#include "rest_server.h"
+#include "rest-server.h"
 #include "microhttpd.h"
 #include "correlation.h"
 #include "errorlist.h"

@@ -9,9 +9,9 @@
 #include "service.h"
 #include "profiles.h"
 #include "metadata.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "errorlist.h"
-#include "edgex_time.h"
+#include "edgex-time.h"
 #include "edgex/device-mgmt.h"
 
 #include <string.h>

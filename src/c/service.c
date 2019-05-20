@@ -12,13 +12,13 @@
 #include "callback.h"
 #include "metrics.h"
 #include "errorlist.h"
-#include "rest_server.h"
+#include "rest-server.h"
 #include "profiles.h"
 #include "metadata.h"
 #include "data.h"
 #include "rest.h"
-#include "edgex_rest.h"
-#include "edgex_time.h"
+#include "edgex-rest.h"
+#include "edgex-time.h"
 #include "edgex/csdk-defs.h"
 #include "edgex/registry.h"
 
@@ -101,8 +101,9 @@ static int ping_handler
   const char **reply_type
 )
 {
-  *reply = strdup ("{\"value\":\"pong\"}\n");
-  *reply_type = "application/json";
+  edgex_device_service *svc = (edgex_device_service *) ctx;
+  *reply = strdup (svc->version);
+  *reply_type = "text/plain";
   return MHD_HTTP_OK;
 }
 

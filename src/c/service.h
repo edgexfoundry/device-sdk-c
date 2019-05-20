@@ -11,10 +11,10 @@
 
 #include "edgex/devsdk.h"
 #include "edgex/eventgen.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 #include "config.h"
 #include "devmap.h"
-#include "rest_server.h"
+#include "rest-server.h"
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
 

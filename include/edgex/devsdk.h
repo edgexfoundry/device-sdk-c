@@ -16,7 +16,7 @@
 
 #include "edgex/edgex-base.h"
 #include "edgex/error.h"
-#include "edgex/edgex_logging.h"
+#include "edgex/edgex-logging.h"
 
 /**
  * @brief Structure containing information about a device resource which is

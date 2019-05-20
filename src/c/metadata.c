@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #include "metadata.h"
-#include "edgex_rest.h"
+#include "edgex-rest.h"
 #include "rest.h"
 #include "errorlist.h"
 #include "config.h"

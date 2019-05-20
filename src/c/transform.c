@@ -69,7 +69,7 @@ static long long int getLLInt (edgex_device_resultvalue value, edgex_propertyval
     case Int16: return value.i16_result; break;
     case Int32: return value.i32_result; break;
     case Int64: return value.i64_result; break;
-    default: assert (0);
+    default: assert (0); return 0;
   }
 }
 

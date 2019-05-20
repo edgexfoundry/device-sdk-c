@@ -193,18 +193,56 @@ static void template_stop (void *impl, bool force) {}
 static void usage (void)
 {
   printf ("Options: \n");
-  printf ("   -h, --help                 : Show this text\n");
-  printf ("   -n, --name <name>          : Set the device service name\n");
-  printf ("   -r [url], --registry [url] : Use the registry service\n");
-  printf ("   -p, --profile <name>       : Set the profile name\n");
-  printf ("   -c, --confdir <dir>        : Set the configuration directory\n");
+  printf ("   -h, --help           : Show this text\n");
+  printf ("   -n, --name <name>    : Set the device service name\n");
+  printf ("   -r, --registry <url> : Use the registry service\n");
+  printf ("   -p, --profile <name> : Set the profile name\n");
+  printf ("   -c, --confdir <dir>  : Set the configuration directory\n");
+}
+
+static bool testArg (int argc, char *argv[], int *pos, const char *pshort, const char *plong, char **var)
+{
+  if (strcmp (argv[*pos], pshort) == 0 || strcmp (argv[*pos], plong) == 0)
+  {
+    if (*pos < argc - 1)
+    {
+      (*pos)++;
+      *var = argv[*pos];
+      (*pos)++;
+      return true;
+    }
+    else
+    {
+      printf ("Option %s requires an argument\n", argv[*pos]);
+      exit (0);
+    }
+  }
+  char *eq = strchr (argv[*pos], '=');
+  if (eq)
+  {
+    if (strncmp (argv[*pos], pshort, eq - argv[*pos]) == 0 || strncmp (argv[*pos], plong, eq - argv[*pos]) == 0)
+    {
+      if (strlen (++eq))
+      {
+        *var = eq;
+        (*pos)++;
+        return true;
+      }
+      else
+      {
+        printf ("Option %s requires an argument\n", argv[*pos]);
+        exit (0);
+      }
+    }
+  }
+  return false;
 }
 
 int main (int argc, char *argv[])
 {
   char *profile = "";
   char *confdir = "";
-  const char *svcname = "device-template";
+  char *svcname = "device-template";
   char *regURL = getenv ("EDGEX_REGISTRY");
 
   template_driver * impl = malloc (sizeof (template_driver));
@@ -218,40 +256,23 @@ int main (int argc, char *argv[])
       usage ();
       return 0;
     }
-    if (strcmp (argv[n], "-r") == 0 || strcmp (argv[n], "--registry") == 0)
+    if (testArg (argc, argv, &n, "-r", "--registry", &regURL))
     {
-      n++;
-      if (n < argc && argv[n][0] != '-')
-      {
-        regURL = argv[n++];
-      }
-      else
-      {
-        if (regURL == NULL)
-        {
-          regURL = "consul://localhost:8500";
-        }
-      }
       continue;
     }
-    if (strcmp (argv[n], "-n") == 0 || strcmp (argv[n], "--name") == 0)
+    if (testArg (argc, argv, &n, "-n", "--name", &svcname))
     {
-      svcname = argv[n + 1];
-      n += 2;
       continue;
     }
-    if (strcmp (argv[n], "-p") == 0 || strcmp (argv[n], "--profile") == 0)
+    if (testArg (argc, argv, &n, "-p", "--profile", &profile))
     {
-      profile = argv[n + 1];
-      n += 2;
       continue;
     }
-    if (strcmp (argv[n], "-c") == 0 || strcmp (argv[n], "--confdir") == 0)
+    if (testArg (argc, argv, &n, "-c", "--confdir", &confdir))
     {
-      confdir = argv[n + 1];
-      n += 2;
       continue;
     }
+
     printf ("Unknown option %s\n", argv[n]);
     usage ();
     return 0;
