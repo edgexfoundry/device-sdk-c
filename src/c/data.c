@@ -15,6 +15,8 @@
 #include "device.h"
 #include "transform.h"
 
+#include <cbor.h>
+
 edgex_event_cooked *edgex_data_process_event
 (
   const char *device_name,
@@ -55,8 +57,51 @@ edgex_event_cooked *edgex_data_process_event
   result = malloc (sizeof (edgex_event_cooked));
   if (useCBOR)
   {
+    size_t bsize = 0;
+    cbor_item_t *cevent = cbor_new_definite_map (3);
+    cbor_item_t *crdgs = cbor_new_definite_array (commandinfo->nreqs);
+
+    for (uint32_t i = 0; i < commandinfo->nreqs; i++)
+    {
+      cbor_item_t *cread;
+      if (values[i].type == Binary)
+      {
+        cread = cbor_build_bytestring (values[i].value.binary_result.bytes, values[i].value.binary_result.size);
+      }
+      else
+      {
+        cread = cbor_build_string (edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary));
+      }
+
+      cbor_item_t *crdg = cbor_new_definite_map (values[i].origin ? 3 : 2);
+      cbor_map_add (crdg, (struct cbor_pair)
+      {
+        .key = cbor_move (cbor_build_string ("name")),
+        .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
+      });
+      cbor_map_add (crdg, (struct cbor_pair)
+        { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
+      if (values[i].origin)
+      {
+        cbor_map_add (crdg, (struct cbor_pair)
+        {
+          .key = cbor_move (cbor_build_string ("origin")),
+          .value = cbor_move (cbor_build_uint64 (values[i].origin))
+        });
+      }
+      cbor_array_push (crdgs, cbor_move (crdg));
+    }
+
+    cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("device")), .value = cbor_move (cbor_build_string (device_name)) });
+    cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("origin")), .value = cbor_move (cbor_build_uint64 (timenow)) });
+    cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("readings")), .value = cbor_move (crdgs) });
+
     result->encoding = CBOR;
-    result->value.cbor = NULL;
+    result->value.cbor.length = cbor_serialize_alloc (cevent, &result->value.cbor.data, &bsize);
+    cbor_decref (&cevent);
     return result;
   }
   else
@@ -123,6 +168,8 @@ void edgex_data_client_add_event
     }
     case CBOR:
     {
+      edgex_http_postbin
+        (lc, &ctx, url, eventval->value.cbor.data, eventval->value.cbor.length, "Application/CBOR", NULL, err);
       break;
     }
   }
@@ -138,6 +185,7 @@ void edgex_event_cooked_free (edgex_event_cooked *e)
         json_free_serialized_string (e->value.json);
         break;
       case CBOR:
+        free (e->value.cbor.data);
         break;
     }
     free (e);
@@ -169,6 +217,7 @@ edgex_device_commandresult *edgex_device_commandresult_dup (const edgex_device_c
   size_t sz;
   for (int i = 0; i < n; i++)
   {
+    result[i].type = res[i].type;
     switch (res[i].type)
     {
       case Bool:

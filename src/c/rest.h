@@ -62,6 +62,9 @@ long edgex_http_delete
 long edgex_http_post
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, edgex_error *err);
 
+long edgex_http_postbin
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *data, size_t length, const char *mime, void *writefunc, edgex_error *err);
+
 long edgex_http_postfile
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *filename, void *writefunc, edgex_error *err);
 

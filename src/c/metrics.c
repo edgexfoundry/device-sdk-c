@@ -28,7 +28,8 @@ int edgex_device_handler_metrics
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -65,6 +66,7 @@ int edgex_device_handler_metrics
     json_object_set_number (obj, "CpuAvgUsage", cputime / walltime);
   }
   *reply = json_serialize_to_string (val);
+  *reply_size = strlen (*reply);
   *reply_type = "application/json";
   json_value_free (val);
   return MHD_HTTP_OK;

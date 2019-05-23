@@ -123,13 +123,13 @@ static void ae_runner (void *p)
             (ai->svc->logger, &ai->svc->config.endpoints, dev->id, DISABLED, &err);
         }
       }
-      edgex_device_commandresult_free (results, ai->resource->nreqs);
       edgex_device_commandresult_free (resdup, ai->resource->nreqs);
     }
     else
     {
       iot_log_error (ai->svc->logger, "AutoEvent: Driver for %s failed on GET", dev->name);
     }
+    edgex_device_commandresult_free (results, ai->resource->nreqs);
     edgex_device_free_crlid ();
     edgex_device_release (dev);
   }

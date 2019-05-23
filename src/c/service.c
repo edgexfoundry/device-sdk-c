@@ -97,12 +97,14 @@ static int ping_handler
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
   edgex_device_service *svc = (edgex_device_service *) ctx;
   *reply = strdup (svc->version);
+  *reply_size = strlen (svc->version);
   *reply_type = "text/plain";
   return MHD_HTTP_OK;
 }

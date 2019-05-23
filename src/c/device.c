@@ -450,11 +450,8 @@ static int edgex_device_runget
 
     if (*reply)
     {
+      retcode = MHD_HTTP_OK;
       edgex_data_client_add_event (svc->logger, &svc->config.endpoints, *reply, &err);
-      if (err.code == 0)
-      {
-        retcode = MHD_HTTP_OK;
-      }
     }
     else
     {
@@ -544,7 +541,8 @@ static int allCommand
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -552,17 +550,21 @@ static int allCommand
   int retOne;
   edgex_cmdqueue_t *cmdq = NULL;
   edgex_cmdqueue_t *iter;
+  uint32_t nret = 0;
+  int32_t maxret = svc->config.service.readmaxlimit;
+  char *buff;
+  edgex_event_encoding enc;
+  size_t bsize;
+
   iot_log_debug
     (svc->logger, "Incoming %s command %s for all", methStr (method), cmd);
 
-  size_t jsize = strlen ("[]") + 1;
-  char *jreply = malloc (jsize);
-  strcpy (jreply, "[");
+  enc = JSON;
+  bsize = 3; // start-array byte + end-array byte + NUL character
+  buff = malloc (bsize);
+  strcpy (buff, "[");
 
   cmdq = edgex_devmap_device_forcmd (svc->devices, cmd, method == GET);
-
-  uint32_t nret = 0;
-  uint32_t maxret = svc->config.service.readmaxlimit;
 
   for (iter = cmdq; iter; iter = iter->next)
   {
@@ -570,22 +572,31 @@ static int allCommand
     retOne = runOne
       (svc, iter->dev, iter->cmd, upload_data, upload_data_size, &ereply);
     edgex_device_release (iter->dev);
-    if (ereply && (maxret == 0 || nret++ < maxret))
+    if (ereply && (maxret == 0 || nret < maxret))
     {
-      if (ereply->encoding == JSON)
+      enc = ereply->encoding;
+      switch (enc)
       {
-        jsize += strlen (ereply->value.json);
-        if (iter != cmdq)
-        {
-          jsize++;
-        }
-        jreply = realloc (jreply, jsize);
-        if (iter != cmdq)
-        {
-          strcat (jreply, ",");
-        }
-        strcat (jreply, ereply->value.json);
+        case JSON:
+          bsize += (strlen (ereply->value.json) + (nret ? 1 : 0));
+          buff = realloc (buff, bsize);
+          if (nret)
+          {
+            strcat (buff, ",");
+          }
+          strcat (buff, ereply->value.json);
+          break;
+        case CBOR:
+          buff = realloc (buff, bsize + ereply->value.cbor.length);
+          if (nret == 0)
+          {
+            buff[0] = '\374';
+          }
+          memcpy (buff + bsize - 2, ereply->value.cbor.data, ereply->value.cbor.length);
+          bsize += ereply->value.cbor.length;
+          break;
       }
+      nret++;
     }
     edgex_event_cooked_free (ereply);
     if (ret != MHD_HTTP_OK)
@@ -596,10 +607,28 @@ static int allCommand
 
   if (ret == MHD_HTTP_OK)
   {
-    strcat (jreply, "]");
-    *reply = jreply;
-    *reply_type = "application/json";
+    switch (enc)
+    {
+      case JSON:
+        strcat (buff, "]");
+        *reply = buff;
+        *reply_size = strlen (buff);
+        *reply_type = "application/json";
+        break;
+      case CBOR:
+        buff[bsize - 2] = '\377';
+        buff[bsize - 1] = '\0';
+        *reply = buff;
+        *reply_size = bsize - 1;
+        *reply_type = "application/cbor";
+        break;
+    }
   }
+  else
+  {
+    free (buff);
+  }
+
   while (cmdq)
   {
     iter = cmdq->next;
@@ -618,7 +647,8 @@ static int oneCommand
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -660,9 +690,13 @@ static int oneCommand
       {
         case JSON:
           *reply = ereply->value.json;
+          *reply_size = strlen (ereply->value.json);
           *reply_type = "application/json";
           break;
         case CBOR:
+          *reply = ereply->value.cbor.data;
+          *reply_size = ereply->value.cbor.length;
+          *reply_type = "application/cbor";
           break;
       }
       free (ereply);
@@ -704,7 +738,8 @@ int edgex_device_handler_device
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -723,8 +758,7 @@ int edgex_device_handler_device
       cmd = url + 4;
       if (strlen (cmd))
       {
-        result = allCommand
-          (svc, cmd, method, upload_data, upload_data_size, reply, reply_type);
+        result = allCommand (svc, cmd, method, upload_data, upload_data_size, reply, reply_size, reply_type);
       }
       else
       {
@@ -748,12 +782,7 @@ int edgex_device_handler_device
       {
          *cmd = '\0';
          result = oneCommand
-         (
-           svc,
-           url, byName, cmd + 1, method,
-           upload_data, upload_data_size,
-           reply, reply_type
-         );
+           (svc, url, byName, cmd + 1, method, upload_data, upload_data_size, reply, reply_size, reply_type);
          *cmd = '/';
       }
     }

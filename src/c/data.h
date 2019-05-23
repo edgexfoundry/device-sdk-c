@@ -38,13 +38,19 @@ typedef struct edgex_event
   struct edgex_event *next;
 } edgex_event;
 
+typedef enum { JSON, CBOR} edgex_event_encoding;
+
 typedef struct edgex_event_cooked
 {
-  enum { JSON, CBOR } encoding;
+  edgex_event_encoding encoding;
   union
   {
     char *json;
-    void *cbor;
+    struct
+    {
+      unsigned char *data;
+      size_t length;
+    } cbor;
   } value;
 } edgex_event_cooked;
 
