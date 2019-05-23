@@ -31,6 +31,10 @@ find_package (LibUUID REQUIRED)
 if (NOT LIBUUID_FOUND)
   message (FATAL_ERROR "UUID library or header not found")
 endif ()
+find_package (LibCBOR REQUIRED)
+if (NOT LIBCBOR_FOUND)
+  message (FATAL_ERROR "CBOR library or header not found")
+endif ()
 
 message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 
