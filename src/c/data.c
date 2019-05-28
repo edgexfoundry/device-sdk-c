@@ -63,24 +63,28 @@ edgex_event_cooked *edgex_data_process_event
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
+      cbor_item_t *crdg = cbor_new_definite_map (values[i].origin ? 3 : 2);
+
       cbor_item_t *cread;
       if (values[i].type == Binary)
       {
         cread = cbor_build_bytestring (values[i].value.binary_result.bytes, values[i].value.binary_result.size);
+        cbor_map_add (crdg, (struct cbor_pair)
+          { .key = cbor_move (cbor_build_string ("binaryValue")), .value = cbor_move (cread) });
       }
       else
       {
         cread = cbor_build_string (edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary));
+        cbor_map_add (crdg, (struct cbor_pair)
+          { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
       }
 
-      cbor_item_t *crdg = cbor_new_definite_map (values[i].origin ? 3 : 2);
       cbor_map_add (crdg, (struct cbor_pair)
       {
         .key = cbor_move (cbor_build_string ("name")),
         .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
       });
-      cbor_map_add (crdg, (struct cbor_pair)
-        { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
+
       if (values[i].origin)
       {
         cbor_map_add (crdg, (struct cbor_pair)
@@ -89,6 +93,7 @@ edgex_event_cooked *edgex_data_process_event
           .value = cbor_move (cbor_build_uint64 (values[i].origin))
         });
       }
+
       cbor_array_push (crdgs, cbor_move (crdg));
     }
 
