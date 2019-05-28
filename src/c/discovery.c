@@ -24,7 +24,8 @@ int edgex_device_handler_discovery
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -43,6 +44,7 @@ int edgex_device_handler_discovery
   if (!svc->config.device.discovery)
   {
     *reply = strdup ("Discovery disabled by configuration\n");
+    *reply_size = strlen (*reply);
     return MHD_HTTP_SERVICE_UNAVAILABLE;
   }
 
@@ -54,6 +56,7 @@ int edgex_device_handler_discovery
   // else discovery was already running; ignore this request
 
   *reply = strdup ("Running discovery\n");
+  *reply_size = strlen (*reply);
   return MHD_HTTP_OK;
 }
 

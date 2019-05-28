@@ -18,17 +18,18 @@ typedef struct edgex_reading
   uint64_t created;
   char *id;
   uint64_t modified;
-  char *name;
+  const char *name;
   uint64_t origin;
   uint64_t pushed;
-  char *value;
+  edgex_device_commandresult value;
+  bool binfloat;
   struct edgex_reading *next;
 } edgex_reading;
 
 typedef struct edgex_event
 {
   uint64_t created;
-  char *device;
+  const char *device;
   char *id;
   uint64_t modified;
   uint64_t origin;
@@ -36,6 +37,22 @@ typedef struct edgex_event
   edgex_reading *readings;
   struct edgex_event *next;
 } edgex_event;
+
+typedef enum { JSON, CBOR} edgex_event_encoding;
+
+typedef struct edgex_event_cooked
+{
+  edgex_event_encoding encoding;
+  union
+  {
+    char *json;
+    struct
+    {
+      unsigned char *data;
+      size_t length;
+    } cbor;
+  } value;
+} edgex_event_cooked;
 
 typedef struct
 {
@@ -58,7 +75,9 @@ typedef struct
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
-JSON_Value *edgex_data_generate_event
+void edgex_event_cooked_free (edgex_event_cooked *e);
+
+edgex_event_cooked *edgex_data_process_event
 (
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
@@ -70,7 +89,7 @@ void edgex_data_client_add_event
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
-  JSON_Value *eventval,
+  edgex_event_cooked *eventval,
   edgex_error *err
 );
 
@@ -98,5 +117,12 @@ bool edgex_data_client_ping
   edgex_service_endpoints *endpoints,
   edgex_error *err
 );
+
+void edgex_device_commandresult_free (edgex_device_commandresult *res, int n);
+
+edgex_device_commandresult *edgex_device_commandresult_dup (const edgex_device_commandresult *res, int n);
+
+bool edgex_device_commandresult_equal
+  (const edgex_device_commandresult *lhs, const edgex_device_commandresult *rhs, int n);
 
 #endif

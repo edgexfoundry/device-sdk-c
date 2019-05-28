@@ -7,6 +7,7 @@
  */
 
 #include "autoevent.h"
+#include "errorlist.h"
 #include "edgex/eventgen.h"
 #include "edgex/edgex.h"
 #include "edgex/edgex-logging.h"
@@ -14,13 +15,14 @@
 #include "parson.h"
 #include "edgex-rest.h"
 #include "correlation.h"
+#include "metadata.h"
 
 #include <microhttpd.h>
 
 typedef struct edgex_autoimpl
 {
   edgex_device_service *svc;
-  struct json_value_t *last;
+  edgex_device_commandresult *last;
   uint64_t interval;
   const edgex_cmdinfo *resource;
   char *device;
@@ -59,21 +61,19 @@ static void edgex_autoimpl_release (edgex_autoimpl *ai)
   {
     free (ai->device);
     edgex_protocols_free (ai->protocols);
-    json_value_free (ai->last);
+    edgex_device_commandresult_free (ai->last, ai->resource->nreqs);
     free (ai);
   }
 }
 
 static void ae_runner (void *p)
 {
-  int res;
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
   atomic_fetch_add (&ai->refs, 1);
 
   edgex_device *dev = edgex_devmap_device_byname (ai->svc->devices, ai->device);
   if (dev)
   {
-    JSON_Value *result = NULL;
     if (dev->adminState == LOCKED || dev->operatingState == DISABLED)
     {
       edgex_device_release (dev);
@@ -81,20 +81,55 @@ static void ae_runner (void *p)
     }
     edgex_device_alloc_crlid (NULL);
     iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
-    res = edgex_device_runget
-      (ai->svc, dev, ai->resource, ai->onChange ? ai->last : NULL, &result);
-    if (res == MHD_HTTP_OK)
+    edgex_device_commandresult *results = calloc (ai->resource->nreqs, sizeof (edgex_device_commandresult));
+    if
+    (
+      ai->svc->userfns.gethandler
+        (ai->svc->userdata, dev->name, dev->protocols, ai->resource->nreqs, ai->resource->reqs, results)
+    )
     {
-      if (ai->onChange)
+      edgex_device_commandresult *resdup = NULL;
+      if (!(ai->onChange && ai->last && edgex_device_commandresult_equal (results, ai->last, ai->resource->nreqs)))
       {
-        json_value_free (ai->last);
-        ai->last = result;
+        edgex_error err = EDGEX_OK;
+        if (ai->onChange)
+        {
+          resdup = edgex_device_commandresult_dup (results, ai->resource->nreqs);
+        }
+        edgex_event_cooked *event =
+          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
+        if (event)
+        {
+          edgex_data_client_add_event (ai->svc->logger, &ai->svc->config.endpoints, event, &err);
+          if (err.code == 0)
+          {
+            if (ai->onChange)
+            {
+              edgex_device_commandresult_free (ai->last, ai->resource->nreqs);
+              ai->last = resdup;
+              resdup = NULL;
+            }
+          }
+          else
+          {
+            iot_log_error (ai->svc->logger, "AutoEvent: unable to push new event");
+          }
+          edgex_event_cooked_free (event);
+        }
+        else
+        {
+          iot_log_error (ai->svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
+          edgex_metadata_client_set_device_opstate
+            (ai->svc->logger, &ai->svc->config.endpoints, dev->id, DISABLED, &err);
+        }
       }
-      else
-      {
-        json_value_free (result);
-      }
+      edgex_device_commandresult_free (resdup, ai->resource->nreqs);
     }
+    else
+    {
+      iot_log_error (ai->svc->logger, "AutoEvent: Driver for %s failed on GET", dev->name);
+    }
+    edgex_device_commandresult_free (results, ai->resource->nreqs);
     edgex_device_free_crlid ();
     edgex_device_release (dev);
   }

@@ -12,8 +12,8 @@
 #include "edgex/devsdk.h"
 #include "edgex/edgex.h"
 #include "rest-server.h"
-#include "parson.h"
 #include "cmdinfo.h"
+#include "data.h"
 
 extern int edgex_device_handler_device
 (
@@ -22,7 +22,8 @@ extern int edgex_device_handler_device
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 );
 
@@ -30,14 +31,5 @@ extern char *edgex_value_tostring (const edgex_device_commandresult *value, bool
 
 extern const struct edgex_cmdinfo *edgex_deviceprofile_findcommand
   (const char *name, edgex_deviceprofile *prof, bool forGet);
-
-extern int edgex_device_runget
-(
-  edgex_device_service *svc,
-  edgex_device *dev,
-  const edgex_cmdinfo *commandinfo,
-  const JSON_Value *lastval,
-  JSON_Value **reply
-);
 
 #endif

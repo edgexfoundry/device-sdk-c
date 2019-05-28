@@ -124,14 +124,13 @@ char *edgex_value_tostring (const edgex_device_commandresult *value, bool binflo
       }
       break;
     case String:
-      res = value->value.string_result;
+      res = strdup (value->value.string_result);
       break;
     case Binary:
       sz = edgex_b64_encodesize (value->value.binary_result.size);
       res = malloc (sz);
       edgex_b64_encode
         (value->value.binary_result.bytes, value->value.binary_result.size, res, sz);
-      free (value->value.binary_result.bytes);
       break;
   }
   return res;
@@ -344,8 +343,7 @@ static int edgex_device_runput
   edgex_device_service *svc,
   edgex_device *dev,
   const edgex_cmdinfo *commandinfo,
-  const char *data,
-  JSON_Value **reply
+  const char *data
 )
 {
   const char *value;
@@ -408,30 +406,18 @@ static int edgex_device_runput
     }
   }
 
-  for (int i = 0; i < commandinfo->nreqs; i++)
-  {
-    if (results[i].type == String)
-    {
-      free (results[i].value.string_result);
-    }
-    else if (results[i].type == Binary)
-    {
-      free (results[i].value.binary_result.bytes);
-    }
-  }
-  free (results);
+  edgex_device_commandresult_free (results, commandinfo->nreqs);
   json_value_free (jval);
 
   return retcode;
 }
 
-int edgex_device_runget
+static int edgex_device_runget
 (
   edgex_device_service *svc,
   edgex_device *dev,
   const edgex_cmdinfo *commandinfo,
-  const JSON_Value *lastval,
-  JSON_Value **reply
+  edgex_event_cooked **reply
 )
 {
   int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
@@ -459,20 +445,13 @@ int edgex_device_runget
   )
   {
     edgex_error err = EDGEX_OK;
-    *reply = edgex_data_generate_event
+    *reply = edgex_data_process_event
       (dev->name, commandinfo, results, svc->config.device.datatransform);
 
     if (*reply)
     {
-      if (lastval == NULL || (json_value_equals (*reply, lastval) == 0))
-      {
-        edgex_data_client_add_event
-          (svc->logger, &svc->config.endpoints, *reply, &err);
-      }
-      if (err.code == 0)
-      {
-        retcode = MHD_HTTP_OK;
-      }
+      retcode = MHD_HTTP_OK;
+      edgex_data_client_add_event (svc->logger, &svc->config.endpoints, *reply, &err);
     }
     else
     {
@@ -486,7 +465,7 @@ int edgex_device_runget
     iot_log_error
       (svc->logger, "Driver for %s failed on GET", dev->name);
   }
-  free (results);
+  edgex_device_commandresult_free (results, commandinfo->nreqs);
   return retcode;
 }
 
@@ -497,7 +476,7 @@ static int runOne
   const edgex_cmdinfo *command,
   const char *upload_data,
   size_t upload_data_size,
-  JSON_Value **reply
+  edgex_event_cooked **reply
 )
 {
   if (dev->adminState == LOCKED)
@@ -535,7 +514,7 @@ static int runOne
 
   if (command->isget)
   {
-    return edgex_device_runget (svc, dev, command, NULL, reply);
+    return edgex_device_runget (svc, dev, command, reply);
   }
   else
   {
@@ -544,7 +523,7 @@ static int runOne
       iot_log_error (svc->logger, "PUT command recieved with no data");
       return MHD_HTTP_BAD_REQUEST;
     }
-    return edgex_device_runput (svc, dev, command, upload_data, reply);
+    return edgex_device_runput (svc, dev, command, upload_data);
   }
 }
 
@@ -562,38 +541,64 @@ static int allCommand
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
   int ret = MHD_HTTP_NOT_FOUND;
   int retOne;
-  JSON_Value *jresult;
-  JSON_Array *jarray;
   edgex_cmdqueue_t *cmdq = NULL;
   edgex_cmdqueue_t *iter;
+  uint32_t nret = 0;
+  int32_t maxret = svc->config.service.readmaxlimit;
+  char *buff;
+  edgex_event_encoding enc;
+  size_t bsize;
 
   iot_log_debug
     (svc->logger, "Incoming %s command %s for all", methStr (method), cmd);
 
-  jresult = json_value_init_array ();
-  jarray = json_value_get_array (jresult);
+  enc = JSON;
+  bsize = 3; // start-array byte + end-array byte + NUL character
+  buff = malloc (bsize);
+  strcpy (buff, "[");
 
   cmdq = edgex_devmap_device_forcmd (svc->devices, cmd, method == GET);
 
-  uint32_t nret = 0;
-  uint32_t maxret = svc->config.service.readmaxlimit;
-
   for (iter = cmdq; iter; iter = iter->next)
   {
-    JSON_Value *jreply = NULL;
+    edgex_event_cooked *ereply = NULL;
     retOne = runOne
-      (svc, iter->dev, iter->cmd, upload_data, upload_data_size, &jreply);
+      (svc, iter->dev, iter->cmd, upload_data, upload_data_size, &ereply);
     edgex_device_release (iter->dev);
-    if (jreply && (maxret == 0 || nret++ < maxret))
+    if (ereply && (maxret == 0 || nret < maxret))
     {
-      json_array_append_value (jarray, jreply);
+      enc = ereply->encoding;
+      switch (enc)
+      {
+        case JSON:
+          bsize += (strlen (ereply->value.json) + (nret ? 1 : 0));
+          buff = realloc (buff, bsize);
+          if (nret)
+          {
+            strcat (buff, ",");
+          }
+          strcat (buff, ereply->value.json);
+          break;
+        case CBOR:
+          buff = realloc (buff, bsize + ereply->value.cbor.length);
+          if (nret == 0)
+          {
+            buff[0] = '\374';
+          }
+          memcpy (buff + bsize - 2, ereply->value.cbor.data, ereply->value.cbor.length);
+          bsize += ereply->value.cbor.length;
+          break;
+      }
+      nret++;
     }
+    edgex_event_cooked_free (ereply);
     if (ret != MHD_HTTP_OK)
     {
       ret = retOne;
@@ -602,10 +607,28 @@ static int allCommand
 
   if (ret == MHD_HTTP_OK)
   {
-    *reply = json_serialize_to_string (jresult);
-    *reply_type = "application/json";
+    switch (enc)
+    {
+      case JSON:
+        strcat (buff, "]");
+        *reply = buff;
+        *reply_size = strlen (buff);
+        *reply_type = "application/json";
+        break;
+      case CBOR:
+        buff[bsize - 2] = '\377';
+        buff[bsize - 1] = '\0';
+        *reply = buff;
+        *reply_size = bsize - 1;
+        *reply_type = "application/cbor";
+        break;
+    }
   }
-  json_value_free (jresult);
+  else
+  {
+    free (buff);
+  }
+
   while (cmdq)
   {
     iter = cmdq->next;
@@ -624,7 +647,8 @@ static int oneCommand
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -656,15 +680,26 @@ static int oneCommand
 
   if (command)
   {
-    JSON_Value *jreply = NULL;
+    edgex_event_cooked *ereply = NULL;
     result = runOne
-      (svc, dev, command, upload_data, upload_data_size, &jreply);
+      (svc, dev, command, upload_data, upload_data_size, &ereply);
     edgex_device_release (dev);
-    if (jreply)
+    if (ereply)
     {
-      *reply = json_serialize_to_string (jreply);
-      *reply_type = "application/json";
-      json_value_free (jreply);
+      switch (ereply->encoding)
+      {
+        case JSON:
+          *reply = ereply->value.json;
+          *reply_size = strlen (ereply->value.json);
+          *reply_type = "application/json";
+          break;
+        case CBOR:
+          *reply = ereply->value.cbor.data;
+          *reply_size = ereply->value.cbor.length;
+          *reply_type = "application/cbor";
+          break;
+      }
+      free (ereply);
     }
   }
   else
@@ -703,7 +738,8 @@ int edgex_device_handler_device
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
@@ -722,8 +758,7 @@ int edgex_device_handler_device
       cmd = url + 4;
       if (strlen (cmd))
       {
-        result = allCommand
-          (svc, cmd, method, upload_data, upload_data_size, reply, reply_type);
+        result = allCommand (svc, cmd, method, upload_data, upload_data_size, reply, reply_size, reply_type);
       }
       else
       {
@@ -747,12 +782,7 @@ int edgex_device_handler_device
       {
          *cmd = '\0';
          result = oneCommand
-         (
-           svc,
-           url, byName, cmd + 1, method,
-           upload_data, upload_data_size,
-           reply, reply_type
-         );
+           (svc, url, byName, cmd + 1, method, upload_data, upload_data_size, reply, reply_size, reply_type);
          *cmd = '/';
       }
     }

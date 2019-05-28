@@ -315,6 +315,21 @@ long edgex_http_post
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
 }
 
+long edgex_http_postbin
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *data, size_t length, const char *mime, void *writefunc, edgex_error *err)
+{
+  struct curl_slist *slist;
+  CURL *hnd = curl_easy_init ();
+
+  curl_easy_setopt (hnd, CURLOPT_CUSTOMREQUEST, "POST");
+  curl_easy_setopt (hnd, CURLOPT_POST, 1L);
+  curl_easy_setopt (hnd, CURLOPT_POSTFIELDS, data);
+  curl_easy_setopt (hnd, CURLOPT_POSTFIELDSIZE_LARGE, length);
+
+  slist = edgex_add_hdr (NULL, "Content-Type", mime);
+  return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
+}
+
 long edgex_http_postfile
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *fname, void *writefunc, edgex_error *err)
 {

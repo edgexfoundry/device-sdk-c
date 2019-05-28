@@ -42,7 +42,7 @@
 typedef struct postparams
 {
   edgex_device_service *svc;
-  JSON_Value *jevent;
+  edgex_event_cooked *event;
 } postparams;
 
 edgex_device_service *edgex_device_service_new
@@ -97,12 +97,14 @@ static int ping_handler
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
-  char **reply,
+  void **reply,
+  size_t *reply_size,
   const char **reply_type
 )
 {
   edgex_device_service *svc = (edgex_device_service *) ctx;
   *reply = strdup (svc->version);
+  *reply_size = strlen (svc->version);
   *reply_type = "text/plain";
   return MHD_HTTP_OK;
 }
@@ -518,11 +520,11 @@ static void doPost (void *p)
   (
     pp->svc->logger,
     &pp->svc->config.endpoints,
-    pp->jevent,
+    pp->event,
     &err
   );
 
-  json_value_free (pp->jevent);
+  edgex_event_cooked_free (pp->event);
   free (pp);
 }
 
@@ -547,14 +549,14 @@ void edgex_device_post_readings
 
   if (command)
   {
-    JSON_Value *jevent = edgex_data_generate_event
+    edgex_event_cooked *event = edgex_data_process_event
       (devname, command, values, svc->config.device.datatransform);
 
-    if (jevent)
+    if (event)
     {
       postparams *pp = malloc (sizeof (postparams));
       pp->svc = svc;
-      pp->jevent = jevent;
+      pp->event = event;
       iot_threadpool_add_work (svc->thpool, doPost, pp, NULL);
     }
   }

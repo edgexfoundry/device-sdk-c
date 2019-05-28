@@ -90,7 +90,8 @@ static int http_handler
   http_context_t *ctx = (http_context_t *) *context;
   edgex_rest_server *svr = (edgex_rest_server *) this;
   struct MHD_Response *response = NULL;
-  char *reply = NULL;
+  void *reply = NULL;
+  size_t reply_size = 0;
   const char *reply_type = NULL;
   handler_list *h;
 
@@ -130,19 +131,20 @@ static int http_handler
     if (method == GET)
     {
       /* List available handlers */
-      int rsize = 1;
+      reply_size = 0;
       pthread_mutex_lock (&svr->lock);
       for (h = svr->handlers; h; h = h->next)
       {
-        rsize += strlen (h->url) + 1;
+        reply_size += strlen (h->url) + 1;
       }
-      reply = malloc (rsize);
-      reply[0] = '\0';
+      char *buff = malloc (reply_size + 1);
+      buff[0] = '\0';
       for (h = svr->handlers; h; h = h->next)
       {
-        strcat (reply, h->url);
-        strcat (reply, "\n");
+        strcat (buff, h->url);
+        strcat (buff, "\n");
       }
+      reply = buff;
       pthread_mutex_unlock (&svr->lock);
     }
     else
@@ -180,6 +182,7 @@ static int http_handler
           ctx->m_data,
           ctx->m_size,
           &reply,
+          &reply_size,
           &reply_type
         );
       }
@@ -200,9 +203,9 @@ static int http_handler
   if (reply == NULL)
   {
     reply = strdup ("");
+    reply_size = 0;
   }
-  response = MHD_create_response_from_buffer
-    (strlen (reply), reply, MHD_RESPMEM_MUST_FREE);
+  response = MHD_create_response_from_buffer (reply_size, reply, MHD_RESPMEM_MUST_FREE);
   MHD_add_response_header (response, "Content-Type", reply_type);
   MHD_queue_response (conn, status, response);
   MHD_destroy_response (response);
