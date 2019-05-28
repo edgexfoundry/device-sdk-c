@@ -174,7 +174,7 @@ void edgex_data_client_add_event
     case CBOR:
     {
       edgex_http_postbin
-        (lc, &ctx, url, eventval->value.cbor.data, eventval->value.cbor.length, "Application/CBOR", NULL, err);
+        (lc, &ctx, url, eventval->value.cbor.data, eventval->value.cbor.length, "application/cbor", NULL, err);
       break;
     }
   }
