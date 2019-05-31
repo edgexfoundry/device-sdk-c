@@ -2,8 +2,8 @@
   Port = 49990
   Timeout = 5000
   ConnectRetries = 3
-  Labels = [ "Template" ]
-  StartupMsg = "Template device started"
+  Labels = [ "Random" ]
+  StartupMsg = "Example random device started"
   ReadMaxLimit = 256
   CheckInterval = "10s"
 
@@ -34,9 +34,9 @@
   LogLevel = "DEBUG"
 
 [[DeviceList]]
-  Name = "Device1"
-  Profile = "TemplateSensor"
-  Description = "An Example Template Device"
+  Name = "RandomDevice1"
+  Profile = "ExampleSensor"
+  Description = "An Example Random Device"
   [DeviceList.Protocols]
     [DeviceList.Protocols.Other]
       Address = "someSensorEndpoint"
@@ -44,3 +44,7 @@
     Resource = "SensorOne"
     OnChange = false
     Frequency = "10s"
+  [[DeviceList.AutoEvents]]
+    Resource = "SensorTwo"
+    OnChange = true
+    Frequency = "15000ms"

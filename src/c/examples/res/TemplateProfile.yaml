@@ -1,37 +1,37 @@
-name: "Example Sensor"
+name: "TemplateSensor"
 manufacturer: "IoTechSystems"
-model: "IoT1"
-description: "Example Sensor"
+model: "IoT0"
+description: "Template Sensor"
 labels:
   - "sensor"
 
 deviceResources:
       -
         name: SensorOne
-        description: "A Sensor generating values between 0 & 100"
+        description: "A Sensor generating unsigned integer values"
         attributes:
-            { SensorID: "Sen1" , SensorType: "1" }
+            { SensorID: "Sen1" , SensorType: "UInt64" }
         properties:
             value:
                 { type: "uint64", readWrite: "R", defaultValue: "0" }
             units:
-                { type: "string", readWrite: "R", defaultValue: "Random" }
+                { type: "string", readWrite: "R", defaultValue: "things" }
 
       -
         name: SensorTwo
-        description: "A Sensor generating values between 1 & 1000"
+        description: "A Sensor generating unsigned integer values"
         attributes:
-          { SensorID: "Sen2", SensorType: "2" }
+          { SensorID: "Sen2", SensorType: "UInt64" }
         properties:
           value:
             { type: "uint64", readWrite: "R", defaultValue: "0" }
           units:
-            { type: "string", readWrite: "R", defaultValue: "Random" }
+            { type: "string", readWrite: "R", defaultValue: "things" }
 
       - name: Switch
         description: "A generic switch"
         attributes:
-          { SwitchID: "Switch1" }
+          { SensorID: "Switch1", SensorType: "Switch" }
         properties:
           value:
             { type: "bool", readWrite: "RW", defaultValue: "true" }

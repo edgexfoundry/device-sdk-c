@@ -2,7 +2,9 @@
 
 The device service configuration is held in TOML format. The SDK method `edgex_device_service_start` takes the name of a directory, and an optional profile name. It will attempt to load the configuration from a file named `configuration.toml` or `configuration-<profile>.toml` in that directory.
 
-Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`. Multiple Schedules and ScheduleEvents may be configured, this is done using an appropriate number of `[[Schedule]]` and `[[ScheduleEvent]]` tables.
+Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`.
+
+If the Registry is in use, configuration is contained in subfolders of edgex/core/1.0/<service-name>. The "Clients" section is not present in this scenario, as the Registry provides a specific mechanism for maintaining service information.
 
 ## Service section
 
@@ -18,8 +20,7 @@ CheckInterval | String | The checking interval to request if registering with Co
 
 ## Clients section
 
-Defines the endpoints for other microservices in an EdgeX system. If using a
-registry service this section is not required.
+Defines the endpoints for other microservices in an EdgeX system.
 
 ### Data
 
@@ -62,6 +63,3 @@ LogLevel | String | Sets the logging level. Available settings in order of incre
 
 This section is for driver-specific options. Any configuration specified here will be passed to the driver implementation during initialization.
 
-## Watchers section
-
-Watchers are not supported in this release.
