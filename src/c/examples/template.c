@@ -1,7 +1,7 @@
 /* template implementation of an Edgex device service using C SDK */
 
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2019
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -18,19 +18,16 @@
 typedef struct template_driver
 {
   iot_logger_t * lc;
-  bool state_flag;
-  pthread_mutex_t mutex;
 } template_driver;
 
 
-static sig_atomic_t running = true;
+static volatile sig_atomic_t running = true;
 static void inthandler (int i)
 {
   running = (i != SIGINT);
 }
 
-static void dump_protocols
-  (iot_logger_t *lc, const edgex_protocols *prots)
+static void dump_protocols (iot_logger_t *lc, const edgex_protocols *prots)
 {
   for (const edgex_protocols *p = prots; p; p = p->next)
   {
@@ -42,6 +39,13 @@ static void dump_protocols
   }
 }
 
+static void dump_attributes (iot_logger_t *lc, const edgex_nvpairs *attrs)
+{
+  for (const edgex_nvpairs *a = attrs; a; a = a->next)
+  {
+    iot_log_debug (lc, "    %s = %s", a->name, a->value);
+  }
+}
 
 /* --- Initialize ---- */
 /* Initialize performs protocol-specific initialization for the device
@@ -56,8 +60,6 @@ static bool template_init
 {
   template_driver *driver = (template_driver *) impl;
   driver->lc = lc;
-  driver->state_flag=false;
-  pthread_mutex_init (&driver->mutex, NULL);
   iot_log_debug(driver->lc,"Init");
   return true;
 }
@@ -100,37 +102,12 @@ static bool template_get_handler
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-  /* Drill into the attributes to differentiate between resources via the
-   * SensorType NVP */
-    const edgex_nvpairs * current = requests[i].attributes;
-    while (current!=NULL)
-    {
-      if (strcmp (current->name, "SensorType") ==0 )
-      {
-        /* Set the resulting reading type as Uint64 */
-        readings[i].type = Uint64;
-
-        if (strcmp (current->value, "1") ==0 )
-        {
-          /* Set the reading as a random value between 0 and 100 */
-          readings[i].value.ui64_result = rand() % 100;
-        }
-        else if (strcmp (current->value, "2") ==0 )
-        {
-          /* Set the reading as a random value between 0 and 1000 */
-          readings[i].value.ui64_result = rand() % 1000;
-        }
-      }
-
-      if (strcmp (current->name, "SwitchID") ==0 )
-      {
-        readings[i].type = Bool;
-        pthread_mutex_lock (&driver->mutex);
-        readings[i].value.bool_result=driver->state_flag;
-        pthread_mutex_unlock (&driver->mutex);
-      }
-      current = current->next;
-    }
+    /* Log the attributes for each requested resource */
+    iot_log_debug (driver->lc, "  Requested reading %u:", i);
+    dump_attributes (driver->lc, requests[i].attributes);
+    /* Fill in a result regardless */
+    readings[i].type = String;
+    readings[i].value.string_result = strdup ("Template result");
   }
   return true;
 }
@@ -166,13 +143,23 @@ static bool template_put_handler
   for (uint32_t i = 0; i < nvalues; i++)
   {
     /* A Device Service again makes use of the data provided to perform a PUT */
-
-    /* In this case we set a boolean flag */
-    if (strcmp (requests[i].resname,"Switch") ==0 )
+    /* Log the attributes */
+    iot_log_debug (driver->lc, "  Requested device write %u:", i);
+    dump_attributes (driver->lc, requests[i].attributes);
+    switch (values[i].type)
     {
-      pthread_mutex_lock (&driver->mutex);
-      driver->state_flag=values->value.bool_result;
-      pthread_mutex_unlock (&driver->mutex);
+      case String:
+        iot_log_debug (driver->lc, "  Value: %s", values[i].value.string_result);
+        break;
+      case Uint64:
+        iot_log_debug (driver->lc, "  Value: %lu", values[i].value.ui64_result);
+        break;
+      case Bool:
+        iot_log_debug (driver->lc, "  Value: %s", values[i].value.bool_result ? "true" : "false");
+        break;
+      /* etc etc */
+      default:
+      break;
     }
   }
   return true;
@@ -194,10 +181,10 @@ static void usage (void)
 {
   printf ("Options: \n");
   printf ("   -h, --help           : Show this text\n");
-  printf ("   -n, --name <name>    : Set the device service name\n");
-  printf ("   -r, --registry <url> : Use the registry service\n");
-  printf ("   -p, --profile <name> : Set the profile name\n");
-  printf ("   -c, --confdir <dir>  : Set the configuration directory\n");
+  printf ("   -n, --name=<name>    : Set the device service name\n");
+  printf ("   -r, --registry=<url> : Use the registry service\n");
+  printf ("   -p, --profile=<name> : Set the profile name\n");
+  printf ("   -c, --confdir=<dir>  : Set the configuration directory\n");
 }
 
 static bool testArg (int argc, char *argv[], int *pos, const char *pshort, const char *plong, char **var)
@@ -294,13 +281,7 @@ int main (int argc, char *argv[])
 
   /* Initalise a new device service */
   edgex_device_service *service = edgex_device_service_new
-  (
-    svcname,
-    "1.0",
-    impl,
-    templateImpls,
-    &e
-  );
+    (svcname, "1.0", impl, templateImpls, &e);
   ERR_CHECK (e);
 
   /* Start the device service*/

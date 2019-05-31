@@ -2,8 +2,8 @@
   Port = 49990
   Timeout = 5000
   ConnectRetries = 3
-  Labels = [ "Template" ]
-  StartupMsg = "Template device started"
+  Labels = [ "Counter" ]
+  StartupMsg = "Example counting device started"
   ReadMaxLimit = 256
   CheckInterval = "10s"
 
@@ -17,7 +17,7 @@
     Port = 48081
 
 [Device]
-  DataTransform = true
+  DataTransform = false
   Discovery = false
   InitCmd = ""
   InitCmdArgs = ""
@@ -34,13 +34,21 @@
   LogLevel = "DEBUG"
 
 [[DeviceList]]
-  Name = "Device1"
-  Profile = "TemplateSensor"
-  Description = "An Example Template Device"
+  Name = "Counter1"
+  Profile = "Example-Counter"
+  Description = "An Example Counting Device"
   [DeviceList.Protocols]
-    [DeviceList.Protocols.Other]
-      Address = "someSensorEndpoint"
+    [DeviceList.Protocols.Counter]
+      Index = "3"
   [[DeviceList.AutoEvents]]
-    Resource = "SensorOne"
+    Resource = "Counter"
     OnChange = false
     Frequency = "10s"
+
+[[DeviceList]]
+  Name = "Counter2"
+  Profile = "Example-Counter"
+  Description = "Another Example Counting Device"
+  [DeviceList.Protocols]
+    [DeviceList.Protocols.Counter]
+      Index = "58"
