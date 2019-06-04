@@ -223,8 +223,11 @@ void edgex_device_autoevent_stop (edgex_device *dev)
 {
   for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
   {
-    edgex_autoimpl *ai = ae->impl;
-    iot_threadpool_add_work (ai->svc->thpool, stopper, ai, NULL);
+    if (ae->impl)
+    {
+      edgex_autoimpl *ai = ae->impl;
+      iot_threadpool_add_work (ai->svc->thpool, stopper, ai, NULL);
+    }
   }
 }
 
