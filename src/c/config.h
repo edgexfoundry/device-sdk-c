@@ -21,7 +21,6 @@ typedef struct edgex_device_serviceinfo
   uint32_t connectretries;
   char **labels;
   char *startupmsg;
-  uint32_t readmaxlimit;
   uint32_t timeout;
   char *checkinterval;
 } edgex_device_serviceinfo;

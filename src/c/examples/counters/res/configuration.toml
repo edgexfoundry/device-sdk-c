@@ -4,7 +4,6 @@
   ConnectRetries = 3
   Labels = [ "Counter" ]
   StartupMsg = "Example counting device started"
-  ReadMaxLimit = 256
   CheckInterval = "10s"
 
 [Clients]

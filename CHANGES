@@ -6,8 +6,9 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
-Changes for 1.0.0:
+Changes for Edinburgh release (1.0.0):
 
+- Removed ReadMaxLimit configuration option.
 - Events containing binary Readings are encoded using CBOR.
   - This introduces a dependency on libcbor.
 - Data transformations (other than "mask") are applied for device PUT requests.
