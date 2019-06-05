@@ -4,7 +4,6 @@
   ConnectRetries = 3
   Labels = [ "Random" ]
   StartupMsg = "Example random device started"
-  ReadMaxLimit = 256
   CheckInterval = "10s"
 
 [Clients]

@@ -194,7 +194,6 @@ void edgex_device_populateConfig
     GET_CONFIG_UINT32(Timeout, service.timeout);
     GET_CONFIG_UINT32(ConnectRetries, service.connectretries);
     GET_CONFIG_STRING(StartupMsg, service.startupmsg);
-    GET_CONFIG_UINT32(ReadMaxLimit, service.readmaxlimit);
     GET_CONFIG_STRING(CheckInterval, service.checkinterval);
     int n = 0;
     arr = toml_array_in (table, "Labels");
@@ -452,8 +451,6 @@ void edgex_device_populateConfigNV
     get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
   svc->config.service.startupmsg =
     get_nv_config_string (config, "Service/StartupMsg");
-  svc->config.service.readmaxlimit =
-    get_nv_config_uint32 (svc->logger, config, "Service/ReadMaxLimit", err);
   svc->config.service.checkinterval =
     get_nv_config_string (config, "Service/CheckInterval");
 
@@ -550,7 +547,6 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   PUT_CONFIG_UINT(Service/Timeout, service.timeout);
   PUT_CONFIG_UINT(Service/ConnectRetries, service.connectretries);
   PUT_CONFIG_STRING(Service/StartupMsg, service.startupmsg);
-  PUT_CONFIG_UINT(Service/ReadMaxLimit, service.readmaxlimit);
   PUT_CONFIG_STRING(Service/CheckInterval, service.checkinterval);
 
   int labellen = 0;
@@ -735,8 +731,6 @@ int edgex_device_handler_config
   json_object_set_number
     (sobj, "ConnectRetries", svc->config.service.connectretries);
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
-  json_object_set_number
-    (sobj, "ReadMaxLimit", svc->config.service.readmaxlimit);
   json_object_set_string
     (sobj, "CheckInterval", svc->config.service.checkinterval);
 

@@ -551,7 +551,6 @@ static int allCommand
   edgex_cmdqueue_t *cmdq = NULL;
   edgex_cmdqueue_t *iter;
   uint32_t nret = 0;
-  int32_t maxret = svc->config.service.readmaxlimit;
   char *buff;
   edgex_event_encoding enc;
   size_t bsize;
@@ -572,7 +571,7 @@ static int allCommand
     retOne = runOne
       (svc, iter->dev, iter->cmd, upload_data, upload_data_size, &ereply);
     edgex_device_release (iter->dev);
-    if (ereply && (maxret == 0 || nret < maxret))
+    if (ereply)
     {
       enc = ereply->encoding;
       switch (enc)
