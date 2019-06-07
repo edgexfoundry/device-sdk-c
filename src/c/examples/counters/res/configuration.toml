@@ -15,6 +15,10 @@
     Host = "localhost"
     Port = 48081
 
+  [Clients.Logging]
+    Host = "localhost"
+    Port = 48061
+
 [Device]
   DataTransform = false
   Discovery = false
@@ -28,7 +32,7 @@
   SendReadingsOnChanged = true
 
 [Logging]
-  RemoteURL = ""
+  EnableRemote = false
   File = "-"
   LogLevel = "DEBUG"
 

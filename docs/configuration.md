@@ -35,6 +35,13 @@ Option | Type | Notes
 Host | String | Hostname on which to contact the core-metadata service.
 Port | Int | Port on which to contact the core-metadata service.
 
+### Logging
+
+Option | Type | Notes
+:--- | :--- | :---
+Host | String | Hostname on which to contact the support-logging service.
+Port | Int | Port on which to contact the support-logging service.
+
 ## Device section
 
 Option | Type | Notes
@@ -54,7 +61,7 @@ SendReadingsOnChanged | Bool | Not implemented. To be used to suppress the submi
 
 Option | Type | Notes
 :--- | :--- | :---
-RemoteURL | String | If this option is set, logs will be submitted to a logging service at the specified URL.
+EnableRemote | Boolean | If this option is set, logs will be submitted to the EdgeX logging service.
 File | String | If this option is set, logs will be written to the named file. Setting a value of "-" causes logs to be written to standard output.
 LogLevel | String | Sets the logging level. Available settings in order of increasing severity are: TRACE, DEBUG, INFO, WARNING, ERROR.
 
