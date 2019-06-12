@@ -8,6 +8,8 @@ differs as follows:
 
 Changes for Edinburgh release (1.0.0):
 
+- EnableLogging replaces RemoteURL in the Logging configuration. The location
+  of the logging service is configured in the [Clients] section.
 - Removed ReadMaxLimit configuration option.
 - Events containing binary Readings are encoded using CBOR.
   - This introduces a dependency on libcbor.

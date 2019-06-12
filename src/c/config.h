@@ -35,6 +35,7 @@ typedef struct edgex_service_endpoints
 {
   edgex_device_service_endpoint data;
   edgex_device_service_endpoint metadata;
+  edgex_device_service_endpoint logging;
 } edgex_service_endpoints;
 
 typedef struct edgex_device_deviceinfo
@@ -54,7 +55,7 @@ typedef struct edgex_device_deviceinfo
 typedef struct edgex_device_logginginfo
 {
   char *file;
-  char *remoteurl;
+  bool useremote;
   iot_loglevel_t level;
 } edgex_device_logginginfo;
 
