@@ -107,6 +107,7 @@ static bool template_get_handler
     dump_attributes (driver->lc, requests[i].attributes);
     /* Fill in a result regardless */
     readings[i].type = String;
+    /* NB String (and binary) readings get deallocated in the SDK */
     readings[i].value.string_result = strdup ("Template result");
   }
   return true;
