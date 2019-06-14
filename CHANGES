@@ -6,7 +6,11 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
-Changes for Edinburgh release (1.0.0):
+Changes for "Fuji":
+
+- Event timestamps are now at nanosecond resolution, and are monotonic.
+
+Changes for 1.0.0 "Edinburgh":
 
 - EnableLogging replaces RemoteURL in the Logging configuration. The location
   of the logging service is configured in the [Clients] section.
@@ -51,7 +55,7 @@ Changes for Edinburgh release (1.0.0):
   - edgex_device_resulttype is renamed to edgex_propertytype, reflecting its
     broader usage.
 
-Changes for 0.7.2
+Changes for 0.7.2:
 
 - Device GET commands return Event structures rather than name-value pairs.
 
@@ -62,7 +66,7 @@ Changes for 0.7.1:
 - The /device/name/{name}/{command} REST endpoint is implemented.
 - Metadata callbacks for device creation and deletion are processed.
 
-Changes for Delhi release (0.7.0):
+Changes for 0.7.0 "Delhi":
 
 - Consul is supported for registration and configuration.
   - New configuration option Service.CheckInterval controlling how frequently
