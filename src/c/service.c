@@ -142,10 +142,16 @@ static void startConfigured
     iot_logger_add
       (svc->logger, edgex_log_tofile, svc->config.logging.file);
   }
-  if (svc->config.logging.remoteurl)
+  if (svc->config.logging.useremote)
   {
-    iot_logger_add
-      (svc->logger, edgex_log_torest, svc->config.logging.remoteurl);
+    char url[URL_BUF_SIZE];
+    snprintf
+    (
+      url, URL_BUF_SIZE - 1,
+      "http://%s:%u/api/v1/logs",
+      svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
+    );
+    iot_logger_add (svc->logger, edgex_log_torest, url);
   }
 
   if (profile)
@@ -489,6 +495,7 @@ void edgex_device_service_start
     edgex_error e; // errors will be picked up in validateConfig
     edgex_registry_query_service (registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
     edgex_registry_query_service (registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
+    edgex_registry_query_service (registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
   }
 
   if (svc->config.device.profilesdir == NULL)

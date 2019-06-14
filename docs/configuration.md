@@ -2,7 +2,9 @@
 
 The device service configuration is held in TOML format. The SDK method `edgex_device_service_start` takes the name of a directory, and an optional profile name. It will attempt to load the configuration from a file named `configuration.toml` or `configuration-<profile>.toml` in that directory.
 
-Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`. Multiple Schedules and ScheduleEvents may be configured, this is done using an appropriate number of `[[Schedule]]` and `[[ScheduleEvent]]` tables.
+Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`.
+
+If the Registry is in use, configuration is contained in subfolders of edgex/core/1.0/<service-name>. The "Clients" section is not present in this scenario, as the Registry provides a specific mechanism for maintaining service information.
 
 ## Service section
 
@@ -13,13 +15,11 @@ Port | Int | Port on which to accept the device service's REST API.
 Timeout | Int | Time (in milliseconds) to wait between attempts to contact core-data and core-metadata when starting up.
 ConnectRetries | Int | Number of times to attempt to contact core-data and core-metadata when starting up.
 StartupMsg | String | Message to log on successful startup.
-ReadMaxLimit | Int | Limits the number of items returned by a GET request to `/api/v1/device/all/<command>`.
 CheckInterval | String | The checking interval to request if registering with Consul
 
 ## Clients section
 
-Defines the endpoints for other microservices in an EdgeX system. If using a
-registry service this section is not required.
+Defines the endpoints for other microservices in an EdgeX system.
 
 ### Data
 
@@ -34,6 +34,13 @@ Option | Type | Notes
 :--- | :--- | :---
 Host | String | Hostname on which to contact the core-metadata service.
 Port | Int | Port on which to contact the core-metadata service.
+
+### Logging
+
+Option | Type | Notes
+:--- | :--- | :---
+Host | String | Hostname on which to contact the support-logging service.
+Port | Int | Port on which to contact the support-logging service.
 
 ## Device section
 
@@ -54,7 +61,7 @@ SendReadingsOnChanged | Bool | Not implemented. To be used to suppress the submi
 
 Option | Type | Notes
 :--- | :--- | :---
-RemoteURL | String | If this option is set, logs will be submitted to a logging service at the specified URL.
+EnableRemote | Boolean | If this option is set, logs will be submitted to the EdgeX logging service.
 File | String | If this option is set, logs will be written to the named file. Setting a value of "-" causes logs to be written to standard output.
 LogLevel | String | Sets the logging level. Available settings in order of increasing severity are: TRACE, DEBUG, INFO, WARNING, ERROR.
 
@@ -62,6 +69,3 @@ LogLevel | String | Sets the logging level. Available settings in order of incre
 
 This section is for driver-specific options. Any configuration specified here will be passed to the driver implementation during initialization.
 
-## Watchers section
-
-Watchers are not supported in this release.

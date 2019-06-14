@@ -194,7 +194,6 @@ void edgex_device_populateConfig
     GET_CONFIG_UINT32(Timeout, service.timeout);
     GET_CONFIG_UINT32(ConnectRetries, service.connectretries);
     GET_CONFIG_STRING(StartupMsg, service.startupmsg);
-    GET_CONFIG_UINT32(ReadMaxLimit, service.readmaxlimit);
     GET_CONFIG_STRING(CheckInterval, service.checkinterval);
     int n = 0;
     arr = toml_array_in (table, "Labels");
@@ -226,6 +225,12 @@ void edgex_device_populateConfig
     {
       GET_CONFIG_STRING(Host, endpoints.metadata.host);
       GET_CONFIG_UINT16(Port, endpoints.metadata.port);
+    }
+    table = toml_table_in (subtable, "Logging");
+    if (table)
+    {
+      GET_CONFIG_STRING(Host, endpoints.logging.host);
+      GET_CONFIG_UINT16(Port, endpoints.logging.port);
     }
   }
 
@@ -276,7 +281,7 @@ void edgex_device_populateConfig
   if (table)
   {
     char *levelstr = NULL;
-    GET_CONFIG_STRING(RemoteURL, logging.remoteurl);
+    GET_CONFIG_BOOL(EnableRemote, logging.useremote);
     GET_CONFIG_STRING(File, logging.file);
     toml_rtos2 (toml_raw_in (table, "LogLevel"), &levelstr);
     if (levelstr)
@@ -452,8 +457,6 @@ void edgex_device_populateConfigNV
     get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
   svc->config.service.startupmsg =
     get_nv_config_string (config, "Service/StartupMsg");
-  svc->config.service.readmaxlimit =
-    get_nv_config_uint32 (svc->logger, config, "Service/ReadMaxLimit", err);
   svc->config.service.checkinterval =
     get_nv_config_string (config, "Service/CheckInterval");
 
@@ -515,8 +518,8 @@ void edgex_device_populateConfigNV
     }
   }
 
-  svc->config.logging.remoteurl =
-    get_nv_config_string (config, "Logging/RemoteURL");
+  svc->config.logging.useremote =
+    get_nv_config_bool (config, "Logging/EnableRemote", false);
   svc->config.logging.file = get_nv_config_string (config, "Logging/File");
 }
 
@@ -550,7 +553,6 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
   PUT_CONFIG_UINT(Service/Timeout, service.timeout);
   PUT_CONFIG_UINT(Service/ConnectRetries, service.connectretries);
   PUT_CONFIG_STRING(Service/StartupMsg, service.startupmsg);
-  PUT_CONFIG_UINT(Service/ReadMaxLimit, service.readmaxlimit);
   PUT_CONFIG_STRING(Service/CheckInterval, service.checkinterval);
 
   int labellen = 0;
@@ -595,7 +597,7 @@ edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
     result = pair;
   }
 
-  PUT_CONFIG_STRING(Logging/RemoteURL, logging.remoteurl);
+  PUT_CONFIG_BOOL(Logging/EnableRemote, logging.useremote);
   PUT_CONFIG_STRING(Logging/File, logging.file);
 
   result = makepair
@@ -649,8 +651,8 @@ void edgex_device_freeConfig (edgex_device_service *svc)
 
   free (svc->config.endpoints.data.host);
   free (svc->config.endpoints.metadata.host);
+  free (svc->config.endpoints.logging.host);
   free (svc->config.logging.file);
-  free (svc->config.logging.remoteurl);
   free (svc->config.service.host);
   free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
@@ -719,12 +721,18 @@ int edgex_device_handler_config
   json_object_set_number (dobj, "Port", svc->config.endpoints.data.port);
   json_object_set_value (cobj, "Data", dval);
 
+  JSON_Value *lsval = json_value_init_object ();
+  JSON_Object *lsobj = json_value_get_object (lsval);
+  json_object_set_string (lsobj, "Host", svc->config.endpoints.logging.host);
+  json_object_set_number (lsobj, "Port", svc->config.endpoints.logging.port);
+  json_object_set_value (cobj, "Data", lsval);
+
   json_object_set_value (obj, "Clients", cval);
 
   JSON_Value *lval = json_value_init_object ();
   JSON_Object *lobj = json_value_get_object (lval);
   json_object_set_string (lobj, "File", svc->config.logging.file);
-  json_object_set_string (lobj, "RemoteURL", svc->config.logging.remoteurl);
+  json_object_set_boolean (lobj, "EnableRemote", svc->config.logging.useremote);
   json_object_set_value (obj, "Logging", lval);
 
   JSON_Value *sval = json_value_init_object ();
@@ -735,8 +743,6 @@ int edgex_device_handler_config
   json_object_set_number
     (sobj, "ConnectRetries", svc->config.service.connectretries);
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
-  json_object_set_number
-    (sobj, "ReadMaxLimit", svc->config.service.readmaxlimit);
   json_object_set_string
     (sobj, "CheckInterval", svc->config.service.checkinterval);
 
