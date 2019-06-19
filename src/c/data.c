@@ -85,14 +85,11 @@ edgex_event_cooked *edgex_data_process_event
         .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
       });
 
-      if (values[i].origin)
+      cbor_map_add (crdg, (struct cbor_pair)
       {
-        cbor_map_add (crdg, (struct cbor_pair)
-        {
-          .key = cbor_move (cbor_build_string ("origin")),
-          .value = cbor_move (cbor_build_uint64 (values[i].origin))
-        });
-      }
+        .key = cbor_move (cbor_build_string ("origin")),
+        .value = cbor_move (cbor_build_uint64 (values[i].origin ? values[i].origin : timenow))
+      });
 
       cbor_array_push (crdgs, cbor_move (crdg));
     }
@@ -125,10 +122,7 @@ edgex_event_cooked *edgex_data_process_event
 
       json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
       json_object_set_string (robj, "value", reading);
-      if (values[i].origin)
-      {
-        json_object_set_number (robj, "origin", values[i].origin);
-      }
+      json_object_set_number (robj, "origin", values[i].origin ? values[i].origin : timenow);
       json_array_append_value (jrdgs, rval);
       free (reading);
     }
