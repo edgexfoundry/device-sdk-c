@@ -20,7 +20,6 @@
 #include "edgex-rest.h"
 #include "edgex-time.h"
 #include "edgex/csdk-defs.h"
-#include "edgex/registry.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -109,14 +108,7 @@ static int ping_handler
   return MHD_HTTP_OK;
 }
 
-static void startConfigured
-(
-  edgex_device_service *svc,
-  edgex_registry *registry,
-  toml_table_t *config,
-  const char *profile,
-  edgex_error *err
-)
+static void startConfigured (edgex_device_service *svc, toml_table_t *config, const char *profile, edgex_error *err)
 {
   char *myhost;
   struct utsname buffer;
@@ -158,7 +150,7 @@ static void startConfigured
   {
     iot_log_info (svc->logger, "Uploading configuration to registry.");
     edgex_nvpairs *c = edgex_device_getConfig (svc);
-    edgex_registry_put_config (registry, svc->name, profile, c, err);
+    edgex_registry_put_config (svc->registry, svc->name, profile, c, err);
     edgex_nvpairs_free (c);
     if (err->code)
     {
@@ -378,11 +370,11 @@ static void startConfigured
 
   /* Ready. Register ourselves and log that we have started. */
 
-  if (registry && svc->config.service.checkinterval)
+  if (svc->registry)
   {
     edgex_registry_register_service
     (
-      registry,
+      svc->registry,
       svc->name,
       myhost,
       svc->config.service.port,
@@ -412,7 +404,6 @@ void edgex_device_service_start
 )
 {
   toml_table_t *config = NULL;
-  edgex_registry *registry = NULL;
   bool uploadConfig = false;
   svc->starttime = edgex_device_millitime();
 
@@ -427,21 +418,21 @@ void edgex_device_service_start
 
   if (registryURL)
   {
-    registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
-    if (registry == NULL)
+    svc->registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
+    if (svc->registry == NULL)
     {
       *err = EDGEX_INVALID_ARG;
       return;
     }
   }
 
-  if (registry)
+  if (svc->registry)
   {
     // Wait for registry to be ready
 
     int retries = 5;
     struct timespec delay = { .tv_sec = 1, .tv_nsec = 0 };
-    while (!edgex_registry_ping (registry, err) && --retries)
+    while (!edgex_registry_ping (svc->registry, err) && --retries)
     {
       nanosleep (&delay, NULL);
     }
@@ -449,7 +440,7 @@ void edgex_device_service_start
     {
       iot_log_error (svc->logger, "registry service not running");
       *err = EDGEX_REMOTE_SERVER_DOWN;
-      edgex_registry_free (registry);
+      edgex_registry_free (svc->registry);
       return;
     }
 
@@ -457,7 +448,7 @@ void edgex_device_service_start
     svc->stopconfig = malloc (sizeof (atomic_bool));
     atomic_init (svc->stopconfig, false);
     edgex_nvpairs *confpairs = edgex_registry_get_config
-      (registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
+      (svc->registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
 
     if (confpairs)
     {
@@ -465,7 +456,7 @@ void edgex_device_service_start
       edgex_nvpairs_free (confpairs);
       if (err->code)
       {
-        edgex_registry_free (registry);
+        edgex_registry_free (svc->registry);
         return;
       }
     }
@@ -478,24 +469,24 @@ void edgex_device_service_start
     }
   }
 
-  if (uploadConfig || (registry == NULL))
+  if (uploadConfig || (svc->registry == NULL))
   {
     config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
     if (err->code)
     {
-      edgex_registry_free (registry);
+      edgex_registry_free (svc->registry);
       return;
     }
 
     edgex_device_populateConfig (svc, config, err);
   }
 
-  if (registry)
+  if (svc->registry)
   {
     edgex_error e; // errors will be picked up in validateConfig
-    edgex_registry_query_service (registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
-    edgex_registry_query_service (registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
-    edgex_registry_query_service (registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
+    edgex_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
+    edgex_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
+    edgex_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
   }
 
   if (svc->config.device.profilesdir == NULL)
@@ -503,9 +494,8 @@ void edgex_device_service_start
     svc->config.device.profilesdir = strdup (confDir);
   }
 
-  startConfigured (svc, registry, config, uploadConfig ? profile : NULL, err);
+  startConfigured (svc, config, uploadConfig ? profile : NULL, err);
 
-  edgex_registry_free (registry);
   toml_free (config);
 
   if (err->code == 0)
@@ -592,6 +582,15 @@ void edgex_device_service_stop
   }
   svc->userfns.stop (svc->userdata, force);
   edgex_devmap_clear (svc->devices);
+  if (svc->registry)
+  {
+    edgex_registry_deregister_service (svc->registry, svc->name, err);
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Unable to deregister service from registry");
+    }
+  }
+
   iot_threadpool_wait (svc->thpool);
   iot_log_info (svc->logger, "Stopped device service");
 }
@@ -606,6 +605,7 @@ void edgex_device_service_free (edgex_device_service *svc)
       iot_scheduler_free (svc->scheduler);
     }
     iot_threadpool_free (svc->thpool);
+    edgex_registry_free (svc->registry);
     edgex_registry_fini ();
     pthread_mutex_destroy (&svc->discolock);
     iot_logger_free (svc->logger);

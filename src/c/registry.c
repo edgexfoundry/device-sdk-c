@@ -33,6 +33,7 @@ static void reginit (void)
     consulimpl.get_config = edgex_consul_client_get_config;
     consulimpl.put_config = edgex_consul_client_write_config;
     consulimpl.register_service = edgex_consul_client_register_service;
+    consulimpl.deregister_service = edgex_consul_client_deregister_service;
     consulimpl.query_service = edgex_consul_client_query_service;
     consulimpl.parser = edgex_registry_parse_simple_url;
     consulimpl.free_location = edgex_registry_free_simple_url;
@@ -167,6 +168,11 @@ void edgex_registry_register_service
     checkInterval,
     err
   );
+}
+
+void edgex_registry_deregister_service (edgex_registry *registry, const char *servicename, edgex_error *err)
+{
+  registry->impl.deregister_service (registry->logger, registry->location, servicename, err);
 }
 
 void edgex_registry_query_service

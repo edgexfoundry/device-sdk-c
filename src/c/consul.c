@@ -317,8 +317,6 @@ void edgex_consul_client_register_service
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  char myUrl[URL_BUF_SIZE];
-  char checkName[URL_BUF_SIZE];
   edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
@@ -327,22 +325,25 @@ void edgex_consul_client_register_service
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/register",
     endpoint->host, endpoint->port
   );
-  snprintf
-    (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, port);
-  snprintf (checkName, URL_BUF_SIZE - 1, "Health Check: %s", servicename);
-
-  JSON_Value *checkval = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (checkval);
-  json_object_set_string (obj, "Name", checkName);
-  json_object_set_string (obj, "Interval", checkInterval);
-  json_object_set_string (obj, "HTTP", myUrl);
 
   JSON_Value *params = json_value_init_object ();
-  obj = json_value_get_object (params);
+  JSON_Object *obj = json_value_get_object (params);
   json_object_set_string (obj, "Name", servicename);
   json_object_set_string (obj, "Address", host);
   json_object_set_number (obj, "Port", port);
-  json_object_set_value (obj, "Check", checkval);
+  if (checkInterval)
+  {
+    char myUrl[URL_BUF_SIZE];
+    char checkName[URL_BUF_SIZE];
+    JSON_Value *checkval = json_value_init_object ();
+    snprintf (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, port);
+    snprintf (checkName, URL_BUF_SIZE - 1, "Health Check: %s", servicename);
+    JSON_Object *checkobj = json_value_get_object (checkval);
+    json_object_set_string (checkobj, "Name", checkName);
+    json_object_set_string (checkobj, "Interval", checkInterval);
+    json_object_set_string (checkobj, "HTTP", myUrl);
+    json_object_set_value (obj, "Check", checkval);
+  }
 
   char *json = json_serialize_to_string (params);
   json_value_free (params);
@@ -354,6 +355,34 @@ void edgex_consul_client_register_service
     iot_log_error (lc, "Register service failed: %s", ctx.buff);
   }
   free (json);
+  free (ctx.buff);
+}
+
+void edgex_consul_client_deregister_service
+(
+  iot_logger_t *lc,
+  void *location,
+  const char *servicename,
+  edgex_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/deregister/%s",
+    endpoint->host, endpoint->port, servicename
+  );
+
+  edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
+
+  if (err->code)
+  {
+    iot_log_error (lc, "Deregister service failed: %s", ctx.buff);
+  }
   free (ctx.buff);
 }
 

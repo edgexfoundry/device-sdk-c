@@ -12,6 +12,7 @@
 #include "edgex/devsdk.h"
 #include "edgex/eventgen.h"
 #include "edgex/edgex-logging.h"
+#include "edgex/registry.h"
 #include "config.h"
 #include "devmap.h"
 #include "rest-server.h"
@@ -32,6 +33,7 @@ struct edgex_device_service
   edgex_device_config config;
   atomic_bool *stopconfig;
   edgex_rest_server *daemon;
+  edgex_registry *registry;
   edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;
   uint64_t starttime;
