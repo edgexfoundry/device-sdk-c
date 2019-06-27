@@ -55,6 +55,9 @@ void edgex_consul_client_register_service
   edgex_error *err
 );
 
+void edgex_consul_client_deregister_service
+  (iot_logger_t *lc, void *location, const char *servicename, edgex_error *err);
+
 void edgex_consul_client_query_service
 (
   iot_logger_t *lc,
