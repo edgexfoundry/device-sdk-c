@@ -746,6 +746,30 @@ static void devicecommand_free (edgex_devicecommand *e)
   }
 }
 
+static bool resourceop_validate (iot_logger_t *lc, edgex_resourceoperation *ro, edgex_deviceresource *reslist)
+{
+  while (ro)
+  {
+    bool found = false;
+    edgex_deviceresource *res = reslist;
+    while (res && !found)
+    {
+      if (strcmp (ro->object, res->name) == 0)
+      {
+        found = true;
+      }
+      res = res->next;
+    }
+    if (!found)
+    {
+      iot_log_error (lc, "No deviceResource \"%s\" found", ro->object);
+      return false;
+    }
+    ro = ro->next;
+  }
+  return true;
+}
+
 static edgex_deviceprofile *deviceprofile_read
   (iot_logger_t *lc, const JSON_Object *obj)
 {
@@ -788,8 +812,22 @@ static edgex_deviceprofile *deviceprofile_read
   {
     edgex_devicecommand *temp = devicecommand_read
       (json_array_get_object (array, i));
-    *last_ptr2 = temp;
-    last_ptr2 = &(temp->next);
+    if
+    (
+      resourceop_validate (lc, temp->set, result->device_resources) &&
+      resourceop_validate (lc, temp->get, result->device_resources)
+    )
+    {
+      *last_ptr2 = temp;
+      last_ptr2 = &(temp->next);
+    }
+    else
+    {
+      iot_log_error (lc, "Parse error in deviceCommand %s of device profile %s", temp->name, result->name);
+      devicecommand_free (temp);
+      edgex_deviceprofile_free (result);
+      return NULL;
+    }
   }
   return result;
 }
