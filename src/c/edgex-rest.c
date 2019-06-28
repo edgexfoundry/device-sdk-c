@@ -172,12 +172,15 @@ const char *edgex_propertytype_tostring (edgex_propertytype pt)
 
 bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
 {
-  for (edgex_propertytype i = Bool; i <= Float64; i++)
+  if (str)
   {
-    if (strcasecmp (str, proptypes[i]) == 0)
+    for (edgex_propertytype i = Bool; i <= Float64; i++)
     {
-      *res = i;
-      return true;
+      if (strcasecmp (str, proptypes[i]) == 0)
+      {
+        *res = i;
+        return true;
+      }
     }
   }
   return false;
@@ -341,7 +344,7 @@ static edgex_propertyvalue *propertyvalue_read
   }
   else
   {
-    iot_log_error (lc, "Unable to parse \"%s\" as data type", tstr);
+    iot_log_error (lc, "Unable to parse \"%s\" as data type", tstr ? tstr : "(null)");
   }
   return result;
 }
