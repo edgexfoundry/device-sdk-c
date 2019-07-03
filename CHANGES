@@ -6,8 +6,9 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
-Changes for "Fuji":
+Changes for 1.1.0 "Fuji":
 
+- Device services de-register from the registry on exit
 - Event timestamps are now at nanosecond resolution, and are monotonic.
 
 Changes for 1.0.0 "Edinburgh":

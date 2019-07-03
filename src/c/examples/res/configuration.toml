@@ -32,7 +32,7 @@
   SendReadingsOnChanged = true
 
 [Logging]
-  EnableRemote = true
+  EnableRemote = false
   File = "-"
   LogLevel = "DEBUG"
 

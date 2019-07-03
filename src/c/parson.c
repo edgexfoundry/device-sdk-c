@@ -42,8 +42,8 @@
 #define STARTING_CAPACITY 16
 #define MAX_NESTING       2048
 
-#define FLOAT_FORMAT "%1.17g" /* do not increase precision without incresing NUM_BUF_SIZE */
-#define NUM_BUF_SIZE 64 /* double printed with "%1.17g" shouldn't be longer than 25 bytes so let's be paranoid and use 64 */
+#define FLOAT_FORMAT "%1.20g" /* do not increase precision without incresing NUM_BUF_SIZE */
+#define NUM_BUF_SIZE 64 /* double printed with "%1.20g" shouldn't be longer than 28 bytes so let's be paranoid and use 64 */
 
 #define SIZEOF_TOKEN(a)       (sizeof(a) - 1)
 #define SKIP_CHAR(str)        ((*str)++)
