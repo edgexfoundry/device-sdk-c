@@ -122,13 +122,13 @@ edgex_event_cooked *edgex_data_process_event
 
       json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
       json_object_set_string (robj, "value", reading);
-      json_object_set_number (robj, "origin", values[i].origin ? values[i].origin : timenow);
+      json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
       json_array_append_value (jrdgs, rval);
       free (reading);
     }
 
     json_object_set_string (jobj, "device", device_name);
-    json_object_set_number (jobj, "origin", timenow);
+    json_object_set_uint (jobj, "origin", timenow);
     json_object_set_value (jobj, "readings", arrval);
     result->encoding = JSON;
     result->value.json = json_serialize_to_string (jevent);

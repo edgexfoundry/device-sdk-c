@@ -44,8 +44,8 @@ int edgex_device_handler_metrics
   JSON_Object *memobj = json_value_get_object (memval);
 
   struct mallinfo mi = mallinfo ();
-  json_object_set_number (memobj, "Alloc", mi.uordblks);
-  json_object_set_number (memobj, "TotalAlloc", mi.arena + mi.hblkhd);
+  json_object_set_uint (memobj, "Alloc", mi.uordblks);
+  json_object_set_uint (memobj, "TotalAlloc", mi.arena + mi.hblkhd);
 
   json_object_set_value (obj, "Memory", memval);
 

@@ -330,7 +330,7 @@ void edgex_consul_client_register_service
   JSON_Object *obj = json_value_get_object (params);
   json_object_set_string (obj, "Name", servicename);
   json_object_set_string (obj, "Address", host);
-  json_object_set_number (obj, "Port", port);
+  json_object_set_uint (obj, "Port", port);
   if (checkInterval)
   {
     char myUrl[URL_BUF_SIZE];
@@ -430,7 +430,7 @@ void edgex_consul_client_query_service
       if (name)
       {
         *host = strdup (name);
-        *port = json_object_get_number (obj, "ServicePort");
+        *port = json_object_get_uint (obj, "ServicePort");
       }
       else
       {
