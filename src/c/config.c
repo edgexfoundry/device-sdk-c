@@ -712,19 +712,19 @@ int edgex_device_handler_config
   JSON_Value *mval = json_value_init_object ();
   JSON_Object *mobj = json_value_get_object (mval);
   json_object_set_string (mobj, "Host", svc->config.endpoints.metadata.host);
-  json_object_set_number (mobj, "Port", svc->config.endpoints.metadata.port);
+  json_object_set_uint (mobj, "Port", svc->config.endpoints.metadata.port);
   json_object_set_value (cobj, "Metadata", mval);
 
   JSON_Value *dval = json_value_init_object ();
   JSON_Object *dobj = json_value_get_object (dval);
   json_object_set_string (dobj, "Host", svc->config.endpoints.data.host);
-  json_object_set_number (dobj, "Port", svc->config.endpoints.data.port);
+  json_object_set_uint (dobj, "Port", svc->config.endpoints.data.port);
   json_object_set_value (cobj, "Data", dval);
 
   JSON_Value *lsval = json_value_init_object ();
   JSON_Object *lsobj = json_value_get_object (lsval);
   json_object_set_string (lsobj, "Host", svc->config.endpoints.logging.host);
-  json_object_set_number (lsobj, "Port", svc->config.endpoints.logging.port);
+  json_object_set_uint (lsobj, "Port", svc->config.endpoints.logging.port);
   json_object_set_value (cobj, "Data", lsval);
 
   json_object_set_value (obj, "Clients", cval);
@@ -738,9 +738,9 @@ int edgex_device_handler_config
   JSON_Value *sval = json_value_init_object ();
   JSON_Object *sobj = json_value_get_object (sval);
   json_object_set_string (sobj, "Host", svc->config.service.host);
-  json_object_set_number (sobj, "Port", svc->config.service.port);
-  json_object_set_number (sobj, "Timeout", svc->config.service.timeout);
-  json_object_set_number
+  json_object_set_uint (sobj, "Port", svc->config.service.port);
+  json_object_set_uint (sobj, "Timeout", svc->config.service.timeout);
+  json_object_set_uint
     (sobj, "ConnectRetries", svc->config.service.connectretries);
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
   json_object_set_string
@@ -763,8 +763,8 @@ int edgex_device_handler_config
   json_object_set_boolean (dobj, "Discovery", svc->config.device.discovery);
   json_object_set_string (dobj, "InitCmd", svc->config.device.initcmd);
   json_object_set_string (dobj, "InitCmdArgs", svc->config.device.initcmdargs);
-  json_object_set_number (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
-  json_object_set_number
+  json_object_set_uint (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
+  json_object_set_uint
     (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
   json_object_set_string (dobj, "RemoveCmd", svc->config.device.removecmd);
   json_object_set_string
