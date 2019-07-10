@@ -111,13 +111,6 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   edgex_error *err
 );
 
-bool edgex_data_client_ping
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  edgex_error *err
-);
-
 void edgex_device_commandresult_free (edgex_device_commandresult *res, int n);
 
 edgex_device_commandresult *edgex_device_commandresult_dup (const edgex_device_commandresult *res, int n);

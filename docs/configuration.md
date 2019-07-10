@@ -4,7 +4,17 @@ The device service configuration is held in TOML format. The SDK method `edgex_d
 
 Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`.
 
-If the Registry is in use, configuration is contained in subfolders of edgex/core/1.0/<service-name>. The "Clients" section is not present in this scenario, as the Registry provides a specific mechanism for maintaining service information.
+If the Registry is in use, configuration is contained in subfolders of `edgex/core/1.0/<service-name>`. The "Clients" section is not present in this scenario, as the Registry provides a specific mechanism for maintaining service information.
+
+When a device service is run for the first time with Registry enabled, it reads its configuration from a TOML file and uploads it to the Registry. The value of any configuration element can be over-ridden at this time with a value from a corresponding environment variable. The service first looks for an environment variable whose name is of the form
+
+`<service-name>_<section-name>_<config-element>`
+
+and if that is not present, then tries
+
+`<section-name>_<config-element>`
+
+For example, `device-template_Device_MaxCmdOps` or `Logging_LogLevel`.
 
 ## Service section
 

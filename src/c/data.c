@@ -382,27 +382,3 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
 
   return result;
 }
-
-bool edgex_data_client_ping
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  edgex_error *err
-)
-{
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/ping",
-    endpoints->data.host,
-    endpoints->data.port
-  );
-
-  edgex_http_get (lc, &ctx, url, NULL, err);
-  return (err->code == 0);
-}
