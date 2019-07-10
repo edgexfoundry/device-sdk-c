@@ -8,7 +8,10 @@ differs as follows:
 
 Changes for 1.1.0 "Fuji":
 
-- Device services de-register from the registry on exit
+- Configuration can be overridden via environment variables when populating
+  the registry.
+- Subtables are supported in the Driver configuration.
+- Device services de-register from the registry on exit.
 - Event timestamps are now at nanosecond resolution, and are monotonic.
 
 Changes for 1.0.0 "Edinburgh":

@@ -19,8 +19,6 @@
 #include <string.h>
 #include <errno.h>
 
-static void toml_rtos2 (const char *s, char **ret);
-
 #define ERRBUFSZ 1024
 
 toml_table_t *edgex_device_loadConfig
@@ -124,7 +122,7 @@ static void toml_rtob2 (const char *raw, bool *ret)
   }
 }
 
-/* Wrap toml_rtoi for uint16, uint32. */
+/* As toml_rtoi but return uint16 */
 
 static void toml_rtoui16
   (const char *raw, uint16_t *ret, iot_logger_t *lc, edgex_error *err)
@@ -144,158 +142,167 @@ static void toml_rtoui16
   }
 }
 
-static void toml_rtoui32
-  (const char *raw, uint32_t *ret, iot_logger_t *lc, edgex_error *err)
+static edgex_nvpairs *makepair
+  (const char *name, const char *value, edgex_nvpairs *list)
 {
-  if (raw)
+  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
+  result->name = strdup (name);
+  result->value = strdup (value);
+  result->next = list;
+  return result;
+}
+
+static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result, const char *prefix)
+{
+  unsigned i = 0;
+  const char *key;
+  const char *raw;
+  toml_table_t *tab;
+  int64_t dummy;
+  char *fullname;
+
+  if (strcmp (prefix, "Clients") == 0)
   {
-    int64_t dummy;
-    if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT32_MAX)
+    return result;   // clients table is handled in parseTomlClients()
+  }
+
+  while ((key = toml_key_in (config, i++)))
+  {
+    if (strlen (prefix))
     {
-      *ret = dummy;
+      fullname = malloc (strlen (prefix) + strlen (key) + 2);
+      strcpy (fullname, prefix);
+      strcat (fullname, "/");
+      strcat (fullname, key);
     }
     else
     {
-      iot_log_error (lc, "Unable to parse %s as uint32", raw);
-      *err = EDGEX_BAD_CONFIG;
+      fullname = strdup (key);
     }
+    if ((raw = toml_raw_in (config, key)))
+    {
+      if (strcmp (raw, "true") == 0 || strcmp (raw, "false") == 0)
+      {
+        result = makepair (fullname, raw, result);
+      }
+      else if (toml_rtoi (raw, &dummy) == 0)
+      {
+        char val[32];
+        sprintf (val, "%" PRIi64, dummy);
+        result = makepair (fullname, val, result); 
+      }
+      else
+      {
+        char *val;
+        toml_rtos (raw, &val);
+        if (val && *val)
+        {
+          result = makepair (fullname, val, result);
+        }
+        free (val);
+      }
+    }
+    else if ((tab = toml_table_in (config, key)))
+    {
+      result = processTable (tab, result, fullname);
+    }
+    free (fullname);
+  }
+  return result;
+}
+
+edgex_nvpairs *edgex_device_parseToml (toml_table_t *config)
+{
+  return processTable (config, NULL, "");
+}
+
+static void parseClient
+  (iot_logger_t *lc, toml_table_t *client, edgex_device_service_endpoint *endpoint, edgex_error *err)
+{
+  if (client)
+  {
+    toml_rtos2 (toml_raw_in (client, "Host"), &endpoint->host);
+    toml_rtoui16 (toml_raw_in (client, "Port"), &endpoint->port, lc, err);
   }
 }
 
-#define GET_CONFIG_STRING(KEY, ELEMENT) \
-toml_rtos2 (toml_raw_in (table, #KEY), &svc->config.ELEMENT);
+void edgex_device_parseTomlClients
+  (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, edgex_error *err)
+{
+  if (clients)
+  {
+    parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
+    parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
+    parseClient (lc, toml_table_in (clients, "Logging"), &endpoints->logging, err);
+  }
+}
 
-#define GET_CONFIG_UINT16(KEY, ELEMENT) \
-toml_rtoui16 (toml_raw_in(table, #KEY), &svc->config.ELEMENT, svc->logger, err);
+static bool checkOverride (char *qstr, char **val)
+{
+  char *env;
+  char *slash = qstr;
 
-#define GET_CONFIG_UINT32(KEY, ELEMENT) \
-toml_rtoui32 (toml_raw_in(table, #KEY), &svc->config.ELEMENT, svc->logger, err);
+  while ((slash = strchr (slash, '/')))
+  {
+    *slash = '_';
+  }
+  env = getenv (qstr);
+  if (env)
+  {
+    free (*val); 
+    *val = strdup (env);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
-#define GET_CONFIG_BOOL(KEY, ELEMENT) \
-toml_rtob2 (toml_raw_in(table, #KEY), &svc->config.ELEMENT);
+void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, edgex_nvpairs *config)
+{
+  char *query = NULL;
+  size_t qsize = 0;
 
-void edgex_device_populateConfig
-  (edgex_device_service *svc, toml_table_t *config, edgex_error *err)
+  for (edgex_nvpairs *iter = config; iter; iter = iter->next)
+  {
+    size_t req = strlen (iter->name) + strlen (sname) + 2;
+    if (qsize < req)
+    {
+      query = realloc (query, req);
+      qsize = req;
+    }
+    strcpy (query, sname);
+    strcat (query, "_");
+    strcat (query, iter->name);
+    if (checkOverride (query, &iter->value))
+    {
+      iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
+    }
+    else
+    {
+      strcpy (query, iter->name);
+      if (checkOverride (query, &iter->value))
+      {
+        iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
+      }
+    }
+  }
+  free (query);
+}
+
+#if 0
+void edgex_device_process_configured_watchers
+  (edgex_device_service *svc, toml_array_t *watchers, edgex_error *err)
 {
   const char *raw;
   char *namestr;
   toml_table_t *table;
-  toml_table_t *subtable;
-  toml_array_t *arr;
 
-  svc->config.device.discovery = true;
-  svc->config.device.datatransform = true;
-
-  table = toml_table_in (config, "Service");
-  if (table)
-  {
-    GET_CONFIG_STRING(Host, service.host);
-    GET_CONFIG_UINT16(Port, service.port);
-    GET_CONFIG_UINT32(Timeout, service.timeout);
-    GET_CONFIG_UINT32(ConnectRetries, service.connectretries);
-    GET_CONFIG_STRING(StartupMsg, service.startupmsg);
-    GET_CONFIG_STRING(CheckInterval, service.checkinterval);
-    int n = 0;
-    arr = toml_array_in (table, "Labels");
-    if (arr)
-    {
-      while (toml_raw_at (arr, n))
-      { n++; }
-    }
-    svc->config.service.labels = malloc (sizeof (char *) * (n + 1));
-    for (int i = 0; i < n; i++)
-    {
-      raw = toml_raw_at (arr, i);
-      toml_rtos2 (raw, &svc->config.service.labels[i]);
-    }
-    svc->config.service.labels[n] = NULL;
-  }
-
-  subtable = toml_table_in (config, "Clients");
-  if (subtable)
-  {
-    table = toml_table_in (subtable, "Data");
-    if (table)
-    {
-      GET_CONFIG_STRING(Host, endpoints.data.host);
-      GET_CONFIG_UINT16(Port, endpoints.data.port);
-    }
-    table = toml_table_in (subtable, "Metadata");
-    if (table)
-    {
-      GET_CONFIG_STRING(Host, endpoints.metadata.host);
-      GET_CONFIG_UINT16(Port, endpoints.metadata.port);
-    }
-    table = toml_table_in (subtable, "Logging");
-    if (table)
-    {
-      GET_CONFIG_STRING(Host, endpoints.logging.host);
-      GET_CONFIG_UINT16(Port, endpoints.logging.port);
-    }
-  }
-
-  table = toml_table_in (config, "Device");
-  if (table)
-  {
-    GET_CONFIG_BOOL(DataTransform, device.datatransform);
-    GET_CONFIG_BOOL(Discovery, device.discovery);
-    GET_CONFIG_STRING(InitCmd, device.initcmd);
-    GET_CONFIG_STRING(InitCmdArgs, device.initcmdargs);
-    GET_CONFIG_UINT32(MaxCmdOps, device.maxcmdops);
-    GET_CONFIG_UINT32(MaxCmdResultLen, device.maxcmdresultlen);
-    GET_CONFIG_STRING(RemoveCmd, device.removecmd);
-    GET_CONFIG_STRING(RemoveCmdArgs, device.removecmdargs);
-    GET_CONFIG_STRING(ProfilesDir, device.profilesdir);
-    GET_CONFIG_BOOL(SendReadingsOnChanged, device.sendreadingsonchanged);
-  }
-
-  table = toml_table_in (config, "Driver");
-  if (table)
-  {
-    const char *key;
-    for (int i = 0; 0 != (key = toml_key_in (table, i)); i++)
-    {
-      raw = toml_raw_in (table, key);
-      if (raw)
-      {
-        edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
-        pair->name = strdup (key);
-        if (toml_rtos (raw, &pair->value) == -1)
-        {
-          pair->value = strdup (raw);
-        }
-        pair->next = svc->config.driverconf;
-        svc->config.driverconf = pair;
-      }
-      else
-      {
-        iot_log_error
-          (svc->logger, "Arrays and subtables not supported in Driver table");
-        *err = EDGEX_BAD_CONFIG;
-        return;
-      }
-    }
-  }
-
-  table = toml_table_in (config, "Logging");
-  if (table)
-  {
-    char *levelstr = NULL;
-    GET_CONFIG_BOOL(EnableRemote, logging.useremote);
-    GET_CONFIG_STRING(File, logging.file);
-    toml_rtos2 (toml_raw_in (table, "LogLevel"), &levelstr);
-    if (levelstr)
-    {
-      edgex_config_setloglevel (svc->logger, levelstr, &svc->config.logging.level);
-      free (levelstr);
-    }
-  }
-
-  arr = toml_array_in (config, "Watchers");
-  if (arr)
+  if (watchers)
   {
     int n = 0;
-    while ((table = toml_table_at (arr, n++)))
+    while ((table = toml_table_at (watchers, n++)))
     {
       edgex_device_watcherinfo watcher;
       watcher.profile = NULL;
@@ -307,16 +314,16 @@ void edgex_device_populateConfig
       toml_rtos2 (toml_raw_in (table, "Key"), &watcher.key);
       toml_rtos2 (toml_raw_in (table, "MatchString"), &watcher.matchstring);
       int n = 0;
-      toml_array_t *arr2 = toml_array_in (table, "Identifiers");
-      if (arr2)
+      toml_array_t *arr = toml_array_in (table, "Identifiers");
+      if (arr)
       {
-        while (toml_raw_at (arr2, n))
+        while (toml_raw_at (arr, n))
         { n++; }
       }
       watcher.ids = malloc (sizeof (char *) * (n + 1));
       for (int j = 0; j < n; j++)
       {
-        raw = toml_raw_at (arr2, j);
+        raw = toml_raw_at (arr, j);
         toml_rtos2 (raw, &watcher.ids[j]);
       }
       watcher.ids[n] = NULL;
@@ -347,17 +354,7 @@ void edgex_device_populateConfig
     }
   }
 }
-
-static edgex_nvpairs *makepair
-  (const char *name, const char *value, edgex_nvpairs *list)
-{
-  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
-  result->name = strdup (name);
-  result->value = strdup (value);
-  result->next = list;
-  return result;
-}
-
+#endif
 
 static char *get_nv_config_string
   (const edgex_nvpairs *config, const char *key)
@@ -445,14 +442,16 @@ static bool get_nv_config_bool
   return dfl;
 }
 
-void edgex_device_populateConfigNV
+void edgex_device_populateConfig
   (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err)
 {
   svc->config.service.host = get_nv_config_string (config, "Service/Host");
   svc->config.service.port =
     get_nv_config_uint16 (svc->logger, config, "Service/Port", err);
-  svc->config.service.timeout =
+  uint32_t tm =
     get_nv_config_uint32 (svc->logger, config, "Service/Timeout", err);
+  svc->config.service.timeout.tv_sec = tm / 1000;
+  svc->config.service.timeout.tv_nsec = 1000000 * (tm % 1000);
   svc->config.service.connectretries =
     get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
   svc->config.service.startupmsg =
@@ -532,115 +531,6 @@ void edgex_device_updateConf (void *p, const edgex_nvpairs *config)
     edgex_config_setloglevel (svc->logger, lname, &svc->config.logging.level);
     free (lname);
   }
-}
-
-#define PUT_CONFIG_STRING(X,Y) \
-  if (svc->config.Y) result = makepair (#X, svc->config.Y, result)
-#define PUT_CONFIG_INT(X,Y) \
-  sprintf (buf, "%ld", (long)svc->config.Y); result = makepair (#X, buf, result)
-#define PUT_CONFIG_UINT(X,Y) \
-  sprintf (buf, "%lu", (unsigned long)svc->config.Y); result = makepair (#X, buf, result)
-#define PUT_CONFIG_BOOL(X,Y) \
-  result = makepair (#X, svc->config.Y ? "true" : "false", result)
-
-edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc)
-{
-  char buf[32];
-  edgex_nvpairs *result = NULL;
-
-  PUT_CONFIG_STRING(Service/Host, service.host);
-  PUT_CONFIG_UINT(Service/Port, service.port);
-  PUT_CONFIG_UINT(Service/Timeout, service.timeout);
-  PUT_CONFIG_UINT(Service/ConnectRetries, service.connectretries);
-  PUT_CONFIG_STRING(Service/StartupMsg, service.startupmsg);
-  PUT_CONFIG_STRING(Service/CheckInterval, service.checkinterval);
-
-  int labellen = 0;
-  for (int i = 0; svc->config.service.labels[i]; i++)
-  {
-    labellen += (strlen (svc->config.service.labels[i]) + 1);
-  }
-  if (labellen)
-  {
-    char *labels = malloc (labellen);
-    labels[0] = '\0';
-    for (int i = 0; svc->config.service.labels[i]; i++)
-    {
-      if (i)
-      {
-        strcat (labels, ",");
-      }
-      strcat (labels, svc->config.service.labels[i]);
-    }
-    result = makepair ("Service/Labels", labels, result);
-    free (labels);
-  }
-
-  PUT_CONFIG_BOOL(Device/DataTransform, device.datatransform);
-  PUT_CONFIG_BOOL(Device/Discovery, device.discovery);
-  PUT_CONFIG_STRING(Device/InitCmd, device.initcmd);
-  PUT_CONFIG_STRING(Device/InitCmdArgs, device.initcmdargs);
-  PUT_CONFIG_UINT(Device/MaxCmdOps, device.maxcmdops);
-  PUT_CONFIG_UINT(Device/MaxCmdResultLen, device.maxcmdresultlen);
-  PUT_CONFIG_STRING(Device/RemoveCmd, device.removecmd);
-  PUT_CONFIG_STRING(Device/RemoveCmdArgs, device.removecmdargs);
-  PUT_CONFIG_STRING(Device/ProfilesDir, device.profilesdir);
-  PUT_CONFIG_BOOL(Device/SendReadingsOnChanged, device.sendreadingsonchanged);
-
-  for (edgex_nvpairs *iter = svc->config.driverconf; iter; iter = iter->next)
-  {
-    edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
-    pair->name = malloc (strlen (iter->name) + strlen ("Driver/") + 1);
-    sprintf (pair->name, "Driver/%s", iter->name);
-    pair->value = strdup (iter->value);
-    pair->next = result;
-    result = pair;
-  }
-
-  PUT_CONFIG_BOOL(Logging/EnableRemote, logging.useremote);
-  PUT_CONFIG_STRING(Logging/File, logging.file);
-
-  result = makepair
-    ("Writable/LogLevel", iot_logger_levelname (svc->config.logging.level), result);
-
-  return result;
-}
-
-void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err)
-{
-  if (svc->config.endpoints.data.host == 0)
-  {
-    iot_log_error (svc->logger, "config: no hostname for core-data");
-    *err = EDGEX_BAD_CONFIG;
-  }
-  if (svc->config.endpoints.data.port == 0)
-  {
-    iot_log_error (svc->logger, "config: no port for core-data");
-    *err = EDGEX_BAD_CONFIG;
-  }
-  if (svc->config.endpoints.metadata.host == 0)
-  {
-    iot_log_error (svc->logger, "config: no hostname for core-metadata");
-    *err = EDGEX_BAD_CONFIG;
-  }
-  if (svc->config.endpoints.metadata.port == 0)
-  {
-    iot_log_error (svc->logger, "config: no port for core-metadata");
-    *err = EDGEX_BAD_CONFIG;
-  }
-}
-
-void edgex_device_dumpConfig (edgex_device_service *svc)
-{
-  edgex_nvpairs *conf;
-
-  iot_log_debug (svc->logger, "Service configuration follows:");
-  conf = edgex_device_getConfig (svc);
-  for (const edgex_nvpairs *iter = conf; iter; iter = iter->next)
-  {
-    iot_log_debug (svc->logger, "%s=%s", iter->name, iter->value);
-  }
-  edgex_nvpairs_free (conf);
 }
 
 void edgex_device_freeConfig (edgex_device_service *svc)
@@ -739,7 +629,10 @@ int edgex_device_handler_config
   JSON_Object *sobj = json_value_get_object (sval);
   json_object_set_string (sobj, "Host", svc->config.service.host);
   json_object_set_uint (sobj, "Port", svc->config.service.port);
-  json_object_set_uint (sobj, "Timeout", svc->config.service.timeout);
+
+  uint64_t tm = svc->config.service.timeout.tv_nsec / 1000000;
+  tm += svc->config.service.timeout.tv_sec * 1000;
+  json_object_set_uint (sobj, "Timeout", tm);
   json_object_set_uint
     (sobj, "ConnectRetries", svc->config.service.connectretries);
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);

@@ -21,7 +21,7 @@ typedef struct edgex_device_serviceinfo
   uint32_t connectretries;
   char **labels;
   char *startupmsg;
-  uint32_t timeout;
+  struct timespec timeout;
   char *checkinterval;
 } edgex_device_serviceinfo;
 
@@ -87,19 +87,16 @@ toml_table_t *edgex_device_loadConfig
   edgex_error *err
 );
 
-void edgex_device_populateConfig
-  (edgex_device_service *svc, toml_table_t *config, edgex_error *err);
+edgex_nvpairs *edgex_device_parseToml (toml_table_t *config);
 
-void edgex_device_populateConfigNV
+void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, edgex_error *err);
+
+void edgex_device_populateConfig
   (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err);
 
+void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, edgex_nvpairs *config);
+
 void edgex_device_updateConf (void *svc, const edgex_nvpairs *config);
-
-void edgex_device_validateConfig (edgex_device_service *svc, edgex_error *err);
-
-edgex_nvpairs *edgex_device_getConfig (const edgex_device_service *svc);
-
-void edgex_device_dumpConfig (edgex_device_service *svc);
 
 void edgex_device_freeConfig (edgex_device_service *svc);
 

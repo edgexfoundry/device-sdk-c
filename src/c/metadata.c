@@ -631,27 +631,3 @@ void edgex_metadata_client_delete_addressable
 
   free (ctx.buff);
 }
-
-bool edgex_metadata_client_ping
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  edgex_error *err
-)
-{
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/ping",
-    endpoints->metadata.host,
-    endpoints->metadata.port
-  );
-
-  edgex_http_get (lc, &ctx, url, NULL, err);
-  return (err->code == 0);
-}

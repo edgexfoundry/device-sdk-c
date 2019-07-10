@@ -108,7 +108,45 @@ static int ping_handler
   return MHD_HTTP_OK;
 }
 
-static void startConfigured (edgex_device_service *svc, toml_table_t *config, const char *profile, edgex_error *err)
+static bool ping_client
+(
+  iot_logger_t *lc,
+  const char *sname,
+  edgex_device_service_endpoint *ep,
+  int retries,
+  struct timespec delay,
+  edgex_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+
+  if (ep->host == NULL || ep->port == 0)
+  {
+    iot_log_error (lc, "Missing endpoint for %s service.", sname);
+    *err = EDGEX_BAD_CONFIG;
+    return false;
+  }
+
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", ep->host, ep->port);
+
+  do
+  {
+    memset (&ctx, 0, sizeof (edgex_ctx));
+    edgex_http_get (lc, &ctx, url, NULL, err);
+    if (err->code == 0)
+    {
+      iot_log_info (lc, "Found %s service at %s:%d", sname, ep->host, ep->port);
+      return true;
+    }
+  } while (retries-- && nanosleep (&delay, NULL) == 0);
+
+  iot_log_error (lc, "Can't connect to %s service at %s:%d", sname, ep->host, ep->port);
+  *err = EDGEX_REMOTE_SERVER_DOWN;
+  return false;
+}
+
+static void startConfigured (edgex_device_service *svc, toml_table_t *config, edgex_error *err)
 {
   char *myhost;
   struct utsname buffer;
@@ -123,86 +161,17 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, co
     myhost = buffer.nodename;
   }
 
-  edgex_device_validateConfig (svc, err);
-  if (err->code)
-  {
-    return;
-  }
-
-  if (svc->config.logging.file)
-  {
-    iot_logger_add
-      (svc->logger, edgex_log_tofile, svc->config.logging.file);
-  }
-  if (svc->config.logging.useremote)
-  {
-    char url[URL_BUF_SIZE];
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1,
-      "http://%s:%u/api/v1/logs",
-      svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
-    );
-    iot_logger_add (svc->logger, edgex_log_torest, url);
-  }
-
-  if (profile)
-  {
-    iot_log_info (svc->logger, "Uploading configuration to registry.");
-    edgex_nvpairs *c = edgex_device_getConfig (svc);
-    edgex_registry_put_config (svc->registry, svc->name, profile, c, err);
-    edgex_nvpairs_free (c);
-    if (err->code)
-    {
-      iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
-      return;
-    }
-  }
-
-  iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
-  iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
-
-  edgex_device_dumpConfig (svc);
-
   svc->adminstate = UNLOCKED;
   svc->opstate = ENABLED;
 
   /* Wait for metadata and data to be available */
 
-  int retries = svc->config.service.connectretries;
-  struct timespec delay =
+  if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.connectretries, svc->config.service.timeout, err))
   {
-    .tv_sec = svc->config.service.timeout / 1000,
-    .tv_nsec = 1000000 * (svc->config.service.timeout % 1000)
-  };
-  while (!edgex_data_client_ping (svc->logger, &svc->config.endpoints, err) && --retries)
-  {
-    nanosleep (&delay, NULL);
-  }
-  if (retries)
-  {
-    iot_log_info (svc->logger, "Found core-data service at %s:%d", svc->config.endpoints.data.host, svc->config.endpoints.data.port);
-  }
-  else
-  {
-    iot_log_error (svc->logger, "core-data service not running");
-    *err = EDGEX_REMOTE_SERVER_DOWN;
     return;
   }
-
-  retries = svc->config.service.connectretries;
-  while (!edgex_metadata_client_ping (svc->logger, &svc->config.endpoints, err) && --retries)
+  if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, svc->config.service.connectretries, svc->config.service.timeout, err))
   {
-    nanosleep (&delay, NULL);
-  }
-  if (retries)
-  {
-    iot_log_info (svc->logger, "Found core-metadata service at %s:%d", svc->config.endpoints.metadata.host, svc->config.endpoints.metadata.port);
-  }
-  else
-  {
-    iot_log_error (svc->logger, "core-metadata service not running");
-    *err = EDGEX_REMOTE_SERVER_DOWN;
     return;
   }
 
@@ -265,9 +234,8 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, co
       ds->labels = newlabel;
     }
 
-    ds->id = edgex_metadata_client_create_deviceservice (svc->logger,
-                                                         &svc->config.endpoints,
-                                                         ds, err);
+    ds->id = edgex_metadata_client_create_deviceservice
+      (svc->logger, &svc->config.endpoints, ds, err);
     if (err->code)
     {
       iot_log_error
@@ -405,6 +373,8 @@ void edgex_device_service_start
 {
   toml_table_t *config = NULL;
   bool uploadConfig = false;
+  edgex_nvpairs *confpairs = NULL;
+
   svc->starttime = edgex_device_millitime();
 
   svc->logger = iot_logger_alloc (svc->name);
@@ -438,25 +408,23 @@ void edgex_device_service_start
     }
     if (retries == 0)
     {
-      iot_log_error (svc->logger, "registry service not running");
+      iot_log_error (svc->logger, "registry service not running at %s", registryURL);
       *err = EDGEX_REMOTE_SERVER_DOWN;
-      edgex_registry_free (svc->registry);
       return;
     }
 
     iot_log_info (svc->logger, "Found registry service at %s", registryURL);
     svc->stopconfig = malloc (sizeof (atomic_bool));
     atomic_init (svc->stopconfig, false);
-    edgex_nvpairs *confpairs = edgex_registry_get_config
+    confpairs = edgex_registry_get_config
       (svc->registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
 
     if (confpairs)
     {
-      edgex_device_populateConfigNV (svc, confpairs, err);
-      edgex_nvpairs_free (confpairs);
+      edgex_device_populateConfig (svc, confpairs, err);
       if (err->code)
       {
-        edgex_registry_free (svc->registry);
+        edgex_nvpairs_free (confpairs);
         return;
       }
     }
@@ -474,19 +442,64 @@ void edgex_device_service_start
     config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
     if (err->code)
     {
-      edgex_registry_free (svc->registry);
       return;
     }
 
-    edgex_device_populateConfig (svc, config, err);
+    confpairs = edgex_device_parseToml (config);
+    edgex_device_populateConfig (svc, confpairs, err);
+
+    if (uploadConfig)
+    {
+      iot_log_info (svc->logger, "Uploading configuration to registry.");
+      edgex_device_overrideConfig (svc->logger, svc->name, confpairs);
+      edgex_registry_put_config (svc->registry, svc->name, profile, confpairs, err);
+      if (err->code)
+      {
+        iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
+        edgex_nvpairs_free (confpairs);
+        toml_free (config);
+        return;
+      }
+    }
+  }
+
+  if (svc->config.logging.file)
+  {
+    iot_logger_add
+      (svc->logger, edgex_log_tofile, svc->config.logging.file);
   }
 
   if (svc->registry)
   {
-    edgex_error e; // errors will be picked up in validateConfig
+    edgex_error e;
     edgex_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
     edgex_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
     edgex_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
+  }
+  else
+  {
+    edgex_device_parseTomlClients (svc->logger, toml_table_in (config, "Clients"), &svc->config.endpoints, err);
+  }
+
+  if (svc->config.logging.useremote)
+  {
+    if (ping_client (svc->logger, "support-logging", &svc->config.endpoints.logging, svc->config.service.connectretries, svc->config.service.timeout, err))
+    {
+      char url[URL_BUF_SIZE];
+      snprintf
+      (
+        url, URL_BUF_SIZE - 1,
+        "http://%s:%u/api/v1/logs",
+        svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
+      );
+      iot_logger_add (svc->logger, edgex_log_torest, url);
+    }
+    else
+    {
+      edgex_nvpairs_free (confpairs);
+      toml_free (config);
+      return;
+    }
   }
 
   if (svc->config.device.profilesdir == NULL)
@@ -494,7 +507,16 @@ void edgex_device_service_start
     svc->config.device.profilesdir = strdup (confDir);
   }
 
-  startConfigured (svc, config, uploadConfig ? profile : NULL, err);
+  iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
+  iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
+  iot_log_debug (svc->logger, "Service configuration follows:");
+  for (const edgex_nvpairs *iter = confpairs; iter; iter = iter->next)
+  {
+    iot_log_debug (svc->logger, "%s=%s", iter->name, iter->value);
+  }
+  edgex_nvpairs_free (confpairs);
+
+  startConfigured (svc, config, err);
 
   toml_free (config);
 
@@ -502,10 +524,6 @@ void edgex_device_service_start
   {
     iot_log_info (svc->logger, "Service started in: %dms", edgex_device_millitime() - svc->starttime);
     iot_log_info (svc->logger, "Listening on port: %d", svc->config.service.port);
-  }
-  else
-  {
-    iot_threadpool_stop (svc->thpool);
   }
 }
 
