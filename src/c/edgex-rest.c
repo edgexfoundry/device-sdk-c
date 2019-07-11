@@ -1288,7 +1288,18 @@ char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create)
 static edgex_device *device_read
   (iot_logger_t *lc, const JSON_Object *obj)
 {
+  char *name = get_string (obj, "name");
+  edgex_deviceprofile *prof = deviceprofile_read (lc, json_object_get_object (obj, "profile"));
+  if (prof == NULL)
+  {
+    iot_log_error (lc, "Device %s has an invalid profile: will not be processed", name);
+    free (name);
+    return NULL;
+  }
+
   edgex_device *result = malloc (sizeof (edgex_device));
+  result->name = name;
+  result->profile = prof;
   result->protocols = protocols_read
     (json_object_get_object (obj, "protocols"));
   result->adminState = edgex_adminstate_fromstring
@@ -1300,7 +1311,6 @@ static edgex_device *device_read
   result->lastConnected = json_object_get_uint (obj, "lastConnected");
   result->lastReported = json_object_get_uint (obj, "lastReported");
   result->modified = json_object_get_uint (obj, "modified");
-  result->name = get_string (obj, "name");
   result->operatingState = edgex_operatingstate_fromstring
     (json_object_get_string (obj, "operatingState"));
   result->origin = json_object_get_uint (obj, "origin");
@@ -1314,8 +1324,6 @@ static edgex_device *device_read
     temp->next = result->autos;
     result->autos = temp;
   }
-  result->profile = deviceprofile_read
-    (lc, json_object_get_object (obj, "profile"));
   result->service = deviceservice_read
     (json_object_get_object (obj, "service"));
   result->next = NULL;
@@ -1488,8 +1496,11 @@ edgex_device *edgex_devices_read (iot_logger_t *lc, const char *json)
     for (size_t i = 0; i < count; i++)
     {
       edgex_device *temp = device_read (lc, json_array_get_object (array, i));
-      *last_ptr = temp;
-      last_ptr = &(temp->next);
+      if (temp)
+      {
+        *last_ptr = temp;
+        last_ptr = &(temp->next);
+      }
     }
   }
 
