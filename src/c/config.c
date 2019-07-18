@@ -162,6 +162,16 @@ static void toml_rtoui32
   }
 }
 
+static edgex_nvpairs *makepair
+  (const char *name, const char *value, edgex_nvpairs *list)
+{
+  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
+  result->name = strdup (name);
+  result->value = strdup (value);
+  result->next = list;
+  return result;
+}
+
 #define GET_CONFIG_STRING(KEY, ELEMENT) \
 toml_rtos2 (toml_raw_in (table, #KEY), &svc->config.ELEMENT);
 
@@ -258,14 +268,13 @@ void edgex_device_populateConfig
       raw = toml_raw_in (table, key);
       if (raw)
       {
-        edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
-        pair->name = strdup (key);
-        if (toml_rtos (raw, &pair->value) == -1)
+        char *val = NULL;
+        toml_rtos (raw, &val);
+        if (val && *val)
         {
-          pair->value = strdup (raw);
+          svc->config.driverconf = makepair (key, val, svc->config.driverconf);
         }
-        pair->next = svc->config.driverconf;
-        svc->config.driverconf = pair;
+        free (val);
       }
       else
       {
@@ -346,16 +355,6 @@ void edgex_device_populateConfig
       }
     }
   }
-}
-
-static edgex_nvpairs *makepair
-  (const char *name, const char *value, edgex_nvpairs *list)
-{
-  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
-  result->name = strdup (name);
-  result->value = strdup (value);
-  result->next = list;
-  return result;
 }
 
 
