@@ -77,6 +77,7 @@ static void ae_runner (void *p)
     if (dev->adminState == LOCKED || dev->operatingState == DISABLED)
     {
       edgex_device_release (dev);
+      edgex_autoimpl_release (ai);
       return;
     }
     edgex_device_alloc_crlid (NULL);

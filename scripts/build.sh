@@ -56,7 +56,7 @@ then
   cp deps/$CUTILDIR/src/c/json.c src/c/iot
   cp deps/$CUTILDIR/src/c/container.c src/c/iot
   mkdir -p include/iot
-  cp deps/$CUTILDIR/include/iot/scheduler.h include/iot
+  cat deps/$CUTILDIR/include/iot/scheduler.h | sed -e 's/1000000000L/1000000000ULL/' > include/iot/scheduler.h
   cp deps/$CUTILDIR/include/iot/logger.h include/iot
   cp deps/$CUTILDIR/include/iot/threadpool.h include/iot
   cp deps/$CUTILDIR/include/iot/component.h include/iot
