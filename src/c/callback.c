@@ -51,7 +51,17 @@ int edgex_device_handler_callback
       {
         case DELETE:
           iot_log_info (svc->logger, "callback: Delete device %s", id);
-          edgex_devmap_removedevice_byid (svc->devices, id);
+          if (svc->removecallback)
+          {
+            edgex_device *dev = edgex_devmap_device_byid (svc->devices, id);
+            edgex_devmap_removedevice_byid (svc->devices, id);
+            svc->removecallback (svc->userdata, dev->name, dev->protocols);
+            edgex_device_release (dev);
+          }
+          else
+          {
+            edgex_devmap_removedevice_byid (svc->devices, id);
+          }
           break;
         case POST:
         case PUT:
@@ -63,12 +73,32 @@ int edgex_device_handler_callback
             {
               iot_log_info (svc->logger, "callback: Device %s moved to %s", id, newdev->service->name);
               edgex_devmap_removedevice_byid (svc->devices, id);
+              if (svc->removecallback)
+              {
+                svc->removecallback (svc->userdata, newdev->name, newdev->protocols);
+              }
             }
             else
             {
               iot_log_info
                 (svc->logger, "callback: New or updated device %s", id);
-              edgex_devmap_replace_device (svc->devices, newdev);
+              switch (edgex_devmap_replace_device (svc->devices, newdev))
+              {
+                case CREATED:
+                  if (svc->addcallback)
+                  {
+                    svc->addcallback (svc->userdata, newdev->name, newdev->protocols, newdev->adminState);
+                  }
+                  break;
+                case UPDATED_DRIVER:
+                  if (svc->updatecallback)
+                  {
+                    svc->updatecallback (svc->userdata, newdev->name, newdev->protocols, newdev->adminState);
+                  }
+                  break;
+                case UPDATED_SDK:
+                  break;
+              }
             }
             edgex_device_free (newdev);
           }
@@ -91,4 +121,23 @@ int edgex_device_handler_callback
 
   json_value_free (jval);
   return status;
+}
+
+void edgex_device_register_devicelist_callbacks
+(
+  edgex_device_service *svc,
+  edgex_device_add_device_callback add_device,
+  edgex_device_update_device_callback update_device,
+  edgex_device_remove_device_callback remove_device
+)
+{
+  if (svc->logger)
+  {
+    iot_log_error (svc->logger, "Devicelist: must register callbacks before service start.");
+    return;
+  }
+
+  svc->addcallback = add_device;
+  svc->updatecallback = update_device;
+  svc->removecallback = remove_device;
 }

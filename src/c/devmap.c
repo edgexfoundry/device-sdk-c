@@ -175,11 +175,22 @@ static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
  * add a new one.
  */
 
-static bool update_in_place (edgex_device *dest, const edgex_device *src)
+static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_devmap_outcome_t *outcome)
 {
+  if (!edgex_protocols_equal (dest->protocols, src->protocols))
+  {
+    *outcome = UPDATED_DRIVER;
+    return false;
+  }
   if (strcmp (dest->name, src->name))
   {
+    *outcome = UPDATED_DRIVER;
     return false;
+  }
+  if (dest->adminState != src->adminState)
+  {
+    *outcome = UPDATED_DRIVER;
+    dest->adminState = src->adminState;
   }
   if (strcmp (dest->profile->name, src->profile->name))
   {
@@ -189,11 +200,6 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src)
   {
     return false;
   }
-  if (!edgex_protocols_equal (dest->protocols, src->protocols))
-  {
-    return false;
-  }
-  dest->adminState = src->adminState;
   dest->operatingState = src->operatingState;
   dest->created = src->created;
   dest->lastConnected = src->lastConnected;
@@ -208,25 +214,28 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src)
   return true;
 }
 
-void edgex_devmap_replace_device (edgex_devmap_t *map, const edgex_device *dev)
+edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const edgex_device *dev)
 {
   edgex_device **olddev;
+  edgex_devmap_outcome_t result = UPDATED_SDK;
 
   pthread_rwlock_wrlock (&map->lock);
   olddev = edgex_map_get (&map->devices, dev->id);
   if (olddev == NULL)
   {
     add_locked (map, dev);
+    result = CREATED;
   }
   else
   {
-    if (!update_in_place (*olddev, dev))
+    if (!update_in_place (*olddev, dev, &result))
     {
       remove_locked (map, *olddev);
       add_locked (map, dev);
     }
   }
   pthread_rwlock_unlock (&map->lock);
+  return result;
 }
 
 edgex_device *edgex_devmap_device_byid (edgex_devmap_t *map, const char *id)

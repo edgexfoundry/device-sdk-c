@@ -18,6 +18,17 @@ struct edgex_devmap_t;
 typedef struct edgex_devmap_t edgex_devmap_t;
 
 /*
+ * Possible outcomes of a 'replace' operation
+ */
+
+typedef enum
+{
+  UPDATED_SDK,     // device fields relevant only to the SDK sere updated
+  UPDATED_DRIVER,  // device fields relevant to the SDK and driver were updated
+  CREATED          // device was created
+} edgex_devmap_outcome_t;
+
+/*
  * A list of devices matching a command.
  */
 
@@ -44,7 +55,7 @@ extern void edgex_devmap_populate_devices
   (edgex_devmap_t *map, const edgex_device *devs);
 extern edgex_device *edgex_devmap_copydevices (edgex_devmap_t *map);
 extern edgex_deviceprofile *edgex_devmap_copyprofiles (edgex_devmap_t *map);
-extern void edgex_devmap_replace_device
+extern edgex_devmap_outcome_t edgex_devmap_replace_device
   (edgex_devmap_t *map, const edgex_device *dev);
 
 /*

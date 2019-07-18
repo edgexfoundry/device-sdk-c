@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.1.0 "Fuji":
 
+- Added callback API for device addition/update/removal events.
 - Configuration can be overridden via environment variables when populating
   the registry.
 - Subtables are supported in the Driver configuration.
