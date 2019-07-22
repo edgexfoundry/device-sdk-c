@@ -150,4 +150,58 @@ void edgex_device_free_deviceprofile (edgex_deviceprofile *p);
 
 void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edgex_error *err);
 
+/*
+ * Callbacks for device addition, updates and removal
+ */
+
+/**
+ * @brief Callback function indicating that a new device has been added.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the new device.
+ * @param protocols The protocol properties that comprise the device's address.
+ * @param state The device's initial adminstate.
+ */
+
+typedef void (*edgex_device_add_device_callback)
+  (void *impl, const char *devname, const edgex_protocols *protocols, edgex_device_adminstate state);
+
+/**
+ * @brief Callback function indicating that a device's address or adminstate has been updated.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the updated device.
+ * @param protocols The protocol properties that comprise the device's address.
+ * @param state The device's current adminstate.
+ */
+
+typedef void (*edgex_device_update_device_callback)
+  (void *impl, const char *devname, const edgex_protocols *protocols, edgex_device_adminstate state);
+
+/**
+ * @brief Callback function indicating that a device has been removed.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the removed device.
+ * @param protocols The protocol properties that comprise the device's address.
+ */
+
+typedef void (*edgex_device_remove_device_callback)
+  (void *impl, const char *devname, const edgex_protocols *protocols);
+
+/**
+ * @brief This function allows a device service implementation to register for updates to the
+          devices it is associated with. The registered functions will be called when a device is
+          added, removed, or modified. Any callback function may be left as null if not required.
+ * @param svc The device service.
+ * @param add_device Function to be called when a device is added to core-metadata.
+ * @param update_device Function to be called when a device is updated in core-metadata.
+ * @param remove_device Function to be called when a device is removed from core-metadata.
+ */
+
+void edgex_device_register_devicelist_callbacks
+(
+  edgex_device_service *svc,
+  edgex_device_add_device_callback add_device,
+  edgex_device_update_device_callback update_device,
+  edgex_device_remove_device_callback remove_device
+);
+
 #endif

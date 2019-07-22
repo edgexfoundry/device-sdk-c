@@ -11,6 +11,7 @@
 
 #include "edgex/devsdk.h"
 #include "edgex/eventgen.h"
+#include "edgex/device-mgmt.h"
 #include "edgex/edgex-logging.h"
 #include "edgex/registry.h"
 #include "config.h"
@@ -18,8 +19,6 @@
 #include "rest-server.h"
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
-
-struct edgex_device_service_job;
 
 struct edgex_device_service
 {
@@ -29,6 +28,9 @@ struct edgex_device_service
   edgex_device_callbacks userfns;
   edgex_device_autoevent_start_handler autoevstart;
   edgex_device_autoevent_stop_handler autoevstop;
+  edgex_device_add_device_callback addcallback;
+  edgex_device_update_device_callback updatecallback;
+  edgex_device_remove_device_callback removecallback;
   iot_logger_t *logger;
   edgex_device_config config;
   atomic_bool *stopconfig;
