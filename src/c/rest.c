@@ -206,7 +206,7 @@ static long edgex_run_curl
   if (ctx->rsphdrs)
   {
     curl_easy_setopt(hnd, CURLOPT_HEADERFUNCTION, edgex_check_rsp_hdr);
-    curl_easy_setopt(hnd, CURLOPT_HEADERDATA, ctx->rsphdrs);
+    curl_easy_setopt(hnd, CURLOPT_HEADERDATA, (void *)ctx->rsphdrs);
   }
 
   /* Use the progress callback to abort a request on demand */
@@ -214,7 +214,7 @@ static long edgex_run_curl
   {
     curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(hnd, CURLOPT_XFERINFOFUNCTION, abort_callback);
-    curl_easy_setopt(hnd, CURLOPT_XFERINFODATA, ctx->aborter);
+    curl_easy_setopt(hnd, CURLOPT_XFERINFODATA, (void *)ctx->aborter);
   }
   else
   {
@@ -224,7 +224,7 @@ static long edgex_run_curl
   /* If the caller wants the HTTP data from the server set the callback function */
   if (writefunc)
   {
-    curl_easy_setopt(hnd, CURLOPT_WRITEDATA, ctx);
+    curl_easy_setopt(hnd, CURLOPT_WRITEDATA, (void *)ctx);
     curl_easy_setopt(hnd, CURLOPT_WRITEFUNCTION, writefunc);
   }
   else
@@ -262,7 +262,7 @@ static long edgex_run_curl
     }
     else if (http_code < 200 || http_code >= 300)
     {
-      iot_log_debug (lc, "HTTP response: %d", (int)http_code);
+      iot_log_debug (lc, "HTTP response: %ld", http_code);
       *err = EDGEX_HTTP_ERROR;
     }
     else
@@ -309,7 +309,6 @@ long edgex_http_post
   curl_easy_setopt (hnd, CURLOPT_CUSTOMREQUEST, "POST");
   curl_easy_setopt (hnd, CURLOPT_POST, 1L);
   curl_easy_setopt (hnd, CURLOPT_POSTFIELDS, data);
-  curl_easy_setopt (hnd, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t) strlen (data));
 
   slist = edgex_add_hdr (NULL, "Content-Type", "application/json");
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
@@ -324,7 +323,7 @@ long edgex_http_postbin
   curl_easy_setopt (hnd, CURLOPT_CUSTOMREQUEST, "POST");
   curl_easy_setopt (hnd, CURLOPT_POST, 1L);
   curl_easy_setopt (hnd, CURLOPT_POSTFIELDS, data);
-  curl_easy_setopt (hnd, CURLOPT_POSTFIELDSIZE_LARGE, length);
+  curl_easy_setopt (hnd, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)length);
 
   slist = edgex_add_hdr (NULL, "Content-Type", mime);
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
@@ -414,7 +413,7 @@ long edgex_http_put
     cb_data.remaining = strlen (data);
     curl_easy_setopt (hnd, CURLOPT_READFUNCTION, read_callback);
     curl_easy_setopt (hnd, CURLOPT_READDATA, &cb_data);
-    curl_easy_setopt (hnd, CURLOPT_INFILESIZE, cb_data.remaining);
+    curl_easy_setopt (hnd, CURLOPT_INFILESIZE, (long)cb_data.remaining);
   }
 
   slist = edgex_add_hdr (NULL, "Content-Type", "application/json");
