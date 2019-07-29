@@ -44,6 +44,93 @@ typedef struct postparams
   edgex_event_cooked *event;
 } postparams;
 
+void edgex_device_service_usage ()
+{
+  printf ("  -n, --name=<name>\t: Set the device service name\n");
+  printf ("  -r, --registry=<url>\t: Use the registry service\n");
+  printf ("  -p, --profile=<name>\t: Set the profile name\n");
+  printf ("  -c, --confdir=<dir>\t: Set the configuration directory\n");
+}
+
+static bool testArg (char *arg, char *val, const char *pshort, const char *plong, const char **var, bool *result)
+{
+  if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
+  {
+    if (val && *val)
+    {
+      *var = val;
+    }
+    else
+    {
+      printf ("Option \"%s\" requires a parameter\n", arg);
+      *result = false;
+    }
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool edgex_device_service_processparams
+  (int *argc_p, char **argv, edgex_device_svcparams *params)
+{
+  bool result = true;
+  char *eq;
+  char *arg;
+  char *val;
+  int argc = *argc_p;
+
+  val = getenv ("edgex_registry");
+  if (val)
+  {
+    params->regURL = val;
+  }
+
+  int n = 1;
+  while (result && n < argc)
+  {
+    arg = argv[n];
+    val = NULL;
+    eq = strchr (arg, '=');
+    if (eq)
+    {
+      *eq = '\0';
+      val = eq + 1;
+    }
+    else if (n + 1 < argc)
+    {
+      val = argv[n + 1];
+    }
+    if
+    (
+      testArg (arg, val, "-r", "--registry", &params->regURL, &result) ||
+      testArg (arg, val, "-n", "--name", &params->svcname, &result) ||
+      testArg (arg, val, "-p", "--profile", &params->profile, &result) ||
+      testArg (arg, val, "-c", "--confdir", &params->confdir, &result)
+    )
+    {
+      int skip = eq ? 1 : 2;
+      for (int n2 = n + skip; n2 < argc; n2++)
+      {
+        argv[n2 - skip] = argv[n2];
+      }
+      argc -= skip;
+    }
+    else
+    {
+      n++;
+    }
+    if (eq)
+    {
+      *eq = '=';
+    }
+  }
+  *argc_p = argc;
+  return result;
+}
+
 edgex_device_service *edgex_device_service_new
 (
   const char *name,
