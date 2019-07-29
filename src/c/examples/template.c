@@ -177,93 +177,33 @@ static bool template_disconnect (void *impl, edgex_protocols *device)
 /* Stop performs any final actions before the device service is terminated */
 static void template_stop (void *impl, bool force) {}
 
-
-static void usage (void)
-{
-  printf ("Options: \n");
-  printf ("   -h, --help           : Show this text\n");
-  printf ("   -n, --name=<name>    : Set the device service name\n");
-  printf ("   -r, --registry=<url> : Use the registry service\n");
-  printf ("   -p, --profile=<name> : Set the profile name\n");
-  printf ("   -c, --confdir=<dir>  : Set the configuration directory\n");
-}
-
-static bool testArg (int argc, char *argv[], int *pos, const char *pshort, const char *plong, char **var)
-{
-  if (strcmp (argv[*pos], pshort) == 0 || strcmp (argv[*pos], plong) == 0)
-  {
-    if (*pos < argc - 1)
-    {
-      (*pos)++;
-      *var = argv[*pos];
-      (*pos)++;
-      return true;
-    }
-    else
-    {
-      printf ("Option %s requires an argument\n", argv[*pos]);
-      exit (0);
-    }
-  }
-  char *eq = strchr (argv[*pos], '=');
-  if (eq)
-  {
-    if (strncmp (argv[*pos], pshort, eq - argv[*pos]) == 0 || strncmp (argv[*pos], plong, eq - argv[*pos]) == 0)
-    {
-      if (strlen (++eq))
-      {
-        *var = eq;
-        (*pos)++;
-        return true;
-      }
-      else
-      {
-        printf ("Option %s requires an argument\n", argv[*pos]);
-        exit (0);
-      }
-    }
-  }
-  return false;
-}
-
 int main (int argc, char *argv[])
 {
-  char *profile = "";
-  char *confdir = "";
-  char *svcname = "device-template";
-  char *regURL = getenv ("EDGEX_REGISTRY");
+  edgex_device_svcparams params = { "device-template", "", "", "" };
 
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
+
+  if (!edgex_device_service_processparams (&argc, argv, &params))
+  {
+    return  0;
+  }
 
   int n = 1;
   while (n < argc)
   {
     if (strcmp (argv[n], "-h") == 0 || strcmp (argv[n], "--help") == 0)
     {
-      usage ();
+      printf ("Options:\n");
+      printf ("  -h, --help\t\t: Show this text\n");
+      edgex_device_service_usage ();
       return 0;
     }
-    if (testArg (argc, argv, &n, "-r", "--registry", &regURL))
+    else
     {
-      continue;
+      printf ("%s: Unrecognized option %s\n", argv[0], argv[n]);
+      return 0;
     }
-    if (testArg (argc, argv, &n, "-n", "--name", &svcname))
-    {
-      continue;
-    }
-    if (testArg (argc, argv, &n, "-p", "--profile", &profile))
-    {
-      continue;
-    }
-    if (testArg (argc, argv, &n, "-c", "--confdir", &confdir))
-    {
-      continue;
-    }
-
-    printf ("Unknown option %s\n", argv[n]);
-    usage ();
-    return 0;
   }
 
   edgex_error e;
@@ -282,11 +222,11 @@ int main (int argc, char *argv[])
 
   /* Initalise a new device service */
   edgex_device_service *service = edgex_device_service_new
-    (svcname, "1.0", impl, templateImpls, &e);
+    (params.svcname, "1.0", impl, templateImpls, &e);
   ERR_CHECK (e);
 
   /* Start the device service*/
-  edgex_device_service_start (service, regURL, profile, confdir, &e);
+  edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
 
   signal (SIGINT, inthandler);

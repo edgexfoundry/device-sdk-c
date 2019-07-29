@@ -19,6 +19,41 @@
 #include "edgex/edgex-logging.h"
 
 /**
+ * @brief Structure containing startup parameters.
+ */
+
+typedef struct edgex_device_svcparams
+{
+  /** The name of the device service */
+  const char *svcname;
+  /** The configuration directory to read from */
+  const char *confdir;
+  /** The location of the registry service, if enabled */
+  const char *regURL;
+  /** The configuration profile to use */
+  const char *profile;
+} edgex_device_svcparams;
+
+/**
+ * @brief Extracts startup parameters from command line and environment. The
+ *        command-line argument array argc and argv are altered to represent
+ *        whatever arguments remain unprocessed.
+ * @param argc A pointer to argc as passed into main().
+ * @param argv argv as passed into main().
+ * @param params The startup parameters to populate.
+ * @returns true if there were no errors in processing.
+ */
+
+bool edgex_device_service_processparams
+  (int *argc, char **argv, edgex_device_svcparams *params);
+
+/**
+ * @brief Prints usage information.
+ */
+
+void edgex_device_service_usage (void);
+
+/**
  * @brief Structure containing information about a device resource which is
  *        the subject of a get or set request.
  */
