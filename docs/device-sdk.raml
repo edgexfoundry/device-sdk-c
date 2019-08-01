@@ -4,7 +4,7 @@ documentation:
     - title: Device Service API
       content: This is the REST API implemented by device-sdk-c. It is therefore available on device services built with the SDK.
 version: v1
-baseUri: "http://device-x:49990/api/{version}"
+baseUri: "http://device-x:49999/api"
 schemas: 
     -
         responseobjects: '{"type":"array","$schema":"http://json-schema.org/draft-06/schema#","title":"responseobjects","items":{"type":"object","required":false,"$ref":"#/schemas/responseobject"}}'
@@ -17,8 +17,22 @@ schemas:
     -
         callbackalert: '{"type": "object","$schema": "http://json-schema.org/draft-06/schema#","title": "Notification Schema","properties": {"id": {"description": "the identifier of the object which is called back","type": "string"},"actionType": {"description": "the type of the called back object","enum":["PROFILE","DEVICE","PROVISIONWATCHER","SCHEDULE","SCHEDULEEVENT"],"type": "string"}},"required": ["id"]}'
     -
+        versionobject: '{"type":"object","$schema":"http://json-schema.org/draft-06/schema#","title":"version","properties":{"version":{"type":"string"},"sdk_version":{"type":"string"}}}
+    -
 
-/ping:
+/version:
+    displayName: Version Strings
+    description: Example -- http://localhost:49999/api/version
+    get:
+        description: Report service and SDK versions
+        responses:
+            "200":
+                body:
+                    application/json:
+                        schema: versionobject
+                        example: '{"version":"1.0","sdk_version":"1.1.0"}'
+
+/v1/ping:
     displayName: Ping Resource
     description: Example -- http://localhost:49990/api/v1/ping
     get:
@@ -31,7 +45,7 @@ schemas:
                         description: device service version string
                         example: 'V1.0'
 
-/device/{id}/{command}:
+/v1/device/{id}/{command}:
     displayName: Command Device (by ID) with Command Name
     description: Example -- http://localhost:49990/api/v1/device/57bd0f2d32d258ad3fcd2d4b/Command
     uriParameters:
@@ -93,7 +107,7 @@ schemas:
             "500":
                 description: The device driver is unable to process the request.
 
-/device/name/{name}/{command}:
+/v1/device/name/{name}/{command}:
     displayName: Command Device (by Name) with Command Name
     description: Example -- http://localhost:49990/api/v1/device/name/MyDevice94/Command
     uriParameters:
@@ -155,7 +169,7 @@ schemas:
             "500":
                 description: The device driver is unable to process the request.
 
-/device/all/{command}:
+/v1/device/all/{command}:
     displayName: Command all operational Devices for the service with command name.
     description: Example -- http://localhost:49990/api/v1/device/all/Command
     uriParameters:
@@ -202,7 +216,7 @@ schemas:
             "500":
                 description: The device driver is unable to process the request.
 
-/callback:
+/v1/callback:
     displayName: Update Callback
     description: Example -- http://localhost:49990/api/v1/callback
     put:
@@ -219,7 +233,7 @@ schemas:
             "501":
                 description: An actionType other than DEVICE, or a method other than PUT/POST/DELETE was requested.
 
-/discovery:
+/v1/discovery:
     displayName: Run device discovery request for all registered Provision Watchers
     description: Example -- http://localhost:49990/api/v1/discovery
     post:
@@ -234,7 +248,7 @@ schemas:
             "503":
                 description: Discovery is disabled by configuration.
 
-/config:
+/v1/config:
     displayName: Config Resource
     description: Example - http://localhost:49990/api/v1/config
     get:
@@ -243,7 +257,7 @@ schemas:
             "200":
                 description: The service's configuration as JSON document.
 
-/metrics:
+/v1/metrics:
     displayName: Metrics Resource
     description: Example - http://localhost:49990/api/v1/metrics
     get:

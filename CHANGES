@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.1.0 "Fuji":
 
+- Added /api/version endpoint for obtaining service version strings.
 - Commandline argument processing mostly handled within the SDK.
 - Added callback API for device addition/update/removal events.
 - Configuration can be overridden via environment variables when populating
