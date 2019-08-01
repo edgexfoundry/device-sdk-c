@@ -30,6 +30,7 @@
 #include <microhttpd.h>
 
 #define EDGEX_DEV_API_PING "/api/v1/ping"
+#define EDGEX_DEV_API_VERSION "/api/version"
 #define EDGEX_DEV_API_DISCOVERY "/api/v1/discovery"
 #define EDGEX_DEV_API_DEVICE "/api/v1/device/"
 #define EDGEX_DEV_API_CALLBACK "/api/v1/callback"
@@ -192,6 +193,30 @@ static int ping_handler
   *reply = strdup (svc->version);
   *reply_size = strlen (svc->version);
   *reply_type = "text/plain";
+  return MHD_HTTP_OK;
+}
+
+static int version_handler
+(
+  void *ctx,
+  char *url,
+  edgex_http_method method,
+  const char *upload_data,
+  size_t upload_data_size,
+  void **reply,
+  size_t *reply_size,
+  const char **reply_type
+)
+{
+  edgex_device_service *svc = (edgex_device_service *) ctx;
+  JSON_Value *val = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (val);
+  json_object_set_string (obj, "version", svc->version);
+  json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
+  *reply = json_serialize_to_string (val);
+  *reply_size = strlen (*reply);
+  *reply_type = "application/json";
+  json_value_free (val);
   return MHD_HTTP_OK;
 }
 
@@ -417,6 +442,9 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
   (
     svc->daemon, EDGEX_DEV_API_CONFIG, GET, svc, edgex_device_handler_config
   );
+
+  edgex_rest_server_register_handler
+    (svc->daemon, EDGEX_DEV_API_VERSION, GET, svc, version_handler);
 
   edgex_rest_server_register_handler
   (
