@@ -473,7 +473,7 @@ void edgex_device_service_start
   }
   *err = EDGEX_OK;
 
-  if (registryURL)
+  if (registryURL && *registryURL)
   {
     svc->registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
     if (svc->registry == NULL)
@@ -487,8 +487,28 @@ void edgex_device_service_start
   {
     // Wait for registry to be ready
 
-    int retries = 5;
+    unsigned retries = 5;
+    char *errc = getenv ("edgex_registry_retry_count");
+    if (errc)
+    {
+      int rc = atoi (errc);
+      if (rc > 0)
+      {
+        retries = rc;
+      }
+    }
+
     struct timespec delay = { .tv_sec = 1, .tv_nsec = 0 };
+    char *errw = getenv ("edgex_registry_retry_wait");
+    if (errw)
+    {
+      int rw = atoi (errw);
+      if (rw > 0)
+      {
+        delay.tv_sec = rw;
+      }
+    }
+
     while (!edgex_registry_ping (svc->registry, err) && --retries)
     {
       nanosleep (&delay, NULL);
