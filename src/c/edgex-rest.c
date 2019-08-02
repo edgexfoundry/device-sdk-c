@@ -366,7 +366,7 @@ static void set_arg
     }
     else
     {
-      sprintf (tmp, "%ld", arg.value.ival);
+      sprintf (tmp, PRId64, arg.value.ival);
     }
     json_object_set_string (obj, name, tmp);
   }
