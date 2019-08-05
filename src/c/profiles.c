@@ -26,6 +26,28 @@ static int yamlselect (const struct dirent *d)
   return strcasecmp (d->d_name + strlen (d->d_name) - 5, ".yaml") == 0 ? 1 : 0;
 }
 
+static bool need_vds (edgex_device_service *svc)
+{
+  bool result = true;
+  edgex_error err = EDGEX_OK;
+  JSON_Value *metaconf = edgex_metadata_client_get_config (svc->logger, &svc->config.endpoints, &err);
+  if (metaconf)
+  {
+    JSON_Object *obj = json_value_get_object (metaconf);
+    JSON_Object *wr = json_object_get_object (obj, "Writable");
+    if (wr)
+    {
+      int enable = json_object_get_boolean (wr, "EnableValueDescriptorManagement");
+      if (enable != -1)
+      {
+        result = !enable;
+      }
+    }
+    json_value_free (metaconf);
+  }
+  return result;
+}
+
 static void generate_value_descriptors
 (
   edgex_device_service *svc,
@@ -238,8 +260,11 @@ void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edg
         dp = edgex_deviceprofile_get_internal (svc, profname, err);
         if (dp)
         {
-          iot_log_info (lc, "Generating value descriptors DeviceProfile %s", profname);
-          generate_value_descriptors (svc, dp);
+          if (need_vds (svc))
+          {
+            iot_log_info (lc, "Generating value descriptors for DeviceProfile %s", profname);
+            generate_value_descriptors (svc, dp);
+          }
         }
         else
         {

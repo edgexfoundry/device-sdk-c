@@ -12,6 +12,7 @@
 #include "edgex/edgex.h"
 #include "edgex/edgex-logging.h"
 #include "edgex/error.h"
+#include "parson.h"
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
@@ -20,6 +21,12 @@ edgex_deviceprofile * edgex_metadata_client_get_deviceprofile
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
   const char * name,
+  edgex_error * err
+);
+JSON_Value * edgex_metadata_client_get_config
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
   edgex_error * err
 );
 void edgex_metadata_client_set_device_opstate

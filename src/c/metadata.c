@@ -57,6 +57,33 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
   return result;
 }
 
+JSON_Value *edgex_metadata_client_get_config
+  (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_error *err)
+{
+  edgex_ctx ctx;
+  JSON_Value *result = NULL;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/config",
+    endpoints->metadata.host,
+    endpoints->metadata.port
+  );
+
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  if (err->code == 0)
+  {
+    result = json_parse_string (ctx.buff);
+  }
+  free (ctx.buff);
+  return result;
+}
+
 void edgex_metadata_client_set_device_opstate
 (
   iot_logger_t *lc,
