@@ -83,7 +83,7 @@ bool edgex_log_tofile
       fprintf
       (
         f,
-        "level=%s ts=%s app=%s%s%s msg=%s\n",
+        "level=%s ts=%s app=%s%s%s msg=\"%s\"\n",
         iot_logger_levelname (l),
         ts8601,
         subsystem ? subsystem : "(default)",

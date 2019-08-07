@@ -6,6 +6,10 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
+Changes for 1.0.3
+
+- Bugfix release only.
+
 Changes for 1.0.2
 
 - Bugfix release only.
