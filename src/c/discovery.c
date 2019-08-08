@@ -21,6 +21,7 @@ int edgex_device_handler_discovery
 (
   void *ctx,
   char *url,
+  char *querystr,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
