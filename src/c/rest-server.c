@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#define STR_BLK_SIZE 512
+
 typedef struct handler_list
 {
   const char *url;
@@ -72,6 +74,47 @@ static char *normalizeUrl (const char *url)
   }
   *rpos = '\0';
   return res;
+}
+
+typedef struct stringbuf
+{
+  char *str;
+  size_t size;
+} stringbuf;
+
+static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
+{
+  stringbuf *buf = (stringbuf *)p;
+
+  size_t newsz = (buf->str ? strlen (buf->str) + 1 : 0) + strlen (key) + (value ? 1 + strlen (value) : 0) + 1;
+
+  size_t newalloc = buf->size;
+  while (newalloc <= newsz)
+  {
+    newalloc += STR_BLK_SIZE;
+  }
+  if (newalloc > buf->size)
+  {
+    buf->str = realloc (buf->str, newalloc);
+    if (buf->size == 0)
+    {
+      *buf->str = '\0';
+    }
+    buf->size = newalloc;
+  }
+
+  if (*buf->str)
+  {
+    strcat (buf->str, "&");
+  }
+  strcat (buf->str, key);
+  if (value)
+  {
+    strcat (buf->str, "=");
+    strcat (buf->str, value);
+  }
+
+  return MHD_YES;
 }
 
 static int http_handler
@@ -174,10 +217,13 @@ static int http_handler
     {
       if (method & h->methods)
       {
+        stringbuf qbuf = { NULL, 0 };
+        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, &qbuf);
         status = h->handler
         (
           h->context,
           nurl + strlen (h->url),
+          qbuf.str,
           method,
           ctx->m_data,
           ctx->m_size,
@@ -185,6 +231,7 @@ static int http_handler
           &reply_size,
           &reply_type
         );
+        free (qbuf.str);
       }
       else
       {

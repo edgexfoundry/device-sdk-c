@@ -417,32 +417,44 @@ static int edgex_device_runget
   edgex_device_service *svc,
   edgex_device *dev,
   const edgex_cmdinfo *commandinfo,
+  const char *querystr,
   edgex_event_cooked **reply
 )
 {
+  edgex_device_commandrequest *requests;
+  edgex_device_commandresult *results;
   int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
-  edgex_device_commandresult *results =
-    calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
+
   for (int i = 0; i < commandinfo->nreqs; i++)
   {
     if (!commandinfo->pvals[i]->readable)
     {
-      iot_log_error
-      (
-        svc->logger,
-        "Attempt to read unreadable value %s",
-        commandinfo->reqs[i].resname
-      );
-      free (results);
+      iot_log_error (svc->logger, "Attempt to read unreadable value %s", commandinfo->reqs[i].resname);
       return MHD_HTTP_METHOD_NOT_ALLOWED;
     }
   }
 
-  if
-  (
-    svc->userfns.gethandler
-      (svc->userdata, dev->name, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results)
-  )
+  results = calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
+  if (querystr)
+  {
+    size_t sz = sizeof (edgex_device_commandrequest) * commandinfo->nreqs;
+    requests = malloc (sz);
+    memcpy (requests, commandinfo->reqs, sz);
+    for (int i = 0; i < commandinfo->nreqs; i++)
+    {
+      edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
+      pair->name = "urlRawQuery";
+      pair->value = (char *)querystr;
+      pair->next = (edgex_nvpairs *)requests[i].attributes;
+      requests[i].attributes = pair;
+    }
+  }
+  else
+  {
+    requests = commandinfo->reqs;
+  }
+
+  if (svc->userfns.gethandler (svc->userdata, dev->name, dev->protocols, commandinfo->nreqs, requests, results))
   {
     edgex_error err = EDGEX_OK;
     *reply = edgex_data_process_event
@@ -465,7 +477,16 @@ static int edgex_device_runget
     iot_log_error
       (svc->logger, "Driver for %s failed on GET", dev->name);
   }
+
   edgex_device_commandresult_free (results, commandinfo->nreqs);
+  if (querystr)
+  {
+    for (int i = 0; i < commandinfo->nreqs; i++)
+    {
+      free ((edgex_nvpairs *)requests[i].attributes);
+    }
+    free (requests);
+  }
   return retcode;
 }
 
@@ -474,6 +495,7 @@ static int runOne
   edgex_device_service *svc,
   edgex_device *dev,
   const edgex_cmdinfo *command,
+  const char *querystr,
   const char *upload_data,
   size_t upload_data_size,
   edgex_event_cooked **reply
@@ -514,7 +536,7 @@ static int runOne
 
   if (command->isget)
   {
-    return edgex_device_runget (svc, dev, command, reply);
+    return edgex_device_runget (svc, dev, command, querystr, reply);
   }
   else
   {
@@ -539,6 +561,7 @@ static int allCommand
   edgex_device_service *svc,
   const char *cmd,
   edgex_http_method method,
+  const char *querystr,
   const char *upload_data,
   size_t upload_data_size,
   void **reply,
@@ -568,8 +591,7 @@ static int allCommand
   for (iter = cmdq; iter; iter = iter->next)
   {
     edgex_event_cooked *ereply = NULL;
-    retOne = runOne
-      (svc, iter->dev, iter->cmd, upload_data, upload_data_size, &ereply);
+    retOne = runOne (svc, iter->dev, iter->cmd, querystr, upload_data, upload_data_size, &ereply);
     edgex_device_release (iter->dev);
     if (ereply)
     {
@@ -644,6 +666,7 @@ static int oneCommand
   bool byName,
   const char *cmd,
   edgex_http_method method,
+  const char *querystr,
   const char *upload_data,
   size_t upload_data_size,
   void **reply,
@@ -681,7 +704,7 @@ static int oneCommand
   {
     edgex_event_cooked *ereply = NULL;
     result = runOne
-      (svc, dev, command, upload_data, upload_data_size, &ereply);
+      (svc, dev, command, querystr, upload_data, upload_data_size, &ereply);
     edgex_device_release (dev);
     if (ereply)
     {
@@ -734,6 +757,7 @@ int edgex_device_handler_device
 (
   void *ctx,
   char *url,
+  char *querystr,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -757,7 +781,7 @@ int edgex_device_handler_device
       cmd = url + 4;
       if (strlen (cmd))
       {
-        result = allCommand (svc, cmd, method, upload_data, upload_data_size, reply, reply_size, reply_type);
+        result = allCommand (svc, cmd, method, querystr, upload_data, upload_data_size, reply, reply_size, reply_type);
       }
       else
       {
@@ -781,7 +805,7 @@ int edgex_device_handler_device
       {
          *cmd = '\0';
          result = oneCommand
-           (svc, url, byName, cmd + 1, method, upload_data, upload_data_size, reply, reply_size, reply_type);
+           (svc, url, byName, cmd + 1, method, querystr, upload_data, upload_data_size, reply, reply_size, reply_type);
          *cmd = '/';
       }
     }
