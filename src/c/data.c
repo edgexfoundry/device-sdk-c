@@ -63,7 +63,7 @@ edgex_event_cooked *edgex_data_process_event
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
-      cbor_item_t *crdg = cbor_new_definite_map (values[i].origin ? 3 : 2);
+      cbor_item_t *crdg = cbor_new_definite_map (3);
 
       cbor_item_t *cread;
       if (values[i].type == Binary)
