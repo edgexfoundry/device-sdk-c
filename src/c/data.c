@@ -74,7 +74,9 @@ edgex_event_cooked *edgex_data_process_event
       }
       else
       {
-        cread = cbor_build_string (edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary));
+        char *reading = edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary);
+        cread = cbor_build_string (reading);
+        free (reading);
         cbor_map_add (crdg, (struct cbor_pair)
           { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
       }
