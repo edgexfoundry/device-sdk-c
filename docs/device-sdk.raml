@@ -34,7 +34,7 @@ schemas:
 
 /v1/ping:
     displayName: Ping Resource
-    description: Example -- http://localhost:49990/api/v1/ping
+    description: Example -- http://localhost:49999/api/v1/ping
     get:
         description: Test service providing an indication that the service is available.
         displayName: service up check
@@ -47,7 +47,7 @@ schemas:
 
 /v1/device/{id}/{command}:
     displayName: Command Device (by ID) with Command Name
-    description: Example -- http://localhost:49990/api/v1/device/57bd0f2d32d258ad3fcd2d4b/Command
+    description: Example -- http://localhost:49999/api/v1/device/57bd0f2d32d258ad3fcd2d4b/Command
     uriParameters:
         id:
             displayName: id
@@ -109,7 +109,7 @@ schemas:
 
 /v1/device/name/{name}/{command}:
     displayName: Command Device (by Name) with Command Name
-    description: Example -- http://localhost:49990/api/v1/device/name/MyDevice94/Command
+    description: Example -- http://localhost:49999/api/v1/device/name/MyDevice94/Command
     uriParameters:
         name:
             displayName: name
@@ -171,7 +171,7 @@ schemas:
 
 /v1/device/all/{command}:
     displayName: Command all operational Devices for the service with command name.
-    description: Example -- http://localhost:49990/api/v1/device/all/Command
+    description: Example -- http://localhost:49999/api/v1/device/all/Command
     uriParameters:
         command:
             displayName: command
@@ -218,7 +218,7 @@ schemas:
 
 /v1/callback:
     displayName: Update Callback
-    description: Example -- http://localhost:49990/api/v1/callback
+    description: Example -- http://localhost:49999/api/v1/callback
     put:
         description: Update the object referred to by the database ID. The only supported update is a change to the object's operational state.
         body:
@@ -235,7 +235,7 @@ schemas:
 
 /v1/discovery:
     displayName: Run device discovery request for all registered Provision Watchers
-    description: Example -- http://localhost:49990/api/v1/discovery
+    description: Example -- http://localhost:49999/api/v1/discovery
     post:
         description: Run the discovery request for a Device Service.
         responses:
@@ -250,7 +250,7 @@ schemas:
 
 /v1/config:
     displayName: Config Resource
-    description: Example - http://localhost:49990/api/v1/config
+    description: Example - http://localhost:49999/api/v1/config
     get:
         description: Fetch the current state of the service's configuration.
         responses:
@@ -259,7 +259,7 @@ schemas:
 
 /v1/metrics:
     displayName: Metrics Resource
-    description: Example - http://localhost:49990/api/v1/metrics
+    description: Example - http://localhost:49999/api/v1/metrics
     get:
         description: Fetch the current state of the service's metrics.
         responses:

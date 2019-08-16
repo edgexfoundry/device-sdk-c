@@ -36,18 +36,18 @@ An EdgeX system containing at least a database and the core-data and core-metada
 Once the service is running it will begin to send one sequence of Events every ten seconds, and another every fifteen. To obtain a reading manually,
 
 ```
-curl 0:49990/api/v1/device/name/RandomDevice1/SensorOne
+curl 0:49999/api/v1/device/name/RandomDevice1/SensorOne
 ```
 
 To read the switch state,
 ```
-curl 0:49990/api/v1/device/name/RandomDevice1/Switch
+curl 0:49999/api/v1/device/name/RandomDevice1/Switch
 ```
 
 To set the switch state,
 
 ```
-curl -X PUT -d '{"Switch":"true"}' 0:49990/api/v1/device/name/RandomDevice1/Switch
+curl -X PUT -d '{"Switch":"true"}' 0:49999/api/v1/device/name/RandomDevice1/Switch
 ```
 
 ### Device details

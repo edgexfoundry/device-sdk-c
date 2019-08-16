@@ -21,7 +21,7 @@ For example, `device-template_Device_MaxCmdOps` or `Logging_LogLevel`.
 Option | Type | Notes
 :--- | :--- | :---
 Host | String | This is the hostname to use when the service generates URLs pointing to itself. It must be resolvable by other services in the EdgeX deployment.
-Port | Int | Port on which to accept the device service's REST API.
+Port | Int | Port on which to accept the device service's REST API. The assigned port for experimental / in-development device services is 49999.
 Timeout | Int | Time (in milliseconds) to wait between attempts to contact core-data and core-metadata when starting up.
 ConnectRetries | Int | Number of times to attempt to contact core-data and core-metadata when starting up.
 StartupMsg | String | Message to log on successful startup.
