@@ -359,6 +359,22 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
       return;
     }
   }
+  else
+  {
+    if (ds->addressable->port != svc->config.service.port || strcmp (ds->addressable->address, myhost))
+    {
+      iot_log_info (svc->logger, "Updating service endpoint in metadata");
+      ds->addressable->port = svc->config.service.port;
+      free (ds->addressable->address);
+      ds->addressable->address = strdup (myhost);
+      edgex_metadata_client_update_addressable (svc->logger, &svc->config.endpoints, ds->addressable, err);
+      if (err->code)
+      {
+        iot_log_error (svc->logger, "update_addressable failed");
+        return;
+      }
+    }
+  }
   edgex_deviceservice_free (ds);
 
   /* Load DeviceProfiles from files and register in metadata */
