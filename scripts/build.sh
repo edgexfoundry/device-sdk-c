@@ -6,7 +6,7 @@ DOCGEN=false
 
 IOTECH=IOTechSystems
 CUTILNAME=iotech-c-utils
-CUTILREF=fc39644
+CUTILREF=e92b649
 CUTILDIR=$IOTECH-$CUTILNAME-$CUTILREF
 
 # Process arguments
@@ -54,9 +54,11 @@ then
   cp deps/$CUTILDIR/src/c/thread.c src/c/iot
   cp deps/$CUTILDIR/src/c/data.c src/c/iot
   cp deps/$CUTILDIR/src/c/json.c src/c/iot
+  cp deps/$CUTILDIR/src/c/base64.c src/c/iot
   cp deps/$CUTILDIR/src/c/container.c src/c/iot
+  cp deps/$CUTILDIR/src/c/component.c src/c/iot
   mkdir -p include/iot
-  cat deps/$CUTILDIR/include/iot/scheduler.h | sed -e 's/1000000000L/1000000000ULL/' > include/iot/scheduler.h
+  cp deps/$CUTILDIR/include/iot/scheduler.h include/iot
   cp deps/$CUTILDIR/include/iot/logger.h include/iot
   cp deps/$CUTILDIR/include/iot/threadpool.h include/iot
   cp deps/$CUTILDIR/include/iot/component.h include/iot
@@ -64,6 +66,7 @@ then
   cp deps/$CUTILDIR/include/iot/thread.h include/iot
   cp deps/$CUTILDIR/include/iot/container.h include/iot
   cp deps/$CUTILDIR/include/iot/json.h include/iot
+  cp deps/$CUTILDIR/include/iot/base64.h include/iot
   cp deps/$CUTILDIR/include/iot/os.h include/iot
   mkdir -p include/iot/os
   cp deps/$CUTILDIR/include/iot/os/* include/iot/os

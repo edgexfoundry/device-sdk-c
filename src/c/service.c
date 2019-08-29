@@ -144,21 +144,21 @@ edgex_device_service *edgex_device_service_new
   if (impldata == NULL)
   {
     iot_log_error
-      (iot_log_default (), "edgex_device_service_new: no implementation object");
+      (iot_logger_default (), "edgex_device_service_new: no implementation object");
     *err = EDGEX_NO_DEVICE_IMPL;
     return NULL;
   }
   if (name == NULL || strlen (name) == 0)
   {
     iot_log_error
-      (iot_log_default (), "edgex_device_service_new: no name specified");
+      (iot_logger_default (), "edgex_device_service_new: no name specified");
     *err = EDGEX_NO_DEVICE_NAME;
     return NULL;
   }
   if (version == NULL || strlen (version) == 0)
   {
     iot_log_error
-      (iot_log_default (), "edgex_device_service_new: no version specified");
+      (iot_logger_default (), "edgex_device_service_new: no version specified");
     *err = EDGEX_NO_DEVICE_VERSION;
     return NULL;
   }
@@ -171,8 +171,10 @@ edgex_device_service *edgex_device_service_new
   result->userdata = impldata;
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
-  result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL);
-  result->scheduler = iot_scheduler_alloc (result->thpool);
+  result->logger = iot_logger_alloc_custom (name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL);
+  iot_logger_start (result->logger);
+  result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL, result->logger);
+  result->scheduler = iot_scheduler_alloc (result->thpool, result->logger);
   pthread_mutex_init (&result->discolock, NULL);
   return result;
 }
@@ -494,7 +496,6 @@ void edgex_device_service_start
 
   svc->starttime = edgex_device_millitime();
 
-  svc->logger = iot_logger_alloc (svc->name);
   iot_threadpool_start (svc->thpool);
 
   if (confDir == NULL || *confDir == '\0')
@@ -602,8 +603,8 @@ void edgex_device_service_start
 
   if (svc->config.logging.file)
   {
-    iot_logger_add
-      (svc->logger, edgex_log_tofile, svc->config.logging.file);
+    free (svc->logger->to);
+    svc->logger->to = strdup (svc->config.logging.file);
   }
 
   if (svc->registry)
@@ -629,7 +630,16 @@ void edgex_device_service_start
         "http://%s:%u/api/v1/logs",
         svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
       );
-      iot_logger_add (svc->logger, edgex_log_torest, url);
+      if (svc->config.logging.file)
+      {
+        svc->logger->next = iot_logger_alloc_custom (svc->name, IOT_LOG_INFO, url, edgex_log_torest, NULL);
+      }
+      else
+      {
+        svc->logger->impl = edgex_log_torest;
+        free (svc->logger->to);
+        svc->logger->to = strdup (url);
+      }
     }
     else
     {
@@ -745,7 +755,7 @@ void edgex_device_service_stop
       iot_log_error (svc->logger, "Unable to deregister service from registry");
     }
   }
-
+  iot_scheduler_free (svc->scheduler);
   iot_threadpool_wait (svc->thpool);
   iot_log_info (svc->logger, "Stopped device service");
 }
@@ -755,10 +765,6 @@ void edgex_device_service_free (edgex_device_service *svc)
   if (svc)
   {
     edgex_devmap_free (svc->devices);
-    if (svc->scheduler)
-    {
-      iot_scheduler_free (svc->scheduler);
-    }
     iot_threadpool_free (svc->thpool);
     edgex_registry_free (svc->registry);
     edgex_registry_fini ();

@@ -8,7 +8,7 @@
 
 #include "CUnit.h"
 #include "base64.h"
-#include "../src/c/base64.h"
+#include "iot/base64.h"
 
 static int suite_init (void)
 {
@@ -31,9 +31,9 @@ static void test_rtrip1 (void)
   {
     memset (encoded, 0, 25);
     memset (decoded, 0, 16);
-    CU_ASSERT (edgex_b64_encode (input, size, encoded, 25));
+    CU_ASSERT (iot_b64_encode (input, size, encoded, 25));
     outlen = size;
-    CU_ASSERT (edgex_b64_decode (encoded, decoded, &outlen));
+    CU_ASSERT (iot_b64_decode (encoded, decoded, &outlen));
     CU_ASSERT (size == outlen);
     CU_ASSERT (strncmp (input, decoded, size) == 0);
   }

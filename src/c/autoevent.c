@@ -249,7 +249,7 @@ void edgex_device_register_autoevent_handlers
   if ((starter == NULL) || (stopper == NULL))
   {
     iot_log_error
-      (iot_log_default (), "AutoEvent registration: must specify both handlers");
+      (iot_logger_default (), "AutoEvent registration: must specify both handlers");
     return;
   }
   svc->autoevstart = starter;

@@ -14,10 +14,9 @@
 
 /* Built-in logger: post to an EdgeX logging service */
 
-extern bool edgex_log_torest
+extern void edgex_log_torest
 (
-  const char *destination,
-  const char *subsystem,
+  struct iot_logger_t * logger,
   iot_loglevel_t l,
   time_t timestamp,
   const char *message
@@ -25,13 +24,16 @@ extern bool edgex_log_torest
 
 /* Built-in logger: write to a file or stdout */
 
-extern bool edgex_log_tofile
+extern void edgex_log_tofile
 (
-  const char *destination,
-  const char *subsystem,
+  struct iot_logger_t * logger,
   iot_loglevel_t l,
   time_t timestamp,
   const char *message
 );
+
+/* Get name of log level */
+
+extern const char * edgex_logger_levelname (iot_loglevel_t level);
 
 #endif

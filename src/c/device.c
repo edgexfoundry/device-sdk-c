@@ -15,7 +15,7 @@
 #include "edgex-rest.h"
 #include "edgex-time.h"
 #include "cmdinfo.h"
-#include "base64.h"
+#include "iot/base64.h"
 #include "transform.h"
 
 #include <inttypes.h>
@@ -106,7 +106,7 @@ char *edgex_value_tostring (const edgex_device_commandresult *value, bool binflo
     case Float32:
       if (binfloat)
       {
-        edgex_b64_encode (&value->value.f32_result, sizeof (float), res, BUFSIZE);
+        iot_b64_encode (&value->value.f32_result, sizeof (float), res, BUFSIZE);
       }
       else
       {
@@ -116,7 +116,7 @@ char *edgex_value_tostring (const edgex_device_commandresult *value, bool binflo
     case Float64:
       if (binfloat)
       {
-        edgex_b64_encode (&value->value.f64_result, sizeof (double), res, BUFSIZE);
+        iot_b64_encode (&value->value.f64_result, sizeof (double), res, BUFSIZE);
       }
       else
       {
@@ -127,9 +127,9 @@ char *edgex_value_tostring (const edgex_device_commandresult *value, bool binflo
       res = strdup (value->value.string_result);
       break;
     case Binary:
-      sz = edgex_b64_encodesize (value->value.binary_result.size);
+      sz = iot_b64_encodesize (value->value.binary_result.size);
       res = malloc (sz);
-      edgex_b64_encode
+      iot_b64_encode
         (value->value.binary_result.bytes, value->value.binary_result.size, res, sz);
       break;
   }
@@ -177,7 +177,7 @@ static bool populateValue
       if (strlen (val) == 8 && val[6] == '=' && val[7] == '=')
       {
         size_t sz = sizeof (float);
-        return edgex_b64_decode (val, &cres->value.f32_result, &sz);
+        return iot_b64_decode (val, &cres->value.f32_result, &sz);
       }
       else
       {
@@ -187,17 +187,17 @@ static bool populateValue
       if (strlen (val) == 12 && val[11] == '=')
       {
         size_t sz = sizeof (double);
-        return edgex_b64_decode (val, &cres->value.f64_result, &sz);
+        return iot_b64_decode (val, &cres->value.f64_result, &sz);
       }
       else
       {
         return (sscanf (val, "%le", &cres->value.f64_result) == 1);
       }
     case Binary:
-      sz = edgex_b64_maxdecodesize (val);
+      sz = iot_b64_maxdecodesize (val);
       cres->value.binary_result.size = sz;
       cres->value.binary_result.bytes = malloc (sz);
-      return edgex_b64_decode
+      return iot_b64_decode
         (val, cres->value.binary_result.bytes, &cres->value.binary_result.size);
   }
   return false;
