@@ -75,21 +75,21 @@ toml_table_t *edgex_device_loadConfig
 static void edgex_config_setloglevel (iot_logger_t *lc, const char *lstr, iot_loglevel_t *result)
 {
   iot_loglevel_t l;
-  for (l = TRACE; l <= ERROR; l++)
+  for (l = IOT_LOG_ERROR; l <= IOT_LOG_TRACE; l++)
   {
-    if (strcasecmp (lstr, iot_logger_levelname (l)) == 0)
+    if (strcasecmp (lstr, edgex_logger_levelname (l)) == 0)
     {
       if (*result != l)
       {
         *result = l;
-        iot_logger_setlevel (lc, INFO);
+        iot_logger_set_level (lc, IOT_LOG_INFO);
         iot_log_info (lc, "Setting LogLevel to %s", lstr);
-        iot_logger_setlevel (lc, l);
+        iot_logger_set_level (lc, l);
       }
       break;
     }
   }
-  if (l > ERROR)
+  if (l > IOT_LOG_TRACE)
   {
     iot_log_error (lc, "Invalid LogLevel %s", lstr);
   }

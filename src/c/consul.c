@@ -13,7 +13,7 @@
 #include "errorlist.h"
 #include "config.h"
 #include "parson.h"
-#include "base64.h"
+#include "iot/base64.h"
 
 #define CONF_PREFIX "edgex/core/1.0/"
 
@@ -71,9 +71,9 @@ static edgex_nvpairs *read_pairs
     enc = json_object_get_string (obj, "Value");
     if (enc)
     {
-      rsize = edgex_b64_maxdecodesize (enc);
+      rsize = iot_b64_maxdecodesize (enc);
       pair->value = malloc (rsize + 1);
-      if (edgex_b64_decode (enc, pair->value, &rsize))
+      if (iot_b64_decode (enc, pair->value, &rsize))
       {
         (pair->value)[rsize] = '\0';
       }
@@ -259,9 +259,9 @@ void edgex_consul_client_write_config
   while (iter)
   {
     size_t valsz = strlen (iter->value);
-    size_t base64sz = edgex_b64_encodesize (valsz);
+    size_t base64sz = iot_b64_encodesize (valsz);
     char *base64val = malloc (base64sz);
-    edgex_b64_encode (iter->value, valsz, base64val, base64sz);
+    iot_b64_encode (iter->value, valsz, base64val, base64sz);
 
     size_t keysz =
       strlen (CONF_PREFIX) + strlen (servicename) + strlen (iter->name) + 2;
@@ -422,7 +422,7 @@ void edgex_consul_client_query_service
     {
       if (nsvcs != 1)
       {
-        iot_log_warning
+        iot_log_warn
           (lc, "Multiple instances of %s found, using first.", servicename);
       }
       JSON_Object *obj = json_array_get_object (svcs, 0);
