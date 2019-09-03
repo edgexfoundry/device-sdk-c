@@ -13,7 +13,7 @@ deviceResources:
             { SensorID: "Sen1" , SensorType: "UInt64" }
         properties:
             value:
-                { type: "uint64", readWrite: "R", defaultValue: "0" }
+                { type: "uint64", readWrite: "R" }
             units:
                 { type: "string", readWrite: "R", defaultValue: "things" }
 
@@ -24,7 +24,7 @@ deviceResources:
           { SensorID: "Sen2", SensorType: "UInt64" }
         properties:
           value:
-            { type: "uint64", readWrite: "R", defaultValue: "0" }
+            { type: "uint64", readWrite: "R" }
           units:
             { type: "string", readWrite: "R", defaultValue: "things" }
 
@@ -34,28 +34,10 @@ deviceResources:
           { SensorID: "Switch1", SensorType: "Switch" }
         properties:
           value:
-            { type: "bool", readWrite: "RW", defaultValue: "true" }
+            { type: "bool", readWrite: "RW" }
           units:
             { type: "string", readWrite: "R", defaultValue: "State" }
 
-
-deviceCommands:
-  -
-    name: SensorOne
-    get:
-      - { index: "1", operation: "get", object: "SensorOne", parameter: "SensorOne", property: "value" }
-
-  -
-    name: SensorTwo
-    get:
-    - { index: "1", operation: "get", object: "SensorTwo", parameter: "SensorTwo", property: "value" }
-
-  -
-    name: Switch
-    get:
-    - { index: "1", operation: "get", object: "Switch", parameter: "Switch", property: "value" }
-    set:
-    - { index: "1", operation: "set", object: "Switch", parameter: "Switch", property: "value" }
 
 coreCommands:
   -
