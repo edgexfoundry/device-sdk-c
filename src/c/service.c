@@ -608,7 +608,10 @@ void edgex_device_service_free (edgex_device_service *svc)
     iot_threadpool_free (svc->thpool);
     edgex_registry_fini ();
     pthread_mutex_destroy (&svc->discolock);
-    iot_logger_free (svc->logger);
+    if (svc->logger)
+    {
+      iot_logger_free (svc->logger);
+    }
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);
     free (svc);
