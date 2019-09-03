@@ -20,13 +20,6 @@ typedef struct template_driver
   iot_logger_t * lc;
 } template_driver;
 
-
-static volatile sig_atomic_t running = true;
-static void inthandler (int i)
-{
-  running = (i != SIGINT);
-}
-
 static void dump_protocols (iot_logger_t *lc, const edgex_protocols *prots)
 {
   for (const edgex_protocols *p = prots; p; p = p->next)
@@ -180,6 +173,8 @@ static void template_stop (void *impl, bool force) {}
 int main (int argc, char *argv[])
 {
   edgex_device_svcparams params = { "device-template", "", "", "" };
+  sigset_t set;
+  int sigret;
 
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
@@ -229,12 +224,10 @@ int main (int argc, char *argv[])
   edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
 
-  signal (SIGINT, inthandler);
-  running = true;
-  while (running)
-  {
-    sleep(1);
-  }
+  /* Wait for interrupt */
+  sigemptyset (&set);
+  sigaddset (&set, SIGINT);
+  sigwait (&set, &sigret);
 
   /* Stop the device service */
   edgex_device_service_stop (service, true, &e);

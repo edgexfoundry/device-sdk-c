@@ -13,12 +13,6 @@
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); edgex_device_service_free (service); free (impl); return x.code; }
 
-static volatile sig_atomic_t running = true;
-static void inthandler (int i)
-{
-  running = (i != SIGINT);
-}
-
 typedef struct random_driver
 {
   iot_logger_t * lc;
@@ -147,6 +141,8 @@ static void random_stop (void *impl, bool force) {}
 int main (int argc, char *argv[])
 {
   edgex_device_svcparams params = { "device-random", "", "", "" };
+  sigset_t set;
+  int sigret;
 
   random_driver * impl = malloc (sizeof (random_driver));
   memset (impl, 0, sizeof (random_driver));
@@ -196,12 +192,10 @@ int main (int argc, char *argv[])
   edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
 
-  signal (SIGINT, inthandler);
-  running = true;
-  while (running)
-  {
-    sleep(1);
-  }
+  /* Wait for interrupt */
+  sigemptyset (&set);
+  sigaddset (&set, SIGINT);
+  sigwait (&set, &sigret);
 
   /* Stop the device service */
   edgex_device_service_stop (service, true, &e);
