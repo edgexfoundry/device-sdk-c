@@ -16,6 +16,7 @@
 #include <pthread.h>
 
 #define STR_BLK_SIZE 512
+#define EDGEX_DS_PREFIX "ds-"
 
 typedef struct handler_list
 {
@@ -84,6 +85,11 @@ typedef struct stringbuf
 
 static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
 {
+  if (strncmp (key, EDGEX_DS_PREFIX, strlen (EDGEX_DS_PREFIX)) == 0)
+  {
+    return MHD_YES;
+  }
+
   stringbuf *buf = (stringbuf *)p;
 
   size_t newsz = (buf->str ? strlen (buf->str) + 1 : 0) + strlen (key) + (value ? 1 + strlen (value) : 0) + 1;
