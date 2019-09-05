@@ -226,9 +226,10 @@ static edgex_cmdinfo *infoForRes
     n++;
   }
   result->nreqs = n;
-  result->reqs = malloc (n * sizeof (edgex_device_commandrequest));
-  result->pvals = malloc (n * sizeof (edgex_propertyvalue *));
-  result->maps = malloc (n * sizeof (edgex_nvpairs *));
+  result->reqs = calloc (n, sizeof (edgex_device_commandrequest));
+  result->pvals = calloc (n, sizeof (edgex_propertyvalue *));
+  result->maps = calloc (n, sizeof (edgex_nvpairs *));
+  result->dfls = calloc (n, sizeof (char *));
   for (n = 0, ro = forGet ? cmd->get : cmd->set; ro; n++, ro = ro->next)
   {
     edgex_deviceresource *devres =
@@ -238,6 +239,14 @@ static edgex_cmdinfo *infoForRes
     result->reqs[n].type = devres->properties->value->type;
     result->pvals[n] = devres->properties->value;
     result->maps[n] = ro->mappings;
+    if (ro->parameter && *ro->parameter)
+    {
+      result->dfls[n] = ro->parameter;
+    }
+    else if (devres->properties->value->defaultvalue && *devres->properties->value->defaultvalue)
+    {
+      result->dfls[n] = devres->properties->value->defaultvalue;
+    }
   }
   result->next = NULL;
   return result;
@@ -252,11 +261,20 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->reqs = malloc (sizeof (edgex_device_commandrequest));
   result->pvals = malloc (sizeof (edgex_propertyvalue *));
   result->maps = malloc (sizeof (edgex_nvpairs *));
-  result->reqs[0].resname = devres->name;;
+  result->dfls = malloc (sizeof (char *));
+  result->reqs[0].resname = devres->name;
   result->reqs[0].attributes = devres->attributes;
   result->reqs[0].type = devres->properties->value->type;
   result->pvals[0] = devres->properties->value;
   result->maps[0] = NULL;
+  if (devres->properties->value->defaultvalue && *devres->properties->value->defaultvalue)
+  {
+    result->dfls[0] = devres->properties->value->defaultvalue;
+  }
+  else
+  {
+    result->dfls[0] = NULL;
+  }
   result->next = NULL;
   return result;
 }
@@ -372,21 +390,21 @@ static int edgex_device_runput
     }
 
     value = json_object_get_string (jobj, resname);
-    if (value == NULL)
+    if (value == NULL && commandinfo->dfls[i] == NULL)
     {
       retcode = MHD_HTTP_BAD_REQUEST;
       iot_log_error (svc->logger, "No value supplied for %s", resname);
       break;
     }
     results[i].type = commandinfo->pvals[i]->type;
-    if (!populateValue (&results[i], value))
+    if (!populateValue (&results[i], value ? value : commandinfo->dfls[i]))
     {
       retcode = MHD_HTTP_BAD_REQUEST;
       iot_log_error
-        (svc->logger, "Unable to parse \"%s\" for %s", value, resname);
+        (svc->logger, "Unable to parse \"%s\" for %s", value ? value : commandinfo->dfls[i], resname);
       break;
     }
-    if (svc->config.device.datatransform)
+    if (svc->config.device.datatransform && value)
     {
       if (!edgex_transform_incoming (&results[i], commandinfo->pvals[i], commandinfo->maps[i]))
       {

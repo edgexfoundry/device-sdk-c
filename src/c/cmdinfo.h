@@ -20,6 +20,7 @@ typedef struct edgex_cmdinfo
   edgex_device_commandrequest *reqs;
   edgex_propertyvalue **pvals;
   edgex_nvpairs **maps;
+  char **dfls;
   struct edgex_cmdinfo *next;
 } edgex_cmdinfo;
 
