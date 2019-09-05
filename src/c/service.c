@@ -648,7 +648,7 @@ void edgex_device_service_start
       );
       if (svc->config.logging.file)
       {
-        svc->logger->next = iot_logger_alloc_custom (svc->name, IOT_LOG_INFO, url, edgex_log_torest, NULL);
+        svc->logger->next = iot_logger_alloc_custom (svc->name, svc->config.logging.level, url, edgex_log_torest, NULL);
       }
       else
       {

@@ -23,12 +23,6 @@ typedef struct counter_driver
   atomic_uint_fast32_t counters[NCOUNTERS];
 } counter_driver;
 
-static volatile sig_atomic_t running = true;
-static void inthandler (int i)
-{
-  running = (i != SIGINT);
-}
-
 static const edgex_protocols *findprotocol
   (const edgex_protocols *prots, const char *name)
 {
@@ -195,6 +189,8 @@ static void counter_stop (void *impl, bool force) {}
 int main (int argc, char *argv[])
 {
   edgex_device_svcparams params = { "device-counter", "", "", "" };
+  sigset_t set;
+  int sigret;
 
   counter_driver * impl = malloc (sizeof (counter_driver));
   impl->lc = NULL;
@@ -241,12 +237,9 @@ int main (int argc, char *argv[])
   edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
 
-  signal (SIGINT, inthandler);
-  running = true;
-  while (running)
-  {
-    sleep(1);
-  }
+  sigemptyset (&set);
+  sigaddset (&set, SIGINT);
+  sigwait (&set, &sigret);
 
   edgex_device_service_stop (service, true, &e);
   ERR_CHECK (e);

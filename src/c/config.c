@@ -520,12 +520,18 @@ void edgex_device_populateConfig
   svc->config.logging.useremote =
     get_nv_config_bool (config, "Logging/EnableRemote", false);
   svc->config.logging.file = get_nv_config_string (config, "Logging/File");
+
+  edgex_device_updateConf (svc, config);
 }
 
 void edgex_device_updateConf (void *p, const edgex_nvpairs *config)
 {
   edgex_device_service *svc = (edgex_device_service *)p;
   char *lname = get_nv_config_string (config, "Writable/LogLevel");
+  if (lname == NULL)
+  {
+    lname = get_nv_config_string (config, "Logging/LogLevel");
+  }
   if (lname)
   {
     edgex_config_setloglevel (svc->logger, lname, &svc->config.logging.level);

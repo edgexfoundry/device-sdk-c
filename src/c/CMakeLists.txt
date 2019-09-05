@@ -1,3 +1,5 @@
+include(CheckCSourceCompiles)
+
 # Set additional C compiler flags
 
 if (DEFINED CMAKE_C_COMPILER_ID)
@@ -20,8 +22,19 @@ endif ()
 
 # Set default files to compile and libraries
 
+# Check whether we need -latomic
+check_c_source_compiles("
+  #include <stdatomic.h>
+  #include <inttypes.h>
+  int main() { _Atomic(uint64_t) a = 0; uint64_t b = 0; uint64_t c = 0; return atomic_compare_exchange_weak (&a, &b, c); }"
+CSDK_HAVE_ATOMIC)
+
 file (GLOB C_FILES *.c iot/*.c)
 set (LINK_LIBRARIES ${LIBMICROHTTP_LIBRARIES} ${CURL_LIBRARIES} ${LIBYAML_LIBRARIES} ${LIBUUID_LIBRARIES} ${LIBCBOR_LIBRARIES})
+if (NOT CSDK_HAVE_ATOMIC)
+  list (APPEND LINK_LIBRARIES atomic)
+endif ()
+
 configure_file ("defs.h.in" "${CMAKE_SOURCE_DIR}/../include/edgex/csdk-defs.h")
 
 # Main sdk library
