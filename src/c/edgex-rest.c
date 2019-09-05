@@ -911,6 +911,7 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
     free (inf->reqs);
     free (inf->pvals);
     free (inf->maps);
+    free (inf->dfls);
     free (inf);
   }
 }
