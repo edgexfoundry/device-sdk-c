@@ -1,0 +1,60 @@
+name: "Example-Gyro"
+manufacturer: "IoTechSystems"
+model: "IoT4"
+description: "Virtual 3-axis Gyro Device for CSDK Example"
+labels:
+  - "sensor"
+
+deviceResources:
+  -
+    name: Xrotation
+    description: "X axis rotation rate"
+    attributes:
+      { parameter: "xrot" }
+    properties:
+      value:
+        { type: "int32", readWrite: "R" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "degrees/sec" }
+  -
+    name: Yrotation
+    description: "Y axis rotation rate"
+    attributes:
+      { parameter: "yrot" }
+    properties:
+      value:
+        { type: "int32", readWrite: "R" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "degrees/sec" }
+  -
+    name: Zrotation
+    description: "Z axis rotation rate"
+    attributes:
+      { parameter: "zrot" }
+    properties:
+      value:
+        { type: "int32", readWrite: "R" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "degrees/sec" }
+
+deviceCommands:
+  -
+    name: rotation
+    get:
+      - { object: "Xrotation" }
+      - { object: "Yrotation" }
+      - { object: "Zrotation" }
+
+coreCommands:
+  -
+    name: rotation
+    get:
+      path: "/api/v1/device/{deviceId}/rotation"
+      responses:
+      - code: "200"
+        description: "Successfully read the rotation sensors."
+        expectedValues: [ "Xrotation", "Yrotation", "Zrotation" ]
+      - code: "503"
+        description: "service unavailable"
+        expectedValues: []
+

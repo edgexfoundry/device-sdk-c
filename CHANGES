@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.1.0 "Fuji":
 
+- Implement "defaultValue" and "parameter" fields for write operations.
 - Allow query strings to be passed to device GET requests.
 - Added /api/version endpoint for obtaining service version strings.
 - Commandline argument processing mostly handled within the SDK.
