@@ -1,0 +1,72 @@
+name: "Example-Terminal"
+manufacturer: "IoTechSystems"
+model: "IoT3"
+description: "Virtual Terminal Device for CSDK Example"
+labels:
+  - "sensor"
+
+deviceResources:
+  -
+    name: Cmd
+    description: "The name of an activation command"
+    attributes:
+      { parameter: "cmd" }
+    properties:
+      value:
+        { type: "string", readWrite: "W" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "text" }
+  -
+    name: Xposition
+    description: "The X position at which to write new text"
+    attributes:
+      { parameter: "x" }
+    properties:
+      value:
+        { type: "int32", readWrite: "W" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "characters" }
+  -
+    name: Yposition
+    description: "The Y position at which to write new text"
+    attributes:
+      { parameter: "y" }
+    properties:
+      value:
+        { type: "int32", readWrite: "W" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "characters" }
+  -
+    name: Message
+    description: "A message to write on the terminal"
+    attributes:
+      { parameter: "msg" }
+    properties:
+      value:
+        { type: "string", readWrite: "W" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "text" }
+
+deviceCommands:
+  -
+    name: WriteMsg
+    set:
+      - { object: "Cmd", parameter: "WriteMsg" }
+      - { object: "Xposition" }
+      - { object: "Yposition" }
+      - { object: "Message" }
+
+coreCommands:
+  -
+    name: WriteMsg
+    put:
+      path: "/api/v1/device/{deviceId}/WriteMsg"
+      parameterNames: ["Xposition", "Yposition", "Message"]
+      responses:
+      - code: "200"
+        description: "Successfully displayed the message."
+        expectedValues: []
+      - code: "503"
+        description: "service unavailable"
+        expectedValues: []
+

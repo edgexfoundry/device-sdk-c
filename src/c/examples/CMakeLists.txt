@@ -1,5 +1,7 @@
 add_subdirectory (counters)
 add_subdirectory (random)
+add_subdirectory (gyro)
+add_subdirectory (terminal)
 add_executable (template template.c)
 target_include_directories (template PRIVATE ../../../include)
 target_link_libraries (template PRIVATE csdk)

@@ -1,0 +1,44 @@
+[Service]
+  Port = 49999
+  Timeout = 5000
+  ConnectRetries = 3
+  Labels = [ "Counter" ]
+  StartupMsg = "Example terminal device service started"
+  CheckInterval = "10s"
+
+[Clients]
+  [Clients.Data]
+    Host = "localhost"
+    Port = 48080
+
+  [Clients.Metadata]
+    Host = "localhost"
+    Port = 48081
+
+  [Clients.Logging]
+    Host = "localhost"
+    Port = 48061
+
+[Device]
+  DataTransform = false
+  Discovery = false
+  InitCmd = ""
+  InitCmdArgs = ""
+  MaxCmdOps = 128
+  MaxCmdResultLen = 256
+  RemoveCmd = ""
+  RemoveCmdArgs = ""
+  ProfilesDir = ""
+  SendReadingsOnChanged = true
+
+[Logging]
+  EnableRemote = false
+  File = "device-terminal.log"
+  LogLevel = "DEBUG"
+
+[[DeviceList]]
+  Name = "Terminal"
+  Profile = "Example-Terminal"
+  Description = "An Example Terminal Device"
+  [DeviceList.Protocols]
+    [DeviceList.Protocols.Terminal]

@@ -2,7 +2,7 @@
 
 An outline device service, `template.c` is provided here.
 
-Example device services "Random" and "Counters" are contained within their own subdirectories.
+Example device services "Random", "Counters", "Gyro" and "Terminal" are contained within their own subdirectories.
 
 ## Template device service
 
