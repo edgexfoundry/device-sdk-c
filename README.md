@@ -33,10 +33,10 @@ usage.
 
 To build the docker image which will build the deliverable, run the following command:
 
-`docker build -t device-sdk-go-c-builder -f scripts/Dockerfile.alpine-3.7 .`
+`docker build -t device-sdk-c-builder -f scripts/Dockerfile.alpine-3.9 .`
 
 Once you have the builder image, to compile the code, run the following command:
 
-`docker run --rm -e UID -e GID -v $PWD/release:/edgex-c-sdk/build/release device-sdk-go-c-builder`
+`docker run --rm -e "UID=`id -u`" -e "GID=`id -g`" -v $PWD/results:/edgex-c-sdk/results device-sdk-c-builder`
 
-This will generate the release files at the root of this project.
+This will generate the sdk files in a results directory at the root of this project.
