@@ -1,0 +1,25 @@
+FROM alpine:3.9
+MAINTAINER Steve Osselton <steve@iotechsys.com>
+RUN apk add --update --no-cache build-base wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev
+
+ENV CBOR_VERSION=0.5.0
+RUN mkdir /tmp/cbor \
+  && cd /tmp/cbor \
+  && wget -O - https://github.com/PJK/libcbor/archive/v${CBOR_VERSION}.tar.gz | tar -z -x -f - \
+  && sed -e 's/-flto//' -i libcbor-${CBOR_VERSION}/CMakeLists.txt \
+  && cmake -DCMAKE_BUILD_TYPE=Release -DCBOR_CUSTOM_ALLOC=ON libcbor-${CBOR_VERSION} \
+  && make \
+  && make install
+
+RUN mkdir /tmp/sdk
+COPY VERSION /tmp/sdk
+COPY src /tmp/sdk/src
+COPY include /tmp/sdk/include
+COPY scripts /tmp/sdk/scripts
+COPY LICENSE /tmp/sdk
+COPY Attribution.txt /tmp/sdk
+RUN cd /tmp/sdk \
+  && ./scripts/build.sh \
+  && make -C build/release install
+
+RUN rm -rf /tmp/cbor /tmp/sdk
