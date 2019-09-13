@@ -8,6 +8,8 @@ differs as follows:
 
 Changes for 1.1.0 "Fuji":
 
+- ResourceOperation field "object" is renamed to "deviceResource".
+  - "object" is still recognized for compatibility purposes but is deprecated.
 - Implement "defaultValue" and "parameter" fields for write operations.
 - Allow query strings to be passed to device GET requests.
 - Added /api/version endpoint for obtaining service version strings.

@@ -233,7 +233,7 @@ static edgex_cmdinfo *infoForRes
   for (n = 0, ro = forGet ? cmd->get : cmd->set; ro; n++, ro = ro->next)
   {
     edgex_deviceresource *devres =
-      findDevResource (prof->device_resources, ro->object);
+      findDevResource (prof->device_resources, ro->deviceResource);
     result->reqs[n].resname = devres->name;
     result->reqs[n].attributes = devres->attributes;
     result->reqs[n].type = devres->properties->value->type;
