@@ -41,9 +41,9 @@ deviceCommands:
   -
     name: rotation
     get:
-      - { object: "Xrotation" }
-      - { object: "Yrotation" }
-      - { object: "Zrotation" }
+      - { deviceResource: "Xrotation" }
+      - { deviceResource: "Yrotation" }
+      - { deviceResource: "Zrotation" }
 
 coreCommands:
   -

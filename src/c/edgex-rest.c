@@ -598,14 +598,26 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   result->index = get_string (obj, "index");
   result->operation = get_string (obj, "operation");
   result->object = get_string (obj, "object");
+  result->deviceResource = get_string (obj, "deviceResource");
   result->property = get_string (obj, "property");
   result->parameter = get_string (obj, "parameter");
   result->resource = get_string (obj, "resource");
+  result->deviceCommand = get_string (obj, "deviceCommand");
   result->secondary = array_to_strings
     (json_object_get_array (obj, "secondary"));
   mappings_obj = json_object_get_object (obj, "mappings");
   result->mappings = nvpairs_read (mappings_obj);
   result->next = NULL;
+  if (strlen (result->deviceResource) == 0 && strlen (result->object) != 0)
+  {
+    free (result->deviceResource);
+    result->deviceResource = strdup (result->object);
+  }
+  if (strlen (result->deviceCommand) == 0 && strlen (result->resource) != 0)
+  {
+    free (result->deviceCommand);
+    result->deviceCommand = strdup (result->resource);
+  }
   return result;
 }
 
@@ -617,9 +629,11 @@ static JSON_Value *resourceoperation_write (const edgex_resourceoperation *e)
   json_object_set_string (obj, "index", e->index);
   json_object_set_string (obj, "operation", e->operation);
   json_object_set_string (obj, "object", e->object);
+  json_object_set_string (obj, "deviceResource", e->deviceResource);
   json_object_set_string (obj, "property", e->property);
   json_object_set_string (obj, "parameter", e->parameter);
   json_object_set_string (obj, "resource", e->resource);
+  json_object_set_string (obj, "deviceCommand", e->deviceCommand);
   json_object_set_value (obj, "secondary", strings_to_array (e->secondary));
   json_object_set_value (obj, "mappings", nvpairs_write (e->mappings));
   return result;
@@ -635,9 +649,11 @@ static edgex_resourceoperation *resourceoperation_dup
     result->index = strdup (ro->index);
     result->operation = strdup (ro->operation);
     result->object = strdup (ro->object);
+    result->deviceResource = strdup (ro->deviceResource);
     result->property = strdup (ro->property);
     result->parameter = strdup (ro->parameter);
     result->resource = strdup (ro->resource);
+    result->deviceCommand = strdup (ro->deviceCommand);
     result->secondary = edgex_strings_dup (ro->secondary);
     result->mappings = edgex_nvpairs_dup (ro->mappings);
     result->next = resourceoperation_dup (ro->next);
@@ -653,9 +669,11 @@ static void resourceoperation_free (edgex_resourceoperation *e)
     free (e->index);
     free (e->operation);
     free (e->object);
+    free (e->deviceResource);
     free (e->property);
     free (e->parameter);
     free (e->resource);
+    free (e->deviceCommand);
     edgex_strings_free (e->secondary);
     edgex_nvpairs_free (e->mappings);
     e = e->next;
@@ -753,19 +771,18 @@ static bool resourceop_validate (iot_logger_t *lc, edgex_resourceoperation *ro, 
 {
   while (ro)
   {
-    bool found = false;
     edgex_deviceresource *res = reslist;
-    while (res && !found)
+    while (res)
     {
-      if (strcmp (ro->object, res->name) == 0)
+      if (strcmp (ro->deviceResource, res->name) == 0)
       {
-        found = true;
+        break;
       }
       res = res->next;
     }
-    if (!found)
+    if (res == NULL)
     {
-      iot_log_error (lc, "No deviceResource \"%s\" found", ro->object);
+      iot_log_error (lc, "No deviceResource \"%s\" found", ro->deviceResource);
       return false;
     }
     ro = ro->next;

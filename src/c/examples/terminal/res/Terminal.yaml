@@ -51,10 +51,10 @@ deviceCommands:
   -
     name: WriteMsg
     set:
-      - { object: "Cmd", parameter: "WriteMsg" }
-      - { object: "Xposition" }
-      - { object: "Yposition" }
-      - { object: "Message" }
+      - { deviceResource: "Cmd", parameter: "WriteMsg" }
+      - { deviceResource: "Xposition" }
+      - { deviceResource: "Yposition" }
+      - { deviceResource: "Message" }
 
 coreCommands:
   -

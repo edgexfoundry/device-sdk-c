@@ -49,9 +49,9 @@ in these lines are as follows:
 * index - a number, used to define an order in which the resource is processed.
 * operation - get or set. Ignored in this implementation, mixing of get and set
 operations is not supported.
-* object - the name of the deviceResource to access.
-* parameter - the name of the corresponding parameter in a PUT request. This
-should match the deviceResource name.
+* deviceResource - the name of the deviceResource to access.
+* parameter - optional, a value that will be used if a PUT request does not
+specify one.
 
 deviceResources
 ---------------
@@ -84,7 +84,7 @@ undifferentiated Integer and Float types are deprecated in EdgeX and not
 supported by the SDK.
 * readWrite - "R", "RW", or "W" indicating whether the value is readable or
 writable.
-* defaultValue - a value assumed before any readings are taken.
+* defaultValue - a value used for PUT requests which do not specify one.
 * base - a value to be raised to the power of the raw reading before it is returned.
 * scale - a factor by which to multiply a reading before it is returned.
 * offset - a value to be added to a reading before it is returned.

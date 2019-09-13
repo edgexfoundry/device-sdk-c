@@ -63,10 +63,12 @@ typedef struct edgex_resourceoperation
 {
   char *index;
   char *operation;
-  char *object;
+  char *object;         // deprecated - use deviceResource instead
+  char *deviceResource;
   char *property;
   char *parameter;
-  char *resource;
+  char *resource;       // deprecated - use deviceCommand instead
+  char *deviceCommand;
   edgex_strings *secondary;
   edgex_nvpairs *mappings;
   struct edgex_resourceoperation *next;
