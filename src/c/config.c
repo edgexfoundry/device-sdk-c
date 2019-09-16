@@ -281,10 +281,24 @@ void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, edgex_nvp
     }
     else
     {
-      strcpy (query, iter->name);
+      for (int i = 0; i < strlen (sname); i++)
+      {
+        if (query[i] == '-')
+        {
+          query[i] = '_';
+        }
+      }
       if (checkOverride (query, &iter->value))
       {
         iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
+      }
+      else
+      {
+        strcpy (query, iter->name);
+        if (checkOverride (query, &iter->value))
+        {
+          iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
+        }
       }
     }
   }
