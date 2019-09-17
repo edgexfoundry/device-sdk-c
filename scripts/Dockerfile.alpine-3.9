@@ -1,5 +1,5 @@
 FROM alpine:3.9
-MAINTAINER Iain Anderson <iain@iotechsys.com>
+MAINTAINER IOTech <support@iotechsys.com>
 RUN apk add --update --no-cache build-base wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev && mkdir -p /edgex-c-sdk/build
 COPY VERSION /edgex-c-sdk/
 COPY src /edgex-c-sdk/src/

@@ -15,7 +15,7 @@ The C SDK provides a framework for building EdgeX device services in C.
 
 At the toplevel C SDK directory, run
 ```
-./scripts/build.sh
+make
 ```
 This retrieves dependencies and uses CMake to build the SDK. Subsequent
 rebuilds may be performed by moving to the ```build/release``` or
@@ -31,12 +31,14 @@ usage.
 
 ### Building with docker
 
-To build the docker image which will build the deliverable, run the following command:
+To build the SDK in a docker image, run the following command:
 
-`docker build -t device-sdk-c-builder -f scripts/Dockerfile.alpine-3.9 .`
-
-Once you have the builder image, to compile the code, run the following command:
-
-`docker run --rm -e "UID=`id -u`" -e "GID=`id -g`" -v $PWD/results:/edgex-c-sdk/results device-sdk-c-builder`
+`make docker`
 
 This will generate the sdk files in a results directory at the root of this project.
+
+Alternatively, you can build a docker image which can be used to build device services in, with the following command:
+
+`docker build -t edgex-csdk-base:1.1.0 -f scripts/Dockerfile.alpine-3.9-base .`
+
+You can then write a Dockerfile for your service that begins `FROM edgex-csdk-base:1.0.0`
