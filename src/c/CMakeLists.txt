@@ -54,5 +54,5 @@ add_subdirectory (utests)
 
 install (TARGETS csdk LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
 install (DIRECTORY "${CMAKE_SOURCE_DIR}/../include/" DESTINATION include )
-install (FILES "${CMAKE_SOURCE_DIR}/../LICENSE" DESTINATION .)
-install (FILES "${CMAKE_SOURCE_DIR}/../Attribution.txt" DESTINATION .)
+install (FILES "${CMAKE_SOURCE_DIR}/../LICENSE" DESTINATION share/device-sdk-c)
+install (FILES "${CMAKE_SOURCE_DIR}/../Attribution.txt" DESTINATION share/device-sdk-c)
