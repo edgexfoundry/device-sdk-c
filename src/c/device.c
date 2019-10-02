@@ -13,7 +13,6 @@
 #include "data.h"
 #include "metadata.h"
 #include "edgex-rest.h"
-#include "edgex-time.h"
 #include "cmdinfo.h"
 #include "iot/base64.h"
 #include "transform.h"

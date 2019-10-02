@@ -11,7 +11,7 @@
 #include "data.h"
 #include "errorlist.h"
 #include "config.h"
-#include "edgex-time.h"
+#include "iot/time.h"
 #include "device.h"
 #include "transform.h"
 
@@ -27,7 +27,7 @@ edgex_event_cooked *edgex_data_process_event
 {
   edgex_event_cooked *result = NULL;
   bool useCBOR = false;
-  uint64_t timenow = edgex_device_nanotime_monotonic ();
+  uint64_t timenow = iot_time_nsecs ();
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
     if (doTransforms)

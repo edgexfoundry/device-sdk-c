@@ -18,7 +18,7 @@
 #include "data.h"
 #include "rest.h"
 #include "edgex-rest.h"
-#include "edgex-time.h"
+#include "iot/time.h"
 #include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
@@ -306,7 +306,7 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
 
   if (ds == NULL)
   {
-    uint64_t millis = edgex_device_millitime ();
+    uint64_t millis = iot_time_msecs ();
     edgex_addressable *addr = edgex_metadata_client_get_addressable
       (svc->logger, &svc->config.endpoints, svc->name, err);
     if (err->code)
@@ -510,7 +510,7 @@ void edgex_device_service_start
   bool uploadConfig = false;
   edgex_nvpairs *confpairs = NULL;
 
-  svc->starttime = edgex_device_millitime();
+  svc->starttime = iot_time_msecs();
 
   iot_threadpool_start (svc->thpool);
 
@@ -685,7 +685,7 @@ void edgex_device_service_start
 
   if (err->code == 0)
   {
-    iot_log_info (svc->logger, "Service started in: %dms", edgex_device_millitime() - svc->starttime);
+    iot_log_info (svc->logger, "Service started in: %dms", iot_time_msecs() - svc->starttime);
     iot_log_info (svc->logger, "Listening on port: %d", svc->config.service.port);
   }
 }
