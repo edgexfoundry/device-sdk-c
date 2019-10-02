@@ -46,9 +46,7 @@ set_target_properties (csdk PROPERTIES DEFINE_SYMBOL "CSDK_EXPORTS")
 
 # Build modules
 
-add_subdirectory (cunit)
 add_subdirectory (examples)
-add_subdirectory (utests)
  
 # Configure installer
 

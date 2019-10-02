@@ -9,7 +9,7 @@
 #include "metrics.h"
 #include "parson.h"
 #include "service.h"
-#include "edgex-time.h"
+#include "iot/time.h"
 
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -61,8 +61,8 @@ int edgex_device_handler_metrics
   if (getrusage (RUSAGE_SELF, &rstats) == 0)
   {
     double cputime = rstats.ru_utime.tv_sec + rstats.ru_stime.tv_sec;
-    cputime += (double)(rstats.ru_utime.tv_usec + rstats.ru_stime.tv_usec) / EDGEX_MICROS;
-    double walltime = (double)(edgex_device_millitime() - svc->starttime) / EDGEX_MILLIS;
+    cputime += (double)(rstats.ru_utime.tv_usec + rstats.ru_stime.tv_usec) / 1e6;
+    double walltime = (double)(iot_time_msecs() - svc->starttime) / 1e3;
     json_object_set_number (obj, "CpuTime", cputime);
     json_object_set_number (obj, "CpuAvgUsage", cputime / walltime);
   }

@@ -11,7 +11,6 @@
 #include "metadata.h"
 #include "edgex-rest.h"
 #include "errorlist.h"
-#include "edgex-time.h"
 #include "edgex/device-mgmt.h"
 
 #include <string.h>

@@ -12,7 +12,7 @@
 #include "metadata.h"
 #include "data.h"
 #include "edgex-rest.h"
-#include "edgex-time.h"
+#include "iot/time.h"
 #include "errorlist.h"
 
 #include <dirent.h>
@@ -54,7 +54,7 @@ static void generate_value_descriptors
   const edgex_deviceprofile *dp
 )
 {
-  uint64_t timenow = edgex_device_millitime ();
+  uint64_t timenow = iot_time_msecs ();
 
   for (edgex_deviceresource *res = dp->device_resources; res; res = res->next)
   {

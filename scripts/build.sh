@@ -4,10 +4,9 @@ set -e -x
 CPPCHECK=false
 DOCGEN=false
 
-IOTECH=IOTechSystems
-CUTILNAME=iotech-c-utils
-CUTILREF=e92b649
-CUTILDIR=$IOTECH-$CUTILNAME-$CUTILREF
+TOMLVER=SDK-0.2
+CUTILVER=v0.8.1
+CUTILDIR=iotech-c-utils-0.8.1
 
 # Process arguments
 
@@ -41,33 +40,16 @@ then
 
   # TOML Parser
 
-  wget -O - https://github.com/IOTechSystems/tomlc99/archive/SDK-0.2.tar.gz | tar -C deps -z -x -f -
-  cp deps/tomlc99-SDK-0.2/toml.* src/c
+  wget -O - https://github.com/IOTechSystems/tomlc99/archive/$TOMLVER.tar.gz | tar -C deps -z -x -f -
+  cp deps/tomlc99-$TOMLVER/toml.* src/c
 
   # C Utils
   
-  wget -O - https://github.com/$IOTECH/$CUTILNAME/tarball/$CUTILREF | tar -C deps -z -x -f -
+  wget -O - https://github.com/IOTechSystems/iotech-c-utils/archive/$CUTILVER.tar.gz | tar -C deps -z -x -f -
   mkdir -p src/c/iot
-  cp deps/$CUTILDIR/src/c/scheduler.c src/c/iot
-  cp deps/$CUTILDIR/src/c/logger.c src/c/iot
-  cp deps/$CUTILDIR/src/c/threadpool.c src/c/iot
-  cp deps/$CUTILDIR/src/c/thread.c src/c/iot
-  cp deps/$CUTILDIR/src/c/data.c src/c/iot
-  cp deps/$CUTILDIR/src/c/json.c src/c/iot
-  cp deps/$CUTILDIR/src/c/base64.c src/c/iot
-  cp deps/$CUTILDIR/src/c/container.c src/c/iot
-  cp deps/$CUTILDIR/src/c/component.c src/c/iot
+  cp deps/$CUTILDIR/src/c/*.c src/c/iot
   mkdir -p include/iot
-  cp deps/$CUTILDIR/include/iot/scheduler.h include/iot
-  cp deps/$CUTILDIR/include/iot/logger.h include/iot
-  cp deps/$CUTILDIR/include/iot/threadpool.h include/iot
-  cp deps/$CUTILDIR/include/iot/component.h include/iot
-  cp deps/$CUTILDIR/include/iot/data.h include/iot
-  cp deps/$CUTILDIR/include/iot/thread.h include/iot
-  cp deps/$CUTILDIR/include/iot/container.h include/iot
-  cp deps/$CUTILDIR/include/iot/json.h include/iot
-  cp deps/$CUTILDIR/include/iot/base64.h include/iot
-  cp deps/$CUTILDIR/include/iot/os.h include/iot
+  cp deps/$CUTILDIR/include/iot/*.h include/iot
   mkdir -p include/iot/os
   cp deps/$CUTILDIR/include/iot/os/* include/iot/os
 
