@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.0)
 project (Csdk LANGUAGES C)
+set (CMAKE_C_STANDARD 11)
+set (CMAKE_C_EXTENSIONS Off)
 
 # Package support
 
@@ -61,7 +63,7 @@ add_subdirectory (c)
 set (CPACK_PACKAGE_NAME "Csdk")
 set (CPACK_PACKAGE_VENDOR "IoTech")
 set (CPACK_PACKAGE_CONTACT "support@iotechsys.com")
-set (CPACK_PACKAGE_DESCRIPTION_SUMARY "EdgeXpert Device SDK for C")
+set (CPACK_PACKAGE_DESCRIPTION_SUMARY "EdgeX Device SDK for C")
 set (CPACK_PACKAGE_VERSION "${CSDK_DOT_VERSION}")
 set (CPACK_PACKAGE_FILE_NAME "csdk-${CPACK_PACKAGE_VERSION}")
 set (CPACK_VERSION_MAJOR "${VERSION_MAJOR}")
