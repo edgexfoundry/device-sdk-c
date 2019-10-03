@@ -21,6 +21,9 @@ This retrieves dependencies and uses CMake to build the SDK. Subsequent
 rebuilds may be performed by moving to the ```build/release``` or
 ```build/debug``` directories and running ```make```.
 
+A .tar.gz file containing the SDK headers and library is created in the
+build/{debug, release} directories.
+
 ### Creating a Device Service
 
 The main include file ```edgex/devsdk.h``` contains the functions provided by
@@ -41,4 +44,4 @@ Alternatively, you can build a docker image which can be used to build device se
 
 `docker build -t edgex-csdk-base:1.1.0 -f scripts/Dockerfile.alpine-3.9-base .`
 
-You can then write a Dockerfile for your service that begins `FROM edgex-csdk-base:1.0.0`
+You can then write a Dockerfile for your service that begins `FROM edgex-csdk-base:1.1.0`
