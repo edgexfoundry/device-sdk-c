@@ -7,9 +7,14 @@ The C SDK provides a framework for building EdgeX device services in C.
 ### Prerequisites
 
 * A Linux build host
-* A version of GCC supporting C99.
+* A version of GCC supporting C11.
 * CMake version 3 or greater and make.
-* Development libraries and headers for curl, microhttpd, yaml, libcbor and libuuid.
+* Development libraries and headers for:
+  * curl (version 7.32 or later)
+  * microhttpd (version 0.9)
+  * libyaml (version 0.1.6 or later)
+  * libcbor (version 0.5)
+  * libuuid (from util-linux v2.x)
 
 ### Building
 
