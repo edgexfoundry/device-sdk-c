@@ -6,12 +6,6 @@ This software includes code licensed under the MIT License as follows:
 Copyright (c) 2017 CK Tan
 https://github.com/cktan/tomlc99
 
-   Threadpool
-   ----------
-
-Copyright (c) 2016 Johan Hanssen Seferidis
-https://github.com/Pithikos/C-Thread-Pool
-
    Map
    ---
 
@@ -23,6 +17,12 @@ https://github.com/rxi/map
 
 Copyright (c) 2012 - 2017 Krzysztof Gabis
 https://github.com/kgabis/parson
+
+   C Utils
+   -------
+
+Copyright (c) 2018 - 2019 IOTech
+https://github.com/IOTechSystems/iotech-c-utils
 
 
 ------------------------------------------------------------------------------
