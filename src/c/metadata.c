@@ -536,6 +536,78 @@ void edgex_metadata_client_delete_device_byname
   free (ctx.buff);
 }
 
+edgex_watcher *edgex_metadata_client_get_watchers
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * servicename,
+  edgex_error * err
+)
+{
+  edgex_ctx ctx;
+  edgex_watcher *result = 0;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/provisionwatcher/servicename/%s",
+    endpoints->metadata.host,
+    endpoints->metadata.port,
+    servicename
+  );
+
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  if (err->code)
+  {
+    return 0;
+  }
+
+  result = edgex_watchers_read (ctx.buff);
+  free (ctx.buff);
+  *err = EDGEX_OK;
+  return result;
+}
+
+edgex_watcher *edgex_metadata_client_get_watcher
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * watcherId,
+  edgex_error * err
+)
+{
+  edgex_ctx ctx;
+  edgex_watcher *result = 0;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/v1/provisionwatcher/%s",
+    endpoints->metadata.host,
+    endpoints->metadata.port,
+    watcherId
+  );
+
+  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  if (err->code)
+  {
+    return 0;
+  }
+
+  result = edgex_watcher_read (ctx.buff);
+  free (ctx.buff);
+  *err = EDGEX_OK;
+  return result;
+}
+
 edgex_addressable *edgex_metadata_client_get_addressable
 (
   iot_logger_t *lc,

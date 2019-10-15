@@ -132,6 +132,20 @@ void edgex_metadata_client_delete_device_byname
   const char * devicename,
   edgex_error * err
 );
+edgex_watcher *edgex_metadata_client_get_watchers
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * servicename,
+  edgex_error * err
+);
+edgex_watcher *edgex_metadata_client_get_watcher
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * watcherId,
+  edgex_error * err
+);
 edgex_addressable * edgex_metadata_client_get_addressable
 (
   iot_logger_t * lc,

@@ -171,6 +171,7 @@ edgex_device_service *edgex_device_service_new
   result->userdata = impldata;
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
+  result->watchlist = edgex_watchlist_alloc ();
   result->logger = iot_logger_alloc_custom (name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL);
   iot_logger_start (result->logger);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL, result->logger);
@@ -433,6 +434,20 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
     *err = EDGEX_DRIVER_UNSTART;
     iot_log_error (svc->logger, "Protocol driver initialization failed");
     return;
+  }
+
+  /* Get Provision Watchers */
+
+  edgex_watcher *w = edgex_metadata_client_get_watchers (svc->logger, &svc->config.endpoints, svc->name, err);
+  if (err->code)
+  {
+    iot_log_error (svc->logger, "Unable to retrieve provision watchers from metadata");
+  }
+  if (w)
+  {
+    iot_log_info
+      (svc->logger, "Added %u provision watchers from metadata", edgex_watchlist_populate (svc->watchlist, w));
+    edgex_watcher_free (w);
   }
 
   /* Start scheduled events */
@@ -781,6 +796,7 @@ void edgex_device_service_free (edgex_device_service *svc)
   if (svc)
   {
     edgex_devmap_free (svc->devices);
+    edgex_watchlist_free (svc->watchlist);
     iot_threadpool_free (svc->thpool);
     edgex_registry_free (svc->registry);
     edgex_registry_fini ();

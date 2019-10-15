@@ -43,6 +43,10 @@ void edgex_addressable_free (edgex_addressable *e);
 edgex_valuedescriptor *edgex_valuedescriptor_read (const char *json);
 char *edgex_valuedescriptor_write (const edgex_valuedescriptor *e);
 void edgex_valuedescriptor_free (edgex_valuedescriptor *e);
+edgex_watcher *edgex_watcher_read (const char *json);
+edgex_watcher *edgex_watchers_read (const char *json);
+edgex_watcher *edgex_watcher_dup (const edgex_watcher *e);
+void edgex_watcher_free (edgex_watcher *e);
 
 #ifdef EDGEX_DEBUG_DUMP
 void edgex_deviceprofile_dump (edgex_deviceprofile * e);
