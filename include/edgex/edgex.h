@@ -11,10 +11,6 @@
 
 #include "edgex/edgex-base.h"
 
-typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
-
-typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
-
 typedef struct
 {
   bool enabled;
@@ -144,6 +140,24 @@ typedef struct edgex_deviceprofile
   struct edgex_cmdinfo *cmdinfo;
   struct edgex_deviceprofile *next;
 } edgex_deviceprofile;
+
+typedef struct edgex_blocklist
+{
+  char *name;
+  edgex_strings *values;
+  struct edgex_blocklist *next;
+} edgex_blocklist;
+
+typedef struct edgex_watcher
+{
+  char *id;
+  char *name;
+  edgex_nvpairs *identifiers;
+  edgex_blocklist *blocking_identifiers;
+  char *profile;
+  edgex_device_adminstate adminstate;
+  struct edgex_watcher *next;
+} edgex_watcher;
 
 typedef struct edgex_device_autoevents
 {

@@ -1647,6 +1647,144 @@ char *edgex_valuedescriptor_write (const edgex_valuedescriptor *e)
   return result;
 }
 
+static edgex_blocklist *blocklist_read (const JSON_Object *obj)
+{
+  edgex_blocklist *result = NULL;
+  size_t count = json_object_get_count (obj);
+  for (size_t i = 0; i < count; i++)
+  {
+    edgex_blocklist *bl = malloc (sizeof (edgex_blocklist));
+    bl->name = strdup (json_object_get_name (obj, i));
+    bl->values = array_to_strings (json_value_get_array (json_object_get_value_at (obj, i)));
+    bl->next = result;
+    result = bl;
+  }
+  return result;
+}
+
+static edgex_blocklist *edgex_blocklist_dup (const edgex_blocklist *e)
+{
+  edgex_blocklist *result = NULL;
+  edgex_blocklist **last = &result;
+  for (const edgex_blocklist *bl = e; bl; bl = bl->next)
+  {
+    edgex_blocklist *elem = calloc (1, sizeof (edgex_blocklist));
+    elem->name = strdup (bl->name);
+    elem->values = edgex_strings_dup (bl->values);
+    *last = elem;
+    last = &(elem->next);
+  }
+  return result;
+}
+
+static void edgex_blocklist_free (edgex_blocklist *e)
+{
+  while (e)
+  {
+    edgex_blocklist *current = e;
+    free (e->name);
+    edgex_strings_free (e->values);
+    e = e->next;
+    free (current);
+  }
+}
+
+static edgex_watcher *watcher_read (const JSON_Object *obj)
+{
+  edgex_watcher *result = calloc (1, sizeof (edgex_watcher));
+  result->name = get_string (obj, "name");
+  result->id = get_string (obj, "id");
+  JSON_Object *idobj = json_object_get_object (obj, "identifiers");
+  if (idobj)
+  {
+    result->identifiers = nvpairs_read (idobj);
+  }
+  JSON_Object *blockObj = json_object_get_object (obj, "blockingidentifiers");
+  if (blockObj)
+  {
+    result->blocking_identifiers = blocklist_read (blockObj);
+  }
+  JSON_Object *profObj = json_object_get_object (obj, "profile");
+  result->profile = get_string (profObj, "name");
+  result->adminstate = edgex_adminstate_fromstring
+    (json_object_get_string (obj, "adminState"));
+
+  return result;
+}
+
+edgex_watcher *edgex_watcher_read (const char *json)
+{
+  edgex_watcher *result = NULL;
+  JSON_Value *val = json_parse_string (json);
+  JSON_Object *obj;
+
+  obj = json_value_get_object (val);
+
+  if (obj)
+  {
+    result = watcher_read (obj);
+  }
+
+  json_value_free (val);
+
+  return result;
+}
+
+edgex_watcher *edgex_watchers_read (const char *json)
+{
+  edgex_watcher *result = NULL;
+  JSON_Value *val = json_parse_string (json);
+  JSON_Array *array = json_value_get_array (val);
+  edgex_watcher **last_ptr = &result;
+
+  if (array)
+  {
+    size_t count = json_array_get_count (array);
+    for (size_t i = 0; i < count; i++)
+    {
+      edgex_watcher *temp = watcher_read (json_array_get_object (array, i));
+      if (temp)
+      {
+        *last_ptr = temp;
+        last_ptr = &(temp->next);
+      }
+    }
+  }
+
+  json_value_free (val);
+
+  return result;
+}
+
+edgex_watcher *edgex_watcher_dup (const edgex_watcher *e)
+{
+  edgex_watcher *res = malloc (sizeof (edgex_watcher));
+  res->id = strdup (e->id);
+  res->name = strdup (e->name);
+  res->identifiers = edgex_nvpairs_dup (e->identifiers);
+  res->blocking_identifiers = edgex_blocklist_dup (e->blocking_identifiers);
+  res->profile = strdup (e->profile);
+  res->adminstate = e->adminstate;
+  res->next = NULL;
+  return res;
+}
+
+void edgex_watcher_free (edgex_watcher *e)
+{
+  edgex_watcher *ew = e;
+  while (ew)
+  {
+    edgex_watcher *next = ew->next;
+    free (ew->id);
+    free (ew->name);
+    edgex_nvpairs_free (ew->identifiers);
+    edgex_blocklist_free (ew->blocking_identifiers);
+    free (ew->profile);
+    free (ew);
+    ew = next;
+  }
+}
+
 #ifdef EDGEX_DEBUG_DUMP
 void edgex_addressable_dump (edgex_addressable * e)
 {

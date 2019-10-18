@@ -16,6 +16,7 @@
 #include "edgex/registry.h"
 #include "config.h"
 #include "devmap.h"
+#include "watchers.h"
 #include "rest-server.h"
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
@@ -41,6 +42,7 @@ struct edgex_device_service
   uint64_t starttime;
 
   edgex_devmap_t *devices;
+  edgex_watchlist_t *watchlist;
   iot_threadpool_t *thpool;
   iot_scheduler_t *scheduler;
   pthread_mutex_t discolock;

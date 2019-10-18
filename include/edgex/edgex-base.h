@@ -11,6 +11,10 @@
 
 #include "edgex/os.h"
 
+typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
+
+typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
+
 typedef struct edgex_strings
 {
   char *str;
@@ -23,6 +27,15 @@ typedef struct edgex_nvpairs
   char *value;
   struct edgex_nvpairs *next;
 } edgex_nvpairs;
+
+/**
+ * @brief Finds a named value in an n-v pair list.
+ * @param nvp A list of name-value pairs.
+ * @param name The named value to search for.
+ * @returns The value corresponding to the given name, or NULL if not found.
+ */
+
+const char *edgex_nvpairs_value (const edgex_nvpairs *nvp, const char *name);
 
 typedef struct edgex_blob
 {
