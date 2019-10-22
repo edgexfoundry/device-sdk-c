@@ -216,6 +216,35 @@ edgex_nvpairs *edgex_device_parseToml (toml_table_t *config)
   return processTable (config, NULL, "");
 }
 
+char *edgex_device_getRegURL (toml_table_t *config)
+{
+  toml_table_t *table;
+  char *rtype = NULL;
+  char *rhost = NULL;
+  int64_t rport = 0;
+  char *result = NULL;
+  int n;
+
+  table = toml_table_in (config, "Registry");
+  if (table)
+  {
+    toml_rtos (toml_raw_in (table, "Type"), &rtype);
+    toml_rtos (toml_raw_in (table, "Host"), &rhost);
+    toml_rtoi (toml_raw_in (table, "Port"), &rport);
+  }
+
+  if (rtype && *rtype && rhost && *rhost && rport)
+  {
+    n = snprintf (NULL, 0, "%s://%s:%" PRIi64, rtype, rhost, rport) + 1;
+    result = malloc (n);
+    snprintf (result, n, "%s://%s:%" PRIi64, rtype, rhost, rport);
+  }
+
+  free (rtype);
+  free (rhost);
+  return result;
+}
+
 static void parseClient
   (iot_logger_t *lc, toml_table_t *client, edgex_device_service_endpoint *endpoint, edgex_error *err)
 {

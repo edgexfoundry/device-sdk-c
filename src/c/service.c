@@ -53,6 +53,30 @@ void edgex_device_service_usage ()
   printf ("  -c, --confdir=<dir>\t: Set the configuration directory\n");
 }
 
+static bool testArgOpt (char *arg, char *val, const char *pshort, const char *plong, const char **var, bool *result)
+{
+  if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
+  {
+    if (val && *val && *val != '-')
+    {
+      *var = val;
+    }
+    else
+    {
+      if (*var == NULL)
+      {
+        *var = "";
+      }
+      *result = false;
+    }
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 static bool testArg (char *arg, char *val, const char *pshort, const char *plong, const char **var, bool *result)
 {
   if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
@@ -72,6 +96,15 @@ static bool testArg (char *arg, char *val, const char *pshort, const char *plong
   {
     return false;
   }
+}
+
+static void consumeArgs (int *argc_p, char **argv, int start, int nargs)
+{
+  for (int n = start + nargs; n < *argc_p; n++)
+  {
+    argv[n - nargs] = argv[n];
+  }
+  *argc_p -= nargs;
 }
 
 bool edgex_device_service_processparams
@@ -104,20 +137,18 @@ bool edgex_device_service_processparams
     {
       val = argv[n + 1];
     }
-    if
+    if (testArgOpt (arg, val, "-r", "--registry", &params->regURL, &result))
+    {
+      consumeArgs (&argc, argv, n, result ? 2 : 1);
+      result = true;
+    } else if
     (
-      testArg (arg, val, "-r", "--registry", &params->regURL, &result) ||
       testArg (arg, val, "-n", "--name", &params->svcname, &result) ||
       testArg (arg, val, "-p", "--profile", &params->profile, &result) ||
       testArg (arg, val, "-c", "--confdir", &params->confdir, &result)
     )
     {
-      int skip = eq ? 1 : 2;
-      for (int n2 = n + skip; n2 < argc; n2++)
-      {
-        argv[n2 - skip] = argv[n2];
-      }
-      argc -= skip;
+      consumeArgs (&argc, argv, n, eq ? 1 : 2);
     }
     else
     {
@@ -535,11 +566,24 @@ void edgex_device_service_start
   }
   *err = EDGEX_OK;
 
-  if (registryURL && *registryURL)
+  if (registryURL)
   {
-    svc->registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
+    if (*registryURL == '\0')
+    {
+      config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
+      if (err->code)
+      {
+        return;
+      }
+      registryURL = edgex_device_getRegURL (config);
+    }
+    if (registryURL)
+    {
+      svc->registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
+    }
     if (svc->registry == NULL)
     {
+      iot_log_error (svc->logger, "Registry was requested but no location given");
       *err = EDGEX_INVALID_ARG;
       return;
     }
@@ -608,10 +652,13 @@ void edgex_device_service_start
 
   if (uploadConfig || (svc->registry == NULL))
   {
-    config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
-    if (err->code)
+    if (config == NULL)
     {
-      return;
+      config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
+      if (err->code)
+      {
+        return;
+      }
     }
 
     confpairs = edgex_device_parseToml (config);
