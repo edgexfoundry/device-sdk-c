@@ -87,6 +87,8 @@ toml_table_t *edgex_device_loadConfig
   edgex_error *err
 );
 
+char *edgex_device_getRegURL (toml_table_t *config);
+
 edgex_nvpairs *edgex_device_parseToml (toml_table_t *config);
 
 void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, edgex_error *err);
