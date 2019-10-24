@@ -178,7 +178,7 @@ static void terminal_stop (void *impl, bool force)
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-terminal", "", "", "" };
+  edgex_device_svcparams params = { "device-terminal", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 
