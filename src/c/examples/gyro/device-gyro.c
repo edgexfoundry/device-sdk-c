@@ -120,7 +120,7 @@ static void gyro_stop (void *impl, bool force)
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-gyro", "", "", "" };
+  edgex_device_svcparams params = { "device-gyro", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 

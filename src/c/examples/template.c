@@ -172,7 +172,7 @@ static void template_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-template", "", "", "" };
+  edgex_device_svcparams params = { "device-template", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 

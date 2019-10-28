@@ -188,7 +188,7 @@ static void counter_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-counter", "", "", "" };
+  edgex_device_svcparams params = { "device-counter", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 

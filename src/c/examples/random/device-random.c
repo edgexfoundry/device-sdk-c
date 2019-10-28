@@ -140,7 +140,7 @@ static void random_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-random", "", "", "" };
+  edgex_device_svcparams params = { "device-random", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 
