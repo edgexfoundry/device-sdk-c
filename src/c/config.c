@@ -152,13 +152,17 @@ static edgex_nvpairs *makepair
   return result;
 }
 
+/* Recursively parse a toml table into name-value pairs. Note that the toml parser does various string manipulations,
+   so reading a raw value into an int or double, then sprintf-ing it back to a string is not necessarily redundant. */
+
 static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result, const char *prefix)
 {
   unsigned i = 0;
   const char *key;
   const char *raw;
   toml_table_t *tab;
-  int64_t dummy;
+  int64_t dummyi;
+  double dummyd;
   char *fullname;
 
   if (strcmp (prefix, "Clients") == 0)
@@ -185,15 +189,21 @@ static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result,
       {
         result = makepair (fullname, raw, result);
       }
-      else if (toml_rtoi (raw, &dummy) == 0)
+      else if (toml_rtoi (raw, &dummyi) == 0)
       {
         char val[32];
-        sprintf (val, "%" PRIi64, dummy);
+        sprintf (val, "%" PRIi64, dummyi);
         result = makepair (fullname, val, result); 
+      }
+      else if (toml_rtod (raw, &dummyd) == 0)
+      {
+        char val[32];
+        sprintf (val, "%f", dummyd);
+        result = makepair (fullname, val, result);
       }
       else
       {
-        char *val;
+        char *val = NULL;
         toml_rtos (raw, &val);
         if (val && *val)
         {
