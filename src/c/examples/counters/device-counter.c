@@ -38,21 +38,6 @@ static const edgex_protocols *findprotocol
   return result;
 }
 
-static const char *findinpairs
-  (const edgex_nvpairs *nvps, const char *name)
-{
-  const edgex_nvpairs *pair = nvps;
-  while (pair)
-  {
-    if (strcmp (pair->name, name) == 0)
-    {
-      return pair->value;
-    }
-    pair = pair->next;
-  }
-  return NULL;
-}
-
 static bool counter_init
   (void *impl, struct iot_logger_t *lc, const edgex_nvpairs *config)
 {
@@ -75,7 +60,7 @@ static bool getDeviceAddress
     return false;
   }
 
-  const char *index_prop = findinpairs (p->properties, "Index");
+  const char *index_prop = edgex_nvpairs_value (p->properties, "Index");
   if (index_prop == NULL || strlen (index_prop) == 0)
   {
     iot_log_error (lc, "No Index property in Counter protocol");
@@ -114,7 +99,7 @@ static bool counter_get_handler
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    const char *reg = findinpairs (requests[i].attributes, "register");
+    const char *reg = edgex_nvpairs_value (requests[i].attributes, "register");
     if (reg == NULL)
     {
       iot_log_error (driver->lc, "No register attribute in GET request");
@@ -155,7 +140,7 @@ static bool counter_put_handler
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char *reg = findinpairs (requests[i].attributes, "register");
+    const char *reg = edgex_nvpairs_value (requests[i].attributes, "register");
     if (reg == NULL)
     {
       iot_log_error (driver->lc, "No register attribute in PUT request");
