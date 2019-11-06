@@ -22,21 +22,6 @@ typedef struct terminal_driver
   iot_logger_t * lc;
 } terminal_driver;
 
-static const char *findinpairs
-  (const edgex_nvpairs *nvps, const char *name)
-{
-  const edgex_nvpairs *pair = nvps;
-  while (pair)
-  {
-    if (strcmp (pair->name, name) == 0)
-    {
-      return pair->value;
-    }
-    pair = pair->next;
-  }
-  return NULL;
-}
-
 static bool terminal_writeMsg
 (
   terminal_driver *driver,
@@ -50,7 +35,7 @@ static bool terminal_writeMsg
   const char *msg = NULL;
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char *param = findinpairs (requests[i].attributes, "parameter");
+    const char *param = edgex_nvpairs_value (requests[i].attributes, "parameter");
 
     if (param)
     {
@@ -137,7 +122,7 @@ static bool terminal_put_handler
   const char *command = NULL;
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char *param = findinpairs (requests[i].attributes, "parameter");
+    const char *param = edgex_nvpairs_value (requests[i].attributes, "parameter");
     if (param && strcmp (param, "cmd") == 0)
     {
       command = values[i].value.string_result;
