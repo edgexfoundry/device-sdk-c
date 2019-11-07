@@ -6,6 +6,11 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
+Changes for 2.0.0 "Geneva":
+
+- Utility functions added in edgex-base.h for finding Protocol Properties, and
+  for obtaining numeric values from name-value pair lists.
+
 Changes for 1.1.0 "Fuji":
 
 - ResourceOperation field "object" is renamed to "deviceResource".

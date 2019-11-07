@@ -48,54 +48,45 @@ static bool random_get_handler
 )
 {
   random_driver *driver = (random_driver *) impl;
-  bool result = true;
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    result = false;
-    /* Drill into the attributes to differentiate between resources via the SensorType NVP */
-    const edgex_nvpairs * current = requests[i].attributes;
-    while (current!=NULL)
+    /* Use the attributes to differentiate between requests */
+    unsigned long stype = 0;
+    const char *swid = NULL;
+    if (edgex_nvpairs_ulong_value (requests[i].attributes, "SensorType", &stype))
     {
-      if (strcmp (current->name, "SensorType") ==0 )
+      switch (stype)
       {
-        /* Set the resulting reading type as Uint64 */
-        readings[i].type = Uint64;
-
-        if (strcmp (current->value, "1") ==0 )
-        {
+        case 1:
           /* Set the reading as a random value between 0 and 100 */
+          readings[i].type = Uint64;
           readings[i].value.ui64_result = rand() % 100;
-          result = true;
-        }
-        else if (strcmp (current->value, "2") ==0 )
-        {
+          break;
+        case 2:
           /* Set the reading as a random value between 0 and 1000 */
+          readings[i].type = Uint64;
           readings[i].value.ui64_result = rand() % 1000;
-          result = true;
-        }
-        else
-        {
-          iot_log_error (driver->lc, "%s is not a valid SensorType", current->value);
-        }
+          break;
+        default:
+          iot_log_error (driver->lc, "%lu is not a valid SensorType", stype);
+          return false;
       }
-
-      if (strcmp (current->name, "SwitchID") ==0 )
-      {
-        readings[i].type = Bool;
-        pthread_mutex_lock (&driver->mutex);
-        readings[i].value.bool_result=driver->state_flag;
-        pthread_mutex_unlock (&driver->mutex);
-        result = true;
-      }
-      current = current->next;
     }
-    if (!result)
+    else if ((swid = edgex_nvpairs_value (requests[i].attributes, "SwitchID")))
     {
-      break;
+      readings[i].type = Bool;
+      pthread_mutex_lock (&driver->mutex);
+      readings[i].value.bool_result=driver->state_flag;
+      pthread_mutex_unlock (&driver->mutex);
+    }
+    else
+    {
+      iot_log_error (driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
+      return false;
     }
   }
-  return result;
+  return true;
 }
 
 static bool random_put_handler
@@ -116,7 +107,7 @@ static bool random_put_handler
     /* A Device Service again makes use of the data provided to perform a PUT */
 
     /* In this case we set a boolean flag */
-    if (strcmp (requests[i].resname,"Switch") ==0 )
+    if (edgex_nvpairs_value (requests[i].attributes, "SwitchID"))
     {
       pthread_mutex_lock (&driver->mutex);
       driver->state_flag=values[i].value.bool_result;
@@ -140,7 +131,7 @@ static void random_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-random", "", "", "" };
+  edgex_device_svcparams params = { "device-random", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 

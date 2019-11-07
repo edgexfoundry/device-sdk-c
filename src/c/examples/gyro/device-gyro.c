@@ -20,21 +20,6 @@ typedef struct gyro_driver
   iot_logger_t * lc;
 } gyro_driver;
 
-static const char *findinpairs
-  (const edgex_nvpairs *nvps, const char *name)
-{
-  const edgex_nvpairs *pair = nvps;
-  while (pair)
-  {
-    if (strcmp (pair->name, name) == 0)
-    {
-      return pair->value;
-    }
-    pair = pair->next;
-  }
-  return NULL;
-}
-
 static bool gyro_init
   (void *impl, struct iot_logger_t *lc, const edgex_nvpairs *config)
 {
@@ -57,7 +42,7 @@ static bool gyro_get_handler
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    const char *param = findinpairs (requests[i].attributes, "parameter");
+    const char *param = edgex_nvpairs_value (requests[i].attributes, "parameter");
     if (param == NULL)
     {
       iot_log_error (driver->lc, "No parameter attribute in GET request");
@@ -120,7 +105,7 @@ static void gyro_stop (void *impl, bool force)
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-gyro", "", "", "" };
+  edgex_device_svcparams params = { "device-gyro", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 
