@@ -37,6 +37,36 @@ typedef struct edgex_nvpairs
 
 const char *edgex_nvpairs_value (const edgex_nvpairs *nvp, const char *name);
 
+/**
+ * @brief Finds a named long value in an n-v pair list.
+ * @param nvp A list of name-value pairs.
+ * @param name The named value to search for.
+ * @param val If the value was found and could be parsed, it is returned here.
+ * @returns true if the operation was successful.
+ */
+
+bool edgex_nvpairs_long_value (const edgex_nvpairs *nvp, const char *name, long *val);
+
+/**
+ * @brief Finds a named unsigned long value in an n-v pair list.
+ * @param nvp A list of name-value pairs.
+ * @param name The named value to search for.
+ * @param val If the value was found and could be parsed, it is returned here.
+ * @returns true if the operation was successful.
+ */
+
+bool edgex_nvpairs_ulong_value (const edgex_nvpairs *nvp, const char *name, unsigned long *val);
+
+/**
+ * @brief Finds a named float value in an n-v pair list.
+ * @param nvp A list of name-value pairs.
+ * @param name The named value to search for.
+ * @param val If the value was found and could be parsed, it is returned here.
+ * @returns true if the operation was successful.
+ */
+
+bool edgex_nvpairs_float_value (const edgex_nvpairs *nvp, const char *name, float *val);
+
 typedef struct edgex_blob
 {
   size_t size;
@@ -76,5 +106,14 @@ typedef struct edgex_protocols
   edgex_nvpairs *properties;
   struct edgex_protocols *next;
 } edgex_protocols;
+
+/**
+ * @brief Finds a protocol's property set in a protocols list.
+ * @param prots The protocols to search.
+ * @param name The protocol to search for.
+ * @returns The protocol properties corresponding to the given name, or NULL if not found.
+ */
+
+const edgex_nvpairs *edgex_protocols_properties (const edgex_protocols *prots, const char *name);
 
 #endif

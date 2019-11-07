@@ -23,21 +23,6 @@ typedef struct counter_driver
   atomic_uint_fast32_t counters[NCOUNTERS];
 } counter_driver;
 
-static const edgex_protocols *findprotocol
-  (const edgex_protocols *prots, const char *name)
-{
-  const edgex_protocols *result = prots;
-  while (result)
-  {
-    if (strcmp (result->name, name) == 0)
-    {
-      break;
-    }
-    result = result->next;
-  }
-  return result;
-}
-
 static bool counter_init
   (void *impl, struct iot_logger_t *lc, const edgex_nvpairs *config)
 {
@@ -53,25 +38,22 @@ static bool counter_init
 static bool getDeviceAddress
   (iot_logger_t *lc, unsigned long *index, const edgex_protocols *protocols)
 {
-  const edgex_protocols *p = findprotocol (protocols, "Counter");
-  if (p == NULL)
+  const edgex_nvpairs *addr = edgex_protocols_properties (protocols, "Counter");
+  if (addr == NULL)
   {
     iot_log_error (lc, "No Counter protocol in device address");
     return false;
   }
 
-  const char *index_prop = edgex_nvpairs_value (p->properties, "Index");
-  if (index_prop == NULL || strlen (index_prop) == 0)
+  unsigned long i = 0;
+  if (!edgex_nvpairs_ulong_value (addr, "Index", &i))
   {
     iot_log_error (lc, "No Index property in Counter protocol");
     return false;
   }
-
-  char *e; 
-  unsigned long i = strtol (index_prop, &e, 0);
-  if (*e != '\0' || i >= NCOUNTERS)
+  if (i >= NCOUNTERS)
   {
-    iot_log_error (lc, "Invalid Index: %s", index_prop);
+    iot_log_error (lc, "Index %ul out of range", i);
     return false;
   }
 

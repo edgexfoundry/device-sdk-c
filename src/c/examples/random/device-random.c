@@ -48,34 +48,29 @@ static bool random_get_handler
 )
 {
   random_driver *driver = (random_driver *) impl;
-  bool result = true;
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    result = false;
     /* Use the attributes to differentiate between requests */
-    const char *stype;
-    const char *swid;
-    if ((stype = edgex_nvpairs_value (requests[i].attributes, "SensorType")))
+    unsigned long stype = 0;
+    const char *swid = NULL;
+    if (edgex_nvpairs_ulong_value (requests[i].attributes, "SensorType", &stype))
     {
-      if (strcmp (stype, "1") == 0)
+      switch (stype)
       {
-        /* Set the reading as a random value between 0 and 100 */
-        readings[i].type = Uint64;
-        readings[i].value.ui64_result = rand() % 100;
-        result = true;
-      }
-      else if (strcmp (stype, "2") == 0)
-      {
-        /* Set the reading as a random value between 0 and 1000 */
-        readings[i].type = Uint64;
-        readings[i].value.ui64_result = rand() % 1000;
-        result = true;
-      }
-      else
-      {
-        iot_log_error (driver->lc, "%s is not a valid SensorType", stype);
-        break;
+        case 1:
+          /* Set the reading as a random value between 0 and 100 */
+          readings[i].type = Uint64;
+          readings[i].value.ui64_result = rand() % 100;
+          break;
+        case 2:
+          /* Set the reading as a random value between 0 and 1000 */
+          readings[i].type = Uint64;
+          readings[i].value.ui64_result = rand() % 1000;
+          break;
+        default:
+          iot_log_error (driver->lc, "%lu is not a valid SensorType", stype);
+          return false;
       }
     }
     else if ((swid = edgex_nvpairs_value (requests[i].attributes, "SwitchID")))
@@ -84,15 +79,14 @@ static bool random_get_handler
       pthread_mutex_lock (&driver->mutex);
       readings[i].value.bool_result=driver->state_flag;
       pthread_mutex_unlock (&driver->mutex);
-      result = true;
     }
     else
     {
       iot_log_error (driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
-      break;
+      return false;
     }
   }
-  return result;
+  return true;
 }
 
 static bool random_put_handler

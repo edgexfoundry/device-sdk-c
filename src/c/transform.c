@@ -18,18 +18,6 @@ static bool transformsOn (const edgex_propertyvalue *pv)
   return (pv->offset.enabled || pv->scale.enabled || pv->base.enabled || pv->shift.enabled || pv->mask.enabled);
 }
 
-static const char *checkMapping (const edgex_nvpairs *map, const char *in)
-{
-  for (const edgex_nvpairs *pair = map; pair; pair = pair->next)
-  {
-    if (strcmp (in, pair->name) == 0)
-    {
-      return pair->value;
-    }
-  }
-  return NULL;
-}
-
 static long double getLongDouble (edgex_device_resultvalue value, edgex_propertyvalue *props)
 {
   return (props->type == Float64) ? value.f64_result : value.f32_result;
@@ -196,7 +184,7 @@ void edgex_transform_outgoing
     break;
     case String:
     {
-      const char *remap = checkMapping (mappings, cres->value.string_result);
+      const char *remap = edgex_nvpairs_value (mappings, cres->value.string_result);
       if (remap)
       {
         free (cres->value.string_result);
@@ -256,7 +244,7 @@ bool edgex_transform_incoming
     break;
     case String:
     {
-      const char *remap = checkMapping (mappings, cres->value.string_result);
+      const char *remap = edgex_nvpairs_value (mappings, cres->value.string_result);
       if (remap)
       {
         free (cres->value.string_result);
