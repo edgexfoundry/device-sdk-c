@@ -86,7 +86,7 @@ static void ae_runner (void *p)
     if
     (
       ai->svc->userfns.gethandler
-        (ai->svc->userdata, dev->name, dev->protocols, ai->resource->nreqs, ai->resource->reqs, results)
+        (ai->svc->userdata, dev->name, dev->protocols, ai->resource->nreqs, ai->resource->reqs, results, NULL)
     )
     {
       edgex_device_commandresult *resdup = NULL;

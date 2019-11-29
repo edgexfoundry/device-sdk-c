@@ -35,7 +35,8 @@ static bool gyro_get_handler
   const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
-  edgex_device_commandresult *readings
+  edgex_device_commandresult *readings,
+  const edgex_nvpairs *qparams
 )
 {
   gyro_driver *driver = (gyro_driver *)impl;

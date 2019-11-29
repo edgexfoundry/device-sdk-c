@@ -68,7 +68,8 @@ static bool counter_get_handler
   const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
-  edgex_device_commandresult *readings
+  edgex_device_commandresult *readings,
+  const edgex_nvpairs *qparams
 )
 {
   counter_driver *driver = (counter_driver *)impl;

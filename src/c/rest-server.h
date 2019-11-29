@@ -30,7 +30,7 @@ typedef int (*http_method_handler_fn)
 (
   void *context,
   char *url,
-  char *querystr,
+  const edgex_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,

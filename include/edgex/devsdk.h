@@ -124,6 +124,7 @@ typedef void (*edgex_device_discover)
  * @param nreadings The number of readings requested.
  * @param requests An array specifying the readings that have been requested.
  * @param readings An array in which to return the requested readings.
+ * @param qparams Query Parameters which were set for this request.
  * @return true if the operation was successful, false otherwise.
  */
 
@@ -134,7 +135,8 @@ typedef bool (*edgex_device_handle_get)
   const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
-  edgex_device_commandresult *readings
+  edgex_device_commandresult *readings,
+  const edgex_nvpairs *qparams
 );
 
 /**

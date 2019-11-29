@@ -8,6 +8,8 @@ differs as follows:
 
 Changes for 2.0.0 "Geneva":
 
+- Query Parameters are passed to the get handler in a name-value pairs list
+  rather than as a special Attribute.
 - Utility functions added in edgex-base.h for finding Protocol Properties, and
   for obtaining numeric values from name-value pair lists.
 

@@ -84,7 +84,8 @@ static bool template_get_handler
   const edgex_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
-  edgex_device_commandresult *readings
+  edgex_device_commandresult *readings,
+  const edgex_nvpairs *qparams
 )
 {
   template_driver *driver = (template_driver *) impl;
@@ -92,6 +93,12 @@ static bool template_get_handler
   /* Access the location of the device to be accessed and log it */
   iot_log_debug(driver->lc, "GET on device:");
   dump_protocols (driver->lc, protocols);
+
+  /* Log any query parameters */
+  for (; qparams; qparams = qparams->next)
+  {
+    iot_log_debug (driver->lc, "QueryParam: %s=%s", qparams->name, qparams->value);
+  }
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
