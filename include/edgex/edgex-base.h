@@ -29,6 +29,17 @@ typedef struct edgex_nvpairs
 } edgex_nvpairs;
 
 /**
+ * @brief Creates a new name-value pair, optionally placing it at the
+ *        start of a list
+ * @param name The name for the new pair
+ * @param value The value for the new pair
+ * @param list A list that the new pair will be placed at the front of, or NULL
+ * @returns The new name-value pair
+ */
+
+edgex_nvpairs *edgex_nvpairs_new (const char *name, const char *value, edgex_nvpairs *list);
+
+/**
  * @brief Finds a named value in an n-v pair list.
  * @param nvp A list of name-value pairs.
  * @param name The named value to search for.

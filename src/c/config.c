@@ -142,16 +142,6 @@ static void toml_rtoui16
   }
 }
 
-static edgex_nvpairs *makepair
-  (const char *name, const char *value, edgex_nvpairs *list)
-{
-  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
-  result->name = strdup (name);
-  result->value = strdup (value);
-  result->next = list;
-  return result;
-}
-
 /* Recursively parse a toml table into name-value pairs. Note that the toml parser does various string manipulations,
    so reading a raw value into an int or double, then sprintf-ing it back to a string is not necessarily redundant. */
 
@@ -187,19 +177,19 @@ static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result,
     {
       if (strcmp (raw, "true") == 0 || strcmp (raw, "false") == 0)
       {
-        result = makepair (fullname, raw, result);
+        result = edgex_nvpairs_new (fullname, raw, result);
       }
       else if (toml_rtoi (raw, &dummyi) == 0)
       {
         char val[32];
         sprintf (val, "%" PRIi64, dummyi);
-        result = makepair (fullname, val, result); 
+        result = edgex_nvpairs_new (fullname, val, result);
       }
       else if (toml_rtod (raw, &dummyd) == 0)
       {
         char val[32];
         sprintf (val, "%f", dummyd);
-        result = makepair (fullname, val, result);
+        result = edgex_nvpairs_new (fullname, val, result);
       }
       else
       {
@@ -207,7 +197,7 @@ static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result,
         toml_rtos (raw, &val);
         if (val && *val)
         {
-          result = makepair (fullname, val, result);
+          result = edgex_nvpairs_new (fullname, val, result);
         }
         free (val);
       }
@@ -565,7 +555,7 @@ void edgex_device_populateConfig
   {
     if (strncmp (iter->name, "Driver/", strlen ("Driver/")) == 0)
     {
-      svc->config.driverconf = makepair
+      svc->config.driverconf = edgex_nvpairs_new
         (iter->name + strlen ("Driver/"), iter->value, svc->config.driverconf);
     }
   }

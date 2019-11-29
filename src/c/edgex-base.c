@@ -9,6 +9,15 @@
 #include <errno.h>
 #include "edgex/edgex-base.h"
 
+edgex_nvpairs *edgex_nvpairs_new (const char *name, const char *value, edgex_nvpairs *list)
+{
+  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
+  result->name = strdup (name);
+  result->value = strdup (value);
+  result->next = list;
+  return result;
+}
+
 const char *edgex_nvpairs_value (const edgex_nvpairs *nvp, const char *name)
 {
   if (name)
