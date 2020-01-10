@@ -198,7 +198,7 @@ void edgex_device_register_devicelist_callbacks
   edgex_device_remove_device_callback remove_device
 )
 {
-  if (svc->logger)
+  if (svc->starttime)
   {
     iot_log_error (svc->logger, "Devicelist: must register callbacks before service start.");
     return;
