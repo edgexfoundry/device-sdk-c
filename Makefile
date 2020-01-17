@@ -4,13 +4,16 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-.PHONY: build clean docker
+.PHONY: build clean docker test
 
 USER=$(shell id -u)
 GROUP=$(shell id -g)
 
 build:
 	./scripts/build.sh
+
+test:
+	echo "make test"
 
 clean:
 	@rm -rf deps build src/c/iot include/iot release
