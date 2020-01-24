@@ -131,6 +131,9 @@ char *edgex_value_tostring (const edgex_device_commandresult *value, bool binflo
       iot_b64_encode
         (value->value.binary_result.bytes, value->value.binary_result.size, res, sz);
       break;
+    default:
+      res = NULL;
+      break;
   }
   return res;
 }
@@ -198,6 +201,8 @@ static bool populateValue
       cres->value.binary_result.bytes = malloc (sz);
       return iot_b64_decode
         (val, cres->value.binary_result.bytes, &cres->value.binary_result.size);
+    default:
+      return false;
   }
   return false;
 }

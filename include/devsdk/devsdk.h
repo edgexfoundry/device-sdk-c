@@ -1,0 +1,230 @@
+/*
+ * Copyright (c) 2020
+ * IoTech Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ */
+
+#ifndef _DEVSDK_DEVSDK_H_
+#define _DEVSDK_DEVSDK_H_ 1
+
+#define DEVSDKV2
+#ifdef DEVSDKV1
+#error Only one of edgex/devsdk.h and devsdk/devsdk.h may be included
+#endif
+
+/**
+ * @file
+ * @brief This file defines the functions and callbacks relating to the SDK.
+ */
+
+#include "devsdk/devsdk-base.h"
+#include "iot/logger.h"
+
+/**
+ * @brief Prints usage information.
+ */
+
+void devsdk_usage (void);
+
+/* Callback functions */
+
+/**
+ * @brief Function called during service start operation.
+ * @param impl The context data passed in when the service was created.
+ * @param lc A logging client for the device service.
+ * @param config A string map containing the the configuration specified in the service's "Driver" section.
+ * @return true if the operation was successful, false otherwise.
+ */
+
+typedef bool (*devsdk_initialize) (void *impl, struct iot_logger_t *lc, const iot_data_t *config);
+
+/**
+ * @brief Optional callback for dynamic discovery of devices. The implementation should detect devices and register them using
+ *        the devsdk_add_device API call.
+ * @param impl The context data passed in when the service was created.
+ */
+
+typedef void (*devsdk_discover) (void *impl);
+
+/**
+ * @brief Callback issued to handle GET requests for device readings.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the device to be queried.
+ * @param protocols The location of the device to be queried.
+ * @param nreadings The number of readings requested.
+ * @param requests An array specifying the readings that have been requested.
+ * @param readings An array in which to return the requested readings.
+ * @param qparams Query Parameters which were set for this request.
+ * @return true if the operation was successful, false otherwise.
+ */
+
+typedef bool (*devsdk_handle_get)
+(
+  void *impl,
+  const char *devname,
+  const devsdk_protocols *protocols,
+  uint32_t nreadings,
+  const devsdk_commandrequest *requests,
+  devsdk_commandresult *readings,
+  const devsdk_nvpairs *qparams
+);
+
+/**
+ * @brief Callback issued to handle PUT requests for setting device values.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the device to be queried.
+ * @param protocols The location of the device to be queried.
+ * @param nvalues The number of set operations requested.
+ * @param requests An array specifying the resources to which to write.
+ * @param values An array specifying the values to be written.
+ * @return true if the operation was successful, false otherwise.
+ */
+
+typedef bool (*devsdk_handle_put)
+(
+  void *impl,
+  const char *devname,
+  const devsdk_protocols *protocols,
+  uint32_t nvalues,
+  const devsdk_commandrequest *requests,
+  const iot_data_t *values[]
+);
+
+/**
+ * @brief Callback issued during device service shutdown. The implementation should stop processing and release any resources that were being used.
+ * @param impl The context data passed in when the service was created.
+ * @param force A 'force' stop has been requested. An unclean shutdown may be performed if necessary.
+ */
+
+typedef void (*devsdk_stop) (void *impl, bool force);
+
+/**
+ * @brief Callback function requesting that automatic events should begin. These should be generated according to the schedule given,
+ *        and posted into EdgeX using devsdk_post_readings().
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the device to be queried.
+ * @param protocols The location of the device to be queried.
+ * @param resource_name The resource on which autoevents have been configured.
+ * @param nreadings The number of readings requested.
+ * @param requests An array specifying the readings that have been requested.
+ * @param interval The time between events, in milliseconds.
+ * @param onChange If true, events should only be generated if one or more readings have changed.
+ * @return A pointer to a data structure that will be provided in a subsequent call to the stop handler.
+ */
+
+typedef void * (*devsdk_autoevent_start_handler)
+(
+  void *impl,
+  const char *devname,
+  const devsdk_protocols *protocols,
+  const char *resource_name,
+  uint32_t nreadings,
+  const devsdk_commandrequest *requests,
+  uint64_t interval,
+  bool onChange
+);
+
+/**
+ * @brief Callback function requesting that automatic events should cease.
+ * @param impl The context data passed in when the service was created.
+ * @param handle The data structure returned by a previous call to the start handler.
+ */
+
+typedef void (*devsdk_autoevent_stop_handler) (void *impl, void *handle);
+
+/**
+ * @brief Callback function indicating that a new device has been added.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the new device.
+ * @param protocols The protocol properties that comprise the device's address.
+ * @param state The device's initial adminstate.
+ */
+
+typedef void (*devsdk_add_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols, bool adminEnabled);
+
+/**
+ * @brief Callback function indicating that a device's address or adminstate has been updated.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the updated device.
+ * @param protocols The protocol properties that comprise the device's address.
+ * @param state The device's current adminstate.
+ */
+
+typedef void (*devsdk_update_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols, bool adminEnabled);
+
+/**
+ * @brief Callback function indicating that a device has been removed.
+ * @param impl The context data passed in when the service was created.
+ * @param devname The name of the removed device.
+ * @param protocols The protocol properties that comprise the device's address.
+ */
+
+typedef void (*devsdk_remove_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols);
+
+typedef struct devsdk_callbacks
+{
+  devsdk_initialize init;
+  devsdk_discover discover;                     /* NULL for no discovery */
+  devsdk_handle_get gethandler;
+  devsdk_handle_put puthandler;
+  devsdk_stop stop;
+  devsdk_add_device_callback device_added;      /* May be NULL */
+  devsdk_update_device_callback device_updated; /* May be NULL */
+  devsdk_remove_device_callback device_removed; /* May be NULL */
+  devsdk_autoevent_start_handler ae_starter;    /* NULL for SDK-managed autoevents */
+  devsdk_autoevent_stop_handler ae_stopper;     /* NULL for SDK-managed autoevents */
+} devsdk_callbacks;
+
+
+/**
+ * @brief Create a new device service.
+ * @param defaultname The device service name, used in logging, metadata lookups and to scope configuration. This may be overridden via the commandline.
+ * @param version The version string for this service. For information only.
+ * @param impldata An object pointer which will be passed back whenever one of the callback functions is invoked.
+ * @param implfns Structure containing the device implementation functions. The SDK will call these functions in order to carry out its various actions.
+ * @param argc A pointer to argc as passed into main(). This will be adjusted to account for arguments consumed by the SDK.
+ * @param argv argv as passed into main(). This will be adjusted to account for arguments consumed by the SDK.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ * @return The newly instantiated service
+ */
+
+devsdk_service_t *devsdk_service_new
+  (const char *defaultname, const char *version, void *impldata, devsdk_callbacks implfns, int *argc, char **argv, devsdk_error *err);
+
+/**
+ * @brief Start a device service.
+ * @param svc The service to start.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err);
+
+/**
+ * @brief Post readings to the core-data service. This method allows readings to be generated other than in response to a device GET invocation.
+ * @param svc The device service.
+ * @param device_name The name of the device that the readings have come from.
+ * @param resource_name Name of the resource or command which defines the Event.
+ * @param values An array of readings. These will be combined into an Event and submitted to core-data.
+ */
+
+void devsdk_post_readings (devsdk_service_t *svc, const char *device_name, const char *resource_name, devsdk_commandresult *values);
+
+/**
+ * @brief Stop the event service. Any automatic events will be cancelled and the rest api for the device service will be shut down.
+ * @param svc The device service.
+ * @param force Force stop.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err);
+
+/**
+ * @brief Free the device service object and associated resources.
+ * @param svc The device service.
+ */
+
+void devsdk_service_free (devsdk_service_t *svc);
+
+#endif

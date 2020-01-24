@@ -263,6 +263,8 @@ edgex_device_commandresult *edgex_device_commandresult_dup (const edgex_device_c
         result[i].value.binary_result.bytes = malloc (sz);
         memcpy (result[i].value.binary_result.bytes, res[i].value.binary_result.bytes, sz);
         break;
+      default:
+        break;
     }
   }
   return result;
@@ -323,6 +325,8 @@ bool edgex_device_commandresult_equal
           lhs[i].value.binary_result.size == rhs[i].value.binary_result.size &&
           memcmp (lhs[i].value.binary_result.bytes, rhs[i].value.binary_result.bytes, lhs[i].value.binary_result.size) == 0
         );
+        break;
+      default:
         break;
     }
     if (result == false)
