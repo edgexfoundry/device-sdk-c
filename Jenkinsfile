@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-@Library("edgex-global-pipelines@v1.0.33") _
-
 edgeXBuildCApp (
     project: 'device-sdk-c',
     dockerBuildFilePath: 'scripts/Dockerfile.alpine-3.9-base',
