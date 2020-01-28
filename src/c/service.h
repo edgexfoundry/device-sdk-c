@@ -40,6 +40,7 @@ struct edgex_device_service
   edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;
   uint64_t starttime;
+  bool overwriteconfig;
 
   edgex_devmap_t *devices;
   edgex_watchlist_t *watchlist;
