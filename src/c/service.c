@@ -98,6 +98,16 @@ static bool testArg (char *arg, char *val, const char *pshort, const char *plong
   }
 }
 
+static bool testBool (char *arg, char *val, const char *pshort, const char *plong, bool *var, bool *result)
+{
+  if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
+  {
+    *var = true;
+    return true;
+  }
+  return false;
+}
+  
 static void consumeArgs (int *argc_p, char **argv, int start, int nargs)
 {
   for (int n = start + nargs; n < *argc_p; n++)
@@ -145,7 +155,8 @@ bool edgex_device_service_processparams
     (
       testArg (arg, val, "-n", "--name", &params->svcname, &result) ||
       testArg (arg, val, "-p", "--profile", &params->profile, &result) ||
-      testArg (arg, val, "-c", "--confdir", &params->confdir, &result)
+      testArg (arg, val, "-c", "--confdir", &params->confdir, &result) ||
+      testBool (arg, val, "-o", "--overwrite", &params->overwrite, &result)
     )
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
@@ -543,6 +554,13 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
   }
 }
 
+/* set the overwrite flag in the device service structure */
+void edgex_device_service_set_overwrite(edgex_device_service *svc, bool overwrite)
+{
+  svc->overwriteconfig = overwrite;
+}
+
+
 void edgex_device_service_start
 (
   edgex_device_service *svc,
@@ -629,24 +647,33 @@ void edgex_device_service_start
     iot_log_info (svc->logger, "Found registry service at %s", registryURL);
     svc->stopconfig = malloc (sizeof (atomic_bool));
     atomic_init (svc->stopconfig, false);
-    confpairs = edgex_registry_get_config
-      (svc->registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
 
-    if (confpairs)
-    {
-      edgex_device_populateConfig (svc, confpairs, err);
-      if (err->code)
-      {
-        edgex_nvpairs_free (confpairs);
-        return;
-      }
-    }
-    else
-    {
-      iot_log_info (svc->logger, "Unable to get configuration from registry.");
+    if (svc->overwriteconfig) {
+      iot_log_info (svc->logger, "--overwrite option is set. Not geting configuration from registry.");
       iot_log_info (svc->logger, "Will load from file.");
       uploadConfig = true;
       *err = EDGEX_OK;
+    }
+    else {
+      confpairs = edgex_registry_get_config
+	(svc->registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
+      
+      if (confpairs)
+      {
+	edgex_device_populateConfig (svc, confpairs, err);
+	if (err->code)
+	{
+	  edgex_nvpairs_free (confpairs);
+	  return;
+	}
+      }
+      else
+      {
+	iot_log_info (svc->logger, "Unable to get configuration from registry.");
+	iot_log_info (svc->logger, "Will load from file.");
+	uploadConfig = true;
+	*err = EDGEX_OK;
+      }
     }
   }
 
