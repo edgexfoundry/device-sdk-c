@@ -173,7 +173,7 @@ static void counter_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-counter", NULL, NULL, NULL };
+  edgex_device_svcparams params = { "device-counter", NULL, NULL, NULL, false };
   sigset_t set;
   int sigret;
 
@@ -219,6 +219,9 @@ int main (int argc, char *argv[])
     (params.svcname, "1.0", impl, counterImpls, &e);
   ERR_CHECK (e);
 
+  /* set the overwrite flag */
+  edgex_device_service_set_overwrite(service, params.overwrite);
+    
   edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
 
