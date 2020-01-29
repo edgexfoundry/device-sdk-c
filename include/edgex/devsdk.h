@@ -32,6 +32,8 @@ typedef struct edgex_device_svcparams
   const char *regURL;
   /** The configuration profile to use */
   const char *profile;
+  /** Force conf file to be read to overwrite info in consul */
+  bool overwrite;
 } edgex_device_svcparams;
 
 /**
@@ -216,6 +218,19 @@ edgex_device_service *edgex_device_service_new
   void *impldata,
   edgex_device_callbacks implfns,
   edgex_error *err
+);
+
+
+/**
+ * @brief Set the overwrite flag to force re-read of configuration.toml.
+ * @param svc The service.
+ * @param overwrite The boolean to set the overwrite flag.
+ */
+
+void edgex_device_service_set_overwrite
+(
+ edgex_device_service *svc,
+ bool overwrite
 );
 
 /**
