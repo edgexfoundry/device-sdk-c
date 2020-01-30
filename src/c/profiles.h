@@ -13,8 +13,8 @@
 
 extern void edgex_device_profiles_upload
 (
-  edgex_device_service *svc,
-  edgex_error *err
+  devsdk_service_t *svc,
+  devsdk_error *err
 );
 
 #endif

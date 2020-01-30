@@ -33,7 +33,7 @@ void edgex_log_torest
 {
   edgex_ctx ctx;
   char *json;
-  edgex_error err = EDGEX_OK;
+  devsdk_error err = EDGEX_OK;
 
   memset (&ctx, 0, sizeof (ctx));
 

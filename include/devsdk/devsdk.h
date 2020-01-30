@@ -106,7 +106,7 @@ typedef void (*devsdk_stop) (void *impl, bool force);
 
 /**
  * @brief Callback function requesting that automatic events should begin. These should be generated according to the schedule given,
- *        and posted into EdgeX using devsdk_post_readings().
+ *        and posted using devsdk_post_readings().
  * @param impl The context data passed in when the service was created.
  * @param devname The name of the device to be queried.
  * @param protocols The location of the device to be queried.

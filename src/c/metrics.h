@@ -17,7 +17,7 @@ extern int edgex_device_handler_metrics
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,

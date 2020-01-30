@@ -21,7 +21,7 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *name,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -58,7 +58,7 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
 }
 
 JSON_Value *edgex_metadata_client_get_config
-  (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_error *err)
+  (iot_logger_t *lc, edgex_service_endpoints *endpoints, devsdk_error *err)
 {
   edgex_ctx ctx;
   JSON_Value *result = NULL;
@@ -90,7 +90,7 @@ void edgex_metadata_client_set_device_opstate
   edgex_service_endpoints *endpoints,
   const char *deviceid,
   edgex_device_operatingstate opstate,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -118,7 +118,7 @@ void edgex_metadata_client_set_device_adminstate
   edgex_service_endpoints *endpoints,
   const char *deviceid,
   edgex_device_adminstate adminstate,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -145,7 +145,7 @@ char *edgex_metadata_client_create_deviceprofile
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const edgex_deviceprofile *newdp,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -172,7 +172,7 @@ char *edgex_metadata_client_create_deviceprofile_file
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *filename,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -196,7 +196,7 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *name,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -240,7 +240,7 @@ char *edgex_metadata_client_create_deviceservice
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const edgex_deviceservice *newds,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -267,7 +267,7 @@ edgex_device *edgex_metadata_client_get_devices
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *servicename,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -304,12 +304,12 @@ char *edgex_metadata_client_add_device
   edgex_service_endpoints *endpoints,
   const char *name,
   const char *description,
-  const edgex_strings *labels,
-  edgex_protocols *protocols,
+  const devsdk_strings *labels,
+  devsdk_protocols *protocols,
   edgex_device_autoevents *autos,
   const char *service_name,
   const char *profile_name,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   char *result = NULL;
@@ -333,7 +333,7 @@ char *edgex_metadata_client_add_device
   dev->adminState = UNLOCKED;
   dev->operatingState = ENABLED;
   dev->labels = (edgex_strings *)labels;
-  dev->protocols = protocols;
+  dev->protocols = (edgex_protocols *)protocols;
   dev->service = malloc (sizeof (edgex_deviceservice));
   memset (dev->service, 0, sizeof (edgex_deviceservice));
   dev->service->name = (char *)service_name;
@@ -371,7 +371,7 @@ edgex_device *edgex_metadata_client_get_device
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *deviceid,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -407,7 +407,7 @@ edgex_device *edgex_metadata_client_get_device_byname
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *devicename,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -445,9 +445,9 @@ void edgex_metadata_client_update_device
   const char * name,
   const char * id,
   const char * description,
-  const edgex_strings * labels,
+  const devsdk_strings * labels,
   const char * profile_name,
-  edgex_error * err
+  devsdk_error * err
 )
 {
   edgex_ctx ctx;
@@ -465,7 +465,7 @@ void edgex_metadata_client_update_device
   );
 
   json = edgex_device_write_sparse
-    (name, id, description, labels, profile_name);
+    (name, id, description, (edgex_strings *)labels, profile_name);
 
   edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
   if (err->code != 0)
@@ -487,7 +487,7 @@ void edgex_metadata_client_delete_device
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
   const char * deviceid,
-  edgex_error * err
+  devsdk_error * err
 )
 {
   edgex_ctx ctx;
@@ -514,7 +514,7 @@ void edgex_metadata_client_delete_device_byname
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
   const char * devicename,
-  edgex_error * err
+  devsdk_error * err
 )
 {
   edgex_ctx ctx;
@@ -541,7 +541,7 @@ edgex_watcher *edgex_metadata_client_get_watchers
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
   const char * servicename,
-  edgex_error * err
+  devsdk_error * err
 )
 {
   edgex_ctx ctx;
@@ -577,7 +577,7 @@ edgex_watcher *edgex_metadata_client_get_watcher
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
   const char * watcherId,
-  edgex_error * err
+  devsdk_error * err
 )
 {
   edgex_ctx ctx;
@@ -613,7 +613,7 @@ edgex_addressable *edgex_metadata_client_get_addressable
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const char *name,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -655,7 +655,7 @@ char *edgex_metadata_client_create_addressable
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const edgex_addressable *newadd,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -682,7 +682,7 @@ void edgex_metadata_client_update_addressable
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   const edgex_addressable *addressable,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -709,7 +709,7 @@ void edgex_metadata_client_delete_addressable
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
   const char * name,
-  edgex_error * err
+  devsdk_error * err
 )
 {
   edgex_ctx ctx;

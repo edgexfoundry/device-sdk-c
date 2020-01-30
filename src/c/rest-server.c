@@ -7,6 +7,7 @@
  */
 
 #include "rest-server.h"
+#include "edgex-rest.h"
 #include "microhttpd.h"
 #include "correlation.h"
 #include "errorlist.h"
@@ -22,7 +23,7 @@ typedef struct handler_list
 {
   const char *url;
   uint32_t methods;
-  void *context;
+  void *ctx;
   http_method_handler_fn handler;
   struct handler_list *next;
 } handler_list;
@@ -77,12 +78,6 @@ static char *normalizeUrl (const char *url)
   return res;
 }
 
-typedef struct stringbuf
-{
-  char *str;
-  size_t size;
-} stringbuf;
-
 static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
 {
   if (strncmp (key, EDGEX_DS_PREFIX, strlen (EDGEX_DS_PREFIX)) == 0)
@@ -90,35 +85,8 @@ static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, con
     return MHD_YES;
   }
 
-  stringbuf *buf = (stringbuf *)p;
-
-  size_t newsz = (buf->str ? strlen (buf->str) + 1 : 0) + strlen (key) + (value ? 1 + strlen (value) : 0) + 1;
-
-  size_t newalloc = buf->size;
-  while (newalloc <= newsz)
-  {
-    newalloc += STR_BLK_SIZE;
-  }
-  if (newalloc > buf->size)
-  {
-    buf->str = realloc (buf->str, newalloc);
-    if (buf->size == 0)
-    {
-      *buf->str = '\0';
-    }
-    buf->size = newalloc;
-  }
-
-  if (*buf->str)
-  {
-    strcat (buf->str, "&");
-  }
-  strcat (buf->str, key);
-  if (value)
-  {
-    strcat (buf->str, "=");
-    strcat (buf->str, value);
-  }
+  edgex_nvpairs **list = (edgex_nvpairs **)p;
+  *list = edgex_nvpairs_new (key, value ? value : "", *list);
 
   return MHD_YES;
 }
@@ -223,21 +191,11 @@ static int http_handler
     {
       if (method & h->methods)
       {
-        stringbuf qbuf = { NULL, 0 };
-        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, &qbuf);
+        devsdk_nvpairs *qparams = NULL;
+        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, &qparams);
         status = h->handler
-        (
-          h->context,
-          nurl + strlen (h->url),
-          qbuf.str,
-          method,
-          ctx->m_data,
-          ctx->m_size,
-          &reply,
-          &reply_size,
-          &reply_type
-        );
-        free (qbuf.str);
+          (h->ctx, nurl + strlen (h->url), qparams, method, ctx->m_data, ctx->m_size, &reply, &reply_size, &reply_type);
+        devsdk_nvpairs_free (qparams);
       }
       else
       {
@@ -273,7 +231,7 @@ static int http_handler
 }
 
 edgex_rest_server *edgex_rest_server_create
-  (iot_logger_t *lc, uint16_t port, edgex_error *err)
+  (iot_logger_t *lc, uint16_t port, devsdk_error *err)
 {
   edgex_rest_server *svr;
   uint16_t flags = MHD_USE_THREAD_PER_CONNECTION;
@@ -315,7 +273,7 @@ void edgex_rest_server_register_handler
   entry->handler = handler;
   entry->url = url;
   entry->methods = methods;
-  entry->context = context;
+  entry->ctx = context;
   pthread_mutex_lock (&svr->lock);
   entry->next = svr->handlers;
   svr->handlers = entry;

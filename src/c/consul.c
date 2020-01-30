@@ -7,7 +7,6 @@
  */
 
 #include "consul.h"
-#include "edgex/registry.h"
 #include "edgex-rest.h"
 #include "rest.h"
 #include "errorlist.h"
@@ -17,21 +16,21 @@
 
 #define CONF_PREFIX "edgex/core/1.0/"
 
-static edgex_nvpairs *read_pairs
+static devsdk_nvpairs *read_pairs
 (
   iot_logger_t *lc,
   const char *json,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   const char *key;
   const char *keyindex;
   const char *enc;
+  char *kval;
   size_t nconfs;
   size_t rsize;
   JSON_Object *obj;
-  edgex_nvpairs *pair;
-  edgex_nvpairs *result = NULL;
+  devsdk_nvpairs *result = NULL;
 
   JSON_Value *val = json_parse_string (json);
   JSON_Array *configs = json_value_get_array (val);
@@ -40,7 +39,6 @@ static edgex_nvpairs *read_pairs
   for (size_t i = 0; i < nconfs; i++)
   {
     obj = json_array_get_object (configs, i);
-    pair = malloc (sizeof (edgex_nvpairs));
     key = json_object_get_string (obj, "Key");
     if (key)
     {
@@ -52,54 +50,41 @@ static edgex_nvpairs *read_pairs
         *(++keyindex)
       )
       {
-        pair->name = strdup (keyindex);
+        enc = json_object_get_string (obj, "Value");
+        if (enc)
+        {
+          rsize = iot_b64_maxdecodesize (enc);
+          kval = malloc (rsize + 1);
+          if (iot_b64_decode (enc, kval, &rsize))
+          {
+            kval[rsize] = '\0';
+            result = devsdk_nvpairs_new (keyindex, kval, result);
+          }
+          else
+          {
+            iot_log_error (lc, "Unable to decode Value %s (for config key %s)", enc, key);
+            *err = EDGEX_CONSUL_RESPONSE;
+          }
+          free (kval);
+        }
+        else
+        {
+          iot_log_error (lc, "No Value field in consul response. JSON was %s", json);
+          *err = EDGEX_CONSUL_RESPONSE;
+          break;
+        }
       }
       else
       {
         iot_log_error (lc, "Unexpected Key %s returned from consul", key);
         *err = EDGEX_CONSUL_RESPONSE;
-        free (pair);
-        break;
       }
     }
     else
     {
       iot_log_error (lc, "No Key field in consul response. JSON was %s", json);
       *err = EDGEX_CONSUL_RESPONSE;
-      break;
     }
-    enc = json_object_get_string (obj, "Value");
-    if (enc)
-    {
-      rsize = iot_b64_maxdecodesize (enc);
-      pair->value = malloc (rsize + 1);
-      if (iot_b64_decode (enc, pair->value, &rsize))
-      {
-        (pair->value)[rsize] = '\0';
-      }
-      else
-      {
-        iot_log_error
-          (lc, "Unable to decode Value %s (for config key %s)", enc, key);
-        *err = EDGEX_CONSUL_RESPONSE;
-        free (pair->value);
-        free (pair->name);
-        free (pair);
-        break;
-      }
-    }
-    else
-    {
-      iot_log_error
-        (lc, "No Value field in consul response. JSON was %s", json);
-      *err = EDGEX_CONSUL_RESPONSE;
-      free (pair->name);
-      free (pair);
-      break;
-    }
-
-    pair->next = result;
-    result = pair;
   }
   json_value_free (val);
   return result;
@@ -109,7 +94,7 @@ struct updatejob
 {
   char *url;
   iot_logger_t *lc;
-  edgex_registry_updatefn updater;
+  devsdk_registry_updatefn updater;
   void *updatectx;
   atomic_bool *updatedone;
 };
@@ -118,9 +103,9 @@ static void poll_consul (void *p)
 {
   char *urltail;
   edgex_ctx ctx;
-  edgex_nvpairs index;
-  edgex_nvpairs *conf;
-  edgex_error err;
+  devsdk_nvpairs index;
+  devsdk_nvpairs *conf;
+  devsdk_error err;
 
   struct updatejob *job = (struct updatejob *)p;
   urltail = job->url + strlen (job->url);
@@ -154,7 +139,7 @@ static void poll_consul (void *p)
       {
         job->updater (job->updatectx, conf);
       }
-      edgex_nvpairs_free (conf);
+      devsdk_nvpairs_free (conf);
     }
     else
     {
@@ -167,23 +152,23 @@ static void poll_consul (void *p)
   free (job);
 }
 
-edgex_nvpairs *edgex_consul_client_get_config
+devsdk_nvpairs *edgex_consul_client_get_config
 (
   iot_logger_t *lc,
   iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
   const char *profile,
-  edgex_registry_updatefn updater,
+  devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  edgex_nvpairs *result = NULL;
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_nvpairs *result = NULL;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   if (profile && *profile)
@@ -212,7 +197,7 @@ edgex_nvpairs *edgex_consul_client_get_config
     result = read_pairs (lc, ctx.buff, err);
     if (err->code)
     {
-      edgex_nvpairs_free (result);
+      devsdk_nvpairs_free (result);
       result = NULL;
     }
   }
@@ -237,13 +222,13 @@ void edgex_consul_client_write_config
   void *location,
   const char *servicename,
   const char *profile,
-  const edgex_nvpairs *config,
-  edgex_error *err
+  const devsdk_nvpairs *config,
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -255,7 +240,7 @@ void edgex_consul_client_write_config
   JSON_Value *jresult = json_value_init_array ();
   JSON_Array *jarray = json_value_get_array (jresult);
 
-  const edgex_nvpairs *iter = config;
+  const devsdk_nvpairs *iter = config;
   while (iter)
   {
     size_t valsz = strlen (iter->value);
@@ -312,12 +297,12 @@ void edgex_consul_client_register_service
   const char *host,
   uint16_t port,
   const char *checkInterval,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -363,12 +348,12 @@ void edgex_consul_client_deregister_service
   iot_logger_t *lc,
   void *location,
   const char *servicename,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -393,12 +378,12 @@ void edgex_consul_client_query_service
   const char *servicename,
   char **host,
   uint16_t *port,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -454,12 +439,12 @@ bool edgex_consul_client_ping
 (
   iot_logger_t *lc,
   void *location,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf

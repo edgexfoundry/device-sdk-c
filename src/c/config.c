@@ -10,14 +10,17 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
+#include "devutil.h"
 #include "autoevent.h"
-#include "edgex/device-mgmt.h"
+#include "edgex/devices.h"
 
 #include <microhttpd.h>
 
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
+/* TODO: Use iot_data_t maps as the "native" representation throughout */
 
 #define ERRBUFSZ 1024
 
@@ -26,7 +29,7 @@ toml_table_t *edgex_device_loadConfig
   iot_logger_t *lc,
   const char *dir,
   const char *profile,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   toml_table_t *result = NULL;
@@ -125,7 +128,7 @@ static void toml_rtob2 (const char *raw, bool *ret)
 /* As toml_rtoi but return uint16 */
 
 static void toml_rtoui16
-  (const char *raw, uint16_t *ret, iot_logger_t *lc, edgex_error *err)
+  (const char *raw, uint16_t *ret, iot_logger_t *lc, devsdk_error *err)
 {
   if (raw)
   {
@@ -142,20 +145,10 @@ static void toml_rtoui16
   }
 }
 
-static edgex_nvpairs *makepair
-  (const char *name, const char *value, edgex_nvpairs *list)
-{
-  edgex_nvpairs *result = malloc (sizeof (edgex_nvpairs));
-  result->name = strdup (name);
-  result->value = strdup (value);
-  result->next = list;
-  return result;
-}
-
 /* Recursively parse a toml table into name-value pairs. Note that the toml parser does various string manipulations,
    so reading a raw value into an int or double, then sprintf-ing it back to a string is not necessarily redundant. */
 
-static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result, const char *prefix)
+static devsdk_nvpairs *processTable (toml_table_t *config, devsdk_nvpairs *result, const char *prefix)
 {
   unsigned i = 0;
   const char *key;
@@ -187,19 +180,19 @@ static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result,
     {
       if (strcmp (raw, "true") == 0 || strcmp (raw, "false") == 0)
       {
-        result = makepair (fullname, raw, result);
+        result = devsdk_nvpairs_new (fullname, raw, result);
       }
       else if (toml_rtoi (raw, &dummyi) == 0)
       {
         char val[32];
         sprintf (val, "%" PRIi64, dummyi);
-        result = makepair (fullname, val, result); 
+        result = devsdk_nvpairs_new (fullname, val, result);
       }
       else if (toml_rtod (raw, &dummyd) == 0)
       {
         char val[32];
         sprintf (val, "%f", dummyd);
-        result = makepair (fullname, val, result);
+        result = devsdk_nvpairs_new (fullname, val, result);
       }
       else
       {
@@ -207,7 +200,7 @@ static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result,
         toml_rtos (raw, &val);
         if (val && *val)
         {
-          result = makepair (fullname, val, result);
+          result = devsdk_nvpairs_new (fullname, val, result);
         }
         free (val);
       }
@@ -221,7 +214,7 @@ static edgex_nvpairs *processTable (toml_table_t *config, edgex_nvpairs *result,
   return result;
 }
 
-edgex_nvpairs *edgex_device_parseToml (toml_table_t *config)
+devsdk_nvpairs *edgex_device_parseToml (toml_table_t *config)
 {
   return processTable (config, NULL, "");
 }
@@ -256,7 +249,7 @@ char *edgex_device_getRegURL (toml_table_t *config)
 }
 
 static void parseClient
-  (iot_logger_t *lc, toml_table_t *client, edgex_device_service_endpoint *endpoint, edgex_error *err)
+  (iot_logger_t *lc, toml_table_t *client, edgex_device_service_endpoint *endpoint, devsdk_error *err)
 {
   if (client)
   {
@@ -266,7 +259,7 @@ static void parseClient
 }
 
 void edgex_device_parseTomlClients
-  (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, edgex_error *err)
+  (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err)
 {
   if (clients)
   {
@@ -298,12 +291,12 @@ static bool checkOverride (char *qstr, char **val)
   }
 }
 
-void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, edgex_nvpairs *config)
+void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nvpairs *config)
 {
   char *query = NULL;
   size_t qsize = 0;
 
-  for (edgex_nvpairs *iter = config; iter; iter = iter->next)
+  for (devsdk_nvpairs *iter = config; iter; iter = iter->next)
   {
     size_t req = strlen (iter->name) + strlen (sname) + 2;
     if (qsize < req)
@@ -346,7 +339,7 @@ void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, edgex_nvp
 
 #if 0
 void edgex_device_process_configured_watchers
-  (edgex_device_service *svc, toml_array_t *watchers, edgex_error *err)
+  (devsdk_service_t *svc, toml_array_t *watchers, devsdk_error *err)
 {
   const char *raw;
   char *namestr;
@@ -410,9 +403,9 @@ void edgex_device_process_configured_watchers
 #endif
 
 static char *get_nv_config_string
-  (const edgex_nvpairs *config, const char *key)
+  (const devsdk_nvpairs *config, const char *key)
 {
-  for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
+  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
@@ -425,12 +418,12 @@ static char *get_nv_config_string
 static uint32_t get_nv_config_uint32
 (
   iot_logger_t *lc,
-  const edgex_nvpairs *config,
+  const devsdk_nvpairs *config,
   const char *key,
-  edgex_error *err
+  devsdk_error *err
 )
 {
-  for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
+  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
@@ -455,12 +448,12 @@ static uint32_t get_nv_config_uint32
 static uint16_t get_nv_config_uint16
 (
   iot_logger_t *lc,
-  const edgex_nvpairs *config,
+  const devsdk_nvpairs *config,
   const char *key,
-  edgex_error *err
+  devsdk_error *err
 )
 {
-  for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
+  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
@@ -483,9 +476,9 @@ static uint16_t get_nv_config_uint16
 }
 
 static bool get_nv_config_bool
-  (const edgex_nvpairs *config, const char *key, bool dfl)
+  (const devsdk_nvpairs *config, const char *key, bool dfl)
 {
-  for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
+  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strcasecmp (iter->name, key) == 0)
     {
@@ -496,7 +489,7 @@ static bool get_nv_config_bool
 }
 
 void edgex_device_populateConfig
-  (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err)
+  (devsdk_service_t *svc, const devsdk_nvpairs *config, devsdk_error *err)
 {
   svc->config.service.host = get_nv_config_string (config, "Service/Host");
   svc->config.service.port =
@@ -561,12 +554,13 @@ void edgex_device_populateConfig
   svc->config.device.sendreadingsonchanged =
     get_nv_config_bool (config, "Device/SendReadingsOnChanged", false);
 
-  for (const edgex_nvpairs *iter = config; iter; iter = iter->next)
+  svc->config.driverconf = iot_data_alloc_map (IOT_DATA_STRING);
+  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
   {
     if (strncmp (iter->name, "Driver/", strlen ("Driver/")) == 0)
     {
-      svc->config.driverconf = makepair
-        (iter->name + strlen ("Driver/"), iter->value, svc->config.driverconf);
+      iot_data_map_add
+        (svc->config.driverconf, iot_data_alloc_string (iter->name + strlen ("Driver/"), IOT_DATA_COPY), iot_data_alloc_string (iter->value, IOT_DATA_COPY));
     }
   }
 
@@ -577,9 +571,9 @@ void edgex_device_populateConfig
   edgex_device_updateConf (svc, config);
 }
 
-void edgex_device_updateConf (void *p, const edgex_nvpairs *config)
+void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
 {
-  edgex_device_service *svc = (edgex_device_service *)p;
+  devsdk_service_t *svc = (devsdk_service_t *)p;
   char *lname = get_nv_config_string (config, "Writable/LogLevel");
   if (lname == NULL)
   {
@@ -592,7 +586,7 @@ void edgex_device_updateConf (void *p, const edgex_nvpairs *config)
   }
 }
 
-void edgex_device_freeConfig (edgex_device_service *svc)
+void edgex_device_freeConfig (devsdk_service_t *svc)
 {
   edgex_device_watcherinfo *watcher;
   edgex_map_iter iter;
@@ -620,7 +614,7 @@ void edgex_device_freeConfig (edgex_device_service *svc)
     free (svc->config.service.labels);
   }
 
-  edgex_nvpairs_free (svc->config.driverconf);
+  iot_data_free (svc->config.driverconf);
 
   iter = edgex_map_iter (svc->config.watchers);
   while ((key = edgex_map_next (&svc->config.watchers, &iter)))
@@ -642,7 +636,7 @@ int edgex_device_handler_config
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -651,7 +645,7 @@ int edgex_device_handler_config
   const char **reply_type
 )
 {
-  edgex_device_service *svc = (edgex_device_service *)ctx;
+  devsdk_service_t *svc = (devsdk_service_t *)ctx;
 
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
@@ -727,15 +721,15 @@ int edgex_device_handler_config
     (dobj, "SendReadingsOnChanged", svc->config.device.sendreadingsonchanged);
   json_object_set_value (obj, "Device", dval);
 
-  edgex_nvpairs *iter = svc->config.driverconf;
-  if (iter)
+  if (svc->config.driverconf)
   {
+    iot_data_map_iter_t iter;
+    iot_data_map_iter (svc->config.driverconf, &iter);
     dval = json_value_init_object ();
     dobj = json_value_get_object (dval);
-    while (iter)
+    while (iot_data_map_iter_next (&iter))
     {
-      json_object_set_string (dobj, iter->name, iter->value);
-      iter = iter->next;
+      json_object_set_string (dobj, iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
     }
     json_object_set_value (obj, "Driver", dval);
   }
@@ -749,7 +743,7 @@ int edgex_device_handler_config
 }
 
 void edgex_device_process_configured_devices
-  (edgex_device_service *svc, toml_array_t *devs, edgex_error *err)
+  (devsdk_service_t *svc, toml_array_t *devs, devsdk_error *err)
 {
   if (devs)
   {
@@ -758,10 +752,10 @@ void edgex_device_process_configured_devices
     edgex_device *existing;
     char *profile_name;
     char *description;
-    edgex_protocols *protocols;
+    devsdk_protocols *protocols;
     edgex_device_autoevents *autos;
-    edgex_strings *labels;
-    edgex_strings *newlabel;
+    devsdk_strings *labels;
+    devsdk_strings *newlabel;
     toml_table_t *table;
     toml_table_t *aetable;
     toml_table_t *pptable;
@@ -793,31 +787,28 @@ void edgex_device_process_configured_devices
             toml_table_t *pprops = toml_table_in (pptable, key);
             if (pprops)
             {
-              edgex_protocols *newprots = malloc (sizeof (edgex_protocols));
-              newprots->name = strdup (key);
-              newprots->properties = NULL;
-              newprots->next = protocols;
-              for (int j = 0; 0 != (key = toml_key_in (pprops, j)); j++)
+              devsdk_nvpairs *props = NULL;
+              const char *pkey;
+              for (int j = 0; 0 != (pkey = toml_key_in (pprops, j)); j++)
               {
-                raw = toml_raw_in (pprops, key);
+                raw = toml_raw_in (pprops, pkey);
                 if (raw)
                 {
-                  edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
-                  pair->name = strdup (key);
-                  if (toml_rtos (raw, &pair->value) == -1)
+                  char *val;
+                  if (toml_rtos (raw, &val) == -1)
                   {
-                    pair->value = strdup (raw);
+                    val = strdup (raw);
                   }
-                  pair->next = newprots->properties;
-                  newprots->properties = pair;
+                  props = devsdk_nvpairs_new (pkey, val, props);
+                  free (val);
                 }
               }
-              protocols = newprots;
+              protocols = devsdk_protocols_new (key, props, protocols);
+              devsdk_nvpairs_free (props);
             }
             else
             {
-              iot_log_error
-                (svc->logger, "Arrays and subtables not supported in Protocol");
+              iot_log_error (svc->logger, "Arrays and subtables not supported in Protocol");
               *err = EDGEX_BAD_CONFIG;
               return;
             }
@@ -859,7 +850,7 @@ void edgex_device_process_configured_devices
           {
             for (int n = 0; (raw = toml_raw_at (arr, n)); n++)
             {
-              newlabel = malloc (sizeof (edgex_strings));
+              newlabel = malloc (sizeof (devsdk_strings));
               newlabel->next = labels;
               toml_rtos2 (raw, &newlabel->str);
               labels = newlabel;
@@ -867,10 +858,10 @@ void edgex_device_process_configured_devices
           }
 
           *err = EDGEX_OK;
-          free (edgex_device_add_device (svc, devname, description, labels, profile_name, protocols, autos, err));
+          free (edgex_add_device (svc, devname, description, labels, profile_name, protocols, autos, err));
 
-          edgex_strings_free (labels);
-          edgex_protocols_free (protocols);
+          devsdk_strings_free (labels);
+          devsdk_protocols_free (protocols);
           edgex_device_autoevents_free (autos);
           free (profile_name);
           free (description);

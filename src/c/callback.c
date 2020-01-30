@@ -18,13 +18,13 @@
 
 static int updateWatcher
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   edgex_http_method method,
   const char *id
 )
 {
   edgex_watcher *w;
-  edgex_error err = EDGEX_OK;
+  devsdk_error err = EDGEX_OK;
   int status = MHD_HTTP_OK;
 
   switch (method)
@@ -69,24 +69,24 @@ static int updateWatcher
 
 static int updateDevice
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   edgex_http_method method,
   const char *id
 )
 {
   edgex_device *newdev;
-  edgex_error err = EDGEX_OK;
+  devsdk_error err = EDGEX_OK;
   int status = MHD_HTTP_OK;
 
   switch (method)
   {
     case DELETE:
       iot_log_info (svc->logger, "callback: Delete device %s", id);
-      if (svc->removecallback)
+      if (svc->userfns.device_removed)
       {
         edgex_device *dev = edgex_devmap_device_byid (svc->devices, id);
         edgex_devmap_removedevice_byid (svc->devices, id);
-        svc->removecallback (svc->userdata, dev->name, dev->protocols);
+        svc->userfns.device_removed (svc->userdata, dev->name, (const devsdk_protocols *)dev->protocols);
         edgex_device_release (dev);
       }
       else
@@ -104,9 +104,9 @@ static int updateDevice
         {
           iot_log_info (svc->logger, "callback: Device %s moved to %s", id, newdev->service->name);
           edgex_devmap_removedevice_byid (svc->devices, id);
-          if (svc->removecallback)
+          if (svc->userfns.device_removed)
           {
-            svc->removecallback (svc->userdata, newdev->name, newdev->protocols);
+            svc->userfns.device_removed (svc->userdata, newdev->name, (const devsdk_protocols *)newdev->protocols);
           }
         }
         else
@@ -115,15 +115,15 @@ static int updateDevice
           switch (edgex_devmap_replace_device (svc->devices, newdev))
           {
             case CREATED:
-              if (svc->addcallback)
+              if (svc->userfns.device_added)
               {
-                svc->addcallback (svc->userdata, newdev->name, newdev->protocols, newdev->adminState);
+                svc->userfns.device_added (svc->userdata, newdev->name, (const devsdk_protocols *)newdev->protocols, newdev->adminState);
               }
               break;
             case UPDATED_DRIVER:
-              if (svc->updatecallback)
+              if (svc->userfns.device_updated)
               {
-                svc->updatecallback (svc->userdata, newdev->name, newdev->protocols, newdev->adminState);
+                svc->userfns.device_updated (svc->userdata, newdev->name, (const devsdk_protocols *)newdev->protocols, newdev->adminState);
               }
               break;
             case UPDATED_SDK:
@@ -144,7 +144,7 @@ int edgex_device_handler_callback
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -154,7 +154,7 @@ int edgex_device_handler_callback
 )
 {
   int status = MHD_HTTP_OK;
-  edgex_device_service *svc = (edgex_device_service *) ctx;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
   JSON_Value *jval = json_parse_string (upload_data);
   if (jval == NULL)
@@ -188,23 +188,4 @@ int edgex_device_handler_callback
 
   json_value_free (jval);
   return status;
-}
-
-void edgex_device_register_devicelist_callbacks
-(
-  edgex_device_service *svc,
-  edgex_device_add_device_callback add_device,
-  edgex_device_update_device_callback update_device,
-  edgex_device_remove_device_callback remove_device
-)
-{
-  if (svc->logger)
-  {
-    iot_log_error (svc->logger, "Devicelist: must register callbacks before service start.");
-    return;
-  }
-
-  svc->addcallback = add_device;
-  svc->updatecallback = update_device;
-  svc->removecallback = remove_device;
 }

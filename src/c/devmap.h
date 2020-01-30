@@ -11,7 +11,7 @@
 
 /* Maintains the device / profile map for the SDK. */
 
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 #include "edgex/edgex.h"
 
 struct edgex_devmap_t;
@@ -43,7 +43,7 @@ typedef struct edgex_cmdqueue_t
  * Device[Profile] map lifecycle.
  */
 
-extern edgex_devmap_t *edgex_devmap_alloc (edgex_device_service *svc);
+extern edgex_devmap_t *edgex_devmap_alloc (devsdk_service_t *svc);
 extern void edgex_devmap_clear (edgex_devmap_t *map);
 extern void edgex_devmap_free (edgex_devmap_t *map);
 

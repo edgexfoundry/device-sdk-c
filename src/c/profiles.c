@@ -6,7 +6,7 @@
  *
  */
 
-#include "edgex/device-mgmt.h"
+#include "edgex/profiles.h"
 #include "profiles.h"
 #include "service.h"
 #include "metadata.h"
@@ -26,10 +26,10 @@ static int yamlselect (const struct dirent *d)
   return strcasecmp (d->d_name + strlen (d->d_name) - 5, ".yaml") == 0 ? 1 : 0;
 }
 
-static bool need_vds (edgex_device_service *svc)
+static bool need_vds (devsdk_service_t *svc)
 {
   bool result = true;
-  edgex_error err = EDGEX_OK;
+  devsdk_error err = EDGEX_OK;
   JSON_Value *metaconf = edgex_metadata_client_get_config (svc->logger, &svc->config.endpoints, &err);
   if (metaconf)
   {
@@ -50,7 +50,7 @@ static bool need_vds (edgex_device_service *svc)
 
 static void generate_value_descriptors
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   const edgex_deviceprofile *dp
 )
 {
@@ -62,7 +62,7 @@ static void generate_value_descriptors
     edgex_units *units = res->properties->units;
     char type[2];
     edgex_valuedescriptor *vd;
-    edgex_error err;
+    devsdk_error err;
     iot_logger_t *lc = svc->logger;
 
     type[0] = edgex_propertytype_tostring (pv->type)[0];
@@ -94,9 +94,9 @@ static void generate_value_descriptors
 
 static const edgex_deviceprofile *edgex_deviceprofile_get_internal
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   const char *name,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   const edgex_deviceprofile *dp;
@@ -115,7 +115,7 @@ static const edgex_deviceprofile *edgex_deviceprofile_get_internal
   return dp;
 }
 
-void edgex_device_profiles_upload (edgex_device_service *svc, edgex_error *err)
+void edgex_device_profiles_upload (devsdk_service_t *svc, devsdk_error *err)
 {
   struct dirent **filenames = NULL;
   int n;
@@ -149,7 +149,7 @@ void edgex_device_profiles_upload (edgex_device_service *svc, edgex_error *err)
       fname = filenames[n]->d_name;
       if (snprintf (pathname, MAX_PATH_SIZE, "%s/%s", profileDir, fname) < MAX_PATH_SIZE)
       {
-        edgex_device_add_profile (svc, pathname, err);
+        edgex_add_profile (svc, pathname, err);
       }
       else
       {
@@ -162,7 +162,7 @@ void edgex_device_profiles_upload (edgex_device_service *svc, edgex_error *err)
   free (filenames);
 }
 
-static char *getProfName (iot_logger_t *lc, const char *fname, edgex_error *err)
+static char *getProfName (iot_logger_t *lc, const char *fname, devsdk_error *err)
 {
   FILE *handle;
   yaml_parser_t parser;
@@ -230,7 +230,7 @@ static char *getProfName (iot_logger_t *lc, const char *fname, edgex_error *err)
   return result;
 }
 
-void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edgex_error *err)
+void edgex_add_profile (devsdk_service_t *svc, const char *fname, devsdk_error *err)
 {
   const edgex_deviceprofile *dp;
   edgex_service_endpoints *endpoints = &svc->config.endpoints;
@@ -276,19 +276,19 @@ void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edg
   }
 }
 
-edgex_deviceprofile *edgex_device_get_deviceprofile_byname
-  (edgex_device_service *svc, const char *name)
+edgex_deviceprofile *edgex_get_deviceprofile_byname
+  (devsdk_service_t *svc, const char *name)
 {
-  edgex_error err = EDGEX_OK;
+  devsdk_error err = EDGEX_OK;
   return edgex_deviceprofile_dup (edgex_deviceprofile_get_internal (svc, name, &err));
 }
 
-edgex_deviceprofile *edgex_device_profiles (edgex_device_service *svc)
+edgex_deviceprofile *edgex_profiles (devsdk_service_t *svc)
 {
   return edgex_devmap_copyprofiles (svc->devices);
 }
 
-void edgex_device_free_deviceprofile (edgex_deviceprofile *dp)
+void edgex_free_deviceprofile (edgex_deviceprofile *dp)
 {
   edgex_deviceprofile_free (dp);
 }

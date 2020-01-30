@@ -10,16 +10,16 @@
 #define _EGDEX_CMDINFO_H_ 1
 
 #include "edgex/edgex.h"
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 
 typedef struct edgex_cmdinfo
 {
   char *name;
   bool isget;
   unsigned nreqs;
-  edgex_device_commandrequest *reqs;
+  devsdk_commandrequest *reqs;
   edgex_propertyvalue **pvals;
-  edgex_nvpairs **maps;
+  devsdk_nvpairs **maps;
   char **dfls;
   struct edgex_cmdinfo *next;
 } edgex_cmdinfo;

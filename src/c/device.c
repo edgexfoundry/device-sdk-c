@@ -56,80 +56,90 @@ static const char *methStr (edgex_http_method method)
   }
 }
 
-static bool isNumericType (edgex_propertytype type)
+static bool isNumericType (iot_data_type_t type)
 {
-  return (type != Bool && type != String && type != Binary);
+  return (type <= IOT_DATA_FLOAT64);
 }
 
-char *edgex_value_tostring (const edgex_device_commandresult *value, bool binfloat)
+char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
 {
 #define BUFSIZE 32
 
-  size_t sz;
   char *res = NULL;
 
-  if (isNumericType (value->type))
+  if (isNumericType (iot_data_type (value)))
   {
     res = malloc (BUFSIZE);
   }
 
-  switch (value->type)
+  switch (iot_data_type (value))
   {
-    case Bool:
-      res = strdup (value->value.bool_result ? "true" : "false");
+    case IOT_DATA_INT8:
+      sprintf (res, "%" PRIi8, iot_data_i8 (value));
       break;
-    case Uint8:
-      sprintf (res, "%" PRIu8, value->value.ui8_result);
+    case IOT_DATA_UINT8:
+      sprintf (res, "%" PRIu8, iot_data_ui8 (value));
       break;
-    case Uint16:
-      sprintf (res, "%" PRIu16, value->value.ui16_result);
+    case IOT_DATA_INT16:
+      sprintf (res, "%" PRIi16, iot_data_i16 (value));
       break;
-    case Uint32:
-      sprintf (res, "%" PRIu32, value->value.ui32_result);
+    case IOT_DATA_UINT16:
+      sprintf (res, "%" PRIu16, iot_data_ui16 (value));
       break;
-    case Uint64:
-      sprintf (res, "%" PRIu64, value->value.ui64_result);
+    case IOT_DATA_INT32:
+      sprintf (res, "%" PRIi32, iot_data_i32 (value));
       break;
-    case Int8:
-      sprintf (res, "%" PRIi8, value->value.i8_result);
+    case IOT_DATA_UINT32:
+      sprintf (res, "%" PRIu32, iot_data_ui32 (value));
       break;
-    case Int16:
-      sprintf (res, "%" PRIi16, value->value.i16_result);
+    case IOT_DATA_INT64:
+      sprintf (res, "%" PRIi64, iot_data_i64 (value));
       break;
-    case Int32:
-      sprintf (res, "%" PRIi32, value->value.i32_result);
+    case IOT_DATA_UINT64:
+      sprintf (res, "%" PRIu64, iot_data_ui64 (value));
       break;
-    case Int64:
-      sprintf (res, "%" PRIi64, value->value.i64_result);
-      break;
-    case Float32:
+    case IOT_DATA_FLOAT32:
       if (binfloat)
       {
-        iot_b64_encode (&value->value.f32_result, sizeof (float), res, BUFSIZE);
+        float f = iot_data_f32 (value);
+        iot_b64_encode (&f, sizeof (float), res, BUFSIZE);
       }
       else
       {
-        sprintf (res, "%.8e", value->value.f32_result);
+        sprintf (res, "%.8e", iot_data_f32 (value));
       }
       break;
-    case Float64:
+    case IOT_DATA_FLOAT64:
       if (binfloat)
       {
-        iot_b64_encode (&value->value.f64_result, sizeof (double), res, BUFSIZE);
+        double d = iot_data_f64 (value);
+        iot_b64_encode (&d, sizeof (double), res, BUFSIZE);
       }
       else
       {
-        sprintf (res, "%.16e", value->value.f64_result);
+        sprintf (res, "%.16e", iot_data_f64 (value));
       }
       break;
-    case String:
-      res = strdup (value->value.string_result);
+    case IOT_DATA_BOOL:
+      res = strdup (iot_data_bool (value) ? "true" : "false");
       break;
-    case Binary:
-      sz = iot_b64_encodesize (value->value.binary_result.size);
+    case IOT_DATA_STRING:
+      res = strdup (iot_data_string (value));
+      break;
+    case IOT_DATA_BLOB:
+    {
+      uint32_t sz, rsz;
+      const uint8_t *data = iot_data_blob (value, &rsz);
+      sz = iot_b64_encodesize (rsz);
       res = malloc (sz);
-      iot_b64_encode
-        (value->value.binary_result.bytes, value->value.binary_result.size, res, sz);
+      iot_b64_encode (data, rsz, res, sz);
+      break;
+    }
+    case IOT_DATA_MAP:
+      res = strdup ("Error: MAP datatype unsupported");
+      break;
+    case IOT_DATA_ARRAY:
+      res = strdup ("Error: ARRAY datatype unsupported");
       break;
     default:
       res = NULL;
@@ -138,71 +148,85 @@ char *edgex_value_tostring (const edgex_device_commandresult *value, bool binflo
   return res;
 }
 
-static bool populateValue
-  (edgex_device_commandresult *cres, const char *val)
+static iot_data_t *populateValue (iot_data_type_t rtype, const char *val)
 {
-  size_t sz;
-  switch (cres->type)
+  switch (rtype)
   {
-    case String:
-      cres->value.string_result = strdup (val);
-      return true;
-    case Bool:
-      if (strcasecmp (val, "true") == 0)
-      {
-        cres->value.bool_result = true;
-        return true;
-      }
-      if (strcasecmp (val, "false") == 0)
-      {
-        cres->value.bool_result = false;
-        return true;
-      }
-      return false;
-    case Uint8:
-      return (sscanf (val, "%" SCNu8, &cres->value.ui8_result) == 1);
-    case Uint16:
-      return (sscanf (val, "%" SCNu16, &cres->value.ui16_result) == 1);
-    case Uint32:
-      return (sscanf (val, "%" SCNu32, &cres->value.ui32_result) == 1);
-    case Uint64:
-      return (sscanf (val, "%" SCNu64, &cres->value.ui64_result) == 1);
-    case Int8:
-      return (sscanf (val, "%" SCNi8, &cres->value.i8_result) == 1);
-    case Int16:
-      return (sscanf (val, "%" SCNi16, &cres->value.i16_result) == 1);
-    case Int32:
-      return (sscanf (val, "%" SCNi32, &cres->value.i32_result) == 1);
-    case Int64:
-      return (sscanf (val, "%" SCNi64, &cres->value.i64_result) == 1);
-    case Float32:
+    case IOT_DATA_UINT8:
+    {
+      uint8_t i;
+      return (sscanf (val, "%" SCNu8, &i) == 1) ? iot_data_alloc_ui8 (i) : NULL;
+    }
+    case IOT_DATA_INT8:
+    {
+      int8_t i;
+      return (sscanf (val, "%" SCNi8, &i) == 1) ? iot_data_alloc_i8 (i) : NULL;
+    }
+    case IOT_DATA_UINT16:
+    {
+      uint16_t i;
+      return (sscanf (val, "%" SCNu16, &i) == 1) ? iot_data_alloc_ui16 (i) : NULL;
+    }
+    case IOT_DATA_INT16:
+    {
+      int16_t i;
+      return (sscanf (val, "%" SCNi16, &i) == 1) ? iot_data_alloc_i16 (i) : NULL;
+    }
+    case IOT_DATA_UINT32:
+    {
+      uint32_t i;
+      return (sscanf (val, "%" SCNu32, &i) == 1) ? iot_data_alloc_ui32 (i) : NULL;
+    }
+    case IOT_DATA_INT32:
+    {
+      int32_t i;
+      return (sscanf (val, "%" SCNi32, &i) == 1) ? iot_data_alloc_i32 (i) : NULL;
+    }
+    case IOT_DATA_UINT64:
+    {
+      uint64_t i;
+      return (sscanf (val, "%" SCNu64, &i) == 1) ? iot_data_alloc_ui64 (i) : NULL;
+    }
+    case IOT_DATA_INT64:
+    {
+      int64_t i;
+      return (sscanf (val, "%" SCNi64, &i) == 1) ? iot_data_alloc_i64 (i) : NULL;
+    }
+    case IOT_DATA_FLOAT32:
+    {
+      float f;
       if (strlen (val) == 8 && val[6] == '=' && val[7] == '=')
       {
         size_t sz = sizeof (float);
-        return iot_b64_decode (val, &cres->value.f32_result, &sz);
+        return iot_b64_decode (val, &f, &sz) ? iot_data_alloc_f32 (f) : NULL;
       }
       else
       {
-        return (sscanf (val, "%e", &cres->value.f32_result) == 1);
+        return (sscanf (val, "%e", &f) == 1) ? iot_data_alloc_f32 (f) : NULL;
       }
-    case Float64:
+    }
+    case IOT_DATA_FLOAT64:
+    {
+      double d;
       if (strlen (val) == 12 && val[11] == '=')
       {
         size_t sz = sizeof (double);
-        return iot_b64_decode (val, &cres->value.f64_result, &sz);
+        return iot_b64_decode (val, &d, &sz) ? iot_data_alloc_f64 (d) : NULL;
       }
       else
       {
-        return (sscanf (val, "%le", &cres->value.f64_result) == 1);
+        return (sscanf (val, "%le", &d) == 1) ? iot_data_alloc_f64 (d) : NULL;
       }
-    case Binary:
-      sz = iot_b64_maxdecodesize (val);
-      cres->value.binary_result.size = sz;
-      cres->value.binary_result.bytes = malloc (sz);
-      return iot_b64_decode
-        (val, cres->value.binary_result.bytes, &cres->value.binary_result.size);
-    default:
-      return false;
+    }
+    case IOT_DATA_STRING:
+      return iot_data_alloc_string (val, IOT_DATA_COPY);
+    case IOT_DATA_BOOL:
+      return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
+    case IOT_DATA_BLOB:
+      return iot_data_alloc_blob_from_base64 (val);
+    case IOT_DATA_MAP:
+    case IOT_DATA_ARRAY:
+      return NULL;
   }
   return false;
 }
@@ -230,7 +254,7 @@ static edgex_cmdinfo *infoForRes
     n++;
   }
   result->nreqs = n;
-  result->reqs = calloc (n, sizeof (edgex_device_commandrequest));
+  result->reqs = calloc (n, sizeof (devsdk_commandrequest));
   result->pvals = calloc (n, sizeof (edgex_propertyvalue *));
   result->maps = calloc (n, sizeof (edgex_nvpairs *));
   result->dfls = calloc (n, sizeof (char *));
@@ -239,10 +263,10 @@ static edgex_cmdinfo *infoForRes
     edgex_deviceresource *devres =
       findDevResource (prof->device_resources, ro->deviceResource);
     result->reqs[n].resname = devres->name;
-    result->reqs[n].attributes = devres->attributes;
+    result->reqs[n].attributes = (devsdk_nvpairs *)devres->attributes;
     result->reqs[n].type = devres->properties->value->type;
     result->pvals[n] = devres->properties->value;
-    result->maps[n] = ro->mappings;
+    result->maps[n] = (devsdk_nvpairs *)ro->mappings;
     if (ro->parameter && *ro->parameter)
     {
       result->dfls[n] = ro->parameter;
@@ -262,12 +286,12 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->name = devres->name;
   result->isget = forGet;
   result->nreqs = 1;
-  result->reqs = malloc (sizeof (edgex_device_commandrequest));
+  result->reqs = malloc (sizeof (devsdk_commandrequest));
   result->pvals = malloc (sizeof (edgex_propertyvalue *));
   result->maps = malloc (sizeof (edgex_nvpairs *));
   result->dfls = malloc (sizeof (char *));
   result->reqs[0].resname = devres->name;
-  result->reqs[0].attributes = devres->attributes;
+  result->reqs[0].attributes = (devsdk_nvpairs *)devres->attributes;
   result->reqs[0].type = devres->properties->value->type;
   result->pvals[0] = devres->properties->value;
   result->maps[0] = NULL;
@@ -362,10 +386,11 @@ static bool commandExists (const char *name, edgex_deviceprofile *prof)
 
 static int edgex_device_runput
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   edgex_device *dev,
   const edgex_cmdinfo *commandinfo,
-  const char *data
+  const char *data,
+  char **exc
 )
 {
   const char *value;
@@ -380,8 +405,7 @@ static int edgex_device_runput
 
   JSON_Object *jobj = json_value_get_object (jval);
 
-  edgex_device_commandresult *results =
-    calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
+  iot_data_t **results = calloc (commandinfo->nreqs, sizeof (iot_data_t *));
   for (int i = 0; i < commandinfo->nreqs; i++)
   {
     const char *resname = commandinfo->reqs[i].resname;
@@ -400,8 +424,8 @@ static int edgex_device_runput
       iot_log_error (svc->logger, "No value supplied for %s", resname);
       break;
     }
-    results[i].type = commandinfo->pvals[i]->type;
-    if (!populateValue (&results[i], value ? value : commandinfo->dfls[i]))
+    results[i] = populateValue (commandinfo->pvals[i]->type, value ? value : commandinfo->dfls[i]);
+    if (!results[i])
     {
       retcode = MHD_HTTP_BAD_REQUEST;
       iot_log_error
@@ -410,7 +434,8 @@ static int edgex_device_runput
     }
     if (svc->config.device.datatransform && value)
     {
-      if (!edgex_transform_incoming (&results[i], commandinfo->pvals[i], commandinfo->maps[i]))
+      edgex_transform_incoming (&results[i], commandinfo->pvals[i], commandinfo->maps[i]);
+      if (!results[i])
       {
         retcode = MHD_HTTP_BAD_REQUEST;
         iot_log_error (svc->logger, "Value \"%s\" for %s overflows after transformations", value, resname);
@@ -421,14 +446,28 @@ static int edgex_device_runput
 
   if (retcode == MHD_HTTP_OK)
   {
-    if (!svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, commandinfo->nreqs, commandinfo->reqs, results))
+    iot_data_t *e = NULL;
+    if
+    (
+      !svc->userfns.puthandler
+        (svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, commandinfo->nreqs, commandinfo->reqs, (const iot_data_t **)results, &e)
+    )
     {
       retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
-      iot_log_error (svc->logger, "Driver for %s failed on PUT", dev->name);
+      if (e)
+      {
+        *exc = iot_data_to_json (e, false);
+      }
+      iot_log_error (svc->logger, "Driver for %s failed on PUT%s%s", dev->name, e ? ": " : "", e ? *exc : "");
     }
+    iot_data_free (e);
   }
 
-  edgex_device_commandresult_free (results, commandinfo->nreqs);
+  for (int i = 0; i < commandinfo->nreqs; i++)
+  {
+    iot_data_free (results[i]);
+  }
+  free (results);
   json_value_free (jval);
 
   return retcode;
@@ -436,51 +475,37 @@ static int edgex_device_runput
 
 static int edgex_device_runget
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   edgex_device *dev,
-  const edgex_cmdinfo *commandinfo,
-  const char *querystr,
-  edgex_event_cooked **reply
+  const edgex_cmdinfo *cmdinfo,
+  const devsdk_nvpairs *qparams,
+  edgex_event_cooked **reply,
+  char **exc
 )
 {
-  edgex_device_commandrequest *requests;
-  edgex_device_commandresult *results;
-  int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
+  devsdk_commandresult *results;
 
-  for (int i = 0; i < commandinfo->nreqs; i++)
+  int retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
+  iot_data_t *e = NULL;
+
+  for (int i = 0; i < cmdinfo->nreqs; i++)
   {
-    if (!commandinfo->pvals[i]->readable)
+    if (!cmdinfo->pvals[i]->readable)
     {
-      iot_log_error (svc->logger, "Attempt to read unreadable value %s", commandinfo->reqs[i].resname);
+      iot_log_error (svc->logger, "Attempt to read unreadable value %s", cmdinfo->reqs[i].resname);
       return MHD_HTTP_METHOD_NOT_ALLOWED;
     }
   }
 
-  results = calloc (commandinfo->nreqs, sizeof (edgex_device_commandresult));
-  if (querystr)
-  {
-    size_t sz = sizeof (edgex_device_commandrequest) * commandinfo->nreqs;
-    requests = malloc (sz);
-    memcpy (requests, commandinfo->reqs, sz);
-    for (int i = 0; i < commandinfo->nreqs; i++)
-    {
-      edgex_nvpairs *pair = malloc (sizeof (edgex_nvpairs));
-      pair->name = "urlRawQuery";
-      pair->value = (char *)querystr;
-      pair->next = (edgex_nvpairs *)requests[i].attributes;
-      requests[i].attributes = pair;
-    }
-  }
-  else
-  {
-    requests = commandinfo->reqs;
-  }
+  results = calloc (cmdinfo->nreqs, sizeof (devsdk_commandresult));
 
-  if (svc->userfns.gethandler (svc->userdata, dev->name, dev->protocols, commandinfo->nreqs, requests, results))
+  if
+  (
+    svc->userfns.gethandler (svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, results, qparams, &e)
+  )
   {
-    edgex_error err = EDGEX_OK;
-    *reply = edgex_data_process_event
-      (dev->name, commandinfo, results, svc->config.device.datatransform);
+    devsdk_error err = EDGEX_OK;
+    *reply = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
 
     if (*reply)
     {
@@ -490,37 +515,34 @@ static int edgex_device_runget
     else
     {
       iot_log_error (svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
-      edgex_metadata_client_set_device_opstate
-        (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
+      edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
     }
   }
   else
   {
-    iot_log_error
-      (svc->logger, "Driver for %s failed on GET", dev->name);
+    if (e)
+    {
+      *exc = iot_data_to_json (e, false);
+    }
+    iot_log_error (svc->logger, "Driver for %s failed on GET%s%s", dev->name, e ? ": " : "", e ? *exc : "");
   }
 
-  edgex_device_commandresult_free (results, commandinfo->nreqs);
-  if (querystr)
-  {
-    for (int i = 0; i < commandinfo->nreqs; i++)
-    {
-      free ((edgex_nvpairs *)requests[i].attributes);
-    }
-    free (requests);
-  }
+  iot_data_free (e);
+  devsdk_commandresult_free (results, cmdinfo->nreqs);
+
   return retcode;
 }
 
 static int runOne
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   edgex_device *dev,
   const edgex_cmdinfo *command,
-  const char *querystr,
+  const devsdk_nvpairs *qparams,
   const char *upload_data,
   size_t upload_data_size,
-  edgex_event_cooked **reply
+  edgex_event_cooked **reply,
+  char **exc
 )
 {
   if (dev->adminState == LOCKED)
@@ -558,7 +580,7 @@ static int runOne
 
   if (command->isget)
   {
-    return edgex_device_runget (svc, dev, command, querystr, reply);
+    return edgex_device_runget (svc, dev, command, qparams, reply, exc);
   }
   else
   {
@@ -567,7 +589,7 @@ static int runOne
       iot_log_error (svc->logger, "PUT command recieved with no data");
       return MHD_HTTP_BAD_REQUEST;
     }
-    return edgex_device_runput (svc, dev, command, upload_data);
+    return edgex_device_runput (svc, dev, command, upload_data, exc);
   }
 }
 
@@ -580,10 +602,10 @@ typedef struct devlist
 
 static int allCommand
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   const char *cmd,
   edgex_http_method method,
-  const char *querystr,
+  const devsdk_nvpairs *qparams,
   const char *upload_data,
   size_t upload_data_size,
   void **reply,
@@ -613,8 +635,10 @@ static int allCommand
   for (iter = cmdq; iter; iter = iter->next)
   {
     edgex_event_cooked *ereply = NULL;
-    retOne = runOne (svc, iter->dev, iter->cmd, querystr, upload_data, upload_data_size, &ereply);
+    char *exc = NULL;
+    retOne = runOne (svc, iter->dev, iter->cmd, qparams, upload_data, upload_data_size, &ereply, &exc);
     edgex_device_release (iter->dev);
+    free (exc);
     if (ereply)
     {
       enc = ereply->encoding;
@@ -683,12 +707,12 @@ static int allCommand
 
 static int oneCommand
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   const char *id,
   bool byName,
   const char *cmd,
   edgex_http_method method,
-  const char *querystr,
+  const devsdk_nvpairs *qparams,
   const char *upload_data,
   size_t upload_data_size,
   void **reply,
@@ -725,8 +749,8 @@ static int oneCommand
   if (command)
   {
     edgex_event_cooked *ereply = NULL;
-    result = runOne
-      (svc, dev, command, querystr, upload_data, upload_data_size, &ereply);
+    char *exc = NULL;
+    result = runOne (svc, dev, command, qparams, upload_data, upload_data_size, &ereply, &exc);
     edgex_device_release (dev);
     if (ereply)
     {
@@ -744,6 +768,12 @@ static int oneCommand
           break;
       }
       free (ereply);
+    }
+    else if (exc)
+    {
+      *reply = exc;
+      *reply_size = strlen (exc);
+      *reply_type = "text/plain";
     }
   }
   else
@@ -779,7 +809,7 @@ int edgex_device_handler_device
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -790,7 +820,7 @@ int edgex_device_handler_device
 {
   int result = MHD_HTTP_NOT_FOUND;
   char *cmd;
-  edgex_device_service *svc = (edgex_device_service *) ctx;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
   if (strlen (url) == 0)
   {
@@ -803,7 +833,7 @@ int edgex_device_handler_device
       cmd = url + 4;
       if (strlen (cmd))
       {
-        result = allCommand (svc, cmd, method, querystr, upload_data, upload_data_size, reply, reply_size, reply_type);
+        result = allCommand (svc, cmd, method, qparams, upload_data, upload_data_size, reply, reply_size, reply_type);
       }
       else
       {
@@ -827,7 +857,7 @@ int edgex_device_handler_device
       {
          *cmd = '\0';
          result = oneCommand
-           (svc, url, byName, cmd + 1, method, querystr, upload_data, upload_data_size, reply, reply_size, reply_type);
+           (svc, url, byName, cmd + 1, method, qparams, upload_data, upload_data_size, reply, reply_size, reply_type);
          *cmd = '/';
       }
     }

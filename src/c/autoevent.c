@@ -8,12 +8,12 @@
 
 #include "autoevent.h"
 #include "errorlist.h"
-#include "edgex/eventgen.h"
 #include "edgex/edgex.h"
 #include "edgex/edgex-logging.h"
 #include "device.h"
 #include "parson.h"
 #include "edgex-rest.h"
+#include "devutil.h"
 #include "correlation.h"
 #include "metadata.h"
 
@@ -21,12 +21,12 @@
 
 typedef struct edgex_autoimpl
 {
-  edgex_device_service *svc;
-  edgex_device_commandresult *last;
+  devsdk_service_t *svc;
+  devsdk_commandresult *last;
   uint64_t interval;
   const edgex_cmdinfo *resource;
   char *device;
-  edgex_protocols *protocols;
+  devsdk_protocols *protocols;
   void *handle;
   atomic_uint_fast32_t refs;
   bool onChange;
@@ -60,8 +60,8 @@ static void edgex_autoimpl_release (edgex_autoimpl *ai)
   if (atomic_fetch_add (&ai->refs, -1) == 1)
   {
     free (ai->device);
-    edgex_protocols_free (ai->protocols);
-    edgex_device_commandresult_free (ai->last, ai->resource->nreqs);
+    devsdk_protocols_free (ai->protocols);
+    devsdk_commandresult_free (ai->last, ai->resource->nreqs);
     free (ai);
   }
 }
@@ -82,20 +82,21 @@ static void ae_runner (void *p)
     }
     edgex_device_alloc_crlid (NULL);
     iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
-    edgex_device_commandresult *results = calloc (ai->resource->nreqs, sizeof (edgex_device_commandresult));
+    devsdk_commandresult *results = calloc (ai->resource->nreqs, sizeof (devsdk_commandresult));
+    iot_data_t *exc = NULL;
     if
     (
       ai->svc->userfns.gethandler
-        (ai->svc->userdata, dev->name, dev->protocols, ai->resource->nreqs, ai->resource->reqs, results)
+        (ai->svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, ai->resource->nreqs, ai->resource->reqs, results, NULL, &exc)
     )
     {
-      edgex_device_commandresult *resdup = NULL;
-      if (!(ai->onChange && ai->last && edgex_device_commandresult_equal (results, ai->last, ai->resource->nreqs)))
+      devsdk_commandresult *resdup = NULL;
+      if (!(ai->onChange && ai->last && devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs)))
       {
-        edgex_error err = EDGEX_OK;
+        devsdk_error err = EDGEX_OK;
         if (ai->onChange)
         {
-          resdup = edgex_device_commandresult_dup (results, ai->resource->nreqs);
+          resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
         }
         edgex_event_cooked *event =
           edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
@@ -106,7 +107,7 @@ static void ae_runner (void *p)
           {
             if (ai->onChange)
             {
-              edgex_device_commandresult_free (ai->last, ai->resource->nreqs);
+              devsdk_commandresult_free (ai->last, ai->resource->nreqs);
               ai->last = resdup;
               resdup = NULL;
             }
@@ -124,13 +125,14 @@ static void ae_runner (void *p)
             (ai->svc->logger, &ai->svc->config.endpoints, dev->id, DISABLED, &err);
         }
       }
-      edgex_device_commandresult_free (resdup, ai->resource->nreqs);
+      devsdk_commandresult_free (resdup, ai->resource->nreqs);
     }
     else
     {
       iot_log_error (ai->svc->logger, "AutoEvent: Driver for %s failed on GET", dev->name);
     }
-    edgex_device_commandresult_free (results, ai->resource->nreqs);
+    iot_data_free (exc);
+    devsdk_commandresult_free (results, ai->resource->nreqs);
     edgex_device_free_crlid ();
     edgex_device_release (dev);
   }
@@ -146,14 +148,14 @@ static void ae_runner (void *p)
 static void starter (void *p)
 {
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
-  ai->handle = ai->svc->autoevstart
+  ai->handle = ai->svc->userfns.ae_starter
   (
     ai->svc->userdata, ai->device, ai->protocols, ai->resource->name,
     ai->resource->nreqs, ai->resource->reqs, ai->interval, ai->onChange
   );
 }
 
-void edgex_device_autoevent_start (edgex_device_service *svc, edgex_device *dev)
+void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
 {
   for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
   {
@@ -188,12 +190,12 @@ void edgex_device_autoevent_start (edgex_device_service *svc, edgex_device *dev)
       ae->impl->interval = interval;
       ae->impl->resource = cmd;
       ae->impl->device = strdup (dev->name);
-      ae->impl->protocols = edgex_protocols_dup (dev->protocols);
+      ae->impl->protocols = devsdk_protocols_dup ((const devsdk_protocols *)dev->protocols);
       ae->impl->handle = NULL;
       atomic_store (&ae->impl->refs, 1);
       ae->impl->onChange = ae->onChange;
     }
-    if (ae->impl->svc->autoevstart)
+    if (ae->impl->svc->userfns.ae_starter)
     {
       iot_threadpool_add_work (svc->thpool, starter, ae->impl, NULL);
     }
@@ -209,9 +211,9 @@ void edgex_device_autoevent_start (edgex_device_service *svc, edgex_device *dev)
 static void stopper (void *p)
 {
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
-  if (ai->svc->autoevstop)
+  if (ai->svc->userfns.ae_stopper)
   {
-    ai->svc->autoevstop (ai->svc->userdata, ai->handle);
+    ai->svc->userfns.ae_stopper (ai->svc->userdata, ai->handle);
   }
   else
   {
@@ -230,28 +232,4 @@ void edgex_device_autoevent_stop (edgex_device *dev)
       iot_threadpool_add_work (ai->svc->thpool, stopper, ai, NULL);
     }
   }
-}
-
-void edgex_device_register_autoevent_handlers
-(
-  edgex_device_service *svc,
-  edgex_device_autoevent_start_handler starter,
-  edgex_device_autoevent_stop_handler stopper
-)
-{
-  if (svc->logger)
-  {
-    iot_log_error
-      (svc->logger, "AutoEvents: must register handlers before service start.");
-    return;
-  }
-
-  if ((starter == NULL) || (stopper == NULL))
-  {
-    iot_log_error
-      (iot_logger_default (), "AutoEvent registration: must specify both handlers");
-    return;
-  }
-  svc->autoevstart = starter;
-  svc->autoevstop = stopper;
 }

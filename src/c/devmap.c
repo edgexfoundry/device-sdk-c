@@ -27,10 +27,10 @@ struct edgex_devmap_t
   edgex_map_device devices;
   edgex_map_string name_to_id;
   edgex_map_profile profiles;
-  edgex_device_service *svc;
+  devsdk_service_t *svc;
 };
 
-edgex_devmap_t *edgex_devmap_alloc (edgex_device_service *svc)
+edgex_devmap_t *edgex_devmap_alloc (devsdk_service_t *svc)
 {
   pthread_rwlockattr_t rwatt;
   pthread_rwlockattr_init (&rwatt);
@@ -177,7 +177,7 @@ static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
 
 static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_devmap_outcome_t *outcome)
 {
-  if (!edgex_protocols_equal (dest->protocols, src->protocols))
+  if (!devsdk_protocols_equal ((devsdk_protocols *)dest->protocols, (devsdk_protocols *)src->protocols))
   {
     *outcome = UPDATED_DRIVER;
     return false;

@@ -7,7 +7,6 @@
  */
 
 #include "edgex-rest.h"
-#include "edgex/device-mgmt.h"
 #include "cmdinfo.h"
 #include "autoevent.h"
 #include "parson.h"
@@ -161,20 +160,20 @@ void edgex_nvpairs_free (edgex_nvpairs *p)
 
 static const char *proptypes[] =
 {
-  "bool", "string", "binary", "uint8", "uint16", "uint32", "uint64",
-  "int8", "int16", "int32", "int64", "float32", "float64"
+  "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64",
+  "uint64", "float32", "float64", "bool", "string", "binary"
 };
 
-const char *edgex_propertytype_tostring (edgex_propertytype pt)
+const char *edgex_propertytype_tostring (iot_data_type_t pt)
 {
   return proptypes[pt];
 }
 
-bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
+bool edgex_propertytype_fromstring (iot_data_type_t *res, const char *str)
 {
   if (str)
   {
-    for (edgex_propertytype i = Bool; i <= Float64; i++)
+    for (iot_data_type_t i = IOT_DATA_INT8; i <= IOT_DATA_BLOB; i++)
     {
       if (strcasecmp (str, proptypes[i]) == 0)
       {
@@ -217,7 +216,7 @@ static bool get_transformArg
   iot_logger_t *lc,
   const JSON_Object *obj,
   const char *name,
-  edgex_propertytype type,
+  iot_data_type_t type,
   edgex_transformArg *res
 )
 {
@@ -229,58 +228,40 @@ static bool get_transformArg
   str = json_object_get_string (obj, name);
   if (str && *str)
   {
-    switch (type)
+    if (type >= IOT_DATA_INT8 && type <= IOT_DATA_UINT64)
     {
-      case Int8:
-      case Int16:
-      case Int32:
-      case Int64:
-      case Uint8:
-      case Uint16:
-      case Uint32:
-      case Uint64:
-        errno = 0;
-        int64_t i = strtol (str, &end, 0);
-        if (errno || (end && *end))
-        {
-          iot_log_error
-          (
-            lc,
-            "Unable to parse \"%s\" as integer for transform \"%s\"",
-            str, name
-          );
-          ok = false;
-        }
-        else
-        {
-          res->enabled = true;
-          res->value.ival = i;
-        }
-        break;
-      case Float32:
-      case Float64:
-        errno = 0;
-        double d = strtod (str, &end);
-        if (errno || (end && *end))
-        {
-          iot_log_error
-          (
-            lc,
-            "Unable to parse \"%s\" as float for transform \"%s\"",
-            str, name
-          );
-          ok = false;
-        }
-        else
-        {
-          res->enabled = true;
-          res->value.dval = d;
-        }
-        break;
-      default:
-        iot_log_error
-          (lc, "Transform \"%s\" specified for non-numeric data", name);
+      errno = 0;
+      int64_t i = strtol (str, &end, 0);
+      if (errno || (end && *end))
+      {
+        iot_log_error (lc, "Unable to parse \"%s\" as integer for transform \"%s\"", str, name);
         ok = false;
+      }
+      else
+      {
+        res->enabled = true;
+        res->value.ival = i;
+      }
+    }
+    else if (type == IOT_DATA_FLOAT32 || type == IOT_DATA_FLOAT64)
+    {
+      errno = 0;
+      double d = strtod (str, &end);
+      if (errno || (end && *end))
+      {
+        iot_log_error ( lc, "Unable to parse \"%s\" as float for transform \"%s\"", str, name);
+        ok = false;
+      }
+      else
+      {
+        res->enabled = true;
+        res->value.dval = d;
+      }
+    }
+    else
+    {
+      iot_log_error (lc, "Transform \"%s\" specified for non-numeric data", name);
+      ok = false;
     }
   }
   return ok;
@@ -290,7 +271,7 @@ static edgex_propertyvalue *propertyvalue_read
   (iot_logger_t *lc, const JSON_Object *obj)
 {
   const char *fe;
-  edgex_propertytype pt;
+  iot_data_type_t pt;
   edgex_propertyvalue *result = NULL;
   const char *tstr = json_object_get_string (obj, "type");
   if (edgex_propertytype_fromstring (&pt, tstr))
@@ -305,7 +286,7 @@ static edgex_propertyvalue *propertyvalue_read
     ok &= get_transformArg (lc, obj, "shift", pt, &result->shift);
     if (result->mask.enabled || result->shift.enabled)
     {
-      if (pt == Float32 || pt == Float64)
+      if (pt == IOT_DATA_FLOAT32 || pt == IOT_DATA_FLOAT64)
       {
         iot_log_error (lc, "Mask/Shift transform specified for float data");
         ok = false;
@@ -354,13 +335,13 @@ static void set_arg
   JSON_Object *obj,
   const char *name,
   edgex_transformArg arg,
-  edgex_propertytype pt
+  iot_data_type_t pt
 )
 {
   if (arg.enabled)
   {
     char tmp[32];
-    if (pt == Float32 || pt == Float64)
+    if (pt == IOT_DATA_FLOAT32 || pt == IOT_DATA_FLOAT64)
     {
       sprintf (tmp, "%f", arg.value.dval);
     }

@@ -9,9 +9,8 @@
 #ifndef _EDGEX_DEVICE_REST_H_
 #define _EDGEX_DEVICE_REST_H_ 1
 
-#include "edgex/edgex-logging.h"
-#include "edgex/edgex-base.h"
-#include "edgex/error.h"
+#include "devsdk/devsdk-base.h"
+#include "iot/logger.h"
 
 typedef struct edgex_ctx
 {
@@ -20,8 +19,8 @@ typedef struct edgex_ctx
   char *tls_cert;         // Location of PEM encoded X509 cert to use for TLS client auth
   char *tls_key;          // Location of PEM encoded priv key to use for TLS client auth
   char *jwt_token;        // access_token provided by server for authenticating REST calls
-  edgex_nvpairs *reqhdrs; // headers to be sent with request
-  edgex_nvpairs *rsphdrs; // headers to be retrieved from response
+  devsdk_nvpairs *reqhdrs; // headers to be sent with request
+  devsdk_nvpairs *rsphdrs; // headers to be retrieved from response
   atomic_bool *aborter;   // if non-null, can kill a request by setting to true
   char *buff;             // data returned from the request
   size_t size;            // current buffer size
@@ -54,21 +53,21 @@ size_t edgex_http_write_cb (void *contents, size_t size, size_t nmemb, void *use
  */
 
 long edgex_http_get
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, edgex_error *err);
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, devsdk_error *err);
 
 long edgex_http_delete
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, edgex_error *err);
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, devsdk_error *err);
 
 long edgex_http_post
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, edgex_error *err);
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err);
 
 long edgex_http_postbin
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *data, size_t length, const char *mime, void *writefunc, edgex_error *err);
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *data, size_t length, const char *mime, void *writefunc, devsdk_error *err);
 
 long edgex_http_postfile
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *filename, void *writefunc, edgex_error *err);
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *filename, void *writefunc, devsdk_error *err);
 
 long edgex_http_put
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, edgex_error *err);
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err);
 
 #endif
