@@ -107,7 +107,7 @@ static bool testBool (char *arg, char *val, const char *pshort, const char *plon
   }
   return false;
 }
-  
+
 static void consumeArgs (int *argc_p, char **argv, int start, int nargs)
 {
   for (int n = start + nargs; n < *argc_p; n++)
@@ -155,11 +155,17 @@ bool edgex_device_service_processparams
     (
       testArg (arg, val, "-n", "--name", &params->svcname, &result) ||
       testArg (arg, val, "-p", "--profile", &params->profile, &result) ||
-      testArg (arg, val, "-c", "--confdir", &params->confdir, &result) ||
-      testBool (arg, val, "-o", "--overwrite", &params->overwrite, &result)
+      testArg (arg, val, "-c", "--confdir", &params->confdir, &result)
     )
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
+    }
+    else if
+    (
+      testBool (arg, val, "-o", "--overwrite", &params->overwrite, &result)
+    )
+    {
+      consumeArgs (&argc, argv, n, 1);
     }
     else
     {
@@ -657,7 +663,7 @@ void edgex_device_service_start
     else {
       confpairs = edgex_registry_get_config
 	(svc->registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
-      
+
       if (confpairs)
       {
 	edgex_device_populateConfig (svc, confpairs, err);
