@@ -211,9 +211,6 @@ int main (int argc, char *argv[])
 
   /* set the overwrite flag */
   edgex_device_service_set_overwrite(service, params.overwrite);
-
-  /* set the overwrite flag */
-  edgex_device_service_set_overwrite(service, params.overwrite);
   
   edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
