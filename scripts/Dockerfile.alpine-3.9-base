@@ -1,4 +1,5 @@
-FROM alpine:3.9 as builder
+ARG BASE=alpine:3.9
+FROM ${BASE} as builder
 RUN apk add --update --no-cache build-base wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev
 
 ENV CBOR_VERSION=0.5.0
