@@ -79,6 +79,8 @@ These are mostly identical to their v1 counterparts, with the following changes
 
 - In `handle_put` the data to be set is passed as an array of `iot_data_t` rather than an array of `commandresult`
 
+- The get and put handlers allow for exceptions to be returned so that the implementation may give more information about a failure. These are implemented as iot_data_t; they should be set as IOT_DATA_STRING.
+
 - The `disconnect_device` callback is removed (obsoleted by `remove_device`)
 
 Note that all callbacks are now specified at `service_new` time. NULL may be given for all except `intialize`, `handle_get`, `handle_put` and `stop`.

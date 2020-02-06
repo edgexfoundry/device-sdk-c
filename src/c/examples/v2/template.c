@@ -82,7 +82,8 @@ static bool template_get_handler
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparams
+  const devsdk_nvpairs *qparams,
+  iot_data_t **exception
 )
 {
   template_driver *driver = (template_driver *) impl;
@@ -121,7 +122,8 @@ static bool template_put_handler
   const devsdk_protocols *protocols,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
-  const iot_data_t *values[]
+  const iot_data_t *values[],
+  iot_data_t **exception
 )
 {
   template_driver *driver = (template_driver *) impl;

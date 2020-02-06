@@ -57,6 +57,7 @@ typedef void (*devsdk_discover) (void *impl);
  * @param requests An array specifying the readings that have been requested.
  * @param readings An array in which to return the requested readings.
  * @param qparams Query Parameters which were set for this request.
+ * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
  * @return true if the operation was successful, false otherwise.
  */
 
@@ -68,7 +69,8 @@ typedef bool (*devsdk_handle_get)
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparams
+  const devsdk_nvpairs *qparams,
+  iot_data_t **exception
 );
 
 /**
@@ -79,6 +81,7 @@ typedef bool (*devsdk_handle_get)
  * @param nvalues The number of set operations requested.
  * @param requests An array specifying the resources to which to write.
  * @param values An array specifying the values to be written.
+ * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
  * @return true if the operation was successful, false otherwise.
  */
 
@@ -89,7 +92,8 @@ typedef bool (*devsdk_handle_put)
   const devsdk_protocols *protocols,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
-  const iot_data_t *values[]
+  const iot_data_t *values[],
+  iot_data_t **exception
 );
 
 /**
