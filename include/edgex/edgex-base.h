@@ -11,6 +11,9 @@
 
 #include "edgex/os.h"
 
+#include "iot/data.h"
+typedef iot_data_type_t edgex_propertytype;
+
 typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
 
 typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
@@ -27,6 +30,17 @@ typedef struct edgex_nvpairs
   char *value;
   struct edgex_nvpairs *next;
 } edgex_nvpairs;
+
+/**
+ * @brief Creates a new name-value pair, optionally placing it at the
+ *        start of a list
+ * @param name The name for the new pair
+ * @param value The value for the new pair
+ * @param list A list that the new pair will be placed at the front of, or NULL
+ * @returns The new name-value pair
+ */
+
+edgex_nvpairs *edgex_nvpairs_new (const char *name, const char *value, edgex_nvpairs *list);
 
 /**
  * @brief Finds a named value in an n-v pair list.
@@ -73,16 +87,6 @@ typedef struct edgex_blob
   uint8_t *bytes;
 } edgex_blob;
 
-typedef enum
-{
-  Bool,
-  String,
-  Binary,
-  Uint8, Uint16, Uint32, Uint64,
-  Int8, Int16, Int32, Int64,
-  Float32, Float64
-} edgex_propertytype;
-
 typedef union edgex_device_resultvalue
 {
   bool bool_result;
@@ -115,5 +119,23 @@ typedef struct edgex_protocols
  */
 
 const edgex_nvpairs *edgex_protocols_properties (const edgex_protocols *prots, const char *name);
+
+/* v1 typename compatibility */
+
+#ifndef DEVSDKV2
+#define Int8 IOT_DATA_INT8
+#define Uint8 IOT_DATA_UINT8
+#define Int16 IOT_DATA_INT16
+#define Uint16 IOT_DATA_UINT16
+#define Int32 IOT_DATA_INT32
+#define Uint32 IOT_DATA_UINT32
+#define Int64 IOT_DATA_INT64
+#define Uint64 IOT_DATA_UINT64
+#define Float32 IOT_DATA_FLOAT32
+#define Float64 IOT_DATA_FLOAT64
+#define Bool IOT_DATA_BOOL
+#define String IOT_DATA_STRING
+#define Binary IOT_DATA_BLOB
+#endif
 
 #endif

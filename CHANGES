@@ -6,8 +6,9 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
-Changes for 2.0.0 "Geneva":
+Changes for 1.2.0 "Geneva":
 
+- New SDK API: see README.v2.md for details.
 - Utility functions added in edgex-base.h for finding Protocol Properties, and
   for obtaining numeric values from name-value pair lists.
 
