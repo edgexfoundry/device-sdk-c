@@ -6,6 +6,9 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
+Changes for 1.1.1:
+- Added the '--overwrite' command line option so that we have feature parity with the go sdk.
+
 Changes for 1.1.0 "Fuji":
 
 - ResourceOperation field "object" is renamed to "deviceResource".

@@ -172,7 +172,7 @@ static void template_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-template", NULL, NULL, NULL };
+  edgex_device_svcparams params = { "device-template", NULL, NULL, NULL, false };
   sigset_t set;
   int sigret;
 
@@ -219,6 +219,9 @@ int main (int argc, char *argv[])
   edgex_device_service *service = edgex_device_service_new
     (params.svcname, "1.0", impl, templateImpls, &e);
   ERR_CHECK (e);
+
+  /* set the overwrite flag */
+  edgex_device_service_set_overwrite(service, params.overwrite);
 
   /* Start the device service*/
   edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
