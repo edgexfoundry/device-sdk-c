@@ -49,8 +49,18 @@ static bool template_init
 )
 {
   template_driver *driver = (template_driver *) impl;
+  iot_log_debug (lc, "Template Init. Driver Config follows:");
+  if (config)
+  {
+    iot_data_map_iter_t iter;
+    iot_data_map_iter (config, &iter);
+    while (iot_data_map_iter_next (&iter))
+    {
+      iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+    }
+  }
   driver->lc = lc;
-  iot_log_debug(driver->lc,"Init");
+  iot_log_debug (lc, "Template Init done");
   return true;
 }
 
