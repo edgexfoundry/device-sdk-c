@@ -108,12 +108,12 @@ unsigned edgex_watchlist_populate (edgex_watchlist_t *wl, const edgex_watcher *n
 
 /* Placeholder matching algorithm. Matches for literals only, no blacklist */
 
-static bool matchpw (const edgex_watcher *pw, const edgex_nvpairs *ids)
+static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
 {
-  const edgex_nvpairs *pair;
-  for (pair = pw->identifiers; pair; pair = pair->next)
+  const devsdk_nvpairs *pair;
+  for (pair = (const devsdk_nvpairs *)pw->identifiers; pair; pair = pair->next)
   {
-    const char *matching = edgex_nvpairs_value (ids, pair->name);
+    const char *matching = devsdk_nvpairs_value (ids, pair->name);
     if (matching && strcmp (pair->value, matching))
     {
       break;
@@ -122,7 +122,7 @@ static bool matchpw (const edgex_watcher *pw, const edgex_nvpairs *ids)
   return pair;
 }
 
-const edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const edgex_nvpairs *ids)
+const edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const devsdk_nvpairs *ids)
 {
   pthread_rwlock_rdlock ((pthread_rwlock_t *)&wl->lock);
 
@@ -150,7 +150,7 @@ void edgex_watchlist_dump (const edgex_watchlist_t *wl, iot_logger_t *logger)
   for (const edgex_watcher *w = wl->list; w; w = w->next)
   {
     iot_log_debug (logger, "PW: Id=%s Name=%s Profile=%s", w->id, w->name, w->profile);
-    for (const edgex_nvpairs *match = w->identifiers; match; match = match->next)
+    for (const devsdk_nvpairs *match = (const devsdk_nvpairs *)w->identifiers; match; match = match->next)
     {
       iot_log_debug (logger, "PW: Match %s = %s", match->name, match->value);
     }

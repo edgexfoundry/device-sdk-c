@@ -9,7 +9,7 @@
 #ifndef _EDGEX_DATA_H_
 #define _EDGEX_DATA_H_ 1
 
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 #include "parson.h"
 #include "cmdinfo.h"
 
@@ -21,7 +21,7 @@ typedef struct edgex_reading
   const char *name;
   uint64_t origin;
   uint64_t pushed;
-  edgex_device_commandresult value;
+  devsdk_commandresult value;
   bool binfloat;
   struct edgex_reading *next;
 } edgex_reading;
@@ -81,7 +81,7 @@ edgex_event_cooked *edgex_data_process_event
 (
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
-  edgex_device_commandresult *values,
+  devsdk_commandresult *values,
   bool doTransforms
 );
 
@@ -90,7 +90,7 @@ void edgex_data_client_add_event
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   edgex_event_cooked *eventval,
-  edgex_error *err
+  devsdk_error *err
 );
 
 edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
@@ -108,14 +108,13 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   const char *description,
   const char *mediaType,
   const char *floatEncoding,
-  edgex_error *err
+  devsdk_error *err
 );
 
-void edgex_device_commandresult_free (edgex_device_commandresult *res, int n);
+void devsdk_commandresult_free (devsdk_commandresult *res, int n);
 
-edgex_device_commandresult *edgex_device_commandresult_dup (const edgex_device_commandresult *res, int n);
+devsdk_commandresult *devsdk_commandresult_dup (const devsdk_commandresult *res, int n);
 
-bool edgex_device_commandresult_equal
-  (const edgex_device_commandresult *lhs, const edgex_device_commandresult *rhs, int n);
+bool devsdk_commandresult_equal (const devsdk_commandresult *lhs, const devsdk_commandresult *rhs, int n);
 
 #endif

@@ -11,8 +11,7 @@
 
 #include "service.h"
 
-void edgex_device_autoevent_start
-  (edgex_device_service *svc, edgex_device *dev);
+void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev);
 
 void edgex_device_autoevent_stop (edgex_device *dev);
 

@@ -58,10 +58,10 @@ static struct curl_slist *edgex_add_crlid_hdr (struct curl_slist *slist)
 
 /* Populate request headers from a list */
 
-static struct curl_slist *edgex_add_other_hdrs (struct curl_slist *slist, const edgex_nvpairs *hdrs)
+static struct curl_slist *edgex_add_other_hdrs (struct curl_slist *slist, const devsdk_nvpairs *hdrs)
 {
   struct curl_slist *s = slist;
-  for (const edgex_nvpairs *h = hdrs; h; h = h->next)
+  for (const devsdk_nvpairs *h = hdrs; h; h = h->next)
   {
     s = edgex_add_hdr (s, h->name, h->value);
   }
@@ -88,7 +88,7 @@ static struct curl_slist *edgex_add_auth_hdr (edgex_ctx *ctx, struct curl_slist 
 static size_t edgex_check_rsp_hdr (char *buffer, size_t size, size_t nitems, void *v)
 {
   char *end = buffer + size * nitems - 1;
-  for (edgex_nvpairs *i = (edgex_nvpairs *)v; i; i = i->next)
+  for (devsdk_nvpairs *i = (devsdk_nvpairs *)v; i; i = i->next)
   {
     int len = strlen (i->name);
     if ((end - buffer > len) && (strncmp (buffer, i->name, len) == 0) && (buffer[len] == ':'))
@@ -167,7 +167,7 @@ static long edgex_run_curl
   const char *url,
   void *writefunc,
   struct curl_slist *slist_in,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   struct curl_slist *slist;
@@ -286,13 +286,13 @@ static long edgex_run_curl
   return http_code;
 }
 
-long edgex_http_get (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, edgex_error *err)
+long edgex_http_get (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, devsdk_error *err)
 {
   CURL *hnd = curl_easy_init ();
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, NULL, err);
 }
 
-long edgex_http_delete (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, edgex_error *err)
+long edgex_http_delete (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, devsdk_error *err)
 {
   CURL *hnd = curl_easy_init ();
   curl_easy_setopt (hnd, CURLOPT_CUSTOMREQUEST, "DELETE");
@@ -301,7 +301,7 @@ long edgex_http_delete (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void 
 }
 
 long edgex_http_post
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, edgex_error *err)
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err)
 {
   struct curl_slist *slist;
   CURL *hnd = curl_easy_init ();
@@ -315,7 +315,7 @@ long edgex_http_post
 }
 
 long edgex_http_postbin
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *data, size_t length, const char *mime, void *writefunc, edgex_error *err)
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *data, size_t length, const char *mime, void *writefunc, devsdk_error *err)
 {
   struct curl_slist *slist;
   CURL *hnd = curl_easy_init ();
@@ -330,7 +330,7 @@ long edgex_http_postbin
 }
 
 long edgex_http_postfile
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *fname, void *writefunc, edgex_error *err)
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *fname, void *writefunc, devsdk_error *err)
 {
   long http_code = 0;
   CURL *hnd;
@@ -398,7 +398,7 @@ static size_t read_callback (char *buffer, size_t size, size_t nitems, void *use
 }
 
 long edgex_http_put
-  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, edgex_error *err)
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err)
 {
   struct curl_slist *slist;
   struct put_data cb_data;

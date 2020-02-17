@@ -20,23 +20,20 @@ typedef struct template_driver
   iot_logger_t * lc;
 } template_driver;
 
+static void dump_nvpairs (iot_logger_t *lc, const edgex_nvpairs *pairs)
+{
+  for (const edgex_nvpairs *a = pairs; a; a = a->next)
+  {
+    iot_log_debug (lc, "    %s = %s", a->name, a->value);
+  }
+}
+
 static void dump_protocols (iot_logger_t *lc, const edgex_protocols *prots)
 {
   for (const edgex_protocols *p = prots; p; p = p->next)
   {
     iot_log_debug (lc, " [%s] protocol:", p->name);
-    for (const edgex_nvpairs *nv = p->properties; nv; nv = nv->next)
-    {
-      iot_log_debug (lc, "    %s = %s", nv->name, nv->value);
-    }
-  }
-}
-
-static void dump_attributes (iot_logger_t *lc, const edgex_nvpairs *attrs)
-{
-  for (const edgex_nvpairs *a = attrs; a; a = a->next)
-  {
-    iot_log_debug (lc, "    %s = %s", a->name, a->value);
+    dump_nvpairs (lc, p->properties);
   }
 }
 
@@ -52,8 +49,10 @@ static bool template_init
 )
 {
   template_driver *driver = (template_driver *) impl;
+  iot_log_debug (lc, "Template Init. Driver Config follows:");
+  dump_nvpairs (lc, config);
   driver->lc = lc;
-  iot_log_debug(driver->lc,"Init");
+  iot_log_debug (lc, "Template Init done");
   return true;
 }
 
@@ -97,7 +96,7 @@ static bool template_get_handler
   {
     /* Log the attributes for each requested resource */
     iot_log_debug (driver->lc, "  Requested reading %u:", i);
-    dump_attributes (driver->lc, requests[i].attributes);
+    dump_nvpairs (driver->lc, requests[i].attributes);
     /* Fill in a result regardless */
     readings[i].type = String;
     /* NB String (and binary) readings get deallocated in the SDK */
@@ -139,7 +138,7 @@ static bool template_put_handler
     /* A Device Service again makes use of the data provided to perform a PUT */
     /* Log the attributes */
     iot_log_debug (driver->lc, "  Requested device write %u:", i);
-    dump_attributes (driver->lc, requests[i].attributes);
+    dump_nvpairs (driver->lc, requests[i].attributes);
     switch (values[i].type)
     {
       case String:

@@ -21,7 +21,7 @@ int edgex_device_handler_discovery
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -30,7 +30,7 @@ int edgex_device_handler_discovery
   const char **reply_type
 )
 {
-  edgex_device_service *svc = (edgex_device_service *) ctx;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
   if (svc->userfns.discover == NULL)
   {
@@ -63,7 +63,7 @@ int edgex_device_handler_discovery
 
 void edgex_device_handler_do_discovery (void *p)
 {
-  edgex_device_service *svc = (edgex_device_service *) p;
+  devsdk_service_t *svc = (devsdk_service_t *) p;
 
   pthread_mutex_lock (&svc->discolock);
   svc->userfns.discover (svc->userdata);

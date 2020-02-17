@@ -68,6 +68,13 @@ typedef struct devsdk_commandresult
 } devsdk_commandresult;
 
 /**
+ * @brief Free an strings list.
+ * @param p The list to free.
+ */
+
+void devsdk_strings_free (devsdk_strings *s);
+
+/**
  * @brief Creates a new name-value pair, optionally placing it at the
  *        start of a list
  * @param name The name for the new pair
@@ -118,6 +125,21 @@ bool devsdk_nvpairs_ulong_value (const devsdk_nvpairs *nvp, const char *name, un
 bool devsdk_nvpairs_float_value (const devsdk_nvpairs *nvp, const char *name, float *val);
 
 /**
+ * @brief Duplicates a n-v pair list
+ * @param e The list to duplicate
+ * @returns The new list
+ */
+
+devsdk_nvpairs *devsdk_nvpairs_dup (const devsdk_nvpairs *nvp);
+
+/**
+ * @brief Free an n-v pair list.
+ * @param p The list to free.
+ */
+
+void devsdk_nvpairs_free (devsdk_nvpairs *p);
+
+/**
  * @brief Finds a protocol's property set in a protocols list.
  * @param prots The protocols to search.
  * @param name The protocol to search for.
@@ -135,6 +157,21 @@ const devsdk_nvpairs *devsdk_protocols_properties (const devsdk_protocols *prots
  */
 
 devsdk_protocols *devsdk_protocols_new (const char *name, const devsdk_nvpairs *properties, devsdk_protocols *list);
+
+/**
+ * @brief Duplicates a protocols object or list
+ * @param e The list to duplicate
+ * @returns The new protocols object
+ */
+
+devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e);
+
+/**
+ * @brief Free a protocols list.
+ * @param p The list to free.
+ */
+
+void devsdk_protocols_free (devsdk_protocols *e);
 
 /* v1 compatibility */
 

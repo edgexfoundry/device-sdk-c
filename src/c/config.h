@@ -9,7 +9,7 @@
 #ifndef _EDGEX_DEVICE_CONFIG_H_
 #define _EDGEX_DEVICE_CONFIG_H_ 1
 
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 #include "rest-server.h"
 #include "toml.h"
 #include "map.h"
@@ -75,7 +75,7 @@ typedef struct edgex_device_config
   edgex_service_endpoints endpoints;
   edgex_device_deviceinfo device;
   edgex_device_logginginfo logging;
-  edgex_nvpairs *driverconf;
+  iot_data_t *driverconf;
   edgex_map_device_watcherinfo watchers;
 } edgex_device_config;
 
@@ -84,32 +84,30 @@ toml_table_t *edgex_device_loadConfig
   iot_logger_t *lc,
   const char *dir,
   const char *profile,
-  edgex_error *err
+  devsdk_error *err
 );
 
 char *edgex_device_getRegURL (toml_table_t *config);
 
-edgex_nvpairs *edgex_device_parseToml (toml_table_t *config);
+devsdk_nvpairs *edgex_device_parseToml (toml_table_t *config);
 
-void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, edgex_error *err);
+void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err);
 
-void edgex_device_populateConfig
-  (edgex_device_service *svc, const edgex_nvpairs *config, edgex_error *err);
+void edgex_device_populateConfig (devsdk_service_t *svc, const devsdk_nvpairs *config, devsdk_error *err);
 
-void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, edgex_nvpairs *config);
+void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nvpairs *config);
 
-void edgex_device_updateConf (void *svc, const edgex_nvpairs *config);
+void edgex_device_updateConf (void *svc, const devsdk_nvpairs *config);
 
-void edgex_device_freeConfig (edgex_device_service *svc);
+void edgex_device_freeConfig (devsdk_service_t *svc);
 
-void edgex_device_process_configured_devices
-  (edgex_device_service *svc, toml_array_t *devs, edgex_error *err);
+void edgex_device_process_configured_devices (devsdk_service_t *svc, toml_array_t *devs, devsdk_error *err);
 
 int edgex_device_handler_config
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,

@@ -36,6 +36,10 @@
   File = "-"
   LogLevel = "DEBUG"
 
+[Driver]
+  TestParam1 = "Hello"
+  TestParam2 = "World"
+
 [[DeviceList]]
   Name = "Device1"
   Profile = "TemplateSensor"

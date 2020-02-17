@@ -25,7 +25,7 @@ int edgex_device_handler_metrics
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -35,7 +35,7 @@ int edgex_device_handler_metrics
 )
 {
   struct rusage rstats;
-  edgex_device_service *svc = (edgex_device_service *)ctx;
+  devsdk_service_t *svc = (devsdk_service_t *)ctx;
 
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);

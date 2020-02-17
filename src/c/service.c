@@ -19,6 +19,7 @@
 #include "rest.h"
 #include "edgex-rest.h"
 #include "iot/time.h"
+#include "iot/iot.h"
 #include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
@@ -41,11 +42,11 @@
 
 typedef struct postparams
 {
-  edgex_device_service *svc;
+  devsdk_service_t *svc;
   edgex_event_cooked *event;
 } postparams;
 
-void edgex_device_service_usage ()
+void devsdk_usage ()
 {
   printf ("  -n, --name=<name>\t: Set the device service name\n");
   printf ("  -r, --registry=<url>\t: Use the registry service\n");
@@ -53,7 +54,7 @@ void edgex_device_service_usage ()
   printf ("  -c, --confdir=<dir>\t: Set the configuration directory\n");
 }
 
-static bool testArgOpt (char *arg, char *val, const char *pshort, const char *plong, const char **var, bool *result)
+static bool testArgOpt (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
 {
   if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
   {
@@ -77,7 +78,7 @@ static bool testArgOpt (char *arg, char *val, const char *pshort, const char *pl
   }
 }
 
-static bool testArg (char *arg, char *val, const char *pshort, const char *plong, const char **var, bool *result)
+static bool testArg (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
 {
   if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
   {
@@ -107,19 +108,18 @@ static void consumeArgs (int *argc_p, char **argv, int start, int nargs)
   *argc_p -= nargs;
 }
 
-bool edgex_device_service_processparams
-  (int *argc_p, char **argv, edgex_device_svcparams *params)
+static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
 {
   bool result = true;
   char *eq;
-  char *arg;
-  char *val;
+  const char *arg;
+  const char *val;
   int argc = *argc_p;
 
   val = getenv ("edgex_registry");
   if (val)
   {
-    params->regURL = val;
+    svc->regURL = val;
   }
 
   int n = 1;
@@ -137,15 +137,15 @@ bool edgex_device_service_processparams
     {
       val = argv[n + 1];
     }
-    if (testArgOpt (arg, val, "-r", "--registry", &params->regURL, &result))
+    if (testArgOpt (arg, val, "-r", "--registry", &svc->regURL, &result))
     {
       consumeArgs (&argc, argv, n, result ? 2 : 1);
       result = true;
     } else if
     (
-      testArg (arg, val, "-n", "--name", &params->svcname, &result) ||
-      testArg (arg, val, "-p", "--profile", &params->profile, &result) ||
-      testArg (arg, val, "-c", "--confdir", &params->confdir, &result)
+      testArg (arg, val, "-n", "--name", &svc->name, &result) ||
+      testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
+      testArg (arg, val, "-c", "--confdir", &svc->confdir, &result)
     )
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
@@ -163,47 +163,55 @@ bool edgex_device_service_processparams
   return result;
 }
 
-edgex_device_service *edgex_device_service_new
-(
-  const char *name,
-  const char *version,
-  void *impldata,
-  edgex_device_callbacks implfns,
-  edgex_error *err
-)
+devsdk_service_t *devsdk_service_new
+  (const char *defaultname, const char *version, void *impldata, devsdk_callbacks implfns, int *argc, char **argv, devsdk_error *err)
 {
   if (impldata == NULL)
   {
     iot_log_error
-      (iot_logger_default (), "edgex_device_service_new: no implementation object");
+      (iot_logger_default (), "devsdk_service_new: no implementation object");
     *err = EDGEX_NO_DEVICE_IMPL;
     return NULL;
   }
-  if (name == NULL || strlen (name) == 0)
+  if (defaultname == NULL || strlen (defaultname) == 0)
   {
     iot_log_error
-      (iot_logger_default (), "edgex_device_service_new: no name specified");
+      (iot_logger_default (), "devsdk_service_new: no default name specified");
     *err = EDGEX_NO_DEVICE_NAME;
     return NULL;
   }
   if (version == NULL || strlen (version) == 0)
   {
     iot_log_error
-      (iot_logger_default (), "edgex_device_service_new: no version specified");
+      (iot_logger_default (), "devsdk_service_new: no version specified");
     *err = EDGEX_NO_DEVICE_VERSION;
     return NULL;
   }
 
   *err = EDGEX_OK;
-  edgex_device_service *result = malloc (sizeof (edgex_device_service));
-  memset (result, 0, sizeof (edgex_device_service));
-  result->name = name;
+  devsdk_service_t *result = malloc (sizeof (devsdk_service_t));
+  memset (result, 0, sizeof (devsdk_service_t));
+
+  if (!processCmdLine (argc, argv, result))
+  {
+    *err = EDGEX_INVALID_ARG;
+    return NULL;
+  }
+
+  if (result->name == NULL)
+  {
+    result->name = defaultname;
+  }
+  if (result->confdir == NULL)
+  {
+    result->confdir = "res";
+  }
   result->version = version;
   result->userdata = impldata;
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
-  result->logger = iot_logger_alloc_custom (name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL);
+  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL);
   iot_logger_start (result->logger);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL, result->logger);
   result->scheduler = iot_scheduler_alloc (result->thpool, result->logger);
@@ -215,7 +223,7 @@ static int ping_handler
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -224,7 +232,7 @@ static int ping_handler
   const char **reply_type
 )
 {
-  edgex_device_service *svc = (edgex_device_service *) ctx;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
   *reply = strdup (svc->version);
   *reply_size = strlen (svc->version);
   *reply_type = "text/plain";
@@ -235,7 +243,7 @@ static int version_handler
 (
   void *ctx,
   char *url,
-  char *querystr,
+  const devsdk_nvpairs *qparams,
   edgex_http_method method,
   const char *upload_data,
   size_t upload_data_size,
@@ -244,7 +252,7 @@ static int version_handler
   const char **reply_type
 )
 {
-  edgex_device_service *svc = (edgex_device_service *) ctx;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
   json_object_set_string (obj, "version", svc->version);
@@ -263,7 +271,7 @@ static bool ping_client
   edgex_device_service_endpoint *ep,
   int retries,
   struct timespec delay,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -294,7 +302,7 @@ static bool ping_client
   return false;
 }
 
-static void startConfigured (edgex_device_service *svc, toml_table_t *config, edgex_error *err)
+static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk_error *err)
 {
   char *myhost;
   struct utsname buffer;
@@ -521,7 +529,7 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
 
   if (svc->registry)
   {
-    edgex_registry_register_service
+    devsdk_registry_register_service
     (
       svc->registry,
       svc->name,
@@ -543,43 +551,33 @@ static void startConfigured (edgex_device_service *svc, toml_table_t *config, ed
   }
 }
 
-void edgex_device_service_start
-(
-  edgex_device_service *svc,
-  const char *registryURL,
-  const char *profile,
-  const char *confDir,
-  edgex_error *err
-)
+void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
 {
   toml_table_t *config = NULL;
   bool uploadConfig = false;
-  edgex_nvpairs *confpairs = NULL;
+  devsdk_nvpairs *confpairs = NULL;
 
   svc->starttime = iot_time_msecs();
 
+  iot_init ();
   iot_threadpool_start (svc->thpool);
 
-  if (confDir == NULL || *confDir == '\0')
-  {
-    confDir = "res";
-  }
   *err = EDGEX_OK;
 
-  if (registryURL)
+  if (svc->regURL)
   {
-    if (*registryURL == '\0')
+    if (*svc->regURL == '\0')
     {
-      config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
+      config = edgex_device_loadConfig (svc->logger, svc->confdir, svc->profile, err);
       if (err->code)
       {
         return;
       }
-      registryURL = edgex_device_getRegURL (config);
+      svc->regURL = edgex_device_getRegURL (config);
     }
-    if (registryURL)
+    if (svc->regURL)
     {
-      svc->registry = edgex_registry_get_registry (svc->logger, svc->thpool, registryURL);
+      svc->registry = devsdk_registry_get_registry (svc->logger, svc->thpool, svc->regURL);
     }
     if (svc->registry == NULL)
     {
@@ -615,29 +613,29 @@ void edgex_device_service_start
       }
     }
 
-    while (!edgex_registry_ping (svc->registry, err) && --retries)
+    while (!devsdk_registry_ping (svc->registry, err) && --retries)
     {
       nanosleep (&delay, NULL);
     }
     if (retries == 0)
     {
-      iot_log_error (svc->logger, "registry service not running at %s", registryURL);
+      iot_log_error (svc->logger, "registry service not running at %s", svc->regURL);
       *err = EDGEX_REMOTE_SERVER_DOWN;
       return;
     }
 
-    iot_log_info (svc->logger, "Found registry service at %s", registryURL);
+    iot_log_info (svc->logger, "Found registry service at %s", svc->regURL);
     svc->stopconfig = malloc (sizeof (atomic_bool));
     atomic_init (svc->stopconfig, false);
-    confpairs = edgex_registry_get_config
-      (svc->registry, svc->name, profile, edgex_device_updateConf, svc, svc->stopconfig, err);
+    confpairs = devsdk_registry_get_config
+      (svc->registry, svc->name, svc->profile, edgex_device_updateConf, svc, svc->stopconfig, err);
 
     if (confpairs)
     {
       edgex_device_populateConfig (svc, confpairs, err);
       if (err->code)
       {
-        edgex_nvpairs_free (confpairs);
+        devsdk_nvpairs_free (confpairs);
         return;
       }
     }
@@ -654,7 +652,7 @@ void edgex_device_service_start
   {
     if (config == NULL)
     {
-      config = edgex_device_loadConfig (svc->logger, confDir, profile, err);
+      config = edgex_device_loadConfig (svc->logger, svc->confdir, svc->profile, err);
       if (err->code)
       {
         return;
@@ -668,11 +666,11 @@ void edgex_device_service_start
     {
       iot_log_info (svc->logger, "Uploading configuration to registry.");
       edgex_device_overrideConfig (svc->logger, svc->name, confpairs);
-      edgex_registry_put_config (svc->registry, svc->name, profile, confpairs, err);
+      devsdk_registry_put_config (svc->registry, svc->name, svc->profile, confpairs, err);
       if (err->code)
       {
         iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
-        edgex_nvpairs_free (confpairs);
+        devsdk_nvpairs_free (confpairs);
         toml_free (config);
         return;
       }
@@ -687,10 +685,10 @@ void edgex_device_service_start
 
   if (svc->registry)
   {
-    edgex_error e;
-    edgex_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
-    edgex_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
-    edgex_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
+    devsdk_error e;
+    devsdk_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
+    devsdk_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
+    devsdk_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
   }
   else
   {
@@ -721,7 +719,7 @@ void edgex_device_service_start
     }
     else
     {
-      edgex_nvpairs_free (confpairs);
+      devsdk_nvpairs_free (confpairs);
       toml_free (config);
       return;
     }
@@ -729,17 +727,17 @@ void edgex_device_service_start
 
   if (svc->config.device.profilesdir == NULL)
   {
-    svc->config.device.profilesdir = strdup (confDir);
+    svc->config.device.profilesdir = strdup (svc->confdir);
   }
 
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
   iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
   iot_log_debug (svc->logger, "Service configuration follows:");
-  for (const edgex_nvpairs *iter = confpairs; iter; iter = iter->next)
+  for (const devsdk_nvpairs *iter = confpairs; iter; iter = iter->next)
   {
     iot_log_debug (svc->logger, "%s=%s", iter->name, iter->value);
   }
-  edgex_nvpairs_free (confpairs);
+  devsdk_nvpairs_free (confpairs);
 
   startConfigured (svc, config, err);
 
@@ -755,7 +753,7 @@ void edgex_device_service_start
 static void doPost (void *p)
 {
   postparams *pp = (postparams *) p;
-  edgex_error err = EDGEX_OK;
+  devsdk_error err = EDGEX_OK;
   edgex_data_client_add_event
   (
     pp->svc->logger,
@@ -768,12 +766,12 @@ static void doPost (void *p)
   free (pp);
 }
 
-void edgex_device_post_readings
+void devsdk_post_readings
 (
-  edgex_device_service *svc,
+  devsdk_service_t *svc,
   const char *devname,
   const char *resname,
-  edgex_device_commandresult *values
+  devsdk_commandresult *values
 )
 {
   edgex_device *dev = edgex_devmap_device_byname (svc->devices, devname);
@@ -806,8 +804,7 @@ void edgex_device_post_readings
   }
 }
 
-void edgex_device_service_stop
-  (edgex_device_service *svc, bool force, edgex_error *err)
+void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
 {
   *err = EDGEX_OK;
   iot_log_debug (svc->logger, "Stop device service");
@@ -827,7 +824,7 @@ void edgex_device_service_stop
   edgex_devmap_clear (svc->devices);
   if (svc->registry)
   {
-    edgex_registry_deregister_service (svc->registry, svc->name, err);
+    devsdk_registry_deregister_service (svc->registry, svc->name, err);
     if (err->code)
     {
       iot_log_error (svc->logger, "Unable to deregister service from registry");
@@ -838,19 +835,20 @@ void edgex_device_service_stop
   iot_log_info (svc->logger, "Stopped device service");
 }
 
-void edgex_device_service_free (edgex_device_service *svc)
+void devsdk_service_free (devsdk_service_t *svc)
 {
   if (svc)
   {
     edgex_devmap_free (svc->devices);
     edgex_watchlist_free (svc->watchlist);
     iot_threadpool_free (svc->thpool);
-    edgex_registry_free (svc->registry);
-    edgex_registry_fini ();
+    devsdk_registry_free (svc->registry);
+    devsdk_registry_fini ();
     pthread_mutex_destroy (&svc->discolock);
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);
     free (svc);
+    iot_fini ();
   }
 }

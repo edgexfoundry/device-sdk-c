@@ -9,13 +9,11 @@
 #ifndef _EDGEX_DEVICE_TRANSFORM_H_
 #define _EDGEX_DEVICE_TRANSFORM_H_ 1
 
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 #include "edgex/edgex.h"
 
-void edgex_transform_outgoing
-  (edgex_device_commandresult *cres, edgex_propertyvalue *props, edgex_nvpairs *mappings);
+void edgex_transform_outgoing (devsdk_commandresult *cres, edgex_propertyvalue *props, devsdk_nvpairs *mappings);
 
-bool edgex_transform_incoming
-  (edgex_device_commandresult *cres, edgex_propertyvalue *props, edgex_nvpairs *mappings);
+void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, devsdk_nvpairs *mappings);
 
 #endif

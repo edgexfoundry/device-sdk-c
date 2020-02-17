@@ -6,49 +6,49 @@
  *
  */
 
-#include "edgex/registry.h"
+#include "registry.h"
 #include "consul.h"
 #include "map.h"
 
-typedef edgex_map(edgex_registry_impl) edgex_map_registry;
+typedef edgex_map(devsdk_registry_impl) devsdk_map_registry;
 
-typedef struct edgex_registry
+typedef struct devsdk_registry
 {
   void *location;
   iot_logger_t *logger;
   iot_threadpool_t *thpool;
-  edgex_registry_impl impl;
-} edgex_registry;
+  devsdk_registry_impl impl;
+} devsdk_registry;
 
 static pthread_mutex_t reglock = PTHREAD_MUTEX_INITIALIZER;
-static edgex_map_registry *regmap = NULL;
+static devsdk_map_registry *regmap = NULL;
 
 static void reginit (void)
 {
   pthread_mutex_lock (&reglock);
   if (regmap == NULL)
   {
-    edgex_registry_impl consulimpl;
+    devsdk_registry_impl consulimpl;
     consulimpl.ping = edgex_consul_client_ping;
     consulimpl.get_config = edgex_consul_client_get_config;
     consulimpl.put_config = edgex_consul_client_write_config;
     consulimpl.register_service = edgex_consul_client_register_service;
     consulimpl.deregister_service = edgex_consul_client_deregister_service;
     consulimpl.query_service = edgex_consul_client_query_service;
-    consulimpl.parser = edgex_registry_parse_simple_url;
-    consulimpl.free_location = edgex_registry_free_simple_url;
-    regmap = malloc (sizeof (edgex_map_registry));
+    consulimpl.parser = devsdk_registry_parse_simple_url;
+    consulimpl.free_location = devsdk_registry_free_simple_url;
+    regmap = malloc (sizeof (devsdk_map_registry));
     edgex_map_init (regmap);
     edgex_map_set (regmap, "consul", consulimpl);
   }
   pthread_mutex_unlock (&reglock);
 }
 
-edgex_registry *edgex_registry_get_registry
+devsdk_registry *devsdk_registry_get_registry
   (iot_logger_t *lc, iot_threadpool_t *tp, const char *url)
 {
-  edgex_registry *res = NULL;
-  edgex_registry_impl *impl;
+  devsdk_registry *res = NULL;
+  devsdk_registry_impl *impl;
   char *delim = strstr (url, "://");
   if (delim)
   {
@@ -62,7 +62,7 @@ edgex_registry *edgex_registry_get_registry
       void *loc = impl->parser (lc, delim + 3);
       if (loc)
       {
-        res = malloc (sizeof (edgex_registry));
+        res = malloc (sizeof (devsdk_registry));
         res->location = loc;
         res->impl = *impl;
         res->logger = lc;
@@ -82,7 +82,7 @@ edgex_registry *edgex_registry_get_registry
   return res;
 }
 
-bool edgex_registry_add_impl (const char *name, edgex_registry_impl impl)
+bool devsdk_registry_add_impl (const char *name, devsdk_registry_impl impl)
 {
   bool res = false;
   reginit ();
@@ -96,7 +96,7 @@ bool edgex_registry_add_impl (const char *name, edgex_registry_impl impl)
   return res;
 }
 
-void edgex_registry_free (edgex_registry *reg)
+void devsdk_registry_free (devsdk_registry *reg)
 {
   if (reg)
   {
@@ -105,7 +105,7 @@ void edgex_registry_free (edgex_registry *reg)
   }
 }
 
-void edgex_registry_fini ()
+void devsdk_registry_fini ()
 {
   reginit ();
   pthread_mutex_lock (&reglock);
@@ -115,47 +115,47 @@ void edgex_registry_fini ()
   pthread_mutex_unlock (&reglock);
 }
 
-bool edgex_registry_ping (edgex_registry *registry, edgex_error *err)
+bool devsdk_registry_ping (devsdk_registry *registry, devsdk_error *err)
 {
   return registry->impl.ping (registry->logger, registry->location, err);
 }
 
-edgex_nvpairs *edgex_registry_get_config
+devsdk_nvpairs *devsdk_registry_get_config
 (
-  edgex_registry *registry,
+  devsdk_registry *registry,
   const char *servicename,
   const char *profile,
-  edgex_registry_updatefn updater,
+  devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   return registry->impl.get_config
     (registry->logger, registry->thpool, registry->location, servicename, profile, updater, updatectx, updatedone, err);
 }
 
-void edgex_registry_put_config
+void devsdk_registry_put_config
 (
-  edgex_registry *registry,
+  devsdk_registry *registry,
   const char *servicename,
   const char *profile,
-  const edgex_nvpairs *config,
-  edgex_error *err
+  const devsdk_nvpairs *config,
+  devsdk_error *err
 )
 {
   registry->impl.put_config
     (registry->logger, registry->location, servicename, profile, config, err);
 }
 
-void edgex_registry_register_service
+void devsdk_registry_register_service
 (
-  edgex_registry *registry,
+  devsdk_registry *registry,
   const char *servicename,
   const char *hostname,
   uint16_t port,
   const char *checkInterval,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   registry->impl.register_service
@@ -170,18 +170,18 @@ void edgex_registry_register_service
   );
 }
 
-void edgex_registry_deregister_service (edgex_registry *registry, const char *servicename, edgex_error *err)
+void devsdk_registry_deregister_service (devsdk_registry *registry, const char *servicename, devsdk_error *err)
 {
   registry->impl.deregister_service (registry->logger, registry->location, servicename, err);
 }
 
-void edgex_registry_query_service
+void devsdk_registry_query_service
 (
-  edgex_registry *registry,
+  devsdk_registry *registry,
   const char *servicename,
   char **hostname,
   uint16_t *port,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   registry->impl.query_service
@@ -195,13 +195,13 @@ void edgex_registry_query_service
   );
 }
 
-void *edgex_registry_parse_simple_url
+void *devsdk_registry_parse_simple_url
 (
   iot_logger_t *lc,
   const char *location
 )
 {
-  edgex_registry_hostport *res = NULL;
+  devsdk_registry_hostport *res = NULL;
   char *colon = strchr (location, ':');
   if (colon && strlen (colon + 1))
   {
@@ -209,7 +209,7 @@ void *edgex_registry_parse_simple_url
     uint16_t port = strtoul (colon + 1, &end, 10);
     if (*end == '\0')
     {
-      res = malloc (sizeof (edgex_registry_hostport));
+      res = malloc (sizeof (devsdk_registry_hostport));
       res->port = port;
       res->host = strndup (location, colon - location);
     }
@@ -226,12 +226,12 @@ void *edgex_registry_parse_simple_url
   return res;
 }
 
-void edgex_registry_free_simple_url
+void devsdk_registry_free_simple_url
 (
   void *location
 )
 {
-  edgex_registry_hostport *endpoint = (edgex_registry_hostport *)location;
+  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
   free (endpoint->host);
   free (endpoint);
 }

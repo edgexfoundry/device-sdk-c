@@ -9,13 +9,12 @@
 #ifndef _EDGEX_DEVUTIL_H
 #define _EDGEX_DEVUTIL_H 1
 
+#include "devsdk/devsdk-base.h"
 #include "edgex/edgex.h"
 
-extern bool edgex_protocols_equal
-  (const edgex_protocols *p1, const edgex_protocols *p2);
+extern bool devsdk_protocols_equal (const devsdk_protocols *p1, const devsdk_protocols *p2);
 
-extern bool edgex_device_autoevents_equal
-  (const edgex_device_autoevents *e1, const edgex_device_autoevents *e2);
+extern bool edgex_device_autoevents_equal (const edgex_device_autoevents *e1, const edgex_device_autoevents *e2);
 
 #endif
 

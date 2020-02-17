@@ -21,7 +21,7 @@ edgex_event_cooked *edgex_data_process_event
 (
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
-  edgex_device_commandresult *values,
+  devsdk_commandresult *values,
   bool doTransforms
 )
 {
@@ -37,7 +37,7 @@ edgex_event_cooked *edgex_data_process_event
     const char *assertion = commandinfo->pvals[i]->assertion;
     if (assertion && *assertion)
     {
-      char *reading = edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary);
+      char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
       if (strcmp (reading, assertion))
       {
         free (reading);
@@ -48,7 +48,7 @@ edgex_event_cooked *edgex_data_process_event
         free (reading);
       }
     }
-    if (commandinfo->pvals[i]->type == Binary)
+    if (commandinfo->pvals[i]->type == IOT_DATA_BLOB)
     {
       useCBOR = true;
     }
@@ -66,15 +66,18 @@ edgex_event_cooked *edgex_data_process_event
       cbor_item_t *crdg = cbor_new_definite_map (3);
 
       cbor_item_t *cread;
-      if (values[i].type == Binary)
+      if (iot_data_type (values[i].value) == IOT_DATA_BLOB)
       {
-        cread = cbor_build_bytestring (values[i].value.binary_result.bytes, values[i].value.binary_result.size);
+        const uint8_t *data;
+        uint32_t sz;
+        data = iot_data_blob (values[i].value, &sz);
+        cread = cbor_build_bytestring (data, sz);
         cbor_map_add (crdg, (struct cbor_pair)
           { .key = cbor_move (cbor_build_string ("binaryValue")), .value = cbor_move (cread) });
       }
       else
       {
-        char *reading = edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary);
+        char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
         cread = cbor_build_string (reading);
         free (reading);
         cbor_map_add (crdg, (struct cbor_pair)
@@ -117,7 +120,7 @@ edgex_event_cooked *edgex_data_process_event
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
-      char *reading = edgex_value_tostring (&values[i], commandinfo->pvals[i]->floatAsBinary);
+      char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
 
       JSON_Value *rval = json_value_init_object ();
       JSON_Object *robj = json_value_get_object (rval);
@@ -144,7 +147,7 @@ void edgex_data_client_add_event
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
   edgex_event_cooked *eventval,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_ctx ctx;
@@ -193,144 +196,43 @@ void edgex_event_cooked_free (edgex_event_cooked *e)
   }
 }
 
-void edgex_device_commandresult_free (edgex_device_commandresult *res, int n)
+void devsdk_commandresult_free (devsdk_commandresult *res, int n)
 {
   if (res)
   {
     for (int i = 0; i < n; i++)
     {
-      if (res[i].type == String)
-      {
-        free (res[i].value.string_result);
-      }
-      else if (res[i].type == Binary)
-      {
-        free (res[i].value.binary_result.bytes);
-      }
+      iot_data_free (res[i].value);
     }
     free (res);
   }
 }
 
-edgex_device_commandresult *edgex_device_commandresult_dup (const edgex_device_commandresult *res, int n)
+/* Dummy methods: onChange on AutoEvents will not work until these two are impl
+emented in iot-c-utils */
+
+static iot_data_t *iot_data_dup (const iot_data_t *rhs) { return NULL; }
+static bool iot_data_equal (const iot_data_t *lhs, const iot_data_t *rhs) { return false; }
+
+devsdk_commandresult *devsdk_commandresult_dup (const devsdk_commandresult *res, int n)
 {
-  edgex_device_commandresult *result = calloc (n, sizeof (edgex_device_commandresult));
-  size_t sz;
+  devsdk_commandresult *result = calloc (n, sizeof (devsdk_commandresult));
   for (int i = 0; i < n; i++)
   {
-    result[i].type = res[i].type;
-    switch (res[i].type)
-    {
-      case Bool:
-        result[i].value.bool_result = res[i].value.bool_result;
-        break;
-      case Uint8:
-        result[i].value.ui8_result = res[i].value.ui8_result;
-        break;
-      case Uint16:
-        result[i].value.ui16_result = res[i].value.ui16_result;
-        break;
-      case Uint32:
-        result[i].value.ui32_result = res[i].value.ui32_result;
-        break;
-      case Uint64:
-        result[i].value.ui64_result = res[i].value.ui64_result;
-        break;
-      case Int8:
-        result[i].value.i8_result = res[i].value.i8_result;
-        break;
-      case Int16:
-        result[i].value.i16_result = res[i].value.i16_result;
-        break;
-      case Int32:
-        result[i].value.i32_result = res[i].value.i32_result;
-        break;
-      case Int64:
-        result[i].value.i64_result = res[i].value.i64_result;
-        break;
-      case Float32:
-        result[i].value.f32_result = res[i].value.f32_result;
-        break;
-      case Float64:
-        result[i].value.f64_result = res[i].value.f64_result;
-        break;
-      case String:
-        result[i].value.string_result = strdup (res[i].value.string_result);
-        break;
-      case Binary:
-        sz = res[i].value.binary_result.size;
-        result[i].value.binary_result.size = sz;
-        result[i].value.binary_result.bytes = malloc (sz);
-        memcpy (result[i].value.binary_result.bytes, res[i].value.binary_result.bytes, sz);
-        break;
-      default:
-        break;
-    }
+    result[i].value = iot_data_dup (res[i].value);
   }
   return result;
 }
 
-bool edgex_device_commandresult_equal
-  (const edgex_device_commandresult *lhs, const edgex_device_commandresult *rhs, int n)
+bool devsdk_commandresult_equal
+  (const devsdk_commandresult *lhs, const devsdk_commandresult *rhs, int n)
 {
   bool result = true;
   for (int i = 0; i < n; i++)
   {
-    if (lhs[i].type != rhs[i].type)
+    if (!iot_data_equal (lhs[i].value, rhs[i].value))
     {
       result = false;
-      break;
-    }
-    switch (lhs[i].type)
-    {
-      case Bool:
-        result = (lhs[i].value.bool_result == rhs[i].value.bool_result);
-        break;
-      case Uint8:
-        result = (lhs[i].value.ui8_result == rhs[i].value.ui8_result);
-        break;
-      case Uint16:
-        result = (lhs[i].value.ui16_result == rhs[i].value.ui16_result);
-        break;
-      case Uint32:
-        result = (lhs[i].value.ui32_result == rhs[i].value.ui32_result);
-        break;
-      case Uint64:
-        result = (lhs[i].value.ui64_result == rhs[i].value.ui64_result);
-        break;
-      case Int8:
-        result = (lhs[i].value.i8_result == rhs[i].value.i8_result);
-        break;
-      case Int16:
-        result = (lhs[i].value.i16_result == rhs[i].value.i16_result);
-        break;
-      case Int32:
-        result = (lhs[i].value.i32_result == rhs[i].value.i32_result);
-        break;
-      case Int64:
-        result = (lhs[i].value.i64_result == rhs[i].value.i64_result);
-        break;
-      case Float32:
-        result = (lhs[i].value.f32_result == rhs[i].value.f32_result);
-        break;
-      case Float64:
-        result = (lhs[i].value.f64_result == rhs[i].value.f64_result);
-        break;
-      case String:
-        result = (strcmp (lhs[i].value.string_result, rhs[i].value.string_result) == 0);
-        break;
-      case Binary:
-        result =
-        (
-          lhs[i].value.binary_result.size == rhs[i].value.binary_result.size &&
-          memcmp (lhs[i].value.binary_result.bytes, rhs[i].value.binary_result.bytes, lhs[i].value.binary_result.size) == 0
-        );
-        break;
-      default:
-        break;
-    }
-    if (result == false)
-    {
       break;
     }
   }
@@ -352,7 +254,7 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   const char *description,
   const char *mediaType,
   const char *floatEncoding,
-  edgex_error *err
+  devsdk_error *err
 )
 {
   edgex_valuedescriptor *result = malloc (sizeof (edgex_valuedescriptor));
