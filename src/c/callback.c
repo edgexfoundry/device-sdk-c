@@ -85,9 +85,16 @@ static int updateDevice
       if (svc->userfns.device_removed)
       {
         edgex_device *dev = edgex_devmap_device_byid (svc->devices, id);
-        edgex_devmap_removedevice_byid (svc->devices, id);
-        svc->userfns.device_removed (svc->userdata, dev->name, (const devsdk_protocols *)dev->protocols);
-        edgex_device_release (dev);
+        if (dev)
+        {
+          edgex_devmap_removedevice_byid (svc->devices, id);
+          svc->userfns.device_removed (svc->userdata, dev->name, (const devsdk_protocols *)dev->protocols);
+          edgex_device_release (dev);
+        }
+        else
+        {
+          iot_log_error (svc->logger, "callback: Device %s (for deletion) not found", id);
+        }
       }
       else
       {
@@ -170,6 +177,7 @@ int edgex_device_handler_callback
   {
     iot_log_error (svc->logger, "Callback: both 'type' and 'id' must be present");
     iot_log_error (svc->logger, "Callback: JSON was %s", upload_data);
+    json_value_free (jval);
     return MHD_HTTP_BAD_REQUEST;
   }
 

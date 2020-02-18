@@ -12,10 +12,60 @@
 #include "errorlist.h"
 #include "config.h"
 #include "iot/time.h"
-#include "device.h"
 #include "transform.h"
+#include "iot/base64.h"
 
 #include <cbor.h>
+
+static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
+{
+#define BUFSIZE 32
+  char *res;
+
+  switch (iot_data_type (value))
+  {
+    case IOT_DATA_FLOAT32:
+      res = malloc (BUFSIZE);
+      if (binfloat)
+      {
+        float f = iot_data_f32 (value);
+        iot_b64_encode (&f, sizeof (float), res, BUFSIZE);
+      }
+      else
+      {
+        sprintf (res, "%.8e", iot_data_f32 (value));
+      }
+      break;
+    case IOT_DATA_FLOAT64:
+      res = malloc (BUFSIZE);
+      if (binfloat)
+      {
+        double d = iot_data_f64 (value);
+        iot_b64_encode (&d, sizeof (double), res, BUFSIZE);
+      }
+      else
+      {
+        sprintf (res, "%.16e", iot_data_f64 (value));
+      }
+      break;
+    case IOT_DATA_STRING:
+      res = strdup (iot_data_string (value));
+      break;
+    case IOT_DATA_BLOB:
+    {
+      uint32_t sz, rsz;
+      const uint8_t *data = iot_data_blob (value, &rsz);
+      sz = iot_b64_encodesize (rsz);
+      res = malloc (sz);
+      iot_b64_encode (data, rsz, res, sz);
+      break;
+    }
+    default:
+      res = iot_data_to_json (value, false);
+      break;
+  }
+  return res;
+}
 
 edgex_event_cooked *edgex_data_process_event
 (

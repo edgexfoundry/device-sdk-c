@@ -13,7 +13,6 @@
 #include "edgex/edgex.h"
 #include "rest-server.h"
 #include "cmdinfo.h"
-#include "data.h"
 
 extern int edgex_device_handler_device
 (
@@ -27,8 +26,6 @@ extern int edgex_device_handler_device
   size_t *reply_size,
   const char **reply_type
 );
-
-extern char *edgex_value_tostring (const iot_data_t *value, bool binfloat);
 
 extern const struct edgex_cmdinfo *edgex_deviceprofile_findcommand
   (const char *name, edgex_deviceprofile *prof, bool forGet);
