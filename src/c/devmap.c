@@ -290,7 +290,10 @@ void edgex_devmap_removedevice_byid (edgex_devmap_t *map, const char *id)
   edgex_device **olddev;
   pthread_rwlock_wrlock (&map->lock);
   olddev = edgex_map_get (&map->devices, id);
-  remove_locked (map, *olddev);
+  if (olddev)
+  {
+    remove_locked (map, *olddev);
+  }
   pthread_rwlock_unlock (&map->lock);
 }
 
@@ -342,4 +345,3 @@ void edgex_device_release (edgex_device *dev)
     edgex_device_free (dev);
   }
 }
-
