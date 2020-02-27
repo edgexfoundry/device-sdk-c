@@ -22,6 +22,10 @@
 #include "devsdk/devsdk-base.h"
 #include "iot/logger.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Prints usage information.
  */
@@ -230,5 +234,9 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err);
  */
 
 void devsdk_service_free (devsdk_service_t *svc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

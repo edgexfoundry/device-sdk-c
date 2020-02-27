@@ -67,6 +67,10 @@ typedef struct devsdk_commandresult
   iot_data_t *value;
 } devsdk_commandresult;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Free an strings list.
  * @param p The list to free.
@@ -172,6 +176,10 @@ devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e);
  */
 
 void devsdk_protocols_free (devsdk_protocols *e);
+
+#ifdef __cplusplus
+}
+#endif
 
 /* v1 compatibility */
 
