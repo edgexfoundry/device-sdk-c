@@ -170,7 +170,7 @@ static bool compat_get_handler
         readings[i].value = iot_data_alloc_string (ereadings[i].value.string_result, IOT_DATA_TAKE);
         break;
       case Binary:
-        readings[i].value = iot_data_alloc_blob (ereadings[i].value.binary_result.bytes, ereadings[i].value.binary_result.size, IOT_DATA_TAKE);
+        readings[i].value = iot_data_alloc_array (ereadings[i].value.binary_result.bytes, ereadings[i].value.binary_result.size, IOT_DATA_UINT8, IOT_DATA_TAKE);
         break;
       default:
         result = false;
@@ -198,7 +198,6 @@ static bool compat_put_handler
   iot_data_t **exception
 )
 {
-  uint32_t sz = 0;
   bool result = true;
   edgex_device_service *v1 = (edgex_device_service *)impl;
   edgex_device_commandresult *evalues = calloc (sizeof (edgex_device_commandresult), nvalues);
@@ -245,8 +244,8 @@ static bool compat_put_handler
         evalues[i].value.string_result = (char *)iot_data_string (values[i]);
         break;
       case Binary:
-        evalues[i].value.binary_result.bytes = (uint8_t *)iot_data_blob (values[i], &sz);
-        evalues[i].value.binary_result.size = sz;
+        evalues[i].value.binary_result.bytes = iot_data_address (values[i]);
+        evalues[i].value.binary_result.size = iot_data_array_size (values[i]);
         break;
       default:
         result = false;

@@ -187,6 +187,6 @@ void devsdk_protocols_free (devsdk_protocols *e);
 #define Float64 IOT_DATA_FLOAT64
 #define Bool IOT_DATA_BOOL
 #define String IOT_DATA_STRING
-#define Binary IOT_DATA_BLOB
+#define Binary IOT_DATA_ARRAY
 
 #endif

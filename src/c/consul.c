@@ -99,7 +99,7 @@ struct updatejob
   atomic_bool *updatedone;
 };
 
-static void poll_consul (void *p)
+static void *poll_consul (void *p)
 {
   char *urltail;
   edgex_ctx ctx;
@@ -150,6 +150,7 @@ static void poll_consul (void *p)
   free (index.value);
   free (job->url);
   free (job);
+  return NULL;
 }
 
 devsdk_nvpairs *edgex_consul_client_get_config
@@ -211,7 +212,7 @@ devsdk_nvpairs *edgex_consul_client_get_config
   job->updater = updater;
   job->updatectx = updatectx;
   job->updatedone = updatedone;
-  iot_threadpool_add_work (thpool, poll_consul, job, NULL);
+  iot_threadpool_add_work (thpool, poll_consul, job, -1);
 
   return result;
 }

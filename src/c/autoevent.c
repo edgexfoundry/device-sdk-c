@@ -66,7 +66,7 @@ static void edgex_autoimpl_release (edgex_autoimpl *ai)
   }
 }
 
-static void ae_runner (void *p)
+static void *ae_runner (void *p)
 {
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
   atomic_fetch_add (&ai->refs, 1);
@@ -78,7 +78,7 @@ static void ae_runner (void *p)
     {
       edgex_device_release (dev);
       edgex_autoimpl_release (ai);
-      return;
+      return NULL;
     }
     edgex_device_alloc_crlid (NULL);
     iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
@@ -143,9 +143,10 @@ static void ae_runner (void *p)
     iot_schedule_remove (ai->svc->scheduler, ai->handle);
   }
   edgex_autoimpl_release (ai);
+  return NULL;
 }
 
-static void starter (void *p)
+static void *starter (void *p)
 {
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
   ai->handle = ai->svc->userfns.ae_starter
@@ -153,6 +154,7 @@ static void starter (void *p)
     ai->svc->userdata, ai->device, ai->protocols, ai->resource->name,
     ai->resource->nreqs, ai->resource->reqs, ai->interval, ai->onChange
   );
+  return NULL;
 }
 
 void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
@@ -197,18 +199,18 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
     }
     if (ae->impl->svc->userfns.ae_starter)
     {
-      iot_threadpool_add_work (svc->thpool, starter, ae->impl, NULL);
+      iot_threadpool_add_work (svc->thpool, starter, ae->impl, -1);
     }
     else
     {
       ae->impl->handle = iot_schedule_create
-        (svc->scheduler, ae_runner, ae->impl, IOT_MS_TO_NS(ae->impl->interval), 0, 0, NULL);
+        (svc->scheduler, ae_runner, NULL, ae->impl, IOT_MS_TO_NS(ae->impl->interval), 0, 0, svc->thpool, -1);
       iot_schedule_add (ae->impl->svc->scheduler, ae->impl->handle);
     }
   }
 }
 
-static void stopper (void *p)
+static void *stopper (void *p)
 {
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
   if (ai->svc->userfns.ae_stopper)
@@ -220,6 +222,7 @@ static void stopper (void *p)
     iot_schedule_delete (ai->svc->scheduler, ai->handle);
   }
   edgex_autoimpl_release (ai);
+  return NULL;
 }
 
 void edgex_device_autoevent_stop (edgex_device *dev)
@@ -229,7 +232,7 @@ void edgex_device_autoevent_stop (edgex_device *dev)
     if (ae->impl)
     {
       edgex_autoimpl *ai = ae->impl;
-      iot_threadpool_add_work (ai->svc->thpool, stopper, ai, NULL);
+      iot_threadpool_add_work (ai->svc->thpool, stopper, ai, -1);
     }
   }
 }

@@ -160,7 +160,7 @@ static bool template_put_handler
         break;
       /* etc etc */
       default:
-        iot_log_debug (driver->lc, "  Value has unexpected type %s: %s", iot_data_type_name (values[i]), iot_data_to_json (values[i], false));
+        iot_log_debug (driver->lc, "  Value has unexpected type %s: %s", iot_data_type_name (values[i]), iot_data_to_json (values[i]));
     }
   }
   return true;

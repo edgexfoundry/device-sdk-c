@@ -17,6 +17,16 @@
 
 #include <microhttpd.h>
 
+static void *edgex_device_handler_do_discovery (void *p)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) p;
+
+  pthread_mutex_lock (&svc->discolock);
+  svc->userfns.discover (svc->userdata);
+  pthread_mutex_unlock (&svc->discolock);
+  return NULL;
+}
+
 int edgex_device_handler_discovery
 (
   void *ctx,
@@ -51,7 +61,7 @@ int edgex_device_handler_discovery
 
   if (pthread_mutex_trylock (&svc->discolock) == 0)
   {
-    iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc, NULL);
+    iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc, -1);
     pthread_mutex_unlock (&svc->discolock);
   }
   // else discovery was already running; ignore this request
@@ -59,13 +69,4 @@ int edgex_device_handler_discovery
   *reply = strdup ("Running discovery\n");
   *reply_size = strlen (*reply);
   return MHD_HTTP_OK;
-}
-
-void edgex_device_handler_do_discovery (void *p)
-{
-  devsdk_service_t *svc = (devsdk_service_t *) p;
-
-  pthread_mutex_lock (&svc->discolock);
-  svc->userfns.discover (svc->userdata);
-  pthread_mutex_unlock (&svc->discolock);
 }
