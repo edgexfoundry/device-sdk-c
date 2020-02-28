@@ -130,10 +130,10 @@ static iot_data_t *populateValue (iot_data_type_t rtype, const char *val)
       return iot_data_alloc_string (val, IOT_DATA_COPY);
     case IOT_DATA_BOOL:
       return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
-    case IOT_DATA_BLOB:
-      return iot_data_alloc_blob_from_base64 (val);
-    case IOT_DATA_MAP:
     case IOT_DATA_ARRAY:
+      return iot_data_alloc_array_from_base64 (val);
+    case IOT_DATA_MAP:
+    case IOT_DATA_VECTOR:
       return NULL;
   }
   return false;
@@ -364,7 +364,7 @@ static int edgex_device_runput
       retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
       if (e)
       {
-        *exc = iot_data_to_json (e, false);
+        *exc = iot_data_to_json (e);
       }
       iot_log_error (svc->logger, "Driver for %s failed on PUT%s%s", dev->name, e ? ": " : "", e ? *exc : "");
     }
@@ -430,7 +430,7 @@ static int edgex_device_runget
   {
     if (e)
     {
-      *exc = iot_data_to_json (e, false);
+      *exc = iot_data_to_json (e);
     }
     iot_log_error (svc->logger, "Driver for %s failed on GET%s%s", dev->name, e ? ": " : "", e ? *exc : "");
   }

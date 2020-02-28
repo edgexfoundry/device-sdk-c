@@ -31,6 +31,10 @@
  * @returns The id of the newly created or existing device, or NULL if an error occurred.
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 char * edgex_add_device
 (
   devsdk_service_t *svc,
@@ -116,10 +120,8 @@ edgex_device * edgex_get_device_byname (devsdk_service_t *svc, const char *name)
 
 void edgex_free_device (edgex_device *d);
 
-/**
- * @brief Retrieve the device profiles currently known in the SDK.
- * @param svc The device service.
- * @returns A list of device profiles.
- */
+#ifdef __cplusplus
+}
+#endif
 
 #endif

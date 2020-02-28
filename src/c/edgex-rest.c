@@ -173,7 +173,7 @@ bool edgex_propertytype_fromstring (iot_data_type_t *res, const char *str)
 {
   if (str)
   {
-    for (iot_data_type_t i = IOT_DATA_INT8; i <= IOT_DATA_BLOB; i++)
+    for (iot_data_type_t i = IOT_DATA_INT8; i <= IOT_DATA_ARRAY; i++)
     {
       if (strcasecmp (str, proptypes[i]) == 0)
       {

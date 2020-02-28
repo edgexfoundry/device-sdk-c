@@ -135,7 +135,7 @@ const edgex_nvpairs *edgex_protocols_properties (const edgex_protocols *prots, c
 #define Float64 IOT_DATA_FLOAT64
 #define Bool IOT_DATA_BOOL
 #define String IOT_DATA_STRING
-#define Binary IOT_DATA_BLOB
+#define Binary IOT_DATA_ARRAY
 #endif
 
 #endif

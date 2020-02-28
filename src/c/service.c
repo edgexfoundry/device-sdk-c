@@ -211,10 +211,9 @@ devsdk_service_t *devsdk_service_new
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
-  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL);
-  iot_logger_start (result->logger);
-  result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, NULL, result->logger);
-  result->scheduler = iot_scheduler_alloc (result->thpool, result->logger);
+  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL, true);
+  result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
+  result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
   pthread_mutex_init (&result->discolock, NULL);
   return result;
 }
@@ -708,7 +707,7 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
       );
       if (svc->config.logging.file)
       {
-        svc->logger->next = iot_logger_alloc_custom (svc->name, svc->config.logging.level, url, edgex_log_torest, NULL);
+        svc->logger->next = iot_logger_alloc_custom (svc->name, svc->config.logging.level, url, edgex_log_torest, NULL, true);
       }
       else
       {
@@ -750,7 +749,7 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   }
 }
 
-static void doPost (void *p)
+static void *doPost (void *p)
 {
   postparams *pp = (postparams *) p;
   devsdk_error err = EDGEX_OK;
@@ -764,6 +763,7 @@ static void doPost (void *p)
 
   edgex_event_cooked_free (pp->event);
   free (pp);
+  return NULL;
 }
 
 void devsdk_post_readings
@@ -795,7 +795,7 @@ void devsdk_post_readings
       postparams *pp = malloc (sizeof (postparams));
       pp->svc = svc;
       pp->event = event;
-      iot_threadpool_add_work (svc->thpool, doPost, pp, NULL);
+      iot_threadpool_add_work (svc->thpool, doPost, pp, -1);
     }
   }
   else

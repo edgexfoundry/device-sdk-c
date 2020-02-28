@@ -17,6 +17,10 @@
 #include "devsdk/devsdk.h"
 #include "edgex/edgex.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief Retrieve the device profiles currently known in the SDK.
  * @param svc The device service.
@@ -49,5 +53,9 @@ void edgex_free_deviceprofile (edgex_deviceprofile *p);
  */
 
 void edgex_add_profile (devsdk_service_t *svc, const char *fname, devsdk_error *err);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

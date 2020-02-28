@@ -51,17 +51,18 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
     case IOT_DATA_STRING:
       res = strdup (iot_data_string (value));
       break;
-    case IOT_DATA_BLOB:
+    case IOT_DATA_ARRAY:
     {
       uint32_t sz, rsz;
-      const uint8_t *data = iot_data_blob (value, &rsz);
+      const uint8_t *data = iot_data_address (value);
+      rsz = iot_data_array_size (value);
       sz = iot_b64_encodesize (rsz);
       res = malloc (sz);
       iot_b64_encode (data, rsz, res, sz);
       break;
     }
     default:
-      res = iot_data_to_json (value, false);
+      res = iot_data_to_json (value);
       break;
   }
   return res;
@@ -98,7 +99,7 @@ edgex_event_cooked *edgex_data_process_event
         free (reading);
       }
     }
-    if (commandinfo->pvals[i]->type == IOT_DATA_BLOB)
+    if (commandinfo->pvals[i]->type == IOT_DATA_ARRAY)
     {
       useCBOR = true;
     }
@@ -116,11 +117,11 @@ edgex_event_cooked *edgex_data_process_event
       cbor_item_t *crdg = cbor_new_definite_map (3);
 
       cbor_item_t *cread;
-      if (iot_data_type (values[i].value) == IOT_DATA_BLOB)
+      if (iot_data_type (values[i].value) == IOT_DATA_ARRAY)
       {
         const uint8_t *data;
-        uint32_t sz;
-        data = iot_data_blob (values[i].value, &sz);
+        uint32_t sz = iot_data_array_size (values[i].value);
+        data = iot_data_address (values[i].value);
         cread = cbor_build_bytestring (data, sz);
         cbor_map_add (crdg, (struct cbor_pair)
           { .key = cbor_move (cbor_build_string ("binaryValue")), .value = cbor_move (cread) });
@@ -261,15 +262,12 @@ void devsdk_commandresult_free (devsdk_commandresult *res, int n)
 /* Dummy methods: onChange on AutoEvents will not work until these two are impl
 emented in iot-c-utils */
 
-static iot_data_t *iot_data_dup (const iot_data_t *rhs) { return NULL; }
-static bool iot_data_equal (const iot_data_t *lhs, const iot_data_t *rhs) { return false; }
-
 devsdk_commandresult *devsdk_commandresult_dup (const devsdk_commandresult *res, int n)
 {
   devsdk_commandresult *result = calloc (n, sizeof (devsdk_commandresult));
   for (int i = 0; i < n; i++)
   {
-    result[i].value = iot_data_dup (res[i].value);
+    result[i].value = iot_data_copy (res[i].value);
   }
   return result;
 }

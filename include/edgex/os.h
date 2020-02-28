@@ -18,6 +18,5 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdatomic.h>
 
 #endif
