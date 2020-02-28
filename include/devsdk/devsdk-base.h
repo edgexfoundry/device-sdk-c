@@ -16,6 +16,10 @@
 
 #include "iot/data.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct devsdk_service_t;
 typedef struct devsdk_service_t devsdk_service_t;
 
@@ -66,10 +70,6 @@ typedef struct devsdk_commandresult
   /** The result. */
   iot_data_t *value;
 } devsdk_commandresult;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief Free an strings list.
