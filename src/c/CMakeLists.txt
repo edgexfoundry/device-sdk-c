@@ -4,7 +4,7 @@ include(CheckCSourceCompiles)
 
 if (DEFINED CMAKE_C_COMPILER_ID)
   if (CMAKE_C_COMPILER_ID MATCHES GNU)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wstrict-prototypes -Wmissing-prototypes")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wstrict-prototypes -Wmissing-prototypes -Werror=implicit-function-declaration")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -pipe")
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
     if (CSDK_BUILD_DEBUG)
@@ -14,6 +14,10 @@ if (DEFINED CMAKE_C_COMPILER_ID)
       endif ()
     endif ()
   endif ()
+endif ()
+
+if ("${LINUX_SYS}" STREQUAL "Alpine")
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__LIBMUSL__")
 endif ()
 
 # Set default files to compile and libraries
