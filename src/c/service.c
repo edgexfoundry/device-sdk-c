@@ -766,6 +766,28 @@ static void *doPost (void *p)
   return NULL;
 }
 
+void devsdk_register_http_handler
+(
+  devsdk_service_t *svc,
+  const char *url,
+  edgex_http_method method,
+  void *context,
+  edgex_http_handler_fn handler,
+  devsdk_error *e
+)
+{
+  *e = EDGEX_OK;
+  if (svc == NULL || svc->daemon == NULL)
+  {
+    *e = EDGEX_HTTP_SERVER_FAIL;
+    iot_log_error (iot_logger_default (), "devsdk_register_http_handler called before service is running");
+  }
+  else if (!edgex_rest_server_register_handler (svc->daemon, url, method, context, handler))
+  {
+    *e = EDGEX_INVALID_ARG;
+  }
+}
+
 void devsdk_post_readings
 (
   devsdk_service_t *svc,

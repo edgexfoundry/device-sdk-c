@@ -24,7 +24,7 @@ typedef struct handler_list
   const char *url;
   uint32_t methods;
   void *ctx;
-  http_method_handler_fn handler;
+  edgex_http_handler_fn handler;
   struct handler_list *next;
 } handler_list;
 
@@ -223,8 +223,7 @@ static int http_handler
 
   /* Clean up */
 
-  if (ctx->m_data)
-  { free (ctx->m_data); }
+  free (ctx->m_data);
   free (ctx);
   edgex_device_free_crlid ();
   return MHD_YES;
@@ -260,24 +259,52 @@ edgex_rest_server *edgex_rest_server_create
   }
 }
 
-void edgex_rest_server_register_handler
+static bool urlClash (const char *u1, const char *u2)
+{
+  unsigned i;
+  for (i = 0; u1[i] && u2[i]; i++)
+  {
+    if (u1[i] != u2[i])
+    {
+      return false;
+    }
+  }
+  return (u1[i] == '/') || (u2[i] == '/');
+}
+
+bool edgex_rest_server_register_handler
 (
   edgex_rest_server *svr,
   const char *url,
   uint32_t methods,
   void *context,
-  http_method_handler_fn handler
+  edgex_http_handler_fn handler
 )
 {
+  bool result = true;
   handler_list *entry = malloc (sizeof (handler_list));
   entry->handler = handler;
   entry->url = url;
   entry->methods = methods;
   entry->ctx = context;
   pthread_mutex_lock (&svr->lock);
-  entry->next = svr->handlers;
-  svr->handlers = entry;
+  for (handler_list *match = svr->handlers; match; match = match->next)
+  {
+    if (urlClash (match->url, url))
+    {
+      result = false;
+      iot_log_error (svr->lc, "Register handler: \"%s\" conflicts with \"%s\", skipping", url, match->url);
+      free (entry);
+      break;
+    }
+  }
+  if (result)
+  {
+    entry->next = svr->handlers;
+    svr->handlers = entry;
+  }
   pthread_mutex_unlock (&svr->lock);
+  return result;
 }
 
 void edgex_rest_server_destroy (edgex_rest_server *svr)
