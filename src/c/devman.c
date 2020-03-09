@@ -11,6 +11,7 @@
 #include "metadata.h"
 #include "edgex-rest.h"
 #include "errorlist.h"
+#include "devutil.h"
 #include "edgex/devices.h"
 #include "edgex/profiles.h"
 
@@ -27,6 +28,7 @@ char * edgex_add_device
   const devsdk_strings *labels,
   const char *profile_name,
   devsdk_protocols *protocols,
+  bool locked,
   edgex_device_autoevents *autos,
   devsdk_error *err
 )
@@ -53,6 +55,7 @@ char * edgex_add_device
     name,
     description,
     labels,
+    locked ? LOCKED : UNLOCKED,
     protocols,
     autos,
     svc->name,
@@ -160,4 +163,22 @@ void edgex_update_device
 void edgex_free_device (edgex_device *e)
 {
   edgex_device_free (e);
+}
+
+void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, devsdk_discovered_device *devices)
+{
+  for (uint32_t i = 0; i < ndevices; i++)
+  {
+    for (devsdk_protocols *prots = devices[i].protocols; prots; prots = prots->next)
+    {
+      edgex_watcher *w = edgex_watchlist_match (svc->watchlist, prots->properties);
+      if (w)
+      {
+        devsdk_error e;
+        free (edgex_add_device (svc, devices[i].name, devices[i].description, devices[i].labels, w->profile, devices[i].protocols, w->adminstate == LOCKED, NULL, &e));
+        edgex_watcher_free (w);
+        break;
+      }
+    }
+  }
 }

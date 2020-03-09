@@ -1,6 +1,6 @@
 # Device service configuration options
 
-The device service configuration is held in TOML format. The SDK method `edgex_device_service_start` takes the name of a directory, and an optional profile name. It will attempt to load the configuration from a file named `configuration.toml` or `configuration-<profile>.toml` in that directory.
+The device service configuration is held in TOML format. By default the SDK will load configuration from a file named `configuration.toml` in the `res` directory, but this may be changed using the --confdir and --profile options.
 
 Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`.
 
@@ -57,7 +57,8 @@ Port | Int | Port on which to contact the support-logging service.
 Option | Type | Notes
 :--- | :--- | :---
 DataTransform | Bool | For enabling/disabling transformations on data between the device and EdgeX. Defaults to true (enabled).
-Discovery | Bool | For enabling/disabling device discovery. Defaults to true (enabled).
+Discovery/Enabled | Bool | For enabling/disabling device discovery. Defaults to true (enabled).
+Discovery/Interval | Int | Time between automatic discovery runs, in seconds. Defaults to zero (do not run discovery automatically).
 InitCmd | String | Not implemented. Specifies a resource command to be automatically generated when a device is added to the service.
 InitCmdArgs | String | Not implemented. Specifies arguments to be included with InitCmd.
 MaxCmdOps | Int | Defines the maximum number of resource operations that can be sent to the driver in a single command.

@@ -153,6 +153,7 @@ typedef struct edgex_watcher
   char *id;
   char *name;
   edgex_nvpairs *identifiers;
+  struct edgex_watcher_regexes_t *regs;
   edgex_blocklist *blocking_identifiers;
   char *profile;
   edgex_device_adminstate adminstate;

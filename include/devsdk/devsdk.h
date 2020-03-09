@@ -219,6 +219,8 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err);
 
 void devsdk_post_readings (devsdk_service_t *svc, const char *device_name, const char *resource_name, devsdk_commandresult *values);
 
+void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, devsdk_discovered_device *devices);
+
 /**
  * @brief Stop the event service. Any automatic events will be cancelled and the rest api for the device service will be shut down.
  * @param svc The device service.

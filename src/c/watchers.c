@@ -9,11 +9,20 @@
 #include "watchers.h"
 #include "edgex-rest.h"
 
+#include <regex.h>
+
 typedef struct edgex_watchlist_t
 {
   pthread_rwlock_t lock;
   edgex_watcher *list;
 } edgex_watchlist_t;
+
+typedef struct edgex_watcher_regexes_t
+{
+  const char *name;
+  regex_t preg;
+  edgex_watcher_regexes_t *next;
+} edgex_watcher_regexes_t;
 
 edgex_watchlist_t *edgex_watchlist_alloc ()
 {
@@ -32,6 +41,16 @@ void edgex_watchlist_free (edgex_watchlist_t *wl)
   }
 }
 
+void edgex_watcher_regexes_free (edgex_watcher_regexes_t *regs)
+{
+  if (regs)
+  {
+    edgex_watcher_regexes_free (regs->next);
+    regfree (&regs->preg);
+    free (regs);
+  }
+}
+
 static edgex_watcher **find_locked (edgex_watcher **list, const char *id)
 {
   while (*list && strcmp ((*list)->id, id))
@@ -44,6 +63,20 @@ static edgex_watcher **find_locked (edgex_watcher **list, const char *id)
 static void add_locked (edgex_watchlist_t *wl, const edgex_watcher *w)
 {
   edgex_watcher *newelem = edgex_watcher_dup (w);
+  for (edgex_nvpairs *ids = newelem->identifiers; ids; ids = ids->next)
+  {
+    edgex_watcher_regexes_t *r = malloc (sizeof (edgex_watcher_regexes_t));
+    if (regcomp (&r->preg, ids->value, REG_NOSUB) == 0)
+    {
+      r->name = ids->name;
+      r->next = newelem->regs;
+      newelem->regs = r;
+    }
+    else
+    {
+      free (r);
+    }
+  }
   newelem->next = wl->list;
   wl->list = newelem;
 }
@@ -106,23 +139,42 @@ unsigned edgex_watchlist_populate (edgex_watchlist_t *wl, const edgex_watcher *n
   return count;
 }
 
-/* Placeholder matching algorithm. Matches for literals only, no blacklist */
-
 static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
 {
-  const devsdk_nvpairs *pair;
-  for (pair = (const devsdk_nvpairs *)pw->identifiers; pair; pair = pair->next)
+  const edgex_blocklist *blocked = NULL;
+  edgex_watcher_regexes_t *match = NULL;
+
+  for (match = pw->regs; match; match = match->next)
   {
-    const char *matching = devsdk_nvpairs_value (ids, pair->name);
-    if (matching && strcmp (pair->value, matching))
+    const char *matchval = devsdk_nvpairs_value (ids, match->name);
+    if (matchval && regexec (&match->preg, matchval, 0, NULL, 0) == 0)
     {
       break;
     }
   }
-  return pair;
+  if (match == NULL)
+  {
+    return false;
+  }
+
+  for (blocked = (const edgex_blocklist *)pw->blocking_identifiers; blocked; blocked = blocked->next)
+  {
+    const char *checkval = devsdk_nvpairs_value (ids, blocked->name);
+    if (checkval)
+    {
+      for (edgex_strings *bv = blocked->values; bv; bv = bv->next)
+      {
+        if (strcmp (bv->str, checkval) == 0)
+        {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
-const edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const devsdk_nvpairs *ids)
+edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const devsdk_nvpairs *ids)
 {
   pthread_rwlock_rdlock ((pthread_rwlock_t *)&wl->lock);
 

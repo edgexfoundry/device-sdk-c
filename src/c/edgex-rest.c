@@ -9,6 +9,7 @@
 #include "edgex-rest.h"
 #include "cmdinfo.h"
 #include "autoevent.h"
+#include "watchers.h"
 #include "parson.h"
 #include <string.h>
 #include <stdlib.h>
@@ -1740,6 +1741,7 @@ edgex_watcher *edgex_watchers_read (const char *json)
 edgex_watcher *edgex_watcher_dup (const edgex_watcher *e)
 {
   edgex_watcher *res = malloc (sizeof (edgex_watcher));
+  res->regs = NULL;
   res->id = strdup (e->id);
   res->name = strdup (e->name);
   res->identifiers = edgex_nvpairs_dup (e->identifiers);
@@ -1759,6 +1761,7 @@ void edgex_watcher_free (edgex_watcher *e)
     free (ew->id);
     free (ew->name);
     edgex_nvpairs_free (ew->identifiers);
+    edgex_watcher_regexes_free (ew->regs);
     edgex_blocklist_free (ew->blocking_identifiers);
     free (ew->profile);
     free (ew);

@@ -43,6 +43,7 @@ char * edgex_add_device
   const devsdk_strings *labels,
   const char *profile_name,
   devsdk_protocols *protocols,
+  bool locked,
   edgex_device_autoevents *autos,
   devsdk_error *err
 );
