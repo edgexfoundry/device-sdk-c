@@ -87,6 +87,7 @@ char * edgex_metadata_client_add_device
   const char * name,
   const char * description,
   const devsdk_strings * labels,
+  edgex_device_adminstate adminstate,
   devsdk_protocols * protocols,
   edgex_device_autoevents * autos,
   const char * service_name,

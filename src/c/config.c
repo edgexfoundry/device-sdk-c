@@ -536,8 +536,8 @@ void edgex_device_populateConfig
 
   svc->config.device.datatransform =
     get_nv_config_bool (config, "Device/DataTransform", true);
-  svc->config.device.discovery =
-    get_nv_config_bool (config, "Device/Discovery", true);
+  svc->config.device.discovery_enabled = get_nv_config_bool (config, "Device/Discovery/Enabled", true);
+  svc->config.device.discovery_interval = get_nv_config_uint32 (svc->logger, config, "Device/Discovery/Interval", err);
   svc->config.device.initcmd = get_nv_config_string (config, "Device/InitCmd");
   svc->config.device.initcmdargs =
     get_nv_config_string (config, "Device/InitCmdArgs");
@@ -705,9 +705,15 @@ int edgex_device_handler_config
 
   dval = json_value_init_object ();
   dobj = json_value_get_object (dval);
+
+  JSON_Value *ddval = json_value_init_object ();
+  JSON_Object *ddobj = json_value_get_object (ddval);
+  json_object_set_boolean (ddobj, "Enabled", svc->config.device.discovery_enabled);
+  json_object_set_uint (ddobj, "Interval", svc->config.device.discovery_interval);
+  json_object_set_value (dobj, "Discovery", ddval);
+
   json_object_set_boolean
     (dobj, "DataTransform", svc->config.device.datatransform);
-  json_object_set_boolean (dobj, "Discovery", svc->config.device.discovery);
   json_object_set_string (dobj, "InitCmd", svc->config.device.initcmd);
   json_object_set_string (dobj, "InitCmdArgs", svc->config.device.initcmdargs);
   json_object_set_uint (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
@@ -858,7 +864,7 @@ void edgex_device_process_configured_devices
           }
 
           *err = EDGEX_OK;
-          free (edgex_add_device (svc, devname, description, labels, profile_name, protocols, autos, err));
+          free (edgex_add_device (svc, devname, description, labels, profile_name, protocols, autos, false, err));
 
           devsdk_strings_free (labels);
           devsdk_protocols_free (protocols);

@@ -26,4 +26,6 @@ extern int edgex_device_handler_discovery
   const char **reply_type
 );
 
+extern void *edgex_device_periodic_discovery (void *svc);
+
 #endif

@@ -544,6 +544,13 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     }
   }
 
+  if (svc->config.device.discovery_enabled && svc->config.device.discovery_interval && svc->userfns.discover)
+  {
+    svc->discosched = iot_schedule_create
+      (svc->scheduler, edgex_device_periodic_discovery, NULL, svc, IOT_SEC_TO_NS(svc->config.device.discovery_interval), 0, 0, svc->thpool, -1);
+    iot_schedule_add (svc->scheduler, svc->discosched);
+  }
+
   if (svc->config.service.startupmsg)
   {
     iot_log_info (svc->logger, svc->config.service.startupmsg);
@@ -830,6 +837,10 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
 {
   *err = EDGEX_OK;
   iot_log_debug (svc->logger, "Stop device service");
+  if (svc->discosched)
+  {
+    iot_schedule_delete (svc->scheduler, svc->discosched);
+  }
   if (svc->stopconfig)
   {
     *svc->stopconfig = true;

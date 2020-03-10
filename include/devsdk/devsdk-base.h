@@ -71,6 +71,14 @@ typedef struct devsdk_commandresult
   iot_data_t *value;
 } devsdk_commandresult;
 
+typedef struct devsdk_discovered_device
+{
+  const char *name;
+  devsdk_protocols *protocols;
+  const char *description;
+  const devsdk_strings *labels;
+} devsdk_discovered_device;
+
 /**
  * @brief Free an strings list.
  * @param p The list to free.

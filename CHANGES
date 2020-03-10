@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.2.0 "Geneva":
 
+- Full dynamic discovery implementation with Provision Watchers.
 - New SDK API: see README.v2.md for details.
 - Utility functions added in edgex-base.h for finding Protocol Properties, and
   for obtaining numeric values from name-value pair lists.

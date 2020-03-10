@@ -129,13 +129,6 @@ void devsdk_nvpairs_free (devsdk_nvpairs *p)
   }
 }
 
-struct devsdk_protocols
-{
-  char *name;
-  devsdk_nvpairs *properties;
-  struct devsdk_protocols *next;
-};
-
 devsdk_protocols *devsdk_protocols_new (const char *name, const devsdk_nvpairs *properties, devsdk_protocols *list)
 {
   devsdk_protocols *result = malloc (sizeof (devsdk_protocols));

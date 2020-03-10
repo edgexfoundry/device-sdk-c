@@ -21,11 +21,16 @@ typedef struct edgex_watchlist_t edgex_watchlist_t;
 extern edgex_watchlist_t *edgex_watchlist_alloc (void);
 extern void edgex_watchlist_free (edgex_watchlist_t *list);
 
+struct edgex_watcher_regexes_t;
+typedef struct edgex_watcher_regexes_t edgex_watcher_regexes_t;
+
+extern void edgex_watcher_regexes_free (edgex_watcher_regexes_t *r);
+
 extern unsigned edgex_watchlist_populate (edgex_watchlist_t *list, const edgex_watcher *entry);
 extern bool edgex_watchlist_remove_watcher (edgex_watchlist_t *list, const char *id);
 extern void edgex_watchlist_update_watcher (edgex_watchlist_t *list, const edgex_watcher *updated);
 
-extern const edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *list, const devsdk_nvpairs *ids);
+extern edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *list, const devsdk_nvpairs *ids);
 
 extern void edgex_watchlist_dump (const edgex_watchlist_t *list, iot_logger_t *logger);
 

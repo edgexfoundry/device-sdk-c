@@ -27,6 +27,34 @@ static void *edgex_device_handler_do_discovery (void *p)
   return NULL;
 }
 
+void *edgex_device_periodic_discovery (void *s)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) s;
+
+  if (svc->adminstate == LOCKED)
+  {
+    iot_log_error (svc->logger, "Periodic discovery not running: device service locked");
+    return NULL;
+  }
+  if (svc->opstate == DISABLED)
+  {
+    iot_log_error (svc->logger, "Periodic discovery not running: device service disabled");
+    return NULL;
+  }
+
+  if (pthread_mutex_trylock (&svc->discolock) == 0)
+  {
+    iot_log_info (svc->logger, "Running periodic discovery");
+    svc->userfns.discover (svc->userdata);
+    pthread_mutex_unlock (&svc->discolock);
+  }
+  else
+  {
+    iot_log_info (svc->logger, "Periodic discovery skipped: discovery already running");
+  }
+  return NULL;
+}
+
 int edgex_device_handler_discovery
 (
   void *ctx,
@@ -41,32 +69,40 @@ int edgex_device_handler_discovery
 )
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  int retcode;
 
   if (svc->userfns.discover == NULL)
   {
-    return MHD_HTTP_NOT_IMPLEMENTED;
+    *reply = strdup ("Dynamic discovery is not implemented in this device service\n");
+    retcode = MHD_HTTP_NOT_IMPLEMENTED;
   }
-
-  if (svc->adminstate == LOCKED || svc->opstate == DISABLED)
+  else if (svc->adminstate == LOCKED)
   {
-    return MHD_HTTP_LOCKED;
+    *reply = strdup ("Device service is administratively locked\n");
+    retcode = MHD_HTTP_LOCKED;
   }
-
-  if (!svc->config.device.discovery)
+  else if (svc->opstate == DISABLED)
+  {
+    *reply = strdup ("Device service is disabled\n");
+    retcode = MHD_HTTP_LOCKED;
+  }
+  else if (!svc->config.device.discovery_enabled)
   {
     *reply = strdup ("Discovery disabled by configuration\n");
-    *reply_size = strlen (*reply);
-    return MHD_HTTP_SERVICE_UNAVAILABLE;
+    retcode = MHD_HTTP_SERVICE_UNAVAILABLE;
   }
-
-  if (pthread_mutex_trylock (&svc->discolock) == 0)
+  else if (pthread_mutex_trylock (&svc->discolock) == 0)
   {
     iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc, -1);
     pthread_mutex_unlock (&svc->discolock);
+    *reply = strdup ("Running discovery\n");
+    retcode = MHD_HTTP_ACCEPTED;
   }
-  // else discovery was already running; ignore this request
-
-  *reply = strdup ("Running discovery\n");
+  else
+  {
+    *reply = strdup ("Discovery already running; ignoring new request\n");
+    retcode = MHD_HTTP_ACCEPTED;
+  }
   *reply_size = strlen (*reply);
-  return MHD_HTTP_OK;
+  return retcode;
 }

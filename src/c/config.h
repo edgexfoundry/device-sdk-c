@@ -41,7 +41,8 @@ typedef struct edgex_service_endpoints
 typedef struct edgex_device_deviceinfo
 {
   bool datatransform;
-  bool discovery;
+  bool discovery_enabled;
+  uint32_t discovery_interval;
   char *initcmd;
   char *initcmdargs;
   uint32_t maxcmdops;
