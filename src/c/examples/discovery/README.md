@@ -22,6 +22,14 @@ gcc -I$CSDK_DIR/include -L$CSDK_DIR/lib -o device-template template.c -lcsdk
 
 A device profile for the simulated device is provided in the `res` directory. This will be uploaded to core-metadata by the device service on first run.
 
+### Running the service
+
+An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
+
+```
+./device-template -c res
+```
+
 ### Dynamic Provisioning via Discovery
 
 In this example, the service "finds" four devices when discovery runs. As
@@ -35,28 +43,22 @@ curl -X POST 0:49999/api/v1/discovery
 ```
 
 Initially, none of the discovered devices will be added to EdgeX, but by
-using appropriate Provision Watchers (see below) they can be accepted.
-
-### Running the service
-
-An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
+using appropriate Provision Watchers they can be accepted. To upload the
+supplied Provision Watchers to core-metadata:
 
 ```
-./device-template -c res
+curl -X POST -d@watcher1.json 0:48081/api/v1/provisionwatcher
+curl -X POST -d@watcher2.json 0:48081/api/v1/provisionwatcher
 ```
 
-To upload the supplied Provision Watcher to core-metadata:
+The Provision Watchers each match one of the discovered devices. They work by
+specifying acceptance criteria (`identifiers`) that match potentially many
+devices, and rejection criteria (`blockingIdentifiers`) which specifically
+block one of them. Note that `identifiers` is a regular expression, and
+`blockingIdentifiers` is a literal string match.
 
-```
-curl -X POST -d@watcher.json 0:48081/api/v1/provisionwatcher
-```
-
-The Provision Watcher matches two of the discovered devices. It works work by
-specifying acceptance criteria (`identifiers`) that match all of the devices
-(two each on HTTP and MAC protocols), and rejection criteria
-(`blockingIdentifiers`) which specifically block two of them. Note that
-`identifiers` is a regular expression, and `blockingIdentifiers` is a literal
-string match.
+A Device must have Protocol fields which match all identifiers and none of the
+blocking identifiers in order for it to be passed by a Provision Watcher.
 
 When a discovered device matches a Provision Watcher, it is created and assigned
 the Profile and AdministrativeState specified in that watcher.

@@ -1,0 +1,1 @@
+{"name":"watcher2", "identifiers":{"HTTP":"10\\.0\\.0\\.[0-9]*"}, "blockingIdentifiers":{"HTTP":["10.0.0.1","10.0.0.255"]},"profile":{"name":"TemplateSensor"},"service":{"name":"device-template"},"adminstate":"UNLOCKED"}

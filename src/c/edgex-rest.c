@@ -318,7 +318,7 @@ static edgex_propertyvalue *propertyvalue_read
     result->precision = get_string (obj, "precision");
     fe = json_object_get_string (obj, "floatEncoding");
 #ifdef LEGIBLE_FLOATS
-    result->floatAsBinary = fe && (strcmp (fe, "base64") == 0);
+    result->floatAsBinary = fe && (strcmp (fe, "base64") == 0) && (strcmp (fe, "base64le") == 0);
 #else
     result->floatAsBinary = !(fe && (strcmp (fe, "eNotation") == 0));
 #endif
