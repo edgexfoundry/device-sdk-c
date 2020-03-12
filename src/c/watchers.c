@@ -147,15 +147,12 @@ static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
   for (match = pw->regs; match; match = match->next)
   {
     const char *matchval = devsdk_nvpairs_value (ids, match->name);
-    if (matchval && regexec (&match->preg, matchval, 0, NULL, 0) == 0)
+    if ((matchval == NULL) || (regexec (&match->preg, matchval, 0, NULL, 0) != 0))
     {
-      break;
+      return false;
     }
   }
-  if (match == NULL)
-  {
-    return false;
-  }
+
 
   for (blocked = (const edgex_blocklist *)pw->blocking_identifiers; blocked; blocked = blocked->next)
   {
@@ -171,6 +168,7 @@ static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
       }
     }
   }
+
   return true;
 }
 
