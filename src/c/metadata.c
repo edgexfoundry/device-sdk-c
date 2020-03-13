@@ -95,20 +95,13 @@ void edgex_metadata_client_set_device_opstate
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
+  char data[sizeof ("{*operatingstate*:*disabled*}")];
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/device/%s/opstate/%s",
-    endpoints->metadata.host,
-    endpoints->metadata.port,
-    deviceid,
-    (opstate == ENABLED) ? "enabled" : "disabled"
-  );
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/device/%s", endpoints->metadata.host, endpoints->metadata.port, deviceid);
+  sprintf (data, "{\"operatingstate\":\"%s\"}", (opstate == ENABLED) ? "enabled" : "disabled");
 
-  edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
+  edgex_http_put (lc, &ctx, url, data, edgex_http_write_cb, err);
   free (ctx.buff);
 }
 
@@ -123,20 +116,13 @@ void edgex_metadata_client_set_device_adminstate
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
+  char data[sizeof ("{*adminstate*:*unlocked*}")];
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/device/%s/adminstate/%s",
-    endpoints->metadata.host,
-    endpoints->metadata.port,
-    deviceid,
-    (adminstate == LOCKED) ? "locked" : "unlocked"
-  );
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/device/%s", endpoints->metadata.host, endpoints->metadata.port, deviceid);
+  sprintf (data, "{\"adminstate\":\"%s\"}", (adminstate == LOCKED) ? "locked" : "unlocked");
 
-  edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
+  edgex_http_put (lc, &ctx, url, data, edgex_http_write_cb, err);
   free (ctx.buff);
 }
 
