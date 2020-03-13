@@ -864,7 +864,7 @@ void edgex_device_process_configured_devices
           }
 
           *err = EDGEX_OK;
-          free (edgex_add_device (svc, devname, description, labels, profile_name, protocols, autos, false, err));
+          free (edgex_add_device (svc, devname, description, labels, profile_name, protocols, false, autos, err));
 
           devsdk_strings_free (labels);
           devsdk_protocols_free (protocols);
