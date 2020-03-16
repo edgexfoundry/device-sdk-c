@@ -1,3 +1,4 @@
+add_subdirectory (random)
 add_subdirectory (counters)
 add_executable (template2 template.c)
 target_include_directories (template2 PRIVATE ../../../../include)
