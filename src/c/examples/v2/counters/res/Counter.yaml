@@ -1,0 +1,42 @@
+name: "Example-Counter"
+manufacturer: "IoTechSystems"
+model: "IoT2"
+description: "Virtual Counter Device for CSDK Example"
+labels:
+  - "sensor"
+
+deviceResources:
+  -
+    name: Counter
+    description: "A counter generating incrementing values"
+    attributes:
+      { register: "count01" }
+    properties:
+      value:
+        { type: "uint32", readWrite: "RW" }
+      units:
+        { type: "string", readWrite: "R", defaultValue: "things" }
+
+coreCommands:
+  -
+    name: Counter
+    get:
+      path: "/api/v1/device/{deviceId}/Counter"
+      responses:
+      - code: "200"
+        description: "Get the current count and increment it."
+        expectedValues: ["Counter"]
+      - code: "503"
+        description: "service unavailable"
+        expectedValues: []
+    put:
+      path: "/api/v1/device/{deviceId}/Counter"
+      parameterNames: ["Counter"]
+      responses:
+      - code: "200"
+        description: "Successfully reset the count."
+        expectedValues: []
+      - code: "503"
+        description: "service unavailable"
+        expectedValues: []
+
