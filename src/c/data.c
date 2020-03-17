@@ -125,6 +125,8 @@ edgex_event_cooked *edgex_data_process_event
         cread = cbor_build_bytestring (data, sz);
         cbor_map_add (crdg, (struct cbor_pair)
           { .key = cbor_move (cbor_build_string ("binaryValue")), .value = cbor_move (cread) });
+        cbor_map_add (crdg, (struct cbor_pair)
+          { .key = cbor_move (cbor_build_string ("mediaType")), .value = cbor_move (cbor_build_string (commandinfo->pvals[i]->mediaType)) });
       }
       else
       {
@@ -140,6 +142,21 @@ edgex_event_cooked *edgex_data_process_event
         .key = cbor_move (cbor_build_string ("name")),
         .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
       });
+
+      cbor_map_add (crdg, (struct cbor_pair)
+      {
+        .key = cbor_move (cbor_build_string ("valueType")),
+        .value = cbor_move (cbor_build_string (edgex_propertytype_tostring (commandinfo->reqs[i].type)))
+      });
+
+      if (commandinfo->reqs[i].type == IOT_DATA_FLOAT32 || commandinfo->reqs[i].type == IOT_DATA_FLOAT64)
+      {
+        cbor_map_add (crdg, (struct cbor_pair)
+        {
+          .key = cbor_move (cbor_build_string ("floatEncoding")),
+          .value = cbor_move (cbor_build_string (commandinfo->pvals[i]->floatAsBinary ? "base64" : "eNotation"))
+        });
+      }
 
       cbor_map_add (crdg, (struct cbor_pair)
       {
@@ -179,6 +196,15 @@ edgex_event_cooked *edgex_data_process_event
       json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
       json_object_set_string (robj, "value", reading);
       json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
+      json_object_set_string (robj, "valueType", edgex_propertytype_tostring (commandinfo->reqs[i].type));
+      if (commandinfo->reqs[i].type == IOT_DATA_FLOAT32 || commandinfo->reqs[i].type == IOT_DATA_FLOAT64)
+      {
+        json_object_set_string (robj, "floatEncoding", commandinfo->pvals[i]->floatAsBinary ? "base64" : "eNotation");
+      }
+      else if (commandinfo->reqs[i].type == IOT_DATA_ARRAY)
+      {
+        json_object_set_string (robj, "mediaType", commandinfo->pvals[i]->mediaType);
+      }
       json_array_append_value (jrdgs, rval);
       free (reading);
     }
