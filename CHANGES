@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.2.0 "Geneva":
 
+- Device Readings are populated with datatype information.
 - Full dynamic discovery implementation with Provision Watchers.
 - New SDK API: see README.v2.md for details.
 - Utility functions added in edgex-base.h for finding Protocol Properties, and
