@@ -14,6 +14,9 @@
 #include "devsdk/devsdk.h"
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
+#define ERR_BUFSZ 1024
+#define ERR_GYRO_WRITE "PUT called for gyro device. This is a read-only device."
+#define ERR_GYRO_NO_PARAM "No parameter attribute in GET request."
 
 typedef struct gyro_driver
 {
@@ -41,13 +44,15 @@ static bool gyro_get_handler
 )
 {
   gyro_driver * driver = (gyro_driver *) impl;
+  char * buff;
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
     const char * param = devsdk_nvpairs_value (requests[i].attributes, "parameter");
     if (param == NULL)
     {
-      iot_log_error (driver->lc, "No parameter attribute in GET request");
+      iot_log_error (driver->lc, ERR_GYRO_NO_PARAM);
+      * exception = iot_data_alloc_string (ERR_GYRO_NO_PARAM, IOT_DATA_REF);
       return false;
     }
     if (strcmp (param, "xrot") == 0)
@@ -64,7 +69,16 @@ static bool gyro_get_handler
     }
     else
     {
-      iot_log_error (driver->lc, "Unknown parameter %s requested", param);
+      buff = malloc (sizeof (char) * ERR_BUFSZ);
+      if (!buff)
+      {
+        iot_log_error (driver->lc, "ERR_BUF malloc() failed");
+        * exception = iot_data_alloc_string ("ERR_BUF malloc() failed", IOT_DATA_REF);
+        return false;
+      }
+      snprintf (buff, ERR_BUFSZ, "Unknown parameter %s requested", param);
+      iot_log_error (driver->lc, buff);
+      * exception = iot_data_alloc_string (buff, IOT_DATA_TAKE);
       return false;
     }
   }
@@ -83,7 +97,8 @@ static bool gyro_put_handler
 )
 {
   gyro_driver * driver = (gyro_driver *) impl;
-  iot_log_error (driver->lc, "PUT called for gyro device. This is a read-only device");
+  iot_log_error (driver->lc, ERR_GYRO_WRITE);
+  * exception = iot_data_alloc_string (ERR_GYRO_WRITE, IOT_DATA_REF);
   return false;
 }
 

@@ -16,6 +16,10 @@
 #include "devsdk/devsdk.h"
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
+#define ERR_BUFSZ 1024
+#define ERR_TERMINAL_READ "GET called for terminal device. This is a write-only device."
+#define ERR_TERMINAL_NO_CMD "No command specified in PUT request."
+#define ERR_TERMINAL_MSG "WriteMsg request did not specify a message."
 
 typedef struct terminal_driver
 {
@@ -68,7 +72,6 @@ static bool terminal_writeMsg
 
   if (msg == NULL)
   {
-    iot_log_error (driver->lc, "WriteMsg request did not specify a message");
     return false;
   }
 
@@ -106,7 +109,8 @@ static bool terminal_get_handler
 )
 {
   terminal_driver * driver = (terminal_driver *) impl;
-  iot_log_error (driver->lc, "GET called for terminal device. This is a write-only device");
+  iot_log_error (driver->lc, ERR_TERMINAL_READ);
+  * exception = iot_data_alloc_string (ERR_TERMINAL_READ, IOT_DATA_REF);
   return false;
 }
 
@@ -121,8 +125,11 @@ static bool terminal_put_handler
   iot_data_t ** exception
 )
 {
+  bool terminal_msg_state = false;
   terminal_driver * driver = (terminal_driver *) impl;
+  char * buff;
   const char * command = NULL;
+
   for (uint32_t i = 0; i < nvalues; i++)
   {
     const char * param = devsdk_nvpairs_value (requests[i].attributes, "parameter");
@@ -135,16 +142,36 @@ static bool terminal_put_handler
 
   if (command == NULL)
   {
-    iot_log_error (driver->lc, "No command specified in PUT request");
+    iot_log_error (driver->lc, ERR_TERMINAL_NO_CMD);
+    * exception = iot_data_alloc_string (ERR_TERMINAL_NO_CMD, IOT_DATA_REF);
     return false;
   }
   else if (strcmp (command, "WriteMsg") == 0)
   {
-    return terminal_writeMsg (driver, nvalues, requests, values);
+    terminal_msg_state = terminal_writeMsg (driver, nvalues, requests, values);
+    if (!terminal_msg_state)
+    {
+      iot_log_error (driver->lc, ERR_TERMINAL_MSG);
+      * exception = iot_data_alloc_string (ERR_TERMINAL_MSG, IOT_DATA_REF);
+      return false;
+    }
+    else
+    {
+      return true;
+    }
   }
   else
   {
-    iot_log_error (driver->lc, "Unknown command %s", command);
+    buff = malloc (sizeof (char) * ERR_BUFSZ);
+    if (!buff)
+    {
+      iot_log_error (driver->lc, "ERR_BUF malloc() failed");
+      * exception = iot_data_alloc_string ("ERR_BUF malloc() failed", IOT_DATA_REF);
+      return false;
+    }
+    snprintf (buff, ERR_BUFSZ, "Unknown command %s", command);
+    iot_log_error (driver->lc, buff);
+    * exception = iot_data_alloc_string (buff, IOT_DATA_TAKE);
     return false;
   }
 }
