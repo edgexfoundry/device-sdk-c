@@ -162,13 +162,7 @@ static bool terminal_put_handler
   }
   else
   {
-    buff = malloc (sizeof (char) * ERR_BUFSZ);
-    if (!buff)
-    {
-      iot_log_error (driver->lc, "ERR_BUF malloc() failed");
-      * exception = iot_data_alloc_string ("ERR_BUF malloc() failed", IOT_DATA_REF);
-      return false;
-    }
+    buff = malloc (ERR_BUFSZ);
     snprintf (buff, ERR_BUFSZ, "Unknown command %s", command);
     iot_log_error (driver->lc, buff);
     * exception = iot_data_alloc_string (buff, IOT_DATA_TAKE);
