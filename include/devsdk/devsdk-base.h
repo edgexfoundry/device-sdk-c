@@ -45,6 +45,38 @@ typedef struct devsdk_nvpairs
 struct devsdk_protocols;
 typedef struct devsdk_protocols devsdk_protocols;
 
+typedef enum devsdk_propertytype
+{
+  DEVSDK_INT8 = IOT_DATA_INT8,
+  DEVSDK_UINT8 = IOT_DATA_UINT8,
+  DEVSDK_INT16 = IOT_DATA_INT16,
+  DEVSDK_UINT16 = IOT_DATA_UINT16,
+  DEVSDK_INT32 = IOT_DATA_INT32,
+  DEVSDK_UINT32 = IOT_DATA_UINT32,
+  DEVSDK_INT64 = IOT_DATA_INT64,
+  DEVSDK_UINT64 = IOT_DATA_UINT64,
+  DEVSDK_FLOAT32 = IOT_DATA_FLOAT32,
+  DEVSDK_FLOAT64 = IOT_DATA_FLOAT64,
+  DEVSDK_BOOL = IOT_DATA_BOOL,
+  DEVSDK_STRING = IOT_DATA_STRING,
+  DEVSDK_BINARY = IOT_DATA_ARRAY,
+  DEVSDK_UNUSED1 = IOT_DATA_MAP,
+  DEVSDK_UNUSED2 = IOT_DATA_VECTOR,
+  DEVSDK_INT8ARRAY,
+  DEVSDK_UINT8ARRAY,
+  DEVSDK_INT16ARRAY,
+  DEVSDK_UINT16ARRAY,
+  DEVSDK_INT32ARRAY,
+  DEVSDK_UINT32ARRAY,
+  DEVSDK_INT64ARRAY,
+  DEVSDK_UINT64ARRAY,
+  DEVSDK_FLOAT32ARRAY,
+  DEVSDK_FLOAT64ARRAY,
+  DEVSDK_BOOLARRAY
+} devsdk_propertytype;
+
+devsdk_propertytype devsdk_data_type (const iot_data_t *data);
+
 /**
  * @brief Structure containing information about a device resource which is the subject of a get or set request.
  */
@@ -56,7 +88,7 @@ typedef struct devsdk_commandrequest
   /** Attributes of the device resource */
   const devsdk_nvpairs *attributes;
   /** Type of the data to be read or written */
-  iot_data_type_t type;
+  devsdk_propertytype type;
 } devsdk_commandrequest;
 
 /**
