@@ -147,15 +147,15 @@ static bool template_put_handler
     /* Log the attributes */
     iot_log_debug (driver->lc, "  Requested device write %u:", i);
     dump_attributes (driver->lc, requests[i].attributes);
-    switch (iot_data_type (values[i]))
+    switch (devsdk_data_type (values[i]))
     {
-      case IOT_DATA_STRING:
+      case DEVSDK_STRING:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_string (values[i]));
         break;
-      case IOT_DATA_UINT64:
+      case DEVSDK_UINT64:
         iot_log_debug (driver->lc, "  Value: %lu", iot_data_ui64 (values[i]));
         break;
-      case IOT_DATA_BOOL:
+      case DEVSDK_BOOL:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_bool (values[i]) ? "true" : "false");
         break;
       /* etc etc */

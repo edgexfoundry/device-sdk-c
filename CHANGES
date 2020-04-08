@@ -8,9 +8,11 @@ differs as follows:
 
 Changes for 1.2.0 "Geneva":
 
+- Arrays of primitive types supported in Readings.
 - Device Readings are populated with datatype information.
 - Full dynamic discovery implementation with Provision Watchers.
 - New SDK API: see README.v2.md for details.
+  - the v1 API will be removed in version 2.0.0
 - Utility functions added in edgex-base.h for finding Protocol Properties, and
   for obtaining numeric values from name-value pair lists.
 

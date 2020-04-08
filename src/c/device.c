@@ -56,85 +56,283 @@ static const char *methStr (edgex_http_method method)
   }
 }
 
-static iot_data_t *populateValue (iot_data_type_t rtype, const char *val)
+static bool readFloat32 (const char *val, float *f)
 {
+  if (strlen (val) == 8 && val[6] == '=' && val[7] == '=')
+  {
+    size_t sz = sizeof (float);
+    return iot_b64_decode (val, f, &sz);
+  }
+  else
+  {
+    return (sscanf (val, "%e", f) == 1);
+  }
+}
+
+static bool readFloat64 (const char *val, double *d)
+{
+  if (strlen (val) == 12 && val[11] == '=')
+  {
+    size_t sz = sizeof (double);
+    return iot_b64_decode (val, d, &sz);
+  }
+  else
+  {
+    return (sscanf (val, "%le", d) == 1);
+  }
+}
+
+static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
+{
+  JSON_Value *jval = NULL;
+  JSON_Array *jarr = NULL;
+  size_t jsz = 0;
+  if (rtype >= DEVSDK_INT8ARRAY && rtype <= DEVSDK_BOOLARRAY)
+  {
+    jval = json_parse_string (val);
+    if (jval)
+    {
+      jarr = json_value_get_array (jval);
+      if (jarr == NULL)
+      {
+        json_value_free (jval);
+        return NULL;
+      }
+      jsz = json_array_get_count (jarr);
+    }
+    else
+    {
+      return NULL;
+    }
+  }
+
   switch (rtype)
   {
-    case IOT_DATA_UINT8:
+    case DEVSDK_UINT8:
     {
       uint8_t i;
       return (sscanf (val, "%" SCNu8, &i) == 1) ? iot_data_alloc_ui8 (i) : NULL;
     }
-    case IOT_DATA_INT8:
+    case DEVSDK_INT8:
     {
       int8_t i;
       return (sscanf (val, "%" SCNi8, &i) == 1) ? iot_data_alloc_i8 (i) : NULL;
     }
-    case IOT_DATA_UINT16:
+    case DEVSDK_UINT16:
     {
       uint16_t i;
       return (sscanf (val, "%" SCNu16, &i) == 1) ? iot_data_alloc_ui16 (i) : NULL;
     }
-    case IOT_DATA_INT16:
+    case DEVSDK_INT16:
     {
       int16_t i;
       return (sscanf (val, "%" SCNi16, &i) == 1) ? iot_data_alloc_i16 (i) : NULL;
     }
-    case IOT_DATA_UINT32:
+    case DEVSDK_UINT32:
     {
       uint32_t i;
       return (sscanf (val, "%" SCNu32, &i) == 1) ? iot_data_alloc_ui32 (i) : NULL;
     }
-    case IOT_DATA_INT32:
+    case DEVSDK_INT32:
     {
       int32_t i;
       return (sscanf (val, "%" SCNi32, &i) == 1) ? iot_data_alloc_i32 (i) : NULL;
     }
-    case IOT_DATA_UINT64:
+    case DEVSDK_UINT64:
     {
       uint64_t i;
       return (sscanf (val, "%" SCNu64, &i) == 1) ? iot_data_alloc_ui64 (i) : NULL;
     }
-    case IOT_DATA_INT64:
+    case DEVSDK_INT64:
     {
       int64_t i;
       return (sscanf (val, "%" SCNi64, &i) == 1) ? iot_data_alloc_i64 (i) : NULL;
     }
-    case IOT_DATA_FLOAT32:
+    case DEVSDK_FLOAT32:
     {
       float f;
-      if (strlen (val) == 8 && val[6] == '=' && val[7] == '=')
-      {
-        size_t sz = sizeof (float);
-        return iot_b64_decode (val, &f, &sz) ? iot_data_alloc_f32 (f) : NULL;
-      }
-      else
-      {
-        return (sscanf (val, "%e", &f) == 1) ? iot_data_alloc_f32 (f) : NULL;
-      }
+      return readFloat32 (val, &f) ? iot_data_alloc_f32 (f) : NULL;
     }
-    case IOT_DATA_FLOAT64:
+    case DEVSDK_FLOAT64:
     {
       double d;
-      if (strlen (val) == 12 && val[11] == '=')
-      {
-        size_t sz = sizeof (double);
-        return iot_b64_decode (val, &d, &sz) ? iot_data_alloc_f64 (d) : NULL;
-      }
-      else
-      {
-        return (sscanf (val, "%le", &d) == 1) ? iot_data_alloc_f64 (d) : NULL;
-      }
+      return readFloat64 (val, &d) ? iot_data_alloc_f64 (d) : NULL;
     }
-    case IOT_DATA_STRING:
+    case DEVSDK_STRING:
       return iot_data_alloc_string (val, IOT_DATA_COPY);
-    case IOT_DATA_BOOL:
+    case DEVSDK_BOOL:
       return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
-    case IOT_DATA_ARRAY:
-      return iot_data_alloc_array_from_base64 (val);
-    case IOT_DATA_MAP:
-    case IOT_DATA_VECTOR:
+    case DEVSDK_BINARY:
+    {
+      iot_data_t *res = iot_data_alloc_array_from_base64 (val);
+      iot_data_t *b = iot_data_alloc_bool (true);
+      iot_data_set_metadata (res, b);
+      iot_data_free (b);
+      return res;
+    }
+    case DEVSDK_UNUSED1:
+    case DEVSDK_UNUSED2:
       return NULL;
+    case DEVSDK_INT8ARRAY:
+    {
+      int8_t *arr = malloc (jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNi8, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_INT8, IOT_DATA_TAKE);
+    }
+    case DEVSDK_UINT8ARRAY:
+    {
+      uint8_t *arr = malloc (jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNu8, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT8, IOT_DATA_TAKE);
+    }
+    case DEVSDK_INT16ARRAY:
+    {
+      int16_t *arr = malloc (2 * jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNi16, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_INT16, IOT_DATA_TAKE);
+    }
+    case DEVSDK_UINT16ARRAY:
+    {
+      uint16_t *arr = malloc (2 * jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNu16, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT16, IOT_DATA_TAKE);
+    }
+    case DEVSDK_INT32ARRAY:
+    {
+      int32_t *arr = malloc (4 * jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNi32, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_INT32, IOT_DATA_TAKE);
+    }
+    case DEVSDK_UINT32ARRAY:
+    {
+      uint32_t *arr = malloc (4 * jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNu32, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT32, IOT_DATA_TAKE);
+    }
+    case DEVSDK_INT64ARRAY:
+    {
+      int64_t *arr = malloc (8 * jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNi64, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_INT64, IOT_DATA_TAKE);
+    }
+    case DEVSDK_UINT64ARRAY:
+    {
+      uint64_t *arr = malloc (8 * jsz);
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (sscanf (json_array_get_string (jarr, i), "%" SCNu64, &arr[i]) != 1)
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT64, IOT_DATA_TAKE);
+    }
+    case DEVSDK_FLOAT32ARRAY:
+    {
+      float *arr = malloc (jsz * sizeof (float));
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (!readFloat32 (json_array_get_string (jarr, i), &arr[i]))
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_FLOAT32, IOT_DATA_TAKE);
+    }
+    case DEVSDK_FLOAT64ARRAY:
+    {
+      double *arr = malloc (jsz * sizeof (double));
+      for (size_t i = 0; i < jsz; i++)
+      {
+        if (!readFloat64 (json_array_get_string (jarr, i), &arr[i]))
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_FLOAT64, IOT_DATA_TAKE);
+    }
+    case DEVSDK_BOOLARRAY:
+    {
+      bool *arr = malloc (jsz * sizeof (bool));
+      for (size_t i = 0; i < jsz; i++)
+      {
+        arr[i] = (strcasecmp (json_array_get_string (jarr, i), "true") == 0);
+      }
+      json_value_free (jval);
+      return iot_data_alloc_array (arr, jsz, IOT_DATA_BOOL, IOT_DATA_TAKE);
+    }
   }
   return false;
 }

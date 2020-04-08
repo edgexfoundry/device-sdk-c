@@ -23,9 +23,9 @@ The pairing of an `edgex_propertytype` and an `edgex_device_resultvalue` is repl
 
 The type of data held in an `iot_data_t` may be obtained using the following function:
 
-`iot_data_type_t iot_data_type (const iot_data_t * data)`
+`devsdk_propertytype devsdk_data_type (const iot_data_t * data)`
 
-`iot_data_type_t` is an enumeration of primitive types, string, binary and others. This is used in place of `edgex_propertytype`, although the old type names are still available via `#define` constants.
+`devsdk_propertytype` is an enumeration of primitive types, string, binary, arrays and others. This is used in place of `edgex_propertytype`, although the old type names are still available via `#define` constants.
 
 Data is stored in an `iot_data_t` using the following functions:
 
