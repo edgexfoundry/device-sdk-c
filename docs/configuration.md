@@ -1,12 +1,14 @@
 # Device service configuration options
 
-The device service configuration is held in TOML format. By default the SDK will load configuration from a file named `configuration.toml` in the `res` directory, but this may be changed using the --confdir and --profile options.
+The device service configuration is held in TOML format. By default the SDK will load configuration from a file named `configuration.toml` in the `res` directory, but this may be changed using the --confdir, --file and --profile options.
 
 Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`.
 
 If the Registry is in use, configuration is contained in subfolders of `edgex/core/1.0/<service-name>`. The "Clients" section is not present in this scenario, as the Registry provides a specific mechanism for maintaining service information.
 
-When a device service is run for the first time with Registry enabled, it reads its configuration from a TOML file and uploads it to the Registry. The value of any configuration element can be over-ridden at this time with a value from a corresponding environment variable. The service first looks for an environment variable whose name is of the form
+When a device service is run for the first time with Registry enabled, it reads its configuration from a TOML file and uploads it to the Registry.
+
+The value of any configuration element can be over-ridden with a value from a corresponding environment variable. The service first looks for an environment variable whose name is of the form
 
 `<service-name>_<section-name>_<config-element>`
 
@@ -79,4 +81,3 @@ LogLevel | String | Sets the logging level. Available settings in order of incre
 ## Driver section
 
 This section is for driver-specific options. Any configuration specified here will be passed to the driver implementation during initialization.
-

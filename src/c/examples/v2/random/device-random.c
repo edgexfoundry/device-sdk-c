@@ -156,7 +156,7 @@ int main (int argc, char *argv[])
     if (strcmp (argv[n], "-h") == 0 || strcmp (argv[n], "--help") == 0)
     {
       printf ("Options:\n");
-      printf ("  -h, --help\t\t: Show this text\n");
+      printf ("  -h, --help\t\t\tShow this text\n");
       return 0;
     }
     else

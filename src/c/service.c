@@ -48,10 +48,16 @@ typedef struct postparams
 
 void devsdk_usage ()
 {
-  printf ("  -n, --name=<name>\t: Set the device service name\n");
-  printf ("  -r, --registry=<url>\t: Use the registry service\n");
-  printf ("  -p, --profile=<name>\t: Set the profile name\n");
-  printf ("  -c, --confdir=<dir>\t: Set the configuration directory\n");
+  printf ("  -cp, --configProvider=<url>\tIndicates to use Configuration Provider service at specified URL.\n"
+          "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: consul.http://localhost:8500\n");
+  printf ("  -o, --overwrite            \tOverwrite configuration in provider with local configuration.\n"
+          "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
+          "                             \tproblematic if those settings were edited by hand intentionally\n");
+  printf ("  -f, --file                 \tIndicates name of the local configuration file. Defaults to configuration.toml\n");
+  printf ("  -p, --profile=<name>       \tIndicate configuration profile other than default.\n");
+  printf ("  -c, --confdir=<dir>        \tSpecify local configuration directory\n");
+  printf ("  -r, --registry             \tIndicates service should use Registry.\n");
+  printf ("  -n, --name=<name>          \tSpecify device service name other than default.\n");
 }
 
 static bool testArgOpt (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
@@ -108,6 +114,19 @@ static void consumeArgs (int *argc_p, char **argv, int start, int nargs)
   *argc_p -= nargs;
 }
 
+static void checkEnv (const char **setting, const char *varname, const char *altvar)
+{
+  const char *val = getenv (varname);
+  if (val == NULL && altvar)
+  {
+    val = getenv (altvar);
+  }
+  if (val)
+  {
+    *setting = val;
+  }
+}
+
 static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
 {
   bool result = true;
@@ -115,12 +134,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   const char *arg;
   const char *val;
   int argc = *argc_p;
-
-  val = getenv ("edgex_registry");
-  if (val)
-  {
-    svc->regURL = val;
-  }
+  bool cpset = false;
 
   int n = 1;
   while (result && n < argc)
@@ -137,15 +151,25 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     {
       val = argv[n + 1];
     }
-    if (testArgOpt (arg, val, "-r", "--registry", &svc->regURL, &result))
+    if (testArgOpt (arg, val, "-r", "--registry", &svc->regURL, &result) || testArgOpt (arg, val, "-cp", "--configProvider", &svc->regURL, &result))
     {
       consumeArgs (&argc, argv, n, result ? 2 : 1);
-      result = true;
+      if (cpset)
+      {
+        printf ("Only one of -r/--registry and -cp/--configProvider may be set\n");
+        result = false;
+      }
+      else
+      {
+        cpset = true;
+        result = true;
+      }
     } else if
     (
       testArg (arg, val, "-n", "--name", &svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
-      testArg (arg, val, "-c", "--confdir", &svc->confdir, &result)
+      testArg (arg, val, "-c", "--confdir", &svc->confdir, &result) ||
+      testArg (arg, val, "-f", "--file", &svc->conffile, &result)
     )
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
@@ -160,6 +184,13 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     }
   }
   *argc_p = argc;
+
+  checkEnv (&svc->regURL, "EDGEX_CONFIGURATION_PROVIDER", "edgex_registry");
+  checkEnv (&svc->profile, "EDGEX_PROFILE", "edgex_profile");
+  checkEnv (&svc->confdir, "EDGEX_CONF_DIR", NULL);
+  checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE", NULL);
+  checkEnv (&svc->name, "EDGEX_SERVICE_NAME", NULL);
+
   return result;
 }
 
@@ -574,11 +605,8 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   {
     if (*svc->regURL == '\0')
     {
-      config = edgex_device_loadConfig (svc->logger, svc->confdir, svc->profile, err);
-      if (err->code)
-      {
-        return;
-      }
+      devsdk_error e;
+      config = edgex_device_loadConfig (svc->logger, svc->confdir, svc->conffile, svc->profile, &e);
       svc->regURL = edgex_device_getRegURL (config);
     }
     if (svc->regURL)
@@ -597,27 +625,57 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   {
     // Wait for registry to be ready
 
+    struct timespec delay;
+    char *val;
     unsigned retries = 5;
-    char *errc = getenv ("edgex_registry_retry_count");
-    if (errc)
+    time_t secs = 1;
+
+    val = getenv ("EDGEX_STARTUP_INTERVAL");
+    if (val == NULL)
     {
-      int rc = atoi (errc);
-      if (rc > 0)
+      val = getenv ("startup_interval");
+    }
+    if (val == NULL)
+    {
+      val = getenv ("edgex_registry_retry_wait");
+    }
+    if (val)
+    {
+      int rw = atoi (val);
+      if (rw > 0)
       {
-        retries = rc;
+        secs = rw;
       }
     }
 
-    struct timespec delay = { .tv_sec = 1, .tv_nsec = 0 };
-    char *errw = getenv ("edgex_registry_retry_wait");
-    if (errw)
+    val = getenv ("EDGEX_STARTUP_DURATION");
+    if (val == NULL)
     {
-      int rw = atoi (errw);
-      if (rw > 0)
+      val = getenv ("startup_duration");
+    }
+    if (val)
+    {
+      int dur = atoi (val);
+      if (dur > 0)
       {
-        delay.tv_sec = rw;
+        retries = dur / secs;
       }
     }
+    else
+    {
+      val = getenv ("edgex_registry_retry_count");
+      if (val)
+      {
+        int rc = atoi (val);
+        if (rc > 0)
+        {
+          retries = rc;
+        }
+      }
+    }
+
+    delay.tv_sec = secs;
+    delay.tv_nsec = 0;
 
     while (!devsdk_registry_ping (svc->registry, err) && --retries)
     {
@@ -638,6 +696,7 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
 
     if (confpairs)
     {
+      edgex_device_overrideConfig (svc->logger, svc->name, confpairs);
       edgex_device_populateConfig (svc, confpairs, err);
       if (err->code)
       {
@@ -658,7 +717,7 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   {
     if (config == NULL)
     {
-      config = edgex_device_loadConfig (svc->logger, svc->confdir, svc->profile, err);
+      config = edgex_device_loadConfig (svc->logger, svc->confdir, svc->conffile, svc->profile, err);
       if (err->code)
       {
         return;
@@ -666,12 +725,12 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
     }
 
     confpairs = edgex_device_parseToml (config);
+    edgex_device_overrideConfig (svc->logger, svc->name, confpairs);
     edgex_device_populateConfig (svc, confpairs, err);
 
     if (uploadConfig)
     {
       iot_log_info (svc->logger, "Uploading configuration to registry.");
-      edgex_device_overrideConfig (svc->logger, svc->name, confpairs);
       devsdk_registry_put_config (svc->registry, svc->name, svc->profile, confpairs, err);
       if (err->code)
       {

@@ -40,6 +40,7 @@ static void reginit (void)
     regmap = malloc (sizeof (devsdk_map_registry));
     edgex_map_init (regmap);
     edgex_map_set (regmap, "consul", consulimpl);
+    edgex_map_set (regmap, "consul.http", consulimpl);
   }
   pthread_mutex_unlock (&reglock);
 }
