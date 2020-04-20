@@ -178,53 +178,6 @@ void devsdk_protocols_free (devsdk_protocols *e)
   }
 }
 
-devsdk_propertytype devsdk_data_type (const iot_data_t *data)
-{
-  devsdk_propertytype res = iot_data_type (data);
-  if (res == DEVSDK_BINARY)
-  {
-    switch (iot_data_array_type (data))
-    {
-      case IOT_DATA_INT8:
-        res = DEVSDK_INT8ARRAY;
-        break;
-      case IOT_DATA_UINT8:
-        res = iot_data_get_metadata (data) ? DEVSDK_BINARY : DEVSDK_UINT8ARRAY;
-        break;
-      case IOT_DATA_INT16:
-        res = DEVSDK_INT16ARRAY;
-        break;
-      case IOT_DATA_UINT16:
-        res = DEVSDK_UINT16ARRAY;
-        break;
-      case IOT_DATA_INT32:
-        res = DEVSDK_INT32ARRAY;
-        break;
-      case IOT_DATA_UINT32:
-        res = DEVSDK_UINT32ARRAY;
-        break;
-      case IOT_DATA_INT64:
-        res = DEVSDK_INT64ARRAY;
-        break;
-      case IOT_DATA_UINT64:
-        res = DEVSDK_UINT64ARRAY;
-        break;
-      case IOT_DATA_FLOAT32:
-        res = DEVSDK_FLOAT32ARRAY;
-        break;
-      case IOT_DATA_FLOAT64:
-        res = DEVSDK_FLOAT64ARRAY;
-        break;
-      case IOT_DATA_BOOL:
-        res = DEVSDK_BOOLARRAY;
-        break;
-      default:
-        res = DEVSDK_UNUSED1;
-    }
-  }
-  return res;
-}
-
 /* Macro for generating single-linked-list comparison functions.
  * Assumes a "next" pointer and that the key (name) field is a string.
  */

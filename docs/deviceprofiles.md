@@ -103,7 +103,7 @@ The Device Profile in the C SDK
 -------------------------------
 
 When the SDK invokes the get or set handler method, parts of the device profile
-which pertain to the request are passed in the edgex_device_commandrequest
+which pertain to the request are passed in the devsdk_commandrequest
 structure. This consists of the name, attributes and type of the deviceResource
 which is being queried or set.
 

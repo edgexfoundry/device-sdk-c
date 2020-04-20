@@ -22,7 +22,7 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
 #define BUFSIZE 32
   char *res;
 
-  if (iot_data_type (value) == IOT_DATA_ARRAY && devsdk_data_type (value) != DEVSDK_BINARY)
+  if (iot_data_type (value) == IOT_DATA_ARRAY && edgex_propertytype_data (value) != Edgex_Binary)
   {
     char vstr[BUFSIZE];
     uint32_t length = iot_data_array_length (value);
@@ -30,33 +30,33 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
     res[0] = 0;
     for (uint32_t i = 0; i < length; i++)
     {
-      switch (devsdk_data_type (value))
+      switch (edgex_propertytype_data (value))
       {
-        case DEVSDK_INT8ARRAY:
+        case Edgex_Int8Array:
           sprintf (vstr, "%" PRIi8, ((int8_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_UINT8ARRAY:
+        case Edgex_Uint8Array:
           sprintf (vstr, "%" PRIu8, ((uint8_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_INT16ARRAY:
+        case Edgex_Int16Array:
           sprintf (vstr, "%" PRIi16, ((int16_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_UINT16ARRAY:
+        case Edgex_Uint16Array:
           sprintf (vstr, "%" PRIu16, ((uint16_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_INT32ARRAY:
+        case Edgex_Int32Array:
           sprintf (vstr, "%" PRIi32, ((int32_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_UINT32ARRAY:
+        case Edgex_Uint32Array:
           sprintf (vstr, "%" PRIu32, ((uint32_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_INT64ARRAY:
+        case Edgex_Int64Array:
           sprintf (vstr, "%" PRIi64, ((int64_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_UINT64ARRAY:
+        case Edgex_Uint64Array:
           sprintf (vstr, "%" PRIu64, ((uint64_t *)iot_data_address (value))[i]);
           break;
-        case DEVSDK_FLOAT32ARRAY:
+        case Edgex_Float32Array:
         {
           float f = ((float *)iot_data_address (value))[i];
           if (binfloat)
@@ -69,7 +69,7 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
           }
           break;
         }
-        case DEVSDK_FLOAT64ARRAY:
+        case Edgex_Float64Array:
         {
           double d = ((double *)iot_data_address (value))[i];
           if (binfloat)
@@ -82,7 +82,7 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
           }
           break;
         }
-        case DEVSDK_BOOLARRAY:
+        case Edgex_BoolArray:
           strcpy (vstr, ((bool *)iot_data_address (value))[i] ? "true" : "false");
           break;
         default:
@@ -96,9 +96,9 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
   }
   else
   {
-    switch (devsdk_data_type (value))
+    switch (edgex_propertytype_data (value))
     {
-      case DEVSDK_FLOAT32:
+      case Edgex_Float32:
         res = malloc (BUFSIZE);
         if (binfloat)
         {
@@ -110,7 +110,7 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
           sprintf (res, "%.8e", iot_data_f32 (value));
         }
         break;
-      case DEVSDK_FLOAT64:
+      case Edgex_Float64:
         res = malloc (BUFSIZE);
         if (binfloat)
         {
@@ -122,10 +122,10 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
           sprintf (res, "%.16e", iot_data_f64 (value));
         }
         break;
-      case DEVSDK_STRING:
+      case Edgex_String:
         res = strdup (iot_data_string (value));
         break;
-      case DEVSDK_BINARY:
+      case Edgex_Binary:
       {
         uint32_t sz, rsz;
         const uint8_t *data = iot_data_address (value);
@@ -156,11 +156,12 @@ edgex_event_cooked *edgex_data_process_event
   uint64_t timenow = iot_time_nsecs ();
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
-    if (commandinfo->reqs[i].type == DEVSDK_BINARY)
+    if (commandinfo->pvals[i]->type == Edgex_Binary)
     {
       iot_data_t *b = iot_data_alloc_bool (true);
       iot_data_set_metadata (values[i].value, b);
       iot_data_free (b);
+      useCBOR = true;
     }
     if (doTransforms)
     {
@@ -180,10 +181,6 @@ edgex_event_cooked *edgex_data_process_event
         free (reading);
       }
     }
-    if (commandinfo->pvals[i]->type == IOT_DATA_ARRAY)
-    {
-      useCBOR = true;
-    }
   }
 
   result = malloc (sizeof (edgex_event_cooked));
@@ -195,10 +192,11 @@ edgex_event_cooked *edgex_data_process_event
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
-      cbor_item_t *crdg = cbor_new_definite_map (3);
-
       cbor_item_t *cread;
-      if (iot_data_type (values[i].value) == IOT_DATA_ARRAY)
+      cbor_item_t *crdg = cbor_new_definite_map (3);
+      edgex_propertytype pt = edgex_propertytype_data (values[i].value);
+
+      if (pt == Edgex_Binary)
       {
         const uint8_t *data;
         uint32_t sz = iot_data_array_size (values[i].value);
@@ -227,10 +225,10 @@ edgex_event_cooked *edgex_data_process_event
       cbor_map_add (crdg, (struct cbor_pair)
       {
         .key = cbor_move (cbor_build_string ("valueType")),
-        .value = cbor_move (cbor_build_string (edgex_propertytype_tostring (commandinfo->reqs[i].type)))
+        .value = cbor_move (cbor_build_string (edgex_propertytype_tostring (pt)))
       });
 
-      if (commandinfo->reqs[i].type == DEVSDK_FLOAT32 || commandinfo->reqs[i].type == DEVSDK_FLOAT64)
+      if (pt == Edgex_Float32 || pt == Edgex_Float64 || pt == Edgex_Float32Array || pt == Edgex_Float64Array)
       {
         cbor_map_add (crdg, (struct cbor_pair)
         {
@@ -269,6 +267,7 @@ edgex_event_cooked *edgex_data_process_event
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
+      edgex_propertytype pt = edgex_propertytype_data (values[i].value);
       char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
 
       JSON_Value *rval = json_value_init_object ();
@@ -277,14 +276,20 @@ edgex_event_cooked *edgex_data_process_event
       json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
       json_object_set_string (robj, "value", reading);
       json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
-      json_object_set_string (robj, "valueType", edgex_propertytype_tostring (commandinfo->reqs[i].type));
-      if (commandinfo->reqs[i].type == DEVSDK_FLOAT32 || commandinfo->reqs[i].type == DEVSDK_FLOAT64)
+      json_object_set_string (robj, "valueType", edgex_propertytype_tostring (pt));
+      switch (pt)
       {
-        json_object_set_string (robj, "floatEncoding", commandinfo->pvals[i]->floatAsBinary ? "base64" : "eNotation");
-      }
-      else if (commandinfo->reqs[i].type == DEVSDK_BINARY)
-      {
-        json_object_set_string (robj, "mediaType", commandinfo->pvals[i]->mediaType);
+        case Edgex_Float32:
+        case Edgex_Float64:
+        case Edgex_Float32Array:
+        case Edgex_Float64Array:
+          json_object_set_string (robj, "floatEncoding", commandinfo->pvals[i]->floatAsBinary ? "base64" : "eNotation");
+          break;
+        case Edgex_Binary:
+          json_object_set_string (robj, "mediaType", commandinfo->pvals[i]->mediaType);
+          break;
+        default:
+          break;
       }
       json_array_append_value (jrdgs, rval);
       free (reading);
@@ -365,9 +370,6 @@ void devsdk_commandresult_free (devsdk_commandresult *res, int n)
     free (res);
   }
 }
-
-/* Dummy methods: onChange on AutoEvents will not work until these two are impl
-emented in iot-c-utils */
 
 devsdk_commandresult *devsdk_commandresult_dup (const devsdk_commandresult *res, int n)
 {

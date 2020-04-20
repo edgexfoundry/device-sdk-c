@@ -9,6 +9,7 @@
  */
 
 #include "devsdk/devsdk.h"
+#include "edgex/edgex-base.h"
 
 #include <unistd.h>
 #include <signal.h>
@@ -147,15 +148,15 @@ static bool template_put_handler
     /* Log the attributes */
     iot_log_debug (driver->lc, "  Requested device write %u:", i);
     dump_attributes (driver->lc, requests[i].attributes);
-    switch (devsdk_data_type (values[i]))
+    switch (edgex_propertytype_data (values[i]))
     {
-      case DEVSDK_STRING:
+      case Edgex_String:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_string (values[i]));
         break;
-      case DEVSDK_UINT64:
+      case Edgex_Uint64:
         iot_log_debug (driver->lc, "  Value: %lu", iot_data_ui64 (values[i]));
         break;
-      case DEVSDK_BOOL:
+      case Edgex_Bool:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_bool (values[i]) ? "true" : "false");
         break;
       /* etc etc */

@@ -18,14 +18,14 @@ static bool transformsOn (const edgex_propertyvalue *pv)
   return (pv->offset.enabled || pv->scale.enabled || pv->base.enabled || pv->shift.enabled || pv->mask.enabled);
 }
 
-static long double getLongDouble (const iot_data_t *value, const edgex_propertyvalue *props)
+static long double getLongDouble (const iot_data_t *value, edgex_propertytype pt)
 {
-  return (props->type == IOT_DATA_FLOAT64) ? iot_data_f64 (value) : iot_data_f32 (value);
+  return (pt == Edgex_Float64) ? iot_data_f64 (value) : iot_data_f32 (value);
 }
 
-static iot_data_t *setLongDouble (long double ldval, edgex_propertyvalue *props)
+static iot_data_t *setLongDouble (long double ldval, edgex_propertytype pt)
 {
-  if (props->type == IOT_DATA_FLOAT64)
+  if (pt == Edgex_Float64)
   {
     return (ldval <= DBL_MAX && ldval >= -DBL_MAX) ? iot_data_alloc_f64 (ldval) : NULL;
   }
@@ -35,48 +35,48 @@ static iot_data_t *setLongDouble (long double ldval, edgex_propertyvalue *props)
   }
 }
 
-static long long int getLLInt (const iot_data_t *value, const edgex_propertyvalue *props)
+static long long int getLLInt (const iot_data_t *value, edgex_propertytype pt)
 {
-  switch (props->type)
+  switch (pt)
   {
-    case IOT_DATA_INT8: return iot_data_i8 (value); break;
-    case IOT_DATA_UINT8: return iot_data_ui8 (value); break;
-    case IOT_DATA_INT16: return iot_data_i16 (value); break;
-    case IOT_DATA_UINT16: return iot_data_ui16 (value); break;
-    case IOT_DATA_INT32: return iot_data_i32 (value); break;
-    case IOT_DATA_UINT32: return iot_data_ui32 (value); break;
-    case IOT_DATA_INT64: return iot_data_i64 (value); break;
-    case IOT_DATA_UINT64: return iot_data_ui64 (value); break;
+    case Edgex_Int8: return iot_data_i8 (value); break;
+    case Edgex_Uint8: return iot_data_ui8 (value); break;
+    case Edgex_Int16: return iot_data_i16 (value); break;
+    case Edgex_Uint16: return iot_data_ui16 (value); break;
+    case Edgex_Int32: return iot_data_i32 (value); break;
+    case Edgex_Uint32: return iot_data_ui32 (value); break;
+    case Edgex_Int64: return iot_data_i64 (value); break;
+    case Edgex_Uint64: return iot_data_ui64 (value); break;
     default: assert (0); return 0;
   }
 }
 
-static iot_data_t *setLLInt (long long int llival, const edgex_propertyvalue *props)
+static iot_data_t *setLLInt (long long int llival, edgex_propertytype pt)
 {
-  switch (props->type)
+  switch (pt)
   {
-    case IOT_DATA_INT8:
+    case Edgex_Int8:
       return (llival >= SCHAR_MIN && llival <= SCHAR_MAX) ? iot_data_alloc_i8 (llival) : NULL;
       break;
-    case IOT_DATA_UINT8:
+    case Edgex_Uint8:
       return (llival >= 0 && llival <= UCHAR_MAX) ? iot_data_alloc_ui8 (llival) : NULL;
       break;
-    case IOT_DATA_INT16:
+    case Edgex_Int16:
       return (llival >= SHRT_MIN && llival <= SHRT_MAX) ? iot_data_alloc_i16 (llival) : NULL;
       break;
-    case IOT_DATA_UINT16:
+    case Edgex_Uint16:
       return (llival >= 0 && llival <= USHRT_MAX) ? iot_data_alloc_ui16 (llival) : NULL;
       break;
-    case IOT_DATA_INT32:
+    case Edgex_Int32:
       return (llival >= INT_MIN && llival <= INT_MAX) ? iot_data_alloc_i32 (llival) : NULL;
       break;
-    case IOT_DATA_UINT32:
+    case Edgex_Uint32:
       return (llival >= 0 && llival <= UINT_MAX) ? iot_data_alloc_ui32 (llival) : NULL;
       break;
-    case IOT_DATA_INT64:
+    case Edgex_Int64:
       return (llival >= LLONG_MIN && llival <= LLONG_MAX) ? iot_data_alloc_i64 (llival) : NULL;
       break;
-    case IOT_DATA_UINT64:
+    case Edgex_Uint64:
       return (llival >= 0 && llival <= ULLONG_MAX) ? iot_data_alloc_ui64 (llival) : NULL;
       break;
     default:
@@ -88,36 +88,37 @@ static iot_data_t *setLLInt (long long int llival, const edgex_propertyvalue *pr
 void edgex_transform_outgoing
   (devsdk_commandresult *cres, edgex_propertyvalue *props, devsdk_nvpairs *mappings)
 {
-  switch (props->type)
+  edgex_propertytype pt = edgex_propertytype_data (cres->value);
+  switch (pt)
   {
-    case IOT_DATA_FLOAT32:
-    case IOT_DATA_FLOAT64:
+    case Edgex_Float32:
+    case Edgex_Float64:
     if (transformsOn (props))
     {
-      long double result = getLongDouble (cres->value, props);
+      long double result = getLongDouble (cres->value, pt);
       if (props->base.enabled) result = powl (props->base.value.dval, result);
       if (props->scale.enabled) result *= props->scale.value.dval;
       if (props->offset.enabled) result += props->offset.value.dval;
 
       iot_data_free (cres->value);
-      cres->value = setLongDouble (result, props);
+      cres->value = setLongDouble (result, pt);
       if (cres->value == NULL)
       {
         cres->value = iot_data_alloc_string ("overflow", IOT_DATA_REF);
       }
     }
     break;
-    case IOT_DATA_INT8:
-    case IOT_DATA_UINT8:
-    case IOT_DATA_INT16:
-    case IOT_DATA_UINT16:
-    case IOT_DATA_INT32:
-    case IOT_DATA_UINT32:
-    case IOT_DATA_INT64:
-    case IOT_DATA_UINT64:
+    case Edgex_Int8:
+    case Edgex_Uint8:
+    case Edgex_Int16:
+    case Edgex_Uint16:
+    case Edgex_Int32:
+    case Edgex_Uint32:
+    case Edgex_Int64:
+    case Edgex_Uint64:
     if (transformsOn (props))
     {
-      long long int result = getLLInt (cres->value, props);
+      long long int result = getLLInt (cres->value, pt);
       if (props->mask.enabled) result &= props->mask.value.ival;
       if (props->shift.enabled)
       {
@@ -135,14 +136,14 @@ void edgex_transform_outgoing
       if (props->offset.enabled) result += props->offset.value.ival;
 
       iot_data_free (cres->value);
-      cres->value = setLLInt (result, props);
+      cres->value = setLLInt (result, pt);
       if (cres->value == NULL)
       {
         cres->value = iot_data_alloc_string ("overflow", IOT_DATA_REF);
       }
     }
     break;
-    case IOT_DATA_STRING:
+    case Edgex_String:
     {
       const char *remap = devsdk_nvpairs_value (mappings, iot_data_string (cres->value));
       if (remap)
@@ -164,12 +165,12 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
     case IOT_DATA_FLOAT64:
     if (transformsOn (props))
     {
-      long double result = getLongDouble (*cres, props);
+      long double result = getLongDouble (*cres, props->type);
       if (props->offset.enabled) result -= props->offset.value.dval;
       if (props->scale.enabled) result /= props->scale.value.dval;
       if (props->base.enabled) result = logl (result) / logl (props->base.value.dval);
       iot_data_free (*cres);
-      *cres = setLongDouble (result, props);
+      *cres = setLongDouble (result, props->type);
     }
     break;
     case IOT_DATA_INT8:
@@ -182,7 +183,7 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
     case IOT_DATA_UINT64:
     if (transformsOn (props))
     {
-      long long int result = getLLInt (*cres, props);
+      long long int result = getLLInt (*cres, props->type);
       if (props->offset.enabled) result -= props->offset.value.ival;
       if (props->scale.enabled) result /= props->scale.value.ival;
       if (props->base.enabled) result = llroundl (logl (result) / logl (props->base.value.ival));
@@ -199,7 +200,7 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
       }
       // Mask transform NYI. Possibly will be done in the driver.
       iot_data_free (*cres);
-      *cres = setLLInt (result, props);
+      *cres = setLLInt (result, props->type);
     }
     break;
     case IOT_DATA_STRING:

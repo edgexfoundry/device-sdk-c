@@ -23,9 +23,9 @@ The pairing of an `edgex_propertytype` and an `edgex_device_resultvalue` is repl
 
 The type of data held in an `iot_data_t` may be obtained using the following function:
 
-`devsdk_propertytype devsdk_data_type (const iot_data_t * data)`
+`edgex_propertytype edgex_propertytype_data (const iot_data_t *data)`
 
-`devsdk_propertytype` is an enumeration of primitive types, string, binary, arrays and others. This is used in place of `edgex_propertytype`, although the old type names are still available via `#define` constants.
+The tags in `edgex_propertytype` are now scoped with the `Edgex_` prefix, although the old type names are still available via `#define` constants.
 
 Data is stored in an `iot_data_t` using the following functions:
 
@@ -76,6 +76,10 @@ These are mostly identical to their v1 counterparts, with the following changes
 - In `initialize`, Driver configuration is passed via an `iot_data_t` of `IOT_DATA_MAP` type rather than a name-value pair list. This permits numeric types to be passed as such rather than in strings.
 
 - In `handle_get`, the incoming query parameters are passed as a name-value pair list instead of being marshalled into a special `Attribute`
+
+- In `handle_get`, the type of the Reading data being requested is now specified using the structured typecode `iot_typecode_t`. An `edgex_propertytype` may be extracted from this if required using the following function:
+
+`edgex_propertytype edgex_propertytype_typecode (const iot_typecode_t *tc)`
 
 - In `handle_put` the data to be set is passed as an array of `iot_data_t` rather than an array of `commandresult`
 
