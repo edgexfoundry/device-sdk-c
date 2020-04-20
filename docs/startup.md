@@ -1,41 +1,52 @@
 # Device service startup parameters
 
-Certain aspects of a device service's operation are controlled by command-line options and environment variable settings. These are not stored with the service configuration as they may be required before the configuration is read - in particular, they may be required in order to locate the configuration.
+Certain aspects of a device service's operation are controlled by command-line options and environment variable settings. These are not stored with the service configuration as they may be required before the configuration is read - in particular, they may be required in order to locate the configuration. Each commandline option may be overridden by an environment variable.
 
 ## Registry
 
-If the Registry is to be used, its location may be specified as a URL. The `scheme` part of the URL indicates the registry implementation to use. Currently the only supported implentation in the SDK is `consul`, but other implementations may be added via the APIs presented in `edgex/registry.h`. For Consul, the URL takes the form `consul://hostname:port`.
+If configuration is to be obtained from the Registry, its location may be specified as a URL. The `scheme` part of the URL indicates the registry implementation to use. Currently the only supported implentation in the SDK is `consul.http`, but other implementations may be added via the APIs presented in `edgex/registry.h`. For Consul, the URL takes the form `consul.http://hostname:port`.
 
-|Environment variable||
-|-|-|
-`edgex_registry` | specifies the registry URL
-`edgex_registry_retry_count` | sets the number of attempts to connect to the registry before abandoning startup
-`edgex_registry_retry_wait` | sets the interval (in seconds) between attempts to connect to the registry
-
-|Long option | short option||
-|-|-|-|
-`--registry` | `-r` | specifies the registry URL. Overrides the environment setting
+|Long option | Short option|Environment ||
+|-|-|-|-|
+`--configProvider` | `-cp` | `EDGEX_REGISTRY` | specifies the registry URL.
 
 ## Service name
 
 Typically a device service will have a default service name, eg device-modbus or device-virtual. However when an EdgeX deployment contains multiple instances of a particular device service, they must be assigned different names. This can be done on the command line:
 
-|Long option | short option||
-|-|-|-|
-`--name` | `-n` | specifies the device service name
+|Long option | Short option|Environment ||
+|-|-|-|-|
+`--name` | `-n` | `EDGEX_SERVICE_NAME` | specifies the device service name
 
 ## Profile
 
 A service has a default configuration profile, but other profiles may be selected using this option. In file-based configuration, additional profiles may be defined in files named `configuration-<profilename>.toml`. In Consul, they are stored in KV-store folders named `<servicename>;<profilename>`.
 
-|Long option | short option||
-|-|-|-|
-`--profile` | `-p` | specifies the configuration profile
+|Long option | Short option|Environment ||
+|-|-|-|-|
+`--profile` | `-p` | `EDGEX_PROFILE` | specifies the configuration profile
 
 ## Configuration directory
 
 For file-based configuration, this is the directory containing TOML files. The default value is `res` (note that this is a relative path).
 
-|Long option | short option||
-|-|-|-|
-`--confdir` | `-c` | specifies the configuration directory
+|Long option | Short option|Environment ||
+|-|-|-|-|
+`--confdir` | `-c` | `EDGEX_CONF_DIR` | specifies the configuration directory
+
+## Configuration file
+
+For file-based configuration, this is the filename of the TOML configuration file. If this option is used, the `--profile` option will be ineffective.
+
+|Long option | Short option|Environment ||
+|-|-|-|-|
+`--file` | `-f` | `EDGEX_CONFIG_FILE` | specifies the configuration filename
+
+## Timeouts
+
+Two additional environment variables control the retry behavior when contacting the registry at startup:
+
+|Environment variable||
+|-|-|
+`EDGEX_STARTUP_DURATION` | sets the amount of time (in seconds) in which to attempt to connect to the registry before abandoning startup
+`EDGEX_STARTUP_INTERVAL` | sets the interval (in seconds) between attempts to connect to the registry

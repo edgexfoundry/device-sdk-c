@@ -23,11 +23,13 @@
 /* TODO: Use iot_data_t maps as the "native" representation throughout */
 
 #define ERRBUFSZ 1024
+#define DEFAULTREG "consul.http://localhost:8500"
 
 toml_table_t *edgex_device_loadConfig
 (
   iot_logger_t *lc,
   const char *dir,
+  const char *fname,
   const char *profile,
   devsdk_error *err
 )
@@ -36,22 +38,37 @@ toml_table_t *edgex_device_loadConfig
   FILE *fp;
   char errbuf[ERRBUFSZ];
   char *filename;
+  int pathlen;
 
-  int pathlen = strlen (dir) + 1 + strlen ("configuration.toml") + 1;
-  if (profile && *profile)
+  if (fname && *fname)
   {
-    pathlen += (strlen (profile) + 1);
+    pathlen = strlen (dir) + 1 + strlen (fname) + 1;
+  }
+  else
+  {
+    pathlen = strlen (dir) + 1 + strlen ("configuration.toml") + 1;
+    if (profile && *profile)
+    {
+      pathlen += (strlen (profile) + 1);
+    }
   }
   filename = malloc (pathlen);
   strcpy (filename, dir);
   strcat (filename, "/");
-  strcat (filename, "configuration");
-  if (profile && *profile)
+  if (fname && *fname)
   {
-    strcat (filename, "-");
-    strcat (filename, profile);
+    strcat (filename, fname);
   }
-  strcat (filename, ".toml");
+  else
+  {
+    strcat (filename, "configuration");
+    if (profile && *profile)
+    {
+      strcat (filename, "-");
+      strcat (filename, profile);
+    }
+    strcat (filename, ".toml");
+  }
 
   fp = fopen (filename, "r");
   if (fp)
@@ -221,14 +238,17 @@ devsdk_nvpairs *edgex_device_parseToml (toml_table_t *config)
 
 char *edgex_device_getRegURL (toml_table_t *config)
 {
-  toml_table_t *table;
+  toml_table_t *table = NULL;
   char *rtype = NULL;
   char *rhost = NULL;
   int64_t rport = 0;
   char *result = NULL;
   int n;
 
-  table = toml_table_in (config, "Registry");
+  if (config)
+  {
+    table = toml_table_in (config, "Registry");
+  }
   if (table)
   {
     toml_rtos (toml_raw_in (table, "Type"), &rtype);
@@ -241,6 +261,10 @@ char *edgex_device_getRegURL (toml_table_t *config)
     n = snprintf (NULL, 0, "%s://%s:%" PRIi64, rtype, rhost, rport) + 1;
     result = malloc (n);
     snprintf (result, n, "%s://%s:%" PRIi64, rtype, rhost, rport);
+  }
+  else
+  {
+    result = DEFAULTREG;
   }
 
   free (rtype);

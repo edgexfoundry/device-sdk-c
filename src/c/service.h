@@ -26,6 +26,7 @@ struct devsdk_service_t
   const char *regURL;
   const char *profile;
   const char *confdir;
+  const char *conffile;
   void *userdata;
   devsdk_callbacks userfns;
   iot_logger_t *logger;

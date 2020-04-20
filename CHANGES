@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.2.0 "Geneva":
 
+- Commandline and environment options aligned with Go microservices.
 - Arrays of primitive types supported in Readings.
 - Device Readings are populated with datatype information.
 - Full dynamic discovery implementation with Provision Watchers.

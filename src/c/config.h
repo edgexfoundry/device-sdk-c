@@ -84,6 +84,7 @@ toml_table_t *edgex_device_loadConfig
 (
   iot_logger_t *lc,
   const char *dir,
+  const char *fname,
   const char *profile,
   devsdk_error *err
 );
