@@ -309,10 +309,23 @@ static bool checkOverride (char *qstr, char **val)
     *val = strdup (env);
     return true;
   }
-  else
+
+  for (char *c = qstr; *c; c++)
   {
-    return false;
+    if (islower (*c))
+    {
+      *c = toupper (*c);
+    }
   }
+  env = getenv (qstr);
+  if (env)
+  {
+    free (*val);
+    *val = strdup (env);
+    return true;
+  }
+
+  return false;
 }
 
 void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nvpairs *config)
@@ -339,10 +352,7 @@ void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nv
     {
       for (int i = 0; i < strlen (sname); i++)
       {
-        if (query[i] == '-')
-        {
-          query[i] = '_';
-        }
+        query[i] = (sname[i] == '-') ? '_' : sname[i];
       }
       if (checkOverride (query, &iter->value))
       {
