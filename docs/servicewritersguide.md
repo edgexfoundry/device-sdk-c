@@ -27,10 +27,12 @@ The Get handler deals with incoming requests to get data from a device. The foll
 
 * void *impl - The impldata pointer given as part of edgex_device_service.
 * char *devname - The name of the device being queried.
-* edgex_protocols *protocols - This provides information about the device that this get request is seeking to access. A list of protocols is supplied, each consists of a name and a set of name-value pairs representing the attributes required for that protocol.
+* devsdk_protocols *protocols - This provides information about the device that this get request is seeking to access. A list of protocols is supplied, each consists of a name and a set of name-value pairs representing the attributes required for that protocol. A function devsdk_protocols_properties() is provided which returns the name-value pairs corresponding to a named protocol.
 * uint32_t nreadings - The following requests and reading parameters are arrays of size nreadings.
-* edgex_device_commandrequest *requests - The name, attributes and type of each resource being requested.
-* edgex_device_commandresult * readings - Once a reading has been taken from a device, the resulting value is placed into the readings. This is used by the SDK to return the result to EdgeX. If a reading is of String or Binary type, memory ownership is taken by the SDK.
+* const devsdk_commandrequest *requests - The name, attributes and type of each resource being requested.
+* devsdk_commandresult * readings - Once a reading has been taken from a device, the resulting value is placed into the readings. This is used by the SDK to return the result to EdgeX.
+* const devsdk_nvpairs *qparams - This contains any parameters requested via the query string of the request URL.
+* iot_data_t ** exception - The handler may store a string here containing details in the event of a read failure.
 
 In general the GET handler should implement a translation between a GET request from edgex and a read/get via the protocol-specific mechanism. Multiple sources of metadata are provided to allow the device-service to identify what it should query on receipt of the callback.
 

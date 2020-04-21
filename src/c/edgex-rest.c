@@ -167,18 +167,18 @@ static const char *proptypes[] =
   "uint64array", "float32array", "float64array", "boolarray"
 };
 
-const char *edgex_propertytype_tostring (devsdk_propertytype pt)
+const char *edgex_propertytype_tostring (edgex_propertytype pt)
 {
   return proptypes[pt];
 }
 
-bool edgex_propertytype_fromstring (devsdk_propertytype *res, const char *str)
+bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
 {
   if (str)
   {
-    for (devsdk_propertytype i = DEVSDK_INT8; i <= DEVSDK_BOOLARRAY; i++)
+    for (edgex_propertytype i = Edgex_Int8; i <= Edgex_BoolArray; i++)
     {
-      if (i != DEVSDK_UNUSED1 && i != DEVSDK_UNUSED2 && strcasecmp (str, proptypes[i]) == 0)
+      if (i != Edgex_Unused1 && i != Edgex_Unused2 && strcasecmp (str, proptypes[i]) == 0)
       {
         *res = i;
         return true;
@@ -219,7 +219,7 @@ static bool get_transformArg
   iot_logger_t *lc,
   const JSON_Object *obj,
   const char *name,
-  devsdk_propertytype type,
+  edgex_propertytype type,
   edgex_transformArg *res
 )
 {
@@ -231,7 +231,7 @@ static bool get_transformArg
   str = json_object_get_string (obj, name);
   if (str && *str)
   {
-    if (type >= DEVSDK_INT8 && type <= DEVSDK_UINT64)
+    if (type >= Edgex_Int8 && type <= Edgex_Uint64)
     {
       errno = 0;
       int64_t i = strtol (str, &end, 0);
@@ -246,7 +246,7 @@ static bool get_transformArg
         res->value.ival = i;
       }
     }
-    else if (type == DEVSDK_FLOAT32 || type == DEVSDK_FLOAT64)
+    else if (type == Edgex_Float32 || type == Edgex_Float64)
     {
       errno = 0;
       double d = strtod (str, &end);
@@ -274,7 +274,7 @@ static edgex_propertyvalue *propertyvalue_read
   (iot_logger_t *lc, const JSON_Object *obj)
 {
   const char *fe;
-  devsdk_propertytype pt;
+  edgex_propertytype pt;
   edgex_propertyvalue *result = NULL;
   const char *tstr = json_object_get_string (obj, "type");
   if (edgex_propertytype_fromstring (&pt, tstr))
@@ -289,7 +289,7 @@ static edgex_propertyvalue *propertyvalue_read
     ok &= get_transformArg (lc, obj, "shift", pt, &result->shift);
     if (result->mask.enabled || result->shift.enabled)
     {
-      if (pt == DEVSDK_FLOAT32 || pt == DEVSDK_FLOAT64)
+      if (pt == Edgex_Float32 || pt == Edgex_Float64)
       {
         iot_log_error (lc, "Mask/Shift transform specified for float data");
         ok = false;

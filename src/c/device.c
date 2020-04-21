@@ -82,12 +82,12 @@ static bool readFloat64 (const char *val, double *d)
   }
 }
 
-static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
+static iot_data_t *populateValue (edgex_propertytype rtype, const char *val)
 {
   JSON_Value *jval = NULL;
   JSON_Array *jarr = NULL;
   size_t jsz = 0;
-  if (rtype >= DEVSDK_INT8ARRAY && rtype <= DEVSDK_BOOLARRAY)
+  if (rtype >= Edgex_Int8Array && rtype <= Edgex_BoolArray)
   {
     jval = json_parse_string (val);
     if (jval)
@@ -108,61 +108,61 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
 
   switch (rtype)
   {
-    case DEVSDK_UINT8:
+    case Edgex_Uint8:
     {
       uint8_t i;
       return (sscanf (val, "%" SCNu8, &i) == 1) ? iot_data_alloc_ui8 (i) : NULL;
     }
-    case DEVSDK_INT8:
+    case Edgex_Int8:
     {
       int8_t i;
       return (sscanf (val, "%" SCNi8, &i) == 1) ? iot_data_alloc_i8 (i) : NULL;
     }
-    case DEVSDK_UINT16:
+    case Edgex_Uint16:
     {
       uint16_t i;
       return (sscanf (val, "%" SCNu16, &i) == 1) ? iot_data_alloc_ui16 (i) : NULL;
     }
-    case DEVSDK_INT16:
+    case Edgex_Int16:
     {
       int16_t i;
       return (sscanf (val, "%" SCNi16, &i) == 1) ? iot_data_alloc_i16 (i) : NULL;
     }
-    case DEVSDK_UINT32:
+    case Edgex_Uint32:
     {
       uint32_t i;
       return (sscanf (val, "%" SCNu32, &i) == 1) ? iot_data_alloc_ui32 (i) : NULL;
     }
-    case DEVSDK_INT32:
+    case Edgex_Int32:
     {
       int32_t i;
       return (sscanf (val, "%" SCNi32, &i) == 1) ? iot_data_alloc_i32 (i) : NULL;
     }
-    case DEVSDK_UINT64:
+    case Edgex_Uint64:
     {
       uint64_t i;
       return (sscanf (val, "%" SCNu64, &i) == 1) ? iot_data_alloc_ui64 (i) : NULL;
     }
-    case DEVSDK_INT64:
+    case Edgex_Int64:
     {
       int64_t i;
       return (sscanf (val, "%" SCNi64, &i) == 1) ? iot_data_alloc_i64 (i) : NULL;
     }
-    case DEVSDK_FLOAT32:
+    case Edgex_Float32:
     {
       float f;
       return readFloat32 (val, &f) ? iot_data_alloc_f32 (f) : NULL;
     }
-    case DEVSDK_FLOAT64:
+    case Edgex_Float64:
     {
       double d;
       return readFloat64 (val, &d) ? iot_data_alloc_f64 (d) : NULL;
     }
-    case DEVSDK_STRING:
+    case Edgex_String:
       return iot_data_alloc_string (val, IOT_DATA_COPY);
-    case DEVSDK_BOOL:
+    case Edgex_Bool:
       return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
-    case DEVSDK_BINARY:
+    case Edgex_Binary:
     {
       iot_data_t *res = iot_data_alloc_array_from_base64 (val);
       iot_data_t *b = iot_data_alloc_bool (true);
@@ -170,10 +170,10 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       iot_data_free (b);
       return res;
     }
-    case DEVSDK_UNUSED1:
-    case DEVSDK_UNUSED2:
+    case Edgex_Unused1:
+    case Edgex_Unused2:
       return NULL;
-    case DEVSDK_INT8ARRAY:
+    case Edgex_Int8Array:
     {
       int8_t *arr = malloc (jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -188,7 +188,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_INT8, IOT_DATA_TAKE);
     }
-    case DEVSDK_UINT8ARRAY:
+    case Edgex_Uint8Array:
     {
       uint8_t *arr = malloc (jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -203,7 +203,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT8, IOT_DATA_TAKE);
     }
-    case DEVSDK_INT16ARRAY:
+    case Edgex_Int16Array:
     {
       int16_t *arr = malloc (2 * jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -218,7 +218,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_INT16, IOT_DATA_TAKE);
     }
-    case DEVSDK_UINT16ARRAY:
+    case Edgex_Uint16Array:
     {
       uint16_t *arr = malloc (2 * jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -233,7 +233,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT16, IOT_DATA_TAKE);
     }
-    case DEVSDK_INT32ARRAY:
+    case Edgex_Int32Array:
     {
       int32_t *arr = malloc (4 * jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -248,7 +248,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_INT32, IOT_DATA_TAKE);
     }
-    case DEVSDK_UINT32ARRAY:
+    case Edgex_Uint32Array:
     {
       uint32_t *arr = malloc (4 * jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -263,7 +263,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT32, IOT_DATA_TAKE);
     }
-    case DEVSDK_INT64ARRAY:
+    case Edgex_Int64Array:
     {
       int64_t *arr = malloc (8 * jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -278,7 +278,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_INT64, IOT_DATA_TAKE);
     }
-    case DEVSDK_UINT64ARRAY:
+    case Edgex_Uint64Array:
     {
       uint64_t *arr = malloc (8 * jsz);
       for (size_t i = 0; i < jsz; i++)
@@ -293,7 +293,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_UINT64, IOT_DATA_TAKE);
     }
-    case DEVSDK_FLOAT32ARRAY:
+    case Edgex_Float32Array:
     {
       float *arr = malloc (jsz * sizeof (float));
       for (size_t i = 0; i < jsz; i++)
@@ -308,7 +308,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_FLOAT32, IOT_DATA_TAKE);
     }
-    case DEVSDK_FLOAT64ARRAY:
+    case Edgex_Float64Array:
     {
       double *arr = malloc (jsz * sizeof (double));
       for (size_t i = 0; i < jsz; i++)
@@ -323,7 +323,7 @@ static iot_data_t *populateValue (devsdk_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_FLOAT64, IOT_DATA_TAKE);
     }
-    case DEVSDK_BOOLARRAY:
+    case Edgex_BoolArray:
     {
       bool *arr = malloc (jsz * sizeof (bool));
       for (size_t i = 0; i < jsz; i++)
@@ -345,6 +345,22 @@ static edgex_deviceresource *findDevResource
     list = list->next;
   }
   return list;
+}
+
+static iot_typecode_t *typecodeFromType (edgex_propertytype pt)
+{
+  if (pt <= Edgex_String)
+  {
+    return iot_typecode_alloc_basic (pt);
+  }
+  if (pt == Edgex_Binary)
+  {
+    return iot_typecode_alloc_array (IOT_DATA_UINT8);
+  }
+  else
+  {
+    return iot_typecode_alloc_array (pt - (Edgex_Int8Array - Edgex_Int8));
+  }
 }
 
 static edgex_cmdinfo *infoForRes
@@ -370,7 +386,7 @@ static edgex_cmdinfo *infoForRes
       findDevResource (prof->device_resources, ro->deviceResource);
     result->reqs[n].resname = devres->name;
     result->reqs[n].attributes = (devsdk_nvpairs *)devres->attributes;
-    result->reqs[n].type = devres->properties->value->type;
+    result->reqs[n].type = typecodeFromType (devres->properties->value->type);
     result->pvals[n] = devres->properties->value;
     result->maps[n] = (devsdk_nvpairs *)ro->mappings;
     if (ro->parameter && *ro->parameter)
@@ -398,7 +414,7 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->dfls = malloc (sizeof (char *));
   result->reqs[0].resname = devres->name;
   result->reqs[0].attributes = (devsdk_nvpairs *)devres->attributes;
-  result->reqs[0].type = devres->properties->value->type;
+  result->reqs[0].type = typecodeFromType (devres->properties->value->type);
   result->pvals[0] = devres->properties->value;
   result->maps[0] = NULL;
   if (devres->properties->value->defaultvalue && *devres->properties->value->defaultvalue)

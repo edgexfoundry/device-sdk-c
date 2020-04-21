@@ -5,7 +5,7 @@ CPPCHECK=false
 DOCGEN=false
 
 TOMLVER=SDK-0.2
-CUTILVER=1.0.0
+CUTILVER=1.0.4
 
 # Process arguments
 

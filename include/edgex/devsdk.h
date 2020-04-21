@@ -276,4 +276,21 @@ void edgex_device_service_stop
  */
 
 void edgex_device_service_free (edgex_device_service *svc);
+
+// Compatibility for old enum tags
+
+#define Int8 Edgex_Int8
+#define Uint8 Edgex_Uint8
+#define Int16 Edgex_Int16
+#define Uint16 Edgex_Uint16
+#define Int32 Edgex_Int32
+#define Uint32 Edgex_Uint32
+#define Int64 Edgex_Int64
+#define Uint64 Edgex_Uint64
+#define Float32 Edgex_Float32
+#define Float64 Edgex_Float64
+#define Bool Edgex_Bool
+#define String Edgex_String
+#define Binary Edgex_Binary
+
 #endif

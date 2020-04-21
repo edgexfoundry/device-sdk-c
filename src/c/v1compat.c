@@ -119,7 +119,7 @@ static bool compat_get_handler
       epairs[i].value = qstr;
       epairs[i].next = (edgex_nvpairs *)requests[i].attributes;
       erequests[i].attributes = &epairs[i];
-      erequests[i].type = requests[i].type;
+      erequests[i].type = edgex_propertytype_typecode (requests[i].type);
     }
   }
   else
