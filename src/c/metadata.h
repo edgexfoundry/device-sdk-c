@@ -37,6 +37,14 @@ void edgex_metadata_client_set_device_opstate
   edgex_device_operatingstate opstate,
   devsdk_error * err
 );
+void edgex_metadata_client_set_device_opstate_byname
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * devicename,
+  edgex_device_operatingstate opstate,
+  devsdk_error * err
+);
 void edgex_metadata_client_set_device_adminstate
 (
   iot_logger_t *lc,

@@ -182,3 +182,20 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
     }
   }
 }
+
+void edgex_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err)
+{
+  *err = EDGEX_OK;
+  edgex_metadata_client_set_device_opstate_byname
+  (
+    svc->logger,
+    &svc->config.endpoints,
+    devname,
+    operational ? ENABLED : DISABLED,
+    err
+  );
+  if (err->code)
+  {
+    iot_log_error (svc->logger, "Unable to change operational state for device %s", devname);
+  }
+}

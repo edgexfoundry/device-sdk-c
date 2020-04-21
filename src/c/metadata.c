@@ -105,6 +105,27 @@ void edgex_metadata_client_set_device_opstate
   free (ctx.buff);
 }
 
+void edgex_metadata_client_set_device_opstate_byname
+(
+  iot_logger_t *lc,
+  edgex_service_endpoints *endpoints,
+  const char *devicename,
+  edgex_device_operatingstate opstate,
+  devsdk_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  char data[sizeof ("{*operatingstate*:*disabled*}")];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/device/name/%s", endpoints->metadata.host, endpoints->metadata.port, devicename);
+  sprintf (data, "{\"operatingstate\":\"%s\"}", (opstate == ENABLED) ? "enabled" : "disabled");
+
+  edgex_http_put (lc, &ctx, url, data, edgex_http_write_cb, err);
+  free (ctx.buff);
+}
+
 void edgex_metadata_client_set_device_adminstate
 (
   iot_logger_t *lc,
