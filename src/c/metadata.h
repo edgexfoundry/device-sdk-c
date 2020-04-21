@@ -141,6 +141,13 @@ void edgex_metadata_client_delete_device_byname
   const char * devicename,
   devsdk_error * err
 );
+void edgex_metadata_client_update_lastconnected
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * devicename,
+  devsdk_error * err
+);
 edgex_watcher *edgex_metadata_client_get_watchers
 (
   iot_logger_t * lc,

@@ -15,6 +15,7 @@
 #include "errorlist.h"
 #include "config.h"
 #include "profiles.h"
+#include "iot/time.h"
 
 edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
 (
@@ -144,6 +145,24 @@ void edgex_metadata_client_set_device_adminstate
   sprintf (data, "{\"adminstate\":\"%s\"}", (adminstate == LOCKED) ? "locked" : "unlocked");
 
   edgex_http_put (lc, &ctx, url, data, edgex_http_write_cb, err);
+  free (ctx.buff);
+}
+
+void edgex_metadata_client_update_lastconnected
+(
+  iot_logger_t * lc,
+  edgex_service_endpoints * endpoints,
+  const char * devicename,
+  devsdk_error * err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/device/name/%s/lastconnected/%ld", endpoints->metadata.host, endpoints->metadata.port, devicename, iot_time_msecs ());
+
+  edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
   free (ctx.buff);
 }
 

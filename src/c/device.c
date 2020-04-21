@@ -571,9 +571,17 @@ static int edgex_device_runput
     iot_data_t *e = NULL;
     if
     (
-      !svc->userfns.puthandler
+      svc->userfns.puthandler
         (svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, commandinfo->nreqs, commandinfo->reqs, (const iot_data_t **)results, &e)
     )
+    {
+      if (svc->config.device.updatelastconnected)
+      {
+        devsdk_error err;
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+      }
+    }
+    else
     {
       retcode = MHD_HTTP_INTERNAL_SERVER_ERROR;
       if (e)
@@ -633,6 +641,10 @@ static int edgex_device_runget
     {
       retcode = MHD_HTTP_OK;
       edgex_data_client_add_event (svc->logger, &svc->config.endpoints, *reply, &err);
+      if (svc->config.device.updatelastconnected)
+      {
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+      }
     }
     else
     {
