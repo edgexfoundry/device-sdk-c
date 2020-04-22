@@ -153,6 +153,35 @@ edgex_deviceprofile *edgex_devmap_copyprofiles (edgex_devmap_t *map)
   return result;
 }
 
+bool edgex_devmap_remove_profile (edgex_devmap_t *map, const char *id)
+{
+  const char *key;
+  bool result = true;
+
+  pthread_rwlock_wrlock (&map->lock);
+  edgex_map_iter iter = edgex_map_iter (map->devices);
+  while (result && (key = edgex_map_next (&map->devices, &iter)))
+  {
+    result = (strcmp ((*edgex_map_get (&map->devices, key))->profile->id, id) != 0);
+  }
+  if (result)
+  {
+    edgex_map_iter iter2 = edgex_map_iter (map->profiles);
+    while ((key = edgex_map_next (&map->profiles, &iter2)))
+    {
+      edgex_deviceprofile **dpp = edgex_map_get (&map->profiles, key);
+      if (strcmp ((*dpp)->id, id) == 0)
+      {
+        edgex_deviceprofile_free (*dpp);
+        edgex_map_remove (&map->profiles, key);
+        break;
+      }
+    }
+  }
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
 const edgex_deviceprofile *edgex_devmap_profile
   (edgex_devmap_t *map, const char *name)
 {

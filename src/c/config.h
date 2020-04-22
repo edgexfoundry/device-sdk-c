@@ -51,6 +51,7 @@ typedef struct edgex_device_deviceinfo
   char *removecmdargs;
   char *profilesdir;
   bool sendreadingsonchanged;
+  bool updatelastconnected;
 } edgex_device_deviceinfo;
 
 typedef struct edgex_device_logginginfo

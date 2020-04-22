@@ -44,6 +44,7 @@ typedef struct postparams
 {
   devsdk_service_t *svc;
   edgex_event_cooked *event;
+  const char *devname;
 } postparams;
 
 void devsdk_usage ()
@@ -828,6 +829,10 @@ static void *doPost (void *p)
   );
 
   edgex_event_cooked_free (pp->event);
+  if (pp->svc->config.device.updatelastconnected)
+  {
+    edgex_metadata_client_update_lastconnected (pp->svc->logger, &pp->svc->config.endpoints, pp->devname, &err);
+  }
   free (pp);
   return NULL;
 }
@@ -883,6 +888,7 @@ void devsdk_post_readings
       postparams *pp = malloc (sizeof (postparams));
       pp->svc = svc;
       pp->event = event;
+      pp->devname = devname;
       iot_threadpool_add_work (svc->thpool, doPost, pp, -1);
     }
   }

@@ -16,6 +16,38 @@
 
 #include <microhttpd.h>
 
+static int updateProfile
+(
+  devsdk_service_t *svc,
+  edgex_http_method method,
+  const char *id
+)
+{
+  if (method == POST)
+  {
+    return MHD_HTTP_OK;  // we'll fetch it on demand (for a new device)
+  }
+  if (method == PUT || method == DELETE)
+  {
+    // Update or remove. Should only happen if there are no devices left for this profile.
+    // In either case we simply forget the profile.
+    if (edgex_devmap_remove_profile (svc->devices, id))
+    {
+      iot_log_info (svc->logger, "callback: Removed Device Profile %s", id);
+      return MHD_HTTP_OK;
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Attempt to update/remove profile %s which still has associated devices. Ignored.", id);
+      return MHD_HTTP_BAD_REQUEST;
+    }
+  }
+  else
+  {
+    return MHD_HTTP_NOT_IMPLEMENTED;
+  }
+}
+
 static int updateWatcher
 (
   devsdk_service_t *svc,
@@ -189,9 +221,14 @@ int edgex_device_handler_callback
   {
     status = updateWatcher (svc, method, id);
   }
+  else if (strcmp (action, "PROFILE") == 0)
+  {
+    status = updateProfile (svc, method, id);
+  }
   else
   {
-    status = MHD_HTTP_NOT_IMPLEMENTED;
+    iot_log_error (svc->logger, "callback: Unexpected object type %s", action);
+    status = MHD_HTTP_BAD_REQUEST;
   }
 
   json_value_free (jval);

@@ -117,6 +117,10 @@ static void *ae_runner (void *p)
             iot_log_error (ai->svc->logger, "AutoEvent: unable to push new event");
           }
           edgex_event_cooked_free (event);
+          if (ai->svc->config.device.updatelastconnected)
+          {
+            edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);
+          }
         }
         else
         {

@@ -71,6 +71,12 @@ extern edgex_cmdqueue_t *edgex_devmap_device_forcmd
   (edgex_devmap_t *map, const char *cmd, bool forGet);
 
 /*
+ * Remove a profile but only if there are no associated devices
+ */
+
+extern bool edgex_devmap_remove_profile (edgex_devmap_t *map, const char *id);
+
+/*
  * Release function. The device is freed when its reference count hits zero.
  */
 

@@ -309,10 +309,23 @@ static bool checkOverride (char *qstr, char **val)
     *val = strdup (env);
     return true;
   }
-  else
+
+  for (char *c = qstr; *c; c++)
   {
-    return false;
+    if (islower (*c))
+    {
+      *c = toupper (*c);
+    }
   }
+  env = getenv (qstr);
+  if (env)
+  {
+    free (*val);
+    *val = strdup (env);
+    return true;
+  }
+
+  return false;
 }
 
 void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nvpairs *config)
@@ -339,10 +352,7 @@ void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nv
     {
       for (int i = 0; i < strlen (sname); i++)
       {
-        if (query[i] == '-')
-        {
-          query[i] = '_';
-        }
+        query[i] = (sname[i] == '-') ? '_' : sname[i];
       }
       if (checkOverride (query, &iter->value))
       {
@@ -577,6 +587,8 @@ void edgex_device_populateConfig
     get_nv_config_string (config, "Device/ProfilesDir");
   svc->config.device.sendreadingsonchanged =
     get_nv_config_bool (config, "Device/SendReadingsOnChanged", false);
+  svc->config.device.updatelastconnected =
+    get_nv_config_bool (config, "Device/UpdateLastConnected", false);
 
   svc->config.driverconf = iot_data_alloc_map (IOT_DATA_STRING);
   for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
@@ -749,6 +761,8 @@ int edgex_device_handler_config
   json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
   json_object_set_boolean
     (dobj, "SendReadingsOnChanged", svc->config.device.sendreadingsonchanged);
+  json_object_set_boolean
+    (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_value (obj, "Device", dval);
 
   if (svc->config.driverconf)
