@@ -106,7 +106,7 @@ static bool testArg (const char *arg, const char *val, const char *pshort, const
   }
 }
 
-static bool testBool (char *arg, char *val, const char *pshort, const char *plong, bool *var, bool *result)
+static bool testBool (const char *arg, const char *val, const char *pshort, const char *plong, bool *var, bool *result)
 {
   if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
   {

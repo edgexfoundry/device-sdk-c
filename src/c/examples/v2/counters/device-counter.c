@@ -10,10 +10,12 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <stdarg.h>
 
 #include "devsdk/devsdk.h"
 
 #define NCOUNTERS 256
+#define ERR_BUFSZ 1024
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
 
@@ -35,26 +37,44 @@ static bool counter_init
   return true;
 }
 
+static bool exceptionAndError0 (iot_data_t **exception, iot_logger_t *lc, const char *msg)
+{
+  iot_log_error (lc, msg);
+  *exception = iot_data_alloc_string (msg, IOT_DATA_REF);
+  return false;
+}
+
+static bool exceptionAndErrorN (iot_data_t **exception, iot_logger_t *lc, const char *msg, ...)
+{
+  char *buf = malloc (ERR_BUFSZ);
+  va_list args;
+  va_start (args, msg);
+  vsnprintf (buf, ERR_BUFSZ, msg, args);
+  va_end (args);
+
+  iot_log_error (lc, buf);
+  *exception = iot_data_alloc_string (buf, IOT_DATA_TAKE);
+
+  return false;
+}
+
 static bool getDeviceAddress
-  (iot_logger_t *lc, unsigned long *index, const devsdk_protocols *protocols)
+  (iot_logger_t *lc, unsigned long *index, const devsdk_protocols *protocols, iot_data_t **exception)
 {
   const devsdk_nvpairs *addr = devsdk_protocols_properties (protocols, "Counter");
   if (addr == NULL)
   {
-    iot_log_error (lc, "No Counter protocol in device address");
-    return false;
+    return exceptionAndError0 (exception, lc, "No Counter protocol in device address");
   }
 
   unsigned long i = 0;
   if (!devsdk_nvpairs_ulong_value (addr, "Index", &i))
   {
-    iot_log_error (lc, "No Index property in Counter protocol");
-    return false;
+    return exceptionAndError0 (exception, lc, "No Index property in Counter protocol");
   }
   if (i >= NCOUNTERS)
   {
-    iot_log_error (lc, "Index %ul out of range", i);
-    return false;
+    return exceptionAndErrorN (exception, lc, "Index %ul out of range", i);
   }
 
   *index = i;
@@ -76,7 +96,7 @@ static bool counter_get_handler
   counter_driver *driver = (counter_driver *)impl;
   unsigned long index;
 
-  if (!getDeviceAddress (driver->lc, &index, protocols))
+  if (!getDeviceAddress (driver->lc, &index, protocols, exception))
   {
     return false;
   }
@@ -86,8 +106,7 @@ static bool counter_get_handler
     const char *reg = devsdk_nvpairs_value (requests[i].attributes, "register");
     if (reg == NULL)
     {
-      iot_log_error (driver->lc, "No register attribute in GET request");
-      return false;
+      return exceptionAndError0 (exception, driver->lc, "No register attribute in GET request");
     }
     if (strcmp (reg, "count01") == 0)
     {
@@ -96,8 +115,7 @@ static bool counter_get_handler
     /* else ifs for other registers... */
     else
     {
-      iot_log_error (driver->lc, "Request for nonexistent register %s", reg);
-      return false;
+      return exceptionAndErrorN (exception, driver->lc, "Request for nonexistent register %s", reg);
     }
   }
   return true;
@@ -117,7 +135,7 @@ static bool counter_put_handler
   counter_driver *driver = (counter_driver *)impl;
   unsigned long index;
 
-  if (!getDeviceAddress (driver->lc, &index, protocols))
+  if (!getDeviceAddress (driver->lc, &index, protocols, exception))
   {
     return false;
   }
@@ -127,8 +145,7 @@ static bool counter_put_handler
     const char *reg = devsdk_nvpairs_value (requests[i].attributes, "register");
     if (reg == NULL)
     {
-      iot_log_error (driver->lc, "No register attribute in PUT request");
-      return false;
+      return exceptionAndError0 (exception, driver->lc, "No register attribute in PUT request");
     }
     if (strcmp (reg, "count01") == 0)
     {
@@ -136,8 +153,7 @@ static bool counter_put_handler
     }
     else
     {
-      iot_log_error (driver->lc, "Request for nonexistent register %s", reg);
-      return false;
+      return exceptionAndErrorN (exception, driver->lc, "Request for nonexistent register %s", reg);
     }
   }
   return true;
