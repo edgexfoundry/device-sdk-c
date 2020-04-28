@@ -1,21 +1,20 @@
 Notes on writing a device service
 ---------------------------------
-This document aims to complement the example provided with the EdgeX C SDK (template.c) by providing insight into what actions should be performed in the various parts of a Device Service.
+This document aims to complement the examples provided with the EdgeX C SDK by providing insight into what actions should be performed in the various parts of a Device Service.
 
-Fundamentally a Device Service is composed of a number of callbacks. These callbacks are provided by the SDK to allow the service to respond to different events. These callbacks (edgex_device_callbacks) are as follows:
+Fundamentally a Device Service is composed of a number of callbacks. These callbacks are provided by the SDK to allow the service to respond to different events. These callbacks (devsdk_callbacks) are as follows:
 
 * init
 * discover
 * get
 * put
-* disconnect
 * stop
 
-A device service must provide an implementation of each callback. A small amount of setup is required of a device service, this is usually performed in the main. An edgex_device_service should be created, containing, amongst other fields the edgex_device_callbacks and an impldata pointer which is passed back every time a callback is invoked. The service must then call edgex_device_service_start, upon exit the service should call edgex_device_service_stop.
+A device service must provide an implementation of each callback, except for `discover` which may be NULL if dynamic discovery is not implemented. A small amount of setup is required of a device service, this is usually performed in the main. A devsdk_service_t should be created, containing, amongst other fields the devsdk_callbacks and an impldata pointer which is passed back every time a callback is invoked. The service must then call devsdk_service_new to create the device service, devsdk_service_start to start it, and upon exit the service should call devsdk_service_stop, followed by devsdk_service_free to clean up.
 
 Init
 ----
-Init is called when the device service starts up, its purpose is to perform protocol-specific initialization for the device service. This typically involves allocating memory for driver specific structures, initialising synchronisation mechanisms (mutex etc.) and setting up a logging client. The logging client is being provided to the implementation, most implementations will want to store the pointer in their impldata structure for later use. Any initialization required by the device should be performed here.
+Init is called when the device service starts up, its purpose is to perform protocol-specific initialization for the device service. This typically involves allocating memory for driver specific structures, initialising synchronisation mechanisms (mutex etc.) and setting up a logging client. The logging client is being provided to the implementation, most implementations will want to store the pointer in their impldata structure for later use. Any initialization required by the device should be performed here. 
 
 Discover
 --------
@@ -40,10 +39,13 @@ Put
 ---
 The Put handler deals with requests to write/transmit data to a specific device. It is provided with the same set of metadata as the GET callback. However, this time the put handler should write the data provided to the device associated with the addressable. The process of using the metadata provided to perform the correct protocol-specific write/put action is similar to that of performing a get.
 
-Disconnect
-----------
-Currently the disconnect callback is not used.
-
 Stop
 ----
-The stop handler is called when edgex_device_service_stop is called. This handler should be used to clean-up all device service specific resources. Typically this would involve freeing any resources allocated during execution of the device service.
+The stop handler is called when devsdk_service_stop is called. This handler should be used to clean-up all device service specific resources. Typically this would involve freeing any resources allocated during execution of the device service.
+
+Optional handlers
+-----------------
+
+An implementation may implement the device_added, device_updated and device_removed handlers, it will then be notified of changes to the extent of devices managed by the service. This may be helpful if special initialization / shutdown operations are required for optimal usage of the device.
+
+An implementation may also implement the ae_starter and ae_stopper callbacks, in which case it will become responsible for the AutoEvents functionality which is normally handled within the SDK. This facility is currently experimental, it may be useful in scenarios where the device can be set to generate readings autonomously.

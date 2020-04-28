@@ -10,8 +10,25 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <stdarg.h>
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
+
+#define ERR_BUFSZ 1024
+
+static bool exceptionAndErrorN (iot_data_t **exception, iot_logger_t *lc, const char *msg, ...)
+{
+  char *buf = malloc (ERR_BUFSZ);
+  va_list args;
+  va_start (args, msg);
+  vsnprintf (buf, ERR_BUFSZ, msg, args);
+  va_end (args);
+
+  iot_log_error (lc, buf);
+  *exception = iot_data_alloc_string (buf, IOT_DATA_TAKE);
+
+  return false;
+}
 
 typedef struct random_driver
 {
@@ -69,8 +86,7 @@ static bool random_get_handler
           readings[i].value = iot_data_alloc_ui64 (rand() % 1000);
           break;
         default:
-          iot_log_error (driver->lc, "%lu is not a valid SensorType", stype);
-          return false;
+          return exceptionAndErrorN (exception, driver->lc, "%lu is not a valid SensorType", stype);
       }
     }
     else if ((swid = devsdk_nvpairs_value (requests[i].attributes, "SwitchID")))
@@ -81,8 +97,8 @@ static bool random_get_handler
     }
     else
     {
-      iot_log_error (driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
-      return false;
+      return exceptionAndErrorN
+        (exception, driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
     }
   }
   return true;
@@ -100,7 +116,6 @@ static bool random_put_handler
 )
 {
   random_driver *driver = (random_driver *) impl;
-  bool result = true;
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
@@ -115,11 +130,10 @@ static bool random_put_handler
     }
     else
     {
-      iot_log_error (driver->lc, "PUT not valid for resource %s", requests[i].resname);
-      result = false;
+      return exceptionAndErrorN (exception, driver->lc, "PUT not valid for resource %s", requests[i].resname);
     }
   }
-  return result;
+  return true;
 }
 
 static void random_stop (void *impl, bool force) {}
