@@ -16,7 +16,7 @@ Typically a device service will have a default service name, eg device-modbus or
 
 |Long option | Short option|Environment ||
 |-|-|-|-|
-`--name` | `-n` | `EDGEX_SERVICE_NAME` | specifies the device service name
+`--serviceName` | `-n` | `EDGEX_SERVICE_NAME` | specifies the device service name
 
 ## Profile
 
