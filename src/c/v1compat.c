@@ -297,7 +297,7 @@ static void compat_update_device (void *impl, const char *devname, const devsdk_
 
 void edgex_device_service_usage ()
 {
-  printf ("  -n, --name=<name>\t: Set the device service name\n");
+  printf ("  -n, --serviceName=<name>\t: Set the device service name\n");
   printf ("  -r, --registry=<url>\t: Use the registry service\n");
   printf ("  -p, --profile=<name>\t: Set the profile name\n");
   printf ("  -c, --confdir=<dir>\t: Set the configuration directory\n");
@@ -402,7 +402,7 @@ bool edgex_device_service_processparams
       result = true;
     } else if
     (
-      testArg (arg, val, "-n", "--name", &params->svcname, &result) ||
+      testArg (arg, val, "-n", "--serviceName", &params->svcname, &result) ||
       testArg (arg, val, "-p", "--profile", &params->profile, &result) ||
       testArg (arg, val, "-c", "--confdir", &params->confdir, &result)
     )

@@ -58,7 +58,7 @@ void devsdk_usage ()
   printf ("  -p, --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -c, --confdir=<dir>        \tSpecify local configuration directory\n");
   printf ("  -r, --registry             \tIndicates service should use Registry.\n");
-  printf ("  -n, --name=<name>          \tSpecify device service name other than default.\n");
+  printf ("  -n, --serviceName=<name>   \tSpecify device service name other than default.\n");
 }
 
 static bool testArgOpt (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
@@ -177,7 +177,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       }
     } else if
     (
-      testArg (arg, val, "-n", "--name", &svc->name, &result) ||
+      testArg (arg, val, "-n", "--serviceName", &svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
       testArg (arg, val, "-c", "--confdir", &svc->confdir, &result) ||
       testArg (arg, val, "-f", "--file", &svc->conffile, &result)
@@ -258,6 +258,10 @@ devsdk_service_t *devsdk_service_new
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
   result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL, true);
+  if (result->name != defaultname)
+  {
+    iot_log_info (result->logger, "Service name overridden: %s->%s", defaultname, result->name);
+  }
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
   pthread_mutex_init (&result->discolock, NULL);
