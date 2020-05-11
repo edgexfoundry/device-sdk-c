@@ -12,11 +12,11 @@ If configuration is to be obtained from the Registry, its location may be specif
 
 ## Service name
 
-Typically a device service will have a default service name, eg device-modbus or device-virtual. However when an EdgeX deployment contains multiple instances of a particular device service, they must be assigned different names. This can be done on the command line:
+Typically a device service will have a default service name, eg device-modbus or device-virtual. However when an EdgeX deployment contains multiple instances of a particular device service, they must be assigned different names. This can be done by assigning an instance name on the command line. The instance name is then appended to the default service name, so if the bacnet device service is run with `-i floor3` the service name will be `device-bacnet_floor3`.
 
 |Long option | Short option|Environment ||
 |-|-|-|-|
-`--serviceName` | `-n` | `EDGEX_SERVICE_NAME` | specifies the device service name
+`--instance` | `-i` | `EDGEX_INSTANCE_NAME` | specifies the instance name
 
 ## Profile
 

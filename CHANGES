@@ -8,6 +8,7 @@ differs as follows:
 
 Changes for 1.2.0 "Geneva":
 
+- --instance flag introduced for suffixing the device service name.
 - Environment variable names for config over-rides are all-uppercase.
 - Device lastConnected property is managed (configurable and disabled by default)
 - Implementations may change the operational state of a device.
