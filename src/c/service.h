@@ -21,7 +21,7 @@
 
 struct devsdk_service_t
 {
-  const char *name;
+  char *name;
   const char *version;
   const char *regURL;
   const char *profile;

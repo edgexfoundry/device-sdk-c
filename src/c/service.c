@@ -58,7 +58,7 @@ void devsdk_usage ()
   printf ("  -p, --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -c, --confdir=<dir>        \tSpecify local configuration directory\n");
   printf ("  -r, --registry             \tIndicates service should use Registry.\n");
-  printf ("  -n, --serviceName=<name>   \tSpecify device service name other than default.\n");
+  printf ("  -i, --instance=<name>      \tSpecify device service instance name (if specified this is appended to the device service name).\n");
 }
 
 static bool testArgOpt (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
@@ -177,7 +177,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       }
     } else if
     (
-      testArg (arg, val, "-n", "--serviceName", &svc->name, &result) ||
+      testArg (arg, val, "-i", "--instance", (const char **)&svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
       testArg (arg, val, "-c", "--confdir", &svc->confdir, &result) ||
       testArg (arg, val, "-f", "--file", &svc->conffile, &result)
@@ -204,7 +204,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   checkEnv (&svc->profile, "EDGEX_PROFILE", "edgex_profile");
   checkEnv (&svc->confdir, "EDGEX_CONF_DIR", NULL);
   checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE", NULL);
-  checkEnv (&svc->name, "EDGEX_SERVICE_NAME", NULL);
+  checkEnv ((const char **)&svc->name, "EDGEX_INSTANCE_NAME", NULL);
 
   return result;
 }
@@ -244,9 +244,18 @@ devsdk_service_t *devsdk_service_new
     return NULL;
   }
 
-  if (result->name == NULL)
+  if (result->name)
   {
-    result->name = defaultname;
+    const char *n = result->name;
+    int l = strlen (n) + strlen (defaultname) + 2;
+    result->name = malloc (l);
+    strcpy (result->name, defaultname);
+    strcat (result->name, "_");
+    strcat (result->name, n);
+  }
+  else
+  {
+    result->name = strdup (defaultname);
   }
   if (result->confdir == NULL)
   {
@@ -258,10 +267,6 @@ devsdk_service_t *devsdk_service_new
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
   result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "-", edgex_log_tofile, NULL, true);
-  if (result->name != defaultname)
-  {
-    iot_log_info (result->logger, "Service name overridden: %s->%s", defaultname, result->name);
-  }
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
   pthread_mutex_init (&result->discolock, NULL);
@@ -973,6 +978,7 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);
+    free (svc->name);
     free (svc);
     iot_fini ();
   }
