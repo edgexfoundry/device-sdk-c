@@ -9,6 +9,10 @@
 #include "devsdk/devsdk.h"
 #undef DEVSDKV2
 #include "edgex/devsdk.h"
+#include "edgex/eventgen.h"
+#include "devmap.h"
+#include "device.h"
+#include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
 #include "edgex/device-mgmt.h"
@@ -88,6 +92,54 @@ static char *nvpsToStr (const devsdk_nvpairs *nvps)
   return result;
 }
 
+static iot_data_t *data_from_reading (edgex_propertytype type, edgex_device_resultvalue value)
+{
+  switch (type)
+  {
+    case Int8:
+      return iot_data_alloc_i8 (value.i8_result);
+      break;
+    case Uint8:
+      return iot_data_alloc_ui8 (value.ui8_result);
+      break;
+    case Int16:
+      return iot_data_alloc_i16 (value.i16_result);
+      break;
+    case Uint16:
+      return iot_data_alloc_ui16 (value.ui16_result);
+      break;
+    case Int32:
+      return iot_data_alloc_i32 (value.i32_result);
+      break;
+    case Uint32:
+      return iot_data_alloc_ui32 (value.ui32_result);
+      break;
+    case Int64:
+      return iot_data_alloc_i64 (value.i64_result);
+      break;
+    case Uint64:
+      return iot_data_alloc_ui64 (value.ui64_result);
+      break;
+    case Float32:
+      return iot_data_alloc_f32 (value.f32_result);
+      break;
+    case Float64:
+      return iot_data_alloc_f64 (value.f64_result);
+      break;
+    case Bool:
+      return iot_data_alloc_bool (value.bool_result);
+      break;
+    case String:
+      return iot_data_alloc_string (value.string_result, IOT_DATA_TAKE);
+      break;
+    case Binary:
+      return iot_data_alloc_array (value.binary_result.bytes, value.binary_result.size, IOT_DATA_UINT8, IOT_DATA_TAKE);
+      break;
+    default:
+      return NULL;
+  }
+}
+
 static bool compat_get_handler
 (
   void *impl,
@@ -131,50 +183,11 @@ static bool compat_get_handler
   for (uint32_t i = 0; result && i < nreadings; i++)
   {
     readings[i].origin = ereadings[i].origin;
-    switch (ereadings[i].type)
+    readings[i].value = data_from_reading (ereadings[i].type, ereadings[i].value);
+    if (readings[i].value == NULL)
     {
-      case Int8:
-        readings[i].value = iot_data_alloc_i8 (ereadings[i].value.i8_result);
-        break;
-      case Uint8:
-        readings[i].value = iot_data_alloc_ui8 (ereadings[i].value.ui8_result);
-        break;
-      case Int16:
-        readings[i].value = iot_data_alloc_i16 (ereadings[i].value.i16_result);
-        break;
-      case Uint16:
-        readings[i].value = iot_data_alloc_ui16 (ereadings[i].value.ui16_result);
-        break;
-      case Int32:
-        readings[i].value = iot_data_alloc_i32 (ereadings[i].value.i32_result);
-        break;
-      case Uint32:
-        readings[i].value = iot_data_alloc_ui32 (ereadings[i].value.ui32_result);
-        break;
-      case Int64:
-        readings[i].value = iot_data_alloc_i64 (ereadings[i].value.i64_result);
-        break;
-      case Uint64:
-        readings[i].value = iot_data_alloc_ui64 (ereadings[i].value.ui64_result);
-        break;
-      case Float32:
-        readings[i].value = iot_data_alloc_f32 (ereadings[i].value.f32_result);
-        break;
-      case Float64:
-        readings[i].value = iot_data_alloc_f64 (ereadings[i].value.f64_result);
-        break;
-      case Bool:
-        readings[i].value = iot_data_alloc_bool (ereadings[i].value.bool_result);
-        break;
-      case String:
-        readings[i].value = iot_data_alloc_string (ereadings[i].value.string_result, IOT_DATA_TAKE);
-        break;
-      case Binary:
-        readings[i].value = iot_data_alloc_array (ereadings[i].value.binary_result.bytes, ereadings[i].value.binary_result.size, IOT_DATA_UINT8, IOT_DATA_TAKE);
-        break;
-      default:
-        result = false;
-        *exception = iot_data_alloc_string ("Unsupported data type (map/array) returned by driver", IOT_DATA_REF);
+      result = false;
+      *exception = iot_data_alloc_string ("Unsupported data type (map/array) returned by driver", IOT_DATA_REF);
     }
   }
   if (qparams)
@@ -632,4 +645,45 @@ void edgex_device_register_devicelist_callbacks
   svc->add_device = add_device;
   svc->update_device = update_device;
   svc->remove_device = remove_device;
+}
+
+void edgex_device_post_readings
+(
+  edgex_device_service *svc,
+  const char *device_name,
+  const char *resource_name,
+  edgex_device_commandresult *values
+)
+{
+  edgex_device *dev = edgex_devmap_device_byname (svc->impl->devices, device_name);
+  if (dev == NULL)
+  {
+    iot_log_error (svc->lc, "Post readings: no such device %s", device_name);
+    return;
+  }
+  const edgex_cmdinfo *command = edgex_deviceprofile_findcommand
+    (resource_name, dev->profile, true);
+  edgex_device_release (dev);
+
+  if (command)
+  {
+    devsdk_commandresult *crs = calloc (command->nreqs, sizeof (devsdk_commandresult));
+    for (unsigned i = 0; i < command->nreqs; i++)
+    {
+      crs[i].origin = values[i].origin;
+      crs[i].value = data_from_reading (values[i].type, values[i].value);
+      if (crs[i].value == NULL)
+      {
+        iot_log_error (svc->lc, "Post readings: Unsupported data type (map/array)");
+        free (crs);
+        return;
+      }
+    }
+    devsdk_post_readings (svc->impl, device_name, resource_name, crs);
+    free (crs);
+  }
+  else
+  {
+    iot_log_error (svc->lc, "Post readings: no such resource %s", resource_name);
+  }
 }
