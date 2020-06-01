@@ -618,6 +618,12 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   bool uploadConfig = false;
   devsdk_nvpairs *confpairs = NULL;
 
+  if (svc->starttime)
+  {
+    iot_log_error (svc->logger, "devsdk_service_start() called for already-started service, skipping");
+    return;
+  }
+
   svc->starttime = iot_time_msecs();
 
   iot_init ();
