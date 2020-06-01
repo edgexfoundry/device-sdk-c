@@ -129,6 +129,6 @@ Some basic types have also changed:
 `edgex_error` is renamed to `devsdk_error`
 `edgex_nvpairs` is renamed to `devsdk_nvpairs`
 `edgex_strings` is renamed to `devsdk_strings`
-`edgex_protocols` is renamed to `devsdk_protocols` and made opaque (ie only usable via the accessor methods)
+`edgex_protocols` is renamed to `devsdk_protocols`
 `edgex_device_adminstate` is replaced by a boolean indicating whether the relevant device is to be accessible
 

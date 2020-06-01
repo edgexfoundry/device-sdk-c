@@ -43,8 +43,12 @@ typedef struct devsdk_nvpairs
   struct devsdk_nvpairs *next;
 } devsdk_nvpairs;
 
-struct devsdk_protocols;
-typedef struct devsdk_protocols devsdk_protocols;
+typedef struct devsdk_protocols
+{
+  char *name;
+  devsdk_nvpairs *properties;
+  struct devsdk_protocols *next;
+} devsdk_protocols;
 
 /**
  * @brief Structure containing information about a device resource which is the subject of a get or set request.

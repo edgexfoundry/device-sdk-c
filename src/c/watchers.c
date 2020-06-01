@@ -63,7 +63,7 @@ static edgex_watcher **find_locked (edgex_watcher **list, const char *id)
 static void add_locked (edgex_watchlist_t *wl, const edgex_watcher *w)
 {
   edgex_watcher *newelem = edgex_watcher_dup (w);
-  for (edgex_nvpairs *ids = newelem->identifiers; ids; ids = ids->next)
+  for (devsdk_nvpairs *ids = newelem->identifiers; ids; ids = ids->next)
   {
     edgex_watcher_regexes_t *r = malloc (sizeof (edgex_watcher_regexes_t));
     if (regcomp (&r->preg, ids->value, REG_NOSUB) == 0)
@@ -159,7 +159,7 @@ static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
     const char *checkval = devsdk_nvpairs_value (ids, blocked->name);
     if (checkval)
     {
-      for (edgex_strings *bv = blocked->values; bv; bv = bv->next)
+      for (devsdk_strings *bv = blocked->values; bv; bv = bv->next)
       {
         if (strcmp (bv->str, checkval) == 0)
         {
@@ -206,7 +206,7 @@ void edgex_watchlist_dump (const edgex_watchlist_t *wl, iot_logger_t *logger)
     }
     for (const edgex_blocklist *bl = w->blocking_identifiers; bl; bl = bl->next)
     {
-      for (edgex_strings *s = bl->values; s; s = s->next)
+      for (devsdk_strings *s = bl->values; s; s = s->next)
       {
         iot_log_debug (logger, "PW: Block %s = %s", bl->name, s->str);
       }

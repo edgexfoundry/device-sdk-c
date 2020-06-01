@@ -28,7 +28,7 @@
  * @param newconfig The updated configuration.
  */
 
-typedef void (*edgex_registry_updatefn) (void *updatectx, const edgex_nvpairs *newconfig);
+typedef void (*edgex_registry_updatefn) (void *updatectx, const devsdk_nvpairs *newconfig);
 
 /* Registry implementation functions */
 
@@ -58,7 +58,7 @@ typedef bool (*edgex_registry_ping_impl)
  * @returns Configuration retrieved for the named service.
  */
 
-typedef edgex_nvpairs *(*edgex_registry_get_config_impl)
+typedef devsdk_nvpairs *(*edgex_registry_get_config_impl)
 (
   iot_logger_t *lc,
   iot_threadpool_t *thpool,
@@ -87,7 +87,7 @@ typedef void (*edgex_registry_put_config_impl)
   void *location,
   const char *servicename,
   const char *profile,
-  const edgex_nvpairs *config,
+  const devsdk_nvpairs *config,
   edgex_error *err
 );
 
@@ -239,7 +239,7 @@ bool edgex_registry_ping (edgex_registry *registry, edgex_error *err);
  * @returns Configuration retrieved for the named service.
  */
 
-edgex_nvpairs *edgex_registry_get_config
+devsdk_nvpairs *edgex_registry_get_config
 (
   edgex_registry *registry,
   const char *servicename,
@@ -264,7 +264,7 @@ void edgex_registry_put_config
   edgex_registry *registry,
   const char *servicename,
   const char *profile,
-  const edgex_nvpairs *config,
+  const devsdk_nvpairs *config,
   edgex_error *err
 );
 

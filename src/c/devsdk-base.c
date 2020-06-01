@@ -10,17 +10,6 @@
 #include "devsdk/devsdk-base.h"
 #include "devutil.h"
 
-void devsdk_strings_free (devsdk_strings *strs)
-{
-  while (strs)
-  {
-    devsdk_strings *current = strs;
-    free (strs->str);
-    strs = strs->next;
-    free (current);
-  }
-}
-
 devsdk_nvpairs *devsdk_nvpairs_new (const char *name, const char *value, devsdk_nvpairs *list)
 {
   devsdk_nvpairs *result = malloc (sizeof (devsdk_nvpairs));
@@ -99,36 +88,6 @@ bool devsdk_nvpairs_float_value (const devsdk_nvpairs *nvp, const char *name, fl
   return result;
 }
 
-devsdk_nvpairs *devsdk_nvpairs_dup (const devsdk_nvpairs *p)
-{
-  devsdk_nvpairs *result = NULL;
-  devsdk_nvpairs *copy;
-  devsdk_nvpairs **last = &result;
-  while (p)
-  {
-    copy = malloc (sizeof (devsdk_nvpairs));
-    copy->name = strdup (p->name);
-    copy->value = strdup (p->value);
-    copy->next = NULL;
-    *last = copy;
-    last = &(copy->next);
-    p = p->next;
-  }
-  return result;
-}
-
-void devsdk_nvpairs_free (devsdk_nvpairs *p)
-{
-  while (p)
-  {
-    devsdk_nvpairs *current = p;
-    free (p->name);
-    free (p->value);
-    p = p->next;
-    free (current);
-  }
-}
-
 devsdk_protocols *devsdk_protocols_new (const char *name, const devsdk_nvpairs *properties, devsdk_protocols *list)
 {
   devsdk_protocols *result = malloc (sizeof (devsdk_protocols));
@@ -151,31 +110,6 @@ const devsdk_nvpairs *devsdk_protocols_properties (const devsdk_protocols *prots
     }
   }
   return NULL;
-}
-
-devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e)
-{
-  devsdk_protocols *result = NULL;
-  for (const devsdk_protocols *p = e; p; p = p->next)
-  {
-    devsdk_protocols *newprot = malloc (sizeof (devsdk_protocols));
-    newprot->name = strdup (p->name);
-    newprot->properties = devsdk_nvpairs_dup (p->properties);
-    newprot->next = result;
-    result = newprot;
-  }
-  return result;
-}
-
-void devsdk_protocols_free (devsdk_protocols *e)
-{
-  if (e)
-  {
-    free (e->name);
-    devsdk_nvpairs_free (e->properties);
-    devsdk_protocols_free (e->next);
-    free (e);
-  }
 }
 
 /* Macro for generating single-linked-list comparison functions.

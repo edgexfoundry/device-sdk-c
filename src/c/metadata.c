@@ -359,8 +359,8 @@ char *edgex_metadata_client_add_device
   dev->description = (char *)description;
   dev->adminState = adminstate;
   dev->operatingState = ENABLED;
-  dev->labels = (edgex_strings *)labels;
-  dev->protocols = (edgex_protocols *)protocols;
+  dev->labels = (devsdk_strings *)labels;
+  dev->protocols = (devsdk_protocols *)protocols;
   dev->service = malloc (sizeof (edgex_deviceservice));
   memset (dev->service, 0, sizeof (edgex_deviceservice));
   dev->service->name = (char *)service_name;
@@ -492,7 +492,7 @@ void edgex_metadata_client_update_device
   );
 
   json = edgex_device_write_sparse
-    (name, id, description, (edgex_strings *)labels, profile_name);
+    (name, id, description, labels, profile_name);
 
   edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
   if (err->code != 0)

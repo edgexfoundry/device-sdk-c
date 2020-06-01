@@ -237,8 +237,8 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_
   dest->origin = src->origin;
   free (dest->description);
   dest->description = strdup (src->description);
-  edgex_strings_free (dest->labels);
-  dest->labels = edgex_strings_dup (src->labels);
+  devsdk_strings_free (dest->labels);
+  dest->labels = devsdk_strings_dup (src->labels);
 
   return true;
 }

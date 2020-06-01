@@ -39,17 +39,17 @@ static bool get_boolean (const JSON_Object *obj, const char *name, bool dflt)
   return (i == -1) ? dflt : i;
 }
 
-static edgex_strings *array_to_strings (const JSON_Array *array)
+static devsdk_strings *array_to_strings (const JSON_Array *array)
 {
   size_t count = json_array_get_count (array);
   size_t i;
-  edgex_strings *result = NULL;
-  edgex_strings *temp;
-  edgex_strings **last_ptr = &result;
+  devsdk_strings *result = NULL;
+  devsdk_strings *temp;
+  devsdk_strings **last_ptr = &result;
 
   for (i = 0; i < count; i++)
   {
-    temp = (edgex_strings *) malloc (sizeof (edgex_strings));
+    temp = (devsdk_strings *) malloc (sizeof (devsdk_strings));
     temp->str = get_array_string (array, i);
     temp->next = NULL;
     *last_ptr = temp;
@@ -59,7 +59,7 @@ static edgex_strings *array_to_strings (const JSON_Array *array)
   return result;
 }
 
-static JSON_Value *strings_to_array (const edgex_strings *s)
+static JSON_Value *strings_to_array (const devsdk_strings *s)
 {
   JSON_Value *result = json_value_init_array ();
   JSON_Array *array = json_value_get_array (result);
@@ -71,15 +71,15 @@ static JSON_Value *strings_to_array (const edgex_strings *s)
   return result;
 }
 
-edgex_strings *edgex_strings_dup (const edgex_strings *strs)
+devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs)
 {
-  edgex_strings *result = NULL;
-  edgex_strings *copy;
-  edgex_strings **last = &result;
+  devsdk_strings *result = NULL;
+  devsdk_strings *copy;
+  devsdk_strings **last = &result;
 
   while (strs)
   {
-    copy = malloc (sizeof (edgex_strings));
+    copy = malloc (sizeof (devsdk_strings));
     copy->str = strdup (strs->str);
     copy->next = NULL;
     *last = copy;
@@ -90,23 +90,23 @@ edgex_strings *edgex_strings_dup (const edgex_strings *strs)
   return result;
 }
 
-void edgex_strings_free (edgex_strings *strs)
+void devsdk_strings_free (devsdk_strings *strs)
 {
   while (strs)
   {
-    edgex_strings *current = strs;
+    devsdk_strings *current = strs;
     free (strs->str);
     strs = strs->next;
     free (current);
   }
 }
 
-static JSON_Value *nvpairs_write (const edgex_nvpairs *e)
+static JSON_Value *nvpairs_write (const devsdk_nvpairs *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
 
-  for (const edgex_nvpairs *nv = e; nv; nv = nv->next)
+  for (const devsdk_nvpairs *nv = e; nv; nv = nv->next)
   {
     json_object_set_string (obj, nv->name, nv->value);
   }
@@ -114,13 +114,13 @@ static JSON_Value *nvpairs_write (const edgex_nvpairs *e)
   return result;
 }
 
-static edgex_nvpairs *nvpairs_read (const JSON_Object *obj)
+static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
 {
-  edgex_nvpairs *result = NULL;
+  devsdk_nvpairs *result = NULL;
   size_t count = json_object_get_count (obj);
   for (size_t i = 0; i < count; i++)
   {
-    edgex_nvpairs *nv = malloc (sizeof (edgex_nvpairs));
+    devsdk_nvpairs *nv = malloc (sizeof (devsdk_nvpairs));
     nv->name = strdup (json_object_get_name (obj, i));
     nv->value = strdup (json_value_get_string (json_object_get_value_at (obj, i)));
     nv->next = result;
@@ -129,14 +129,14 @@ static edgex_nvpairs *nvpairs_read (const JSON_Object *obj)
   return result;
 }
 
-edgex_nvpairs *edgex_nvpairs_dup (const edgex_nvpairs *p)
+devsdk_nvpairs *devsdk_nvpairs_dup (const devsdk_nvpairs *p)
 {
-  edgex_nvpairs *result = NULL;
-  edgex_nvpairs *copy;
-  edgex_nvpairs **last = &result;
+  devsdk_nvpairs *result = NULL;
+  devsdk_nvpairs *copy;
+  devsdk_nvpairs **last = &result;
   while (p)
   {
-    copy = malloc (sizeof (edgex_nvpairs));
+    copy = malloc (sizeof (devsdk_nvpairs));
     copy->name = strdup (p->name);
     copy->value = strdup (p->value);
     copy->next = NULL;
@@ -147,11 +147,11 @@ edgex_nvpairs *edgex_nvpairs_dup (const edgex_nvpairs *p)
   return result;
 }
 
-void edgex_nvpairs_free (edgex_nvpairs *p)
+void devsdk_nvpairs_free (devsdk_nvpairs *p)
 {
   while (p)
   {
-    edgex_nvpairs *current = p;
+    devsdk_nvpairs *current = p;
     free (p->name);
     free (p->value);
     p = p->next;
@@ -553,7 +553,7 @@ static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresourc
     result->description = strdup (e->description);
     result->tag = strdup (e->tag);
     result->properties = profileproperty_dup (e->properties);
-    result->attributes = edgex_nvpairs_dup (e->attributes);
+    result->attributes = devsdk_nvpairs_dup (e->attributes);
     result->next = edgex_deviceresource_dup (e->next);
   }
   return result;
@@ -568,7 +568,7 @@ static void deviceresource_free (edgex_deviceresource *e)
     free (e->description);
     free (e->tag);
     profileproperty_free (e->properties);
-    edgex_nvpairs_free (e->attributes);
+    devsdk_nvpairs_free (e->attributes);
     e = e->next;
     free (current);
   }
@@ -638,8 +638,8 @@ static edgex_resourceoperation *resourceoperation_dup
     result->parameter = strdup (ro->parameter);
     result->resource = strdup (ro->resource);
     result->deviceCommand = strdup (ro->deviceCommand);
-    result->secondary = edgex_strings_dup (ro->secondary);
-    result->mappings = edgex_nvpairs_dup (ro->mappings);
+    result->secondary = devsdk_strings_dup (ro->secondary);
+    result->mappings = devsdk_nvpairs_dup (ro->mappings);
     result->next = resourceoperation_dup (ro->next);
   }
   return result;
@@ -658,8 +658,8 @@ static void resourceoperation_free (edgex_resourceoperation *e)
     free (e->parameter);
     free (e->resource);
     free (e->deviceCommand);
-    edgex_strings_free (e->secondary);
-    edgex_nvpairs_free (e->mappings);
+    devsdk_strings_free (e->secondary);
+    devsdk_nvpairs_free (e->mappings);
     e = e->next;
     free (current);
   }
@@ -972,14 +972,14 @@ void edgex_device_autoevents_free (edgex_device_autoevents *e)
   }
 }
 
-static edgex_protocols *protocols_read (const JSON_Object *obj)
+static devsdk_protocols *protocols_read (const JSON_Object *obj)
 {
-  edgex_protocols *result = NULL;
+  devsdk_protocols *result = NULL;
   size_t count = json_object_get_count (obj);
   for (size_t i = 0; i < count; i++)
   {
     JSON_Value *pval = json_object_get_value_at (obj, i);
-    edgex_protocols *prot = malloc (sizeof (edgex_protocols));
+    devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
     prot->name = strdup (json_object_get_name (obj, i));
     prot->properties = nvpairs_read (json_value_get_object (pval));
     prot->next = result;
@@ -988,39 +988,39 @@ static edgex_protocols *protocols_read (const JSON_Object *obj)
   return result;
 }
 
-static JSON_Value *protocols_write (const edgex_protocols *e)
+static JSON_Value *protocols_write (const devsdk_protocols *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
 
-  for (const edgex_protocols *prot = e; prot; prot = prot->next)
+  for (const devsdk_protocols *prot = e; prot; prot = prot->next)
   {
     json_object_set_value (obj, prot->name, nvpairs_write (prot->properties));
   }
   return result;
 }
 
-edgex_protocols *edgex_protocols_dup (const edgex_protocols *e)
+devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e)
 {
-  edgex_protocols *result = NULL;
-  for (const edgex_protocols *p = e; p; p = p->next)
+  devsdk_protocols *result = NULL;
+  for (const devsdk_protocols *p = e; p; p = p->next)
   {
-    edgex_protocols *newprot = malloc (sizeof (edgex_protocols));
+    devsdk_protocols *newprot = malloc (sizeof (devsdk_protocols));
     newprot->name = strdup (p->name);
-    newprot->properties = edgex_nvpairs_dup (p->properties);
+    newprot->properties = devsdk_nvpairs_dup (p->properties);
     newprot->next = result;
     result = newprot;
   }
   return result;
 }
 
-void edgex_protocols_free (edgex_protocols *e)
+void devsdk_protocols_free (devsdk_protocols *e)
 {
   if (e)
   {
     free (e->name);
-    edgex_nvpairs_free (e->properties);
-    edgex_protocols_free (e->next);
+    devsdk_nvpairs_free (e->properties);
+    devsdk_protocols_free (e->next);
     free (e);
   }
 }
@@ -1182,7 +1182,7 @@ edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e)
   res->name = strdup (e->name);
   res->id = strdup (e->id);
   res->description = strdup (e->description);
-  res->labels = edgex_strings_dup (e->labels);
+  res->labels = devsdk_strings_dup (e->labels);
   res->addressable = edgex_addressable_dup (e->addressable);
   res->adminState = e->adminState;
   res->operatingState = e->operatingState;
@@ -1201,7 +1201,7 @@ void edgex_deviceservice_free (edgex_deviceservice *e)
     edgex_addressable_free (e->addressable);
     free (e->description);
     free (e->id);
-    edgex_strings_free (e->labels);
+    devsdk_strings_free (e->labels);
     free (e->name);
     free (e);
   }
@@ -1232,7 +1232,7 @@ edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *src)
     dest->origin = src->origin;
     dest->manufacturer = strdup (src->manufacturer);
     dest->model = strdup (src->model);
-    dest->labels = edgex_strings_dup (src->labels);
+    dest->labels = devsdk_strings_dup (src->labels);
     dest->device_resources = edgex_deviceresource_dup (src->device_resources);
     dest->device_commands = devicecommand_dup (src->device_commands);
   }
@@ -1249,7 +1249,7 @@ void edgex_deviceprofile_free (edgex_deviceprofile *e)
     free (e->description);
     free (e->manufacturer);
     free (e->model);
-    edgex_strings_free (e->labels);
+    devsdk_strings_free (e->labels);
     deviceresource_free (e->device_resources);
     devicecommand_free (e->device_commands);
     cmdinfo_free (e->cmdinfo);
@@ -1386,8 +1386,8 @@ edgex_device *edgex_device_dup (const edgex_device *e)
   result->name = strdup (e->name);
   result->id = strdup (e->id);
   result->description = strdup (e->description);
-  result->labels = edgex_strings_dup (e->labels);
-  result->protocols = edgex_protocols_dup (e->protocols);
+  result->labels = devsdk_strings_dup (e->labels);
+  result->protocols = devsdk_protocols_dup (e->protocols);
   result->autos = autoevents_dup (e->autos);
   result->adminState = e->adminState;
   result->operatingState = e->operatingState;
@@ -1407,11 +1407,11 @@ void edgex_device_free (edgex_device *e)
   while (e)
   {
     edgex_device *current = e;
-    edgex_protocols_free (e->protocols);
+    devsdk_protocols_free (e->protocols);
     edgex_device_autoevents_free (e->autos);
     free (e->description);
     free (e->id);
-    edgex_strings_free (e->labels);
+    devsdk_strings_free (e->labels);
     free (e->name);
     if (e->profile)
     {
@@ -1457,7 +1457,7 @@ char *edgex_device_write_sparse
   const char * name,
   const char * id,
   const char * description,
-  const edgex_strings * labels,
+  const devsdk_strings * labels,
   const char * profile_name
 )
 {
@@ -1591,7 +1591,7 @@ void edgex_valuedescriptor_free (edgex_valuedescriptor *e)
   free (e->description);
   free (e->formatting);
   free (e->id);
-  edgex_strings_free (e->labels);
+  devsdk_strings_free (e->labels);
   free (e->max);
   free (e->min);
   free (e->name);
@@ -1654,7 +1654,7 @@ static edgex_blocklist *edgex_blocklist_dup (const edgex_blocklist *e)
   {
     edgex_blocklist *elem = calloc (1, sizeof (edgex_blocklist));
     elem->name = strdup (bl->name);
-    elem->values = edgex_strings_dup (bl->values);
+    elem->values = devsdk_strings_dup (bl->values);
     *last = elem;
     last = &(elem->next);
   }
@@ -1667,7 +1667,7 @@ static void edgex_blocklist_free (edgex_blocklist *e)
   {
     edgex_blocklist *current = e;
     free (e->name);
-    edgex_strings_free (e->values);
+    devsdk_strings_free (e->values);
     e = e->next;
     free (current);
   }
@@ -1746,7 +1746,7 @@ edgex_watcher *edgex_watcher_dup (const edgex_watcher *e)
   res->regs = NULL;
   res->id = strdup (e->id);
   res->name = strdup (e->name);
-  res->identifiers = edgex_nvpairs_dup (e->identifiers);
+  res->identifiers = devsdk_nvpairs_dup (e->identifiers);
   res->blocking_identifiers = edgex_blocklist_dup (e->blocking_identifiers);
   res->profile = strdup (e->profile);
   res->adminstate = e->adminstate;
@@ -1762,7 +1762,7 @@ void edgex_watcher_free (edgex_watcher *e)
     edgex_watcher *next = ew->next;
     free (ew->id);
     free (ew->name);
-    edgex_nvpairs_free (ew->identifiers);
+    devsdk_nvpairs_free (ew->identifiers);
     edgex_watcher_regexes_free (ew->regs);
     edgex_blocklist_free (ew->blocking_identifiers);
     free (ew->profile);
@@ -1804,13 +1804,13 @@ static void resourceoperation_dump (const edgex_resourceoperation *e)
     printf ("parameter %s\n", SAFE_STR(e->parameter));
     printf ("resource %s\n", SAFE_STR(e->resource));
     printf ("secondary");
-    for (edgex_strings * tmp = e->secondary; tmp; tmp = tmp->next)
+    for (devsdk_strings * tmp = e->secondary; tmp; tmp = tmp->next)
     {
       printf (" %s", tmp->str);
     }
     printf ("\n");
     printf ("mappings");
-    for (edgex_nvpairs * nv = e->mappings; nv; nv = nv->next)
+    for (devsdk_nvpairs * nv = e->mappings; nv; nv = nv->next)
     {
       printf (" [%s, %s]", nv->name, nv->value);
     }
@@ -1825,7 +1825,7 @@ void edgex_deviceprofile_dump (edgex_deviceprofile * e)
   printf ("description %s\n", SAFE_STR(e->description));
   printf ("id %s\n", SAFE_STR(e->id));
   printf ("labels:");
-  for (edgex_strings * tmp = e->labels; tmp; tmp = tmp->next)
+  for (devsdk_strings * tmp = e->labels; tmp; tmp = tmp->next)
   {
     printf (" %s", tmp->str);
   }
@@ -1881,7 +1881,7 @@ void edgex_deviceservice_dump (edgex_deviceservice * e)
   printf ("description %s\n", SAFE_STR(e->description));
   printf ("id %s\n", SAFE_STR(e->id));
   printf ("labels:");
-  for (edgex_strings * tmp = e->labels; tmp; tmp = tmp->next)
+  for (devsdk_strings * tmp = e->labels; tmp; tmp = tmp->next)
   {
     printf (" %s", tmp->str);
   }
@@ -1902,7 +1902,7 @@ void edgex_device_dump (edgex_device * e)
   printf ("description %s\n", e->description);
   printf ("id %s\n", e->id);
   printf ("labels:");
-  for (edgex_strings * tmp = e->labels; tmp; tmp = tmp->next)
+  for (devsdk_strings * tmp = e->labels; tmp; tmp = tmp->next)
   {
     printf (" %s", tmp->str);
   }
@@ -1936,7 +1936,7 @@ void edgex_valuedescriptor_dump (edgex_valuedescriptor * e)
   printf ("formatting %s\n", e->formatting);
   printf ("id %s\n", e->id);
   printf ("labels:");
-  for (edgex_strings * tmp = e->labels; tmp; tmp = tmp->next)
+  for (devsdk_strings * tmp = e->labels; tmp; tmp = tmp->next)
   {
     printf (" %s", tmp->str);
   }

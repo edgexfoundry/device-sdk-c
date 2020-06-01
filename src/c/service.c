@@ -438,7 +438,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     ds->created = millis;
     for (int n = 0; svc->config.service.labels[n]; n++)
     {
-      edgex_strings *newlabel = malloc (sizeof (edgex_strings));
+      devsdk_strings *newlabel = malloc (sizeof (devsdk_strings));
       newlabel->str = strdup (svc->config.service.labels[n]);
       newlabel->next = ds->labels;
       ds->labels = newlabel;

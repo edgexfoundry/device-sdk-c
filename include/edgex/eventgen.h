@@ -58,7 +58,7 @@ typedef void * (*edgex_device_autoevent_start_handler)
 (
   void *impl,
   const char *devname,
-  const edgex_protocols *protocols,
+  const devsdk_protocols *protocols,
   const char *resource_name,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,

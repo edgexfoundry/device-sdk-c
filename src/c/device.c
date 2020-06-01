@@ -378,17 +378,17 @@ static edgex_cmdinfo *infoForRes
   result->nreqs = n;
   result->reqs = calloc (n, sizeof (devsdk_commandrequest));
   result->pvals = calloc (n, sizeof (edgex_propertyvalue *));
-  result->maps = calloc (n, sizeof (edgex_nvpairs *));
+  result->maps = calloc (n, sizeof (devsdk_nvpairs *));
   result->dfls = calloc (n, sizeof (char *));
   for (n = 0, ro = forGet ? cmd->get : cmd->set; ro; n++, ro = ro->next)
   {
     edgex_deviceresource *devres =
       findDevResource (prof->device_resources, ro->deviceResource);
     result->reqs[n].resname = devres->name;
-    result->reqs[n].attributes = (devsdk_nvpairs *)devres->attributes;
+    result->reqs[n].attributes = devres->attributes;
     result->reqs[n].type = typecodeFromType (devres->properties->value->type);
     result->pvals[n] = devres->properties->value;
-    result->maps[n] = (devsdk_nvpairs *)ro->mappings;
+    result->maps[n] = ro->mappings;
     if (ro->parameter && *ro->parameter)
     {
       result->dfls[n] = ro->parameter;
@@ -410,10 +410,10 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->nreqs = 1;
   result->reqs = malloc (sizeof (devsdk_commandrequest));
   result->pvals = malloc (sizeof (edgex_propertyvalue *));
-  result->maps = malloc (sizeof (edgex_nvpairs *));
+  result->maps = malloc (sizeof (devsdk_nvpairs *));
   result->dfls = malloc (sizeof (char *));
   result->reqs[0].resname = devres->name;
-  result->reqs[0].attributes = (devsdk_nvpairs *)devres->attributes;
+  result->reqs[0].attributes = devres->attributes;
   result->reqs[0].type = typecodeFromType (devres->properties->value->type);
   result->pvals[0] = devres->properties->value;
   result->maps[0] = NULL;
