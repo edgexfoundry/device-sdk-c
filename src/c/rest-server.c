@@ -209,7 +209,7 @@ static int http_handler
 
   if (reply_type == NULL)
   {
-    reply_type = "text/plain";
+    reply_type = CONTENT_PLAINTEXT;
   }
   if (reply == NULL)
   {

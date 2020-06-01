@@ -68,7 +68,7 @@ int edgex_device_handler_metrics
   }
   *reply = json_serialize_to_string (val);
   *reply_size = strlen (*reply);
-  *reply_type = "application/json";
+  *reply_type = CONTENT_JSON;
   json_value_free (val);
   return MHD_HTTP_OK;
 }

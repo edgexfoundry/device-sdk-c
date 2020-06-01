@@ -814,14 +814,14 @@ static int allCommand
         strcat (buff, "]");
         *reply = buff;
         *reply_size = strlen (buff);
-        *reply_type = "application/json";
+        *reply_type = CONTENT_JSON;
         break;
       case CBOR:
         buff[bsize - 2] = '\377';
         buff[bsize - 1] = '\0';
         *reply = buff;
         *reply_size = bsize - 1;
-        *reply_type = "application/cbor";
+        *reply_type = CONTENT_CBOR;
         break;
     }
   }
@@ -893,12 +893,12 @@ static int oneCommand
         case JSON:
           *reply = ereply->value.json;
           *reply_size = strlen (ereply->value.json);
-          *reply_type = "application/json";
+          *reply_type = CONTENT_JSON;
           break;
         case CBOR:
           *reply = ereply->value.cbor.data;
           *reply_size = ereply->value.cbor.length;
-          *reply_type = "application/cbor";
+          *reply_type = CONTENT_CBOR;
           break;
       }
       free (ereply);
@@ -907,7 +907,7 @@ static int oneCommand
     {
       *reply = exc;
       *reply_size = strlen (exc);
-      *reply_type = "text/plain";
+      *reply_type = CONTENT_PLAINTEXT;
     }
   }
   else
