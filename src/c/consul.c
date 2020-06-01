@@ -286,7 +286,7 @@ void edgex_consul_client_write_config
 
   edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
 
-  free (json);
+  json_free_serialized_string (json);
   free (ctx.buff);
 }
 
@@ -340,7 +340,7 @@ void edgex_consul_client_register_service
   {
     iot_log_error (lc, "Register service failed: %s", ctx.buff);
   }
-  free (json);
+  json_free_serialized_string (json);
   free (ctx.buff);
 }
 

@@ -189,7 +189,7 @@ char *edgex_metadata_client_create_deviceprofile
   );
   json = edgex_deviceprofile_write (newdp, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  free (json);
+  json_free_serialized_string (json);
   return ctx.buff;
 }
 
@@ -284,7 +284,7 @@ char *edgex_metadata_client_create_deviceservice
   );
   json = edgex_deviceservice_write (newds, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  free (json);
+  json_free_serialized_string (json);
   return ctx.buff;
 }
 
@@ -387,7 +387,7 @@ char *edgex_metadata_client_add_device
   }
   free (dev->service);
   free (dev->profile);
-  free (json);
+  json_free_serialized_string (json);
   free (dev);
 
   return result;
@@ -506,7 +506,7 @@ void edgex_metadata_client_update_device
     );
   }
   free (ctx.buff);
-  free (json);
+  json_free_serialized_string (json);
 }
 
 void edgex_metadata_client_delete_device
@@ -700,7 +700,7 @@ char *edgex_metadata_client_create_addressable
   );
   json = edgex_addressable_write (newadd, true);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  free (json);
+  json_free_serialized_string (json);
   return ctx.buff;
 }
 
@@ -727,7 +727,7 @@ void edgex_metadata_client_update_addressable
   );
   json = edgex_addressable_write (addressable, false);
   edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
-  free (json);
+  json_free_serialized_string (json);
   free (ctx.buff);
 }
 
