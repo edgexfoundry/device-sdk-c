@@ -1,44 +1,44 @@
 [Service]
   Port = 49999
   Timeout = 5000
-  ConnectRetries = 3
-  Labels = [ "Gyro" ]
-  StartupMsg = "Example gyro device service started"
-  CheckInterval = "10s"
+  ConnectRetries = 10
+  Labels = [ 'Gyro' ]
+  StartupMsg = 'Example gyro device service started'
+  CheckInterval = '10s'
 
 [Clients]
   [Clients.Data]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48080
 
   [Clients.Metadata]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48081
 
   [Clients.Logging]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48061
 
 [Device]
   DataTransform = false
   Discovery = false
-  InitCmd = ""
-  InitCmdArgs = ""
+  InitCmd = ''
+  InitCmdArgs = ''
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  RemoveCmd = ""
-  RemoveCmdArgs = ""
-  ProfilesDir = ""
+  RemoveCmd = ''
+  RemoveCmdArgs = ''
+  ProfilesDir = ''
   SendReadingsOnChanged = true
 
 [Logging]
   EnableRemote = false
-  File = "-"
-  LogLevel = "DEBUG"
+  File = '-'
+  LogLevel = 'DEBUG'
 
 [[DeviceList]]
-  Name = "Gyro"
-  Profile = "Example-Gyro"
-  Description = "An Example Gyro Device"
+  Name = 'Gyro'
+  Profile = 'Example-Gyro'
+  Description = 'An Example Gyro Device'
   [DeviceList.Protocols]
     [DeviceList.Protocols.Gyro]
