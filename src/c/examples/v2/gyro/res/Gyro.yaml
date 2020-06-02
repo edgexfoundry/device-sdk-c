@@ -15,7 +15,7 @@ deviceResources:
       value:
         { type: "int32", readWrite: "R" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "degrees/sec" }
+        { defaultValue: "degrees/sec" }
   -
     name: Yrotation
     description: "Y axis rotation rate"
@@ -25,7 +25,7 @@ deviceResources:
       value:
         { type: "int32", readWrite: "R" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "degrees/sec" }
+        { defaultValue: "degrees/sec" }
   -
     name: Zrotation
     description: "Z axis rotation rate"
@@ -35,7 +35,7 @@ deviceResources:
       value:
         { type: "int32", readWrite: "R" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "degrees/sec" }
+        { defaultValue: "degrees/sec" }
 
 deviceCommands:
   -

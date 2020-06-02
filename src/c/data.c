@@ -336,7 +336,7 @@ void edgex_data_client_add_event
     case CBOR:
     {
       edgex_http_postbin
-        (lc, &ctx, url, eventval->value.cbor.data, eventval->value.cbor.length, "application/cbor", NULL, err);
+        (lc, &ctx, url, eventval->value.cbor.data, eventval->value.cbor.length, CONTENT_CBOR, NULL, err);
       break;
     }
   }
@@ -443,7 +443,7 @@ edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
   json = edgex_valuedescriptor_write (result);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
   result->id = ctx.buff;
-  free (json);
+  json_free_serialized_string (json);
 
   return result;
 }

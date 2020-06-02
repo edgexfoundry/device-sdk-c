@@ -26,6 +26,10 @@ typedef enum
   UNKNOWN = 1024
 } edgex_http_method;
 
+#define CONTENT_JSON "application/json"
+#define CONTENT_CBOR "application/cbor"
+#define CONTENT_PLAINTEXT "text/plain"
+
 /**
  * @brief Function called to handle an http request.
  * @param context The context data passed in when the handler was registered.

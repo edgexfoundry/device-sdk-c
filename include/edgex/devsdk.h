@@ -70,7 +70,7 @@ typedef struct edgex_device_commandrequest
   /** The device resource's name */
   const char *resname;
   /** Attributes of the device resource */
-  const edgex_nvpairs *attributes;
+  const devsdk_nvpairs *attributes;
   /** Type of the data to be read or written */
   edgex_propertytype type;
 } edgex_device_commandrequest;
@@ -108,7 +108,7 @@ typedef bool (*edgex_device_device_initialize)
 (
   void *impl,
   struct iot_logger_t *lc,
-  const edgex_nvpairs *config
+  const devsdk_nvpairs *config
 );
 
 /**
@@ -138,7 +138,7 @@ typedef bool (*edgex_device_handle_get)
 (
   void *impl,
   const char *devname,
-  const edgex_protocols *protocols,
+  const devsdk_protocols *protocols,
   uint32_t nreadings,
   const edgex_device_commandrequest *requests,
   edgex_device_commandresult *readings
@@ -159,7 +159,7 @@ typedef bool (*edgex_device_handle_put)
 (
   void *impl,
   const char *devname,
-  const edgex_protocols *protocols,
+  const devsdk_protocols *protocols,
   uint32_t nvalues,
   const edgex_device_commandrequest *requests,
   const edgex_device_commandresult *values
@@ -174,7 +174,7 @@ typedef bool (*edgex_device_handle_put)
 typedef bool (*edgex_device_disconnect_device)
 (
   void *impl,
-  edgex_protocols *device
+  devsdk_protocols *device
 );
 
 /**

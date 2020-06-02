@@ -37,9 +37,9 @@ char * edgex_device_add_device
   edgex_device_service *svc,
   const char *name,
   const char *description,
-  const edgex_strings *labels,
+  const devsdk_strings *labels,
   const char *profile_name,
-  edgex_protocols *protocols,
+  devsdk_protocols *protocols,
   edgex_device_autoevents *autos,
   edgex_error *err
 );
@@ -80,7 +80,7 @@ void edgex_device_update_device
   const char *id,
   const char *name,
   const char *description,
-  const edgex_strings *labels,
+  const devsdk_strings *labels,
   const char *profilename,
   edgex_error *err
 );
@@ -163,7 +163,7 @@ void edgex_device_add_profile (edgex_device_service *svc, const char *fname, edg
  */
 
 typedef void (*edgex_device_add_device_callback)
-  (void *impl, const char *devname, const edgex_protocols *protocols, edgex_device_adminstate state);
+  (void *impl, const char *devname, const devsdk_protocols *protocols, edgex_device_adminstate state);
 
 /**
  * @brief Callback function indicating that a device's address or adminstate has been updated.
@@ -174,7 +174,7 @@ typedef void (*edgex_device_add_device_callback)
  */
 
 typedef void (*edgex_device_update_device_callback)
-  (void *impl, const char *devname, const edgex_protocols *protocols, edgex_device_adminstate state);
+  (void *impl, const char *devname, const devsdk_protocols *protocols, edgex_device_adminstate state);
 
 /**
  * @brief Callback function indicating that a device has been removed.
@@ -184,7 +184,7 @@ typedef void (*edgex_device_update_device_callback)
  */
 
 typedef void (*edgex_device_remove_device_callback)
-  (void *impl, const char *devname, const edgex_protocols *protocols);
+  (void *impl, const char *devname, const devsdk_protocols *protocols);
 
 /**
  * @brief This function allows a device service implementation to register for updates to the

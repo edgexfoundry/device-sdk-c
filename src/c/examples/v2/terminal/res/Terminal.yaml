@@ -15,7 +15,7 @@ deviceResources:
       value:
         { type: "string", readWrite: "W" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "text" }
+        { defaultValue: "text" }
   -
     name: Xposition
     description: "The X position at which to write new text"
@@ -25,7 +25,7 @@ deviceResources:
       value:
         { type: "int32", readWrite: "W" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "characters" }
+        { defaultValue: "characters" }
   -
     name: Yposition
     description: "The Y position at which to write new text"
@@ -35,7 +35,7 @@ deviceResources:
       value:
         { type: "int32", readWrite: "W" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "characters" }
+        { defaultValue: "characters" }
   -
     name: Message
     description: "A message to write on the terminal"
@@ -45,7 +45,7 @@ deviceResources:
       value:
         { type: "string", readWrite: "W" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "text" }
+        { defaultValue: "text" }
 
 deviceCommands:
   -

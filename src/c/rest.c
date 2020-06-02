@@ -27,6 +27,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "errorlist.h"
 #include "correlation.h"
 #include "rest.h"
+#include "edgex/rest-server.h"
 
 #if (LIBCURL_VERSION_NUM >= 0x073800)
 #define USE_CURL_MIME
@@ -310,7 +311,7 @@ long edgex_http_post
   curl_easy_setopt (hnd, CURLOPT_POST, 1L);
   curl_easy_setopt (hnd, CURLOPT_POSTFIELDS, data);
 
-  slist = edgex_add_hdr (NULL, "Content-Type", "application/json");
+  slist = edgex_add_hdr (NULL, "Content-Type", CONTENT_JSON);
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
 }
 
@@ -416,6 +417,6 @@ long edgex_http_put
     curl_easy_setopt (hnd, CURLOPT_INFILESIZE, (long)cb_data.remaining);
   }
 
-  slist = edgex_add_hdr (NULL, "Content-Type", "application/json");
+  slist = edgex_add_hdr (NULL, "Content-Type", CONTENT_JSON);
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
 }

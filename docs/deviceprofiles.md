@@ -96,8 +96,7 @@ that order. This is done within the SDK. A reverse transformation is applied
 by the SDK to incoming data on set operations (NB mask transforms on set are NYI)
 
 The units property is used to indicate the units of the value, eg Amperes,
-degrees C, etc. It should have a type of String, readWrite "R" indicating
-read-only, and a defaultValue that specifies the units.
+degrees C, etc. It should have only one field, a defaultValue that specifies the units.
 
 The Device Profile in the C SDK
 -------------------------------

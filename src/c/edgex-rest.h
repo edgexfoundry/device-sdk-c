@@ -13,14 +13,14 @@
 #include "edgex/edgex-logging.h"
 #include "data.h"
 
-edgex_strings *edgex_strings_dup (const edgex_strings *strs);
-void edgex_strings_free (edgex_strings *strs);
-edgex_nvpairs *edgex_nvpairs_dup (const edgex_nvpairs *p);
-void edgex_nvpairs_free (edgex_nvpairs *p);
+devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs);
+void devsdk_strings_free (devsdk_strings *strs);
+devsdk_nvpairs *devsdk_nvpairs_dup (const devsdk_nvpairs *p);
+void devsdk_nvpairs_free (devsdk_nvpairs *p);
 const char *edgex_propertytype_tostring (edgex_propertytype pt);
 bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str);
-edgex_protocols *edgex_protocols_dup (const edgex_protocols *e);
-void edgex_protocols_free (edgex_protocols *e);
+devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e);
+void devsdk_protocols_free (devsdk_protocols *e);
 edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *json);
 char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create);
 edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *e);
@@ -32,7 +32,7 @@ void edgex_deviceservice_free (edgex_deviceservice *e);
 void edgex_device_autoevents_free (edgex_device_autoevents *e);
 edgex_device *edgex_device_read (iot_logger_t *lc, const char *json);
 char *edgex_device_write (const edgex_device *e, bool create);
-char *edgex_device_write_sparse (const char *name, const char *id, const char *description, const edgex_strings *labels, const char *profile_name);
+char *edgex_device_write_sparse (const char *name, const char *id, const char *description, const devsdk_strings *labels, const char *profile_name);
 edgex_device *edgex_device_dup (const edgex_device *e);
 void edgex_device_free (edgex_device *e);
 edgex_device *edgex_devices_read (iot_logger_t *lc, const char *json);

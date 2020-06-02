@@ -289,7 +289,7 @@ static int ping_handler
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   *reply = strdup (svc->version);
   *reply_size = strlen (svc->version);
-  *reply_type = "text/plain";
+  *reply_type = CONTENT_PLAINTEXT;
   return MHD_HTTP_OK;
 }
 
@@ -313,7 +313,7 @@ static int version_handler
   json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
   *reply = json_serialize_to_string (val);
   *reply_size = strlen (*reply);
-  *reply_type = "application/json";
+  *reply_type = CONTENT_JSON;
   json_value_free (val);
   return MHD_HTTP_OK;
 }
@@ -438,7 +438,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     ds->created = millis;
     for (int n = 0; svc->config.service.labels[n]; n++)
     {
-      edgex_strings *newlabel = malloc (sizeof (edgex_strings));
+      devsdk_strings *newlabel = malloc (sizeof (devsdk_strings));
       newlabel->str = strdup (svc->config.service.labels[n]);
       newlabel->next = ds->labels;
       ds->labels = newlabel;
@@ -617,6 +617,12 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   toml_table_t *config = NULL;
   bool uploadConfig = false;
   devsdk_nvpairs *confpairs = NULL;
+
+  if (svc->starttime)
+  {
+    iot_log_error (svc->logger, "devsdk_service_start() called for already-started service, skipping");
+    return;
+  }
 
   svc->starttime = iot_time_msecs();
 

@@ -46,7 +46,7 @@ typedef struct
   uint64_t created;
   char *description;
   char *id;
-  edgex_strings *labels;
+  devsdk_strings *labels;
   uint64_t lastConnected;
   uint64_t lastReported;
   uint64_t modified;
@@ -65,8 +65,8 @@ typedef struct edgex_resourceoperation
   char *parameter;
   char *resource;       // deprecated - use deviceCommand instead
   char *deviceCommand;
-  edgex_strings *secondary;
-  edgex_nvpairs *mappings;
+  devsdk_strings *secondary;
+  devsdk_nvpairs *mappings;
   struct edgex_resourceoperation *next;
 } edgex_resourceoperation;
 
@@ -109,7 +109,7 @@ typedef struct edgex_deviceresource
   char *name;
   char *tag;
   edgex_profileproperty *properties;
-  edgex_nvpairs *attributes;
+  devsdk_nvpairs *attributes;
   struct edgex_deviceresource *next;
 } edgex_deviceresource;
 
@@ -134,7 +134,7 @@ typedef struct edgex_deviceprofile
   uint64_t origin;
   char *manufacturer;
   char *model;
-  edgex_strings *labels;
+  devsdk_strings *labels;
   edgex_deviceresource *device_resources;
   edgex_devicecommand *device_commands;
   struct edgex_cmdinfo *cmdinfo;
@@ -144,7 +144,7 @@ typedef struct edgex_deviceprofile
 typedef struct edgex_blocklist
 {
   char *name;
-  edgex_strings *values;
+  devsdk_strings *values;
   struct edgex_blocklist *next;
 } edgex_blocklist;
 
@@ -152,7 +152,7 @@ typedef struct edgex_watcher
 {
   char *id;
   char *name;
-  edgex_nvpairs *identifiers;
+  devsdk_nvpairs *identifiers;
   struct edgex_watcher_regexes_t *regs;
   edgex_blocklist *blocking_identifiers;
   char *profile;
@@ -171,12 +171,12 @@ typedef struct edgex_device_autoevents
 
 typedef struct edgex_device
 {
-  edgex_protocols *protocols;
+  devsdk_protocols *protocols;
   edgex_device_adminstate adminState;
   uint64_t created;
   char *description;
   char *id;
-  edgex_strings *labels;
+  devsdk_strings *labels;
   uint64_t lastConnected;
   uint64_t lastReported;
   uint64_t modified;

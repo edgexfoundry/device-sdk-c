@@ -85,8 +85,8 @@ static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, con
     return MHD_YES;
   }
 
-  edgex_nvpairs **list = (edgex_nvpairs **)p;
-  *list = edgex_nvpairs_new (key, value ? value : "", *list);
+  devsdk_nvpairs **list = (devsdk_nvpairs **)p;
+  *list = devsdk_nvpairs_new (key, value ? value : "", *list);
 
   return MHD_YES;
 }
@@ -209,7 +209,7 @@ static int http_handler
 
   if (reply_type == NULL)
   {
-    reply_type = "text/plain";
+    reply_type = CONTENT_PLAINTEXT;
   }
   if (reply == NULL)
   {

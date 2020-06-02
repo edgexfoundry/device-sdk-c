@@ -169,7 +169,7 @@ static bool compat_get_handler
       erequests[i].resname = requests[i].resname;
       epairs[i].name = "urlRawQuery";
       epairs[i].value = qstr;
-      epairs[i].next = (edgex_nvpairs *)requests[i].attributes;
+      epairs[i].next = (devsdk_nvpairs *)requests[i].attributes;
       erequests[i].attributes = &epairs[i];
       erequests[i].type = edgex_propertytype_typecode (requests[i].type);
     }
@@ -179,7 +179,7 @@ static bool compat_get_handler
     erequests = (edgex_device_commandrequest *)requests;
   }
   ereadings = calloc (sizeof (edgex_device_commandresult), nreadings);
-  result = v1->implfns.gethandler (v1->impldata, devname, (const edgex_protocols *)protocols, nreadings, erequests, ereadings);
+  result = v1->implfns.gethandler (v1->impldata, devname, protocols, nreadings, erequests, ereadings);
   for (uint32_t i = 0; result && i < nreadings; i++)
   {
     readings[i].origin = ereadings[i].origin;
@@ -268,7 +268,7 @@ static bool compat_put_handler
   if (result)
   {
     result = v1->implfns.puthandler
-      (v1->impldata, devname, (const edgex_protocols *)protocols, nvalues, (const edgex_device_commandrequest *)requests, evalues);
+      (v1->impldata, devname, protocols, nvalues, (const edgex_device_commandrequest *)requests, evalues);
   }
 
   free (evalues);
@@ -286,7 +286,7 @@ static void compat_add_device (void *impl, const char *devname, const devsdk_pro
   edgex_device_service *v1 = (edgex_device_service *)impl;
   if (v1->add_device)
   {
-    (v1->add_device)(v1->impldata, devname, (const edgex_protocols *)protocols, adminEnabled ? ENABLED : DISABLED);
+    (v1->add_device)(v1->impldata, devname, protocols, adminEnabled ? ENABLED : DISABLED);
   }
 }
 
@@ -295,7 +295,7 @@ static void compat_remove_device (void *impl, const char *devname, const devsdk_
   edgex_device_service *v1 = (edgex_device_service *)impl;
   if (v1->remove_device)
   {
-    (v1->remove_device)(v1->impldata, devname, (const edgex_protocols *)protocols);
+    (v1->remove_device)(v1->impldata, devname, protocols);
   }
 }
 
@@ -304,7 +304,7 @@ static void compat_update_device (void *impl, const char *devname, const devsdk_
   edgex_device_service *v1 = (edgex_device_service *)impl;
   if (v1->update_device)
   {
-    (v1->update_device)(v1->impldata, devname, (const edgex_protocols *)protocols, adminEnabled ? ENABLED : DISABLED);
+    (v1->update_device)(v1->impldata, devname, protocols, adminEnabled ? ENABLED : DISABLED);
   }
 }
 
@@ -558,7 +558,7 @@ void edgex_device_service_stop (edgex_device_service *svc, bool force, edgex_err
 void edgex_device_service_free (edgex_device_service *svc)
 {
   devsdk_service_free (svc->impl);
-  edgex_nvpairs_free (svc->config);
+  devsdk_nvpairs_free (svc->config);
   free (svc);
 }
 

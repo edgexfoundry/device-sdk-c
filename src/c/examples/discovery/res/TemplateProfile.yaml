@@ -15,7 +15,7 @@ deviceResources:
             value:
                 { type: "uint64", readWrite: "R" }
             units:
-                { type: "string", readWrite: "R", defaultValue: "things" }
+                { defaultValue: "things" }
 
       -
         name: SensorTwo
@@ -26,7 +26,7 @@ deviceResources:
           value:
             { type: "uint64", readWrite: "R" }
           units:
-            { type: "string", readWrite: "R", defaultValue: "things" }
+            { defaultValue: "things" }
 
       - name: Switch
         description: "A generic switch"
@@ -36,7 +36,7 @@ deviceResources:
           value:
             { type: "bool", readWrite: "RW" }
           units:
-            { type: "string", readWrite: "R", defaultValue: "State" }
+            { defaultValue: "State" }
 
 
 coreCommands:

@@ -15,7 +15,7 @@ deviceResources:
       value:
         { type: "uint32", readWrite: "RW" }
       units:
-        { type: "string", readWrite: "R", defaultValue: "things" }
+        { defaultValue: "things" }
 
 coreCommands:
   -

@@ -61,7 +61,7 @@ typedef struct
   char *description;
   char *formatting;
   char *id;
-  edgex_strings *labels;
+  devsdk_strings *labels;
   char *max;
   char *min;
   uint64_t modified;

@@ -10,7 +10,7 @@
 #define _EDGEX_EDGEX_BASE_H_
 
 #include "edgex/os.h"
-#include "iot/data.h"
+#include "devsdk/devsdk-base.h"
 
 typedef enum edgex_propertytype
 {
@@ -49,18 +49,11 @@ typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
 
 typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
 
-typedef struct edgex_strings
-{
-  char *str;
-  struct edgex_strings *next;
-} edgex_strings;
+typedef devsdk_strings edgex_strings;
 
-typedef struct edgex_nvpairs
-{
-  char *name;
-  char *value;
-  struct edgex_nvpairs *next;
-} edgex_nvpairs;
+typedef devsdk_nvpairs edgex_nvpairs;
+
+typedef devsdk_protocols edgex_protocols;
 
 /**
  * @brief Creates a new name-value pair, optionally placing it at the
@@ -135,13 +128,6 @@ typedef union edgex_device_resultvalue
   edgex_blob binary_result;
 } edgex_device_resultvalue;
 
-typedef struct edgex_protocols
-{
-  char *name;
-  edgex_nvpairs *properties;
-  struct edgex_protocols *next;
-} edgex_protocols;
-
 /**
  * @brief Finds a protocol's property set in a protocols list.
  * @param prots The protocols to search.
@@ -149,6 +135,6 @@ typedef struct edgex_protocols
  * @returns The protocol properties corresponding to the given name, or NULL if not found.
  */
 
-const edgex_nvpairs *edgex_protocols_properties (const edgex_protocols *prots, const char *name);
+const devsdk_nvpairs *edgex_protocols_properties (const devsdk_protocols *prots, const char *name);
 
 #endif
