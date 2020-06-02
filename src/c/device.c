@@ -491,21 +491,6 @@ const edgex_cmdinfo *edgex_deviceprofile_findcommand
   return result;
 }
 
-static bool commandExists (const char *name, edgex_deviceprofile *prof)
-{
-  if (prof->cmdinfo == NULL)
-  {
-    populateCmdInfo (prof);
-  }
-
-  edgex_cmdinfo *result = prof->cmdinfo;
-  while (result && strcmp (result->name, name))
-  {
-    result = result->next;
-  }
-  return result != NULL;
-}
-
 static int edgex_device_runput
 (
   devsdk_service_t *svc,
@@ -858,12 +843,7 @@ static int oneCommand
   edgex_device *dev = NULL;
   const edgex_cmdinfo *command = NULL;
 
-  iot_log_debug
-  (
-    svc->logger,
-    "Incoming command for device {%s}: %s (%s)",
-    id, cmd, methStr (method)
-  );
+  iot_log_debug (svc->logger, "Incoming command for device %s: %s (%s)", id, cmd, methStr (method));
 
   if (byName)
   {
@@ -914,26 +894,25 @@ static int oneCommand
   {
     if (dev)
     {
-      if (commandExists (cmd, dev->profile))
+      edgex_cmdinfo *ci = dev->profile->cmdinfo;
+      while (ci && strcmp (ci->name, cmd))
       {
-        iot_log_error
-        (
-          svc->logger,
-          "Wrong method for command %s, device %s",
-          cmd, dev->name
-        );
+        ci = ci->next;
+      }
+      if (ci)
+      {
+        iot_log_error (svc->logger, "Wrong method for command %s, device %s", cmd, dev->name);
         result = MHD_HTTP_METHOD_NOT_ALLOWED;
       }
       else
       {
-        iot_log_error
-          (svc->logger, "No command %s for device %s", cmd, dev->name);
+        iot_log_error (svc->logger, "No command %s for device %s", cmd, dev->name);
       }
       edgex_device_release (dev);
     }
     else
     {
-      iot_log_error (svc->logger, "No such device {%s}", id);
+      iot_log_error (svc->logger, "No such device %s", id);
     }
   }
   return result;
