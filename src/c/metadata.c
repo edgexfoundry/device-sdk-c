@@ -226,10 +226,12 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
 )
 {
   edgex_ctx ctx;
-  edgex_deviceservice *result = 0;
+  char *ename;
+  edgex_deviceservice *result = NULL;
   char url[URL_BUF_SIZE];
   long rc;
 
+  ename = curl_easy_escape (NULL, name, 0);
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -238,7 +240,7 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
     "http://%s:%u/api/v1/deviceservice/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
-    name
+    ename
   );
 
   rc = edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
@@ -246,18 +248,15 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
   if (rc == 404)
   {
     *err = EDGEX_OK;
-    free (ctx.buff);
-    return 0;
   }
 
-  if (err->code)
+  if (err->code == 0)
   {
-    return 0;
+    result = edgex_deviceservice_read (ctx.buff);
   }
 
-  result = edgex_deviceservice_read (ctx.buff);
+  curl_free (ename);
   free (ctx.buff);
-  *err = EDGEX_OK;
   return result;
 }
 
@@ -297,9 +296,11 @@ edgex_device *edgex_metadata_client_get_devices
 )
 {
   edgex_ctx ctx;
+  char *ename;
   edgex_device *result = 0;
   char url[URL_BUF_SIZE];
 
+  ename = curl_easy_escape (NULL, servicename, 0);
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -308,11 +309,12 @@ edgex_device *edgex_metadata_client_get_devices
     "http://%s:%u/api/v1/device/servicename/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
-    servicename
+    ename
   );
 
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
 
+  curl_free (ename);
   if (err->code)
   {
     return 0;
@@ -320,7 +322,6 @@ edgex_device *edgex_metadata_client_get_devices
 
   result = edgex_devices_read (lc, ctx.buff);
   free (ctx.buff);
-  *err = EDGEX_OK;
   return result;
 }
 
@@ -429,42 +430,6 @@ edgex_device *edgex_metadata_client_get_device
   return result;
 }
 
-edgex_device *edgex_metadata_client_get_device_byname
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  const char *devicename,
-  devsdk_error *err
-)
-{
-  edgex_ctx ctx;
-  edgex_device *result = 0;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/device/name/%s",
-    endpoints->metadata.host,
-    endpoints->metadata.port,
-    devicename
-  );
-
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
-
-  if (err->code)
-  {
-    return 0;
-  }
-
-  result = edgex_device_read (lc, ctx.buff);
-  free (ctx.buff);
-  *err = EDGEX_OK;
-  return result;
-}
-
 void edgex_metadata_client_update_device
 (
   iot_logger_t * lc,
@@ -545,9 +510,11 @@ void edgex_metadata_client_delete_device_byname
 )
 {
   edgex_ctx ctx;
+  char *ename;
   char url[URL_BUF_SIZE];
 
   memset (&ctx, 0, sizeof (edgex_ctx));
+  ename = curl_easy_escape (NULL, devicename, 0);
   snprintf
   (
     url,
@@ -555,11 +522,12 @@ void edgex_metadata_client_delete_device_byname
     "http://%s:%u/api/v1/device/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
-    devicename
+    ename
   );
 
   edgex_http_delete (lc, &ctx, url, edgex_http_write_cb, err);
 
+  curl_free (ename);
   free (ctx.buff);
 }
 
@@ -572,9 +540,11 @@ edgex_watcher *edgex_metadata_client_get_watchers
 )
 {
   edgex_ctx ctx;
+  char *ename;
   edgex_watcher *result = 0;
   char url[URL_BUF_SIZE];
 
+  ename = curl_easy_escape (NULL, servicename, 0);
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
@@ -583,11 +553,12 @@ edgex_watcher *edgex_metadata_client_get_watchers
     "http://%s:%u/api/v1/provisionwatcher/servicename/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
-    servicename
+    ename
   );
 
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
 
+  curl_free (ename);
   if (err->code)
   {
     return 0;
@@ -644,11 +615,13 @@ edgex_addressable *edgex_metadata_client_get_addressable
 )
 {
   edgex_ctx ctx;
+  char *ename;
   edgex_addressable *result = 0;
   char url[URL_BUF_SIZE];
   long rc;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
+  ename = curl_easy_escape (NULL, name, 0);
   snprintf
   (
     url,
@@ -656,11 +629,12 @@ edgex_addressable *edgex_metadata_client_get_addressable
     "http://%s:%u/api/v1/addressable/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
-    name
+    ename
   );
 
   rc = edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
 
+  curl_free (ename);
   if (err->code)
   {
     if (rc == 404)
@@ -728,32 +702,5 @@ void edgex_metadata_client_update_addressable
   json = edgex_addressable_write (addressable, false);
   edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
   json_free_serialized_string (json);
-  free (ctx.buff);
-}
-
-void edgex_metadata_client_delete_addressable
-(
-  iot_logger_t * lc,
-  edgex_service_endpoints * endpoints,
-  const char * name,
-  devsdk_error * err
-)
-{
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/addressable/name/%s",
-    endpoints->metadata.host,
-    endpoints->metadata.port,
-    name
-  );
-
-  edgex_http_delete (lc, &ctx, url, edgex_http_write_cb, err);
-
   free (ctx.buff);
 }
