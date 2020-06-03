@@ -1,33 +1,33 @@
 [Service]
   Port = 49999
   Timeout = 5000
-  ConnectRetries = 3
-  Labels = [ "Template" ]
-  StartupMsg = "Template device started"
-  CheckInterval = "10s"
+  ConnectRetries = 10
+  Labels = [ 'Template' ]
+  StartupMsg = 'Template device started'
+  CheckInterval = '10s'
 
 [Clients]
   [Clients.Data]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48080
 
   [Clients.Metadata]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48081
 
   [Clients.Logging]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48061
 
 [Device]
   DataTransform = true
-  InitCmd = ""
-  InitCmdArgs = ""
+  InitCmd = ''
+  InitCmdArgs = ''
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  RemoveCmd = ""
-  RemoveCmdArgs = ""
-  ProfilesDir = ""
+  RemoveCmd = ''
+  RemoveCmdArgs = ''
+  ProfilesDir = ''
   SendReadingsOnChanged = true
   [Device.Discovery]
     Enabled = true
@@ -35,10 +35,10 @@
 
 [Logging]
   EnableRemote = false
-  File = "-"
-  LogLevel = "DEBUG"
+  File = '-'
+  LogLevel = 'DEBUG'
 
 [Driver]
-  TestParam1 = "Hello"
-  TestParam2 = "World"
+  TestParam1 = 'Hello'
+  TestParam2 = 'World'
 

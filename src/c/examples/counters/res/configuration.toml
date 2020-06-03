@@ -1,57 +1,57 @@
 [Service]
   Port = 49999
   Timeout = 5000
-  ConnectRetries = 3
-  Labels = [ "Counter" ]
-  StartupMsg = "Example counting device started"
-  CheckInterval = "10s"
+  ConnectRetries = 10
+  Labels = [ 'Counter' ]
+  StartupMsg = 'Example counting device started'
+  CheckInterval = '10s'
 
 [Clients]
   [Clients.Data]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48080
 
   [Clients.Metadata]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48081
 
   [Clients.Logging]
-    Host = "localhost"
+    Host = 'localhost'
     Port = 48061
 
 [Device]
   DataTransform = false
   Discovery = false
-  InitCmd = ""
-  InitCmdArgs = ""
+  InitCmd = ''
+  InitCmdArgs = ''
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  RemoveCmd = ""
-  RemoveCmdArgs = ""
-  ProfilesDir = ""
+  RemoveCmd = ''
+  RemoveCmdArgs = ''
+  ProfilesDir = ''
   SendReadingsOnChanged = true
 
 [Logging]
   EnableRemote = false
-  File = "-"
-  LogLevel = "DEBUG"
+  File = '-'
+  LogLevel = 'DEBUG'
 
 [[DeviceList]]
-  Name = "Counter1"
-  Profile = "Example-Counter"
-  Description = "An Example Counting Device"
+  Name = 'Counter1'
+  Profile = 'Example-Counter'
+  Description = 'An Example Counting Device'
   [DeviceList.Protocols]
     [DeviceList.Protocols.Counter]
-      Index = "3"
+      Index = '3'
   [[DeviceList.AutoEvents]]
-    Resource = "Counter"
+    Resource = 'Counter'
     OnChange = false
-    Frequency = "10s"
+    Frequency = '10s'
 
 [[DeviceList]]
-  Name = "Counter2"
-  Profile = "Example-Counter"
-  Description = "Another Example Counting Device"
+  Name = 'Counter2'
+  Profile = 'Example-Counter'
+  Description = 'Another Example Counting Device'
   [DeviceList.Protocols]
     [DeviceList.Protocols.Counter]
-      Index = "58"
+      Index = '58'
