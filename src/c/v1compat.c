@@ -140,6 +140,25 @@ static iot_data_t *data_from_reading (edgex_propertytype type, edgex_device_resu
   }
 }
 
+static edgex_device_commandrequest *compat_map_requests (uint32_t nreqs, const devsdk_commandrequest *requests, const devsdk_nvpairs *qparams)
+{
+  edgex_device_commandrequest *result = calloc (sizeof (edgex_device_commandrequest), nreqs);
+  char *qstr = NULL;
+
+  if (qparams)
+  {
+    qstr = nvpsToStr (qparams);
+  }
+  for (uint32_t i = 0; i < nreqs; i++)
+  {
+    result[i].resname = requests[i].resname;
+    result[i].attributes = qstr ? edgex_nvpairs_new ("urlRawQuery", qstr, (edgex_nvpairs *)requests[i].attributes) : (edgex_nvpairs *)requests[i].attributes;
+    result[i].type = edgex_propertytype_typecode (requests[i].type);
+  }
+  free (qstr);
+  return result;
+}
+
 static bool compat_get_handler
 (
   void *impl,
@@ -152,33 +171,12 @@ static bool compat_get_handler
   iot_data_t **exception
 )
 {
-  edgex_device_commandrequest *erequests;
-  edgex_device_commandresult *ereadings;
-  edgex_nvpairs *epairs = NULL;
-  char *qstr = NULL;
   bool result;
   edgex_device_service *v1 = (edgex_device_service *)impl;
 
-  if (qparams)
-  {
-    qstr = nvpsToStr (qparams);
-    erequests = calloc (sizeof (edgex_device_commandrequest), nreadings);
-    epairs = calloc (sizeof (edgex_nvpairs), nreadings);
-    for (uint32_t i = 0; i < nreadings; i++)
-    {
-      erequests[i].resname = requests[i].resname;
-      epairs[i].name = "urlRawQuery";
-      epairs[i].value = qstr;
-      epairs[i].next = (devsdk_nvpairs *)requests[i].attributes;
-      erequests[i].attributes = &epairs[i];
-      erequests[i].type = edgex_propertytype_typecode (requests[i].type);
-    }
-  }
-  else
-  {
-    erequests = (edgex_device_commandrequest *)requests;
-  }
-  ereadings = calloc (sizeof (edgex_device_commandresult), nreadings);
+  edgex_device_commandresult *ereadings = calloc (sizeof (edgex_device_commandresult), nreadings);
+  edgex_device_commandrequest *erequests = compat_map_requests (nreadings, requests, qparams);
+
   result = v1->implfns.gethandler (v1->impldata, devname, protocols, nreadings, erequests, ereadings);
   for (uint32_t i = 0; result && i < nreadings; i++)
   {
@@ -189,13 +187,15 @@ static bool compat_get_handler
       result = false;
       *exception = iot_data_alloc_string ("Unsupported data type (map/array) returned by driver", IOT_DATA_REF);
     }
+    if (erequests[i].attributes != (edgex_nvpairs *)requests[i].attributes)
+    {
+      edgex_nvpairs *epair = (edgex_nvpairs *)erequests[i].attributes;
+      epair->next = NULL;
+      devsdk_nvpairs_free (epair);
+    }
   }
-  if (qparams)
-  {
-    free (erequests);
-    free (epairs);
-    free (qstr);
-  }
+
+  free (erequests);
   free (ereadings);
   return result;
 }
@@ -214,6 +214,7 @@ static bool compat_put_handler
   bool result = true;
   edgex_device_service *v1 = (edgex_device_service *)impl;
   edgex_device_commandresult *evalues = calloc (sizeof (edgex_device_commandresult), nvalues);
+  edgex_device_commandrequest *erequests = compat_map_requests (nvalues, requests, NULL);
 
   for (uint32_t i = 0; result && i < nvalues; i++)
   {
@@ -268,10 +269,11 @@ static bool compat_put_handler
   if (result)
   {
     result = v1->implfns.puthandler
-      (v1->impldata, devname, protocols, nvalues, (const edgex_device_commandrequest *)requests, evalues);
+      (v1->impldata, devname, protocols, nvalues, erequests, evalues);
   }
 
   free (evalues);
+  free (erequests);
   return result;
 }
 
@@ -680,6 +682,10 @@ void edgex_device_post_readings
       }
     }
     devsdk_post_readings (svc->impl, device_name, resource_name, crs);
+    for (unsigned i = 0; i < command->nreqs; i++)
+    {
+      iot_data_free (crs[i].value);
+    }
     free (crs);
   }
   else
