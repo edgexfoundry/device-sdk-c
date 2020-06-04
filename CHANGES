@@ -1,10 +1,12 @@
 This is the C SDK for EdgeX. It is based largely on the Go SDK but the API
 differs as follows:
 
-* Adding devices in the "discovery" callback is done using an API function call
-  rather than directly returning the new devices.
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
+
+Changes for 1.2.1:
+
+- Fixes in the compatibility layer for the v1 API.
 
 Changes for 1.2.0 "Geneva":
 
