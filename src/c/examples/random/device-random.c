@@ -1,17 +1,34 @@
 /*
- * Copyright (c) 2018-2019
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  */
 
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 
 #include <unistd.h>
 #include <signal.h>
+#include <stdarg.h>
 
-#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); edgex_device_service_free (service); free (impl); return x.code; }
+#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
+
+#define ERR_BUFSZ 1024
+
+static bool exceptionAndErrorN (iot_data_t **exception, iot_logger_t *lc, const char *msg, ...)
+{
+  char *buf = malloc (ERR_BUFSZ);
+  va_list args;
+  va_start (args, msg);
+  vsnprintf (buf, ERR_BUFSZ, msg, args);
+  va_end (args);
+
+  iot_log_error (lc, buf);
+  *exception = iot_data_alloc_string (buf, IOT_DATA_TAKE);
+
+  return false;
+}
 
 typedef struct random_driver
 {
@@ -24,7 +41,7 @@ static bool random_init
 (
   void *impl,
   struct iot_logger_t *lc,
-  const edgex_nvpairs *config
+  const iot_data_t *config
 )
 {
   random_driver *driver = (random_driver *) impl;
@@ -41,10 +58,12 @@ static bool random_get_handler
 (
   void *impl,
   const char *devname,
-  const edgex_protocols *protocols,
+  const devsdk_protocols *protocols,
   uint32_t nreadings,
-  const edgex_device_commandrequest *requests,
-  edgex_device_commandresult *readings
+  const devsdk_commandrequest *requests,
+  devsdk_commandresult *readings,
+  const devsdk_nvpairs *qparms,
+  iot_data_t **exception
 )
 {
   random_driver *driver = (random_driver *) impl;
@@ -54,36 +73,32 @@ static bool random_get_handler
     /* Use the attributes to differentiate between requests */
     unsigned long stype = 0;
     const char *swid = NULL;
-    if (edgex_nvpairs_ulong_value (requests[i].attributes, "SensorType", &stype))
+    if (devsdk_nvpairs_ulong_value (requests[i].attributes, "SensorType", &stype))
     {
       switch (stype)
       {
         case 1:
           /* Set the reading as a random value between 0 and 100 */
-          readings[i].type = Uint64;
-          readings[i].value.ui64_result = rand() % 100;
+          readings[i].value = iot_data_alloc_ui64 (rand() % 100);
           break;
         case 2:
           /* Set the reading as a random value between 0 and 1000 */
-          readings[i].type = Uint64;
-          readings[i].value.ui64_result = rand() % 1000;
+          readings[i].value = iot_data_alloc_ui64 (rand() % 1000);
           break;
         default:
-          iot_log_error (driver->lc, "%lu is not a valid SensorType", stype);
-          return false;
+          return exceptionAndErrorN (exception, driver->lc, "%lu is not a valid SensorType", stype);
       }
     }
-    else if ((swid = edgex_nvpairs_value (requests[i].attributes, "SwitchID")))
+    else if ((swid = devsdk_nvpairs_value (requests[i].attributes, "SwitchID")))
     {
-      readings[i].type = Bool;
       pthread_mutex_lock (&driver->mutex);
-      readings[i].value.bool_result=driver->state_flag;
+      readings[i].value = iot_data_alloc_bool (driver->state_flag);
       pthread_mutex_unlock (&driver->mutex);
     }
     else
     {
-      iot_log_error (driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
-      return false;
+      return exceptionAndErrorN
+        (exception, driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
     }
   }
   return true;
@@ -93,37 +108,31 @@ static bool random_put_handler
 (
   void *impl,
   const char *devname,
-  const edgex_protocols *protocols,
+  const devsdk_protocols *protocols,
   uint32_t nvalues,
-  const edgex_device_commandrequest *requests,
-  const edgex_device_commandresult *values
+  const devsdk_commandrequest *requests,
+  const iot_data_t *values[],
+  iot_data_t **exception
 )
 {
   random_driver *driver = (random_driver *) impl;
-  bool result = true;
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
     /* A Device Service again makes use of the data provided to perform a PUT */
 
     /* In this case we set a boolean flag */
-    if (edgex_nvpairs_value (requests[i].attributes, "SwitchID"))
+    if (devsdk_nvpairs_value (requests[i].attributes, "SwitchID"))
     {
       pthread_mutex_lock (&driver->mutex);
-      driver->state_flag=values[i].value.bool_result;
+      driver->state_flag = iot_data_bool (values[i]);
       pthread_mutex_unlock (&driver->mutex);
     }
     else
     {
-      iot_log_error (driver->lc, "PUT not valid for resource %s", requests[i].resname);
-      result = false;
+      return exceptionAndErrorN (exception, driver->lc, "PUT not valid for resource %s", requests[i].resname);
     }
   }
-  return result;
-}
-
-static bool random_disconnect (void *impl, edgex_protocols *device)
-{
   return true;
 }
 
@@ -131,17 +140,29 @@ static void random_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-random", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 
   random_driver * impl = malloc (sizeof (random_driver));
   memset (impl, 0, sizeof (random_driver));
 
-  if (!edgex_device_service_processparams (&argc, argv, &params))
+  devsdk_error e;
+  e.code = 0;
+
+  /* Device Callbacks */
+  devsdk_callbacks randomImpls =
   {
-    return  0;
-  }
+    random_init,         /* Initialize */
+    random_discover,     /* Discovery */
+    random_get_handler,  /* Get */
+    random_put_handler,  /* Put */
+    random_stop          /* Stop */
+  };
+
+  /* Initalise a new device service */
+  devsdk_service_t *service = devsdk_service_new
+    ("device-random", "1.0", impl, randomImpls, &argc, argv, &e);
+  ERR_CHECK (e);
 
   int n = 1;
   while (n < argc)
@@ -149,8 +170,7 @@ int main (int argc, char *argv[])
     if (strcmp (argv[n], "-h") == 0 || strcmp (argv[n], "--help") == 0)
     {
       printf ("Options:\n");
-      printf ("  -h, --help\t\t: Show this text\n");
-      edgex_device_service_usage ();
+      printf ("  -h, --help\t\t\tShow this text\n");
       return 0;
     }
     else
@@ -160,27 +180,8 @@ int main (int argc, char *argv[])
     }
   }
 
-  edgex_error e;
-  e.code = 0;
-
-  /* Device Callbacks */
-  edgex_device_callbacks randomImpls =
-  {
-    random_init,         /* Initialize */
-    random_discover,     /* Discovery */
-    random_get_handler,  /* Get */
-    random_put_handler,  /* Put */
-    random_disconnect,   /* Disconnect */
-    random_stop          /* Stop */
-  };
-
-  /* Initalise a new device service */
-  edgex_device_service *service = edgex_device_service_new
-    (params.svcname, "1.0", impl, randomImpls, &e);
-  ERR_CHECK (e);
-
   /* Start the device service*/
-  edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
+  devsdk_service_start (service, &e);
   ERR_CHECK (e);
 
   /* Wait for interrupt */
@@ -189,10 +190,10 @@ int main (int argc, char *argv[])
   sigwait (&set, &sigret);
 
   /* Stop the device service */
-  edgex_device_service_stop (service, true, &e);
+  devsdk_service_stop (service, true, &e);
   ERR_CHECK (e);
 
-  edgex_device_service_free (service);
+  devsdk_service_free (service);
   free (impl);
   return 0;
 }
