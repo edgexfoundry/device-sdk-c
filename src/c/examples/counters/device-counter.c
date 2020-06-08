@@ -208,7 +208,9 @@ int main (int argc, char *argv[])
 
   sigemptyset (&set);
   sigaddset (&set, SIGINT);
+  sigprocmask (SIG_BLOCK, &set, NULL);
   sigwait (&set, &sigret);
+  sigprocmask (SIG_UNBLOCK, &set, NULL);
 
   devsdk_service_stop (service, true, &e);
   ERR_CHECK (e);

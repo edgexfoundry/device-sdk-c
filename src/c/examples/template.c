@@ -221,7 +221,9 @@ int main (int argc, char *argv[])
   /* Wait for interrupt */
   sigemptyset (&set);
   sigaddset (&set, SIGINT);
+  sigprocmask (SIG_BLOCK, &set, NULL);
   sigwait (&set, &sigret);
+  sigprocmask (SIG_UNBLOCK, &set, NULL);
 
   /* Stop the device service */
   devsdk_service_stop (service, true, &e);
