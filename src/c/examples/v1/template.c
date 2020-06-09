@@ -1,40 +1,39 @@
 /* template implementation of an Edgex device service using C SDK */
 
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2019
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  */
 
-#include "devsdk/devsdk.h"
-#include "edgex/edgex-base.h"
+#include "edgex/devsdk.h"
 
 #include <unistd.h>
 #include <signal.h>
 
-#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
+#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); edgex_device_service_free (service); free (impl); return x.code; }
 
 typedef struct template_driver
 {
   iot_logger_t * lc;
 } template_driver;
 
-static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
+static void dump_nvpairs (iot_logger_t *lc, const edgex_nvpairs *pairs)
 {
-  iot_log_debug (lc, " [Other] protocol:");
-  for (const devsdk_nvpairs *nv = devsdk_protocols_properties (prots, "Other"); nv; nv = nv->next)
+  for (const edgex_nvpairs *a = pairs; a; a = a->next)
   {
-    iot_log_debug (lc, "    %s = %s", nv->name, nv->value);
+    iot_log_debug (lc, "    %s = %s", a->name, a->value);
   }
 }
 
-static void dump_attributes (iot_logger_t *lc, const devsdk_nvpairs *attrs)
+static void dump_protocols (iot_logger_t *lc, const edgex_protocols *prots)
 {
-  for (const devsdk_nvpairs *a = attrs; a; a = a->next)
+  for (const edgex_protocols *p = prots; p; p = p->next)
   {
-    iot_log_debug (lc, "    %s = %s", a->name, a->value);
+    iot_log_debug (lc, " [%s] protocol:", p->name);
+    dump_nvpairs (lc, p->properties);
   }
 }
 
@@ -46,20 +45,12 @@ static bool template_init
 (
   void *impl,
   struct iot_logger_t *lc,
-  const iot_data_t *config
+  const edgex_nvpairs *config
 )
 {
   template_driver *driver = (template_driver *) impl;
   iot_log_debug (lc, "Template Init. Driver Config follows:");
-  if (config)
-  {
-    iot_data_map_iter_t iter;
-    iot_data_map_iter (config, &iter);
-    while (iot_data_map_iter_next (&iter))
-    {
-      iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
-    }
-  }
+  dump_nvpairs (lc, config);
   driver->lc = lc;
   iot_log_debug (lc, "Template Init done");
   return true;
@@ -69,7 +60,7 @@ static bool template_init
 /* Device services which are capable of device discovery should implement it
  * in this callback. It is called in response to a request on the
  * device service's discovery REST endpoint. New devices should be added using
- * the devsdk_add_device() method
+ * the edgex_device_add_device() method
  */
 static void template_discover (void *impl) {}
 
@@ -89,12 +80,10 @@ static bool template_get_handler
 (
   void *impl,
   const char *devname,
-  const devsdk_protocols *protocols,
+  const edgex_protocols *protocols,
   uint32_t nreadings,
-  const devsdk_commandrequest *requests,
-  devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparams,
-  iot_data_t **exception
+  const edgex_device_commandrequest *requests,
+  edgex_device_commandresult *readings
 )
 {
   template_driver *driver = (template_driver *) impl;
@@ -107,9 +96,11 @@ static bool template_get_handler
   {
     /* Log the attributes for each requested resource */
     iot_log_debug (driver->lc, "  Requested reading %u:", i);
-    dump_attributes (driver->lc, requests[i].attributes);
+    dump_nvpairs (driver->lc, requests[i].attributes);
     /* Fill in a result regardless */
-    readings[i].value = iot_data_alloc_string ("Template result", IOT_DATA_REF);
+    readings[i].type = String;
+    /* NB String (and binary) readings get deallocated in the SDK */
+    readings[i].value.string_result = strdup ("Template result");
   }
   return true;
 }
@@ -130,14 +121,14 @@ static bool template_put_handler
 (
   void *impl,
   const char *devname,
-  const devsdk_protocols *protocols,
+  const edgex_protocols *protocols,
   uint32_t nvalues,
-  const devsdk_commandrequest *requests,
-  const iot_data_t *values[],
-  iot_data_t **exception
+  const edgex_device_commandrequest *requests,
+  const edgex_device_commandresult *values
 )
 {
   template_driver *driver = (template_driver *) impl;
+
   /* Access the location of the device to be accessed and log it */
   iot_log_debug (driver->lc, "PUT on device:");
   dump_protocols (driver->lc, protocols);
@@ -147,23 +138,30 @@ static bool template_put_handler
     /* A Device Service again makes use of the data provided to perform a PUT */
     /* Log the attributes */
     iot_log_debug (driver->lc, "  Requested device write %u:", i);
-    dump_attributes (driver->lc, requests[i].attributes);
-    switch (edgex_propertytype_data (values[i]))
+    dump_nvpairs (driver->lc, requests[i].attributes);
+    switch (values[i].type)
     {
-      case Edgex_String:
-        iot_log_debug (driver->lc, "  Value: %s", iot_data_string (values[i]));
+      case String:
+        iot_log_debug (driver->lc, "  Value: %s", values[i].value.string_result);
         break;
-      case Edgex_Uint64:
-        iot_log_debug (driver->lc, "  Value: %lu", iot_data_ui64 (values[i]));
+      case Uint64:
+        iot_log_debug (driver->lc, "  Value: %lu", values[i].value.ui64_result);
         break;
-      case Edgex_Bool:
-        iot_log_debug (driver->lc, "  Value: %s", iot_data_bool (values[i]) ? "true" : "false");
+      case Bool:
+        iot_log_debug (driver->lc, "  Value: %s", values[i].value.bool_result ? "true" : "false");
         break;
       /* etc etc */
       default:
-        iot_log_debug (driver->lc, "  Value has unexpected type %s: %s", iot_data_type_name (values[i]), iot_data_to_json (values[i]));
+      break;
     }
   }
+  return true;
+}
+
+/* ---- Disconnect ---- */
+/* Disconnect handles protocol-specific cleanup when a device is removed. */
+static bool template_disconnect (void *impl, edgex_protocols *device)
+{
   return true;
 }
 
@@ -173,29 +171,17 @@ static void template_stop (void *impl, bool force) {}
 
 int main (int argc, char *argv[])
 {
+  edgex_device_svcparams params = { "device-template", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
 
-  devsdk_error e;
-  e.code = 0;
-
-  /* Device Callbacks */
-  devsdk_callbacks templateImpls =
+  if (!edgex_device_service_processparams (&argc, argv, &params))
   {
-    template_init,         /* Initialize */
-    template_discover,     /* Discovery */
-    template_get_handler,  /* Get */
-    template_put_handler,  /* Put */
-    template_stop          /* Stop */
-  };
-
-  /* Initalise a new device service */
-  devsdk_service_t *service = devsdk_service_new
-    ("device-template", "1.0", impl, templateImpls, &argc, argv, &e);
-  ERR_CHECK (e);
+    return  0;
+  }
 
   int n = 1;
   while (n < argc)
@@ -203,8 +189,8 @@ int main (int argc, char *argv[])
     if (strcmp (argv[n], "-h") == 0 || strcmp (argv[n], "--help") == 0)
     {
       printf ("Options:\n");
-      printf ("  -h, --help\t\t\tShow this text\n");
-      devsdk_usage ();
+      printf ("  -h, --help\t\t: Show this text\n");
+      edgex_device_service_usage ();
       return 0;
     }
     else
@@ -214,8 +200,27 @@ int main (int argc, char *argv[])
     }
   }
 
+  edgex_error e;
+  e.code = 0;
+
+  /* Device Callbacks */
+  edgex_device_callbacks templateImpls =
+  {
+    template_init,         /* Initialize */
+    template_discover,     /* Discovery */
+    template_get_handler,  /* Get */
+    template_put_handler,  /* Put */
+    template_disconnect,   /* Disconnect */
+    template_stop          /* Stop */
+  };
+
+  /* Initalise a new device service */
+  edgex_device_service *service = edgex_device_service_new
+    (params.svcname, "1.0", impl, templateImpls, &e);
+  ERR_CHECK (e);
+
   /* Start the device service*/
-  devsdk_service_start (service, &e);
+  edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
   ERR_CHECK (e);
 
   /* Wait for interrupt */
@@ -224,10 +229,10 @@ int main (int argc, char *argv[])
   sigwait (&set, &sigret);
 
   /* Stop the device service */
-  devsdk_service_stop (service, true, &e);
+  edgex_device_service_stop (service, true, &e);
   ERR_CHECK (e);
 
-  devsdk_service_free (service);
+  edgex_device_service_free (service);
   free (impl);
   return 0;
 }

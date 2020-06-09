@@ -1,7 +1,7 @@
 /* Pseudo-device service emulating counters using C SDK */
 
 /*
- * Copyright (c) 2018-2019
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -10,12 +10,14 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <stdarg.h>
 
-#include "edgex/devsdk.h"
+#include "devsdk/devsdk.h"
 
 #define NCOUNTERS 256
+#define ERR_BUFSZ 1024
 
-#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); edgex_device_service_free (service); free (impl); return x.code; }
+#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
 
 typedef struct counter_driver
 {
@@ -24,7 +26,7 @@ typedef struct counter_driver
 } counter_driver;
 
 static bool counter_init
-  (void *impl, struct iot_logger_t *lc, const edgex_nvpairs *config)
+  (void *impl, struct iot_logger_t *lc, const iot_data_t *config)
 {
   counter_driver *driver = (counter_driver *) impl;
   driver->lc = lc;
@@ -35,26 +37,44 @@ static bool counter_init
   return true;
 }
 
-static bool getDeviceAddress
-  (iot_logger_t *lc, unsigned long *index, const edgex_protocols *protocols)
+static bool exceptionAndError0 (iot_data_t **exception, iot_logger_t *lc, const char *msg)
 {
-  const edgex_nvpairs *addr = edgex_protocols_properties (protocols, "Counter");
+  iot_log_error (lc, msg);
+  *exception = iot_data_alloc_string (msg, IOT_DATA_REF);
+  return false;
+}
+
+static bool exceptionAndErrorN (iot_data_t **exception, iot_logger_t *lc, const char *msg, ...)
+{
+  char *buf = malloc (ERR_BUFSZ);
+  va_list args;
+  va_start (args, msg);
+  vsnprintf (buf, ERR_BUFSZ, msg, args);
+  va_end (args);
+
+  iot_log_error (lc, buf);
+  *exception = iot_data_alloc_string (buf, IOT_DATA_TAKE);
+
+  return false;
+}
+
+static bool getDeviceAddress
+  (iot_logger_t *lc, unsigned long *index, const devsdk_protocols *protocols, iot_data_t **exception)
+{
+  const devsdk_nvpairs *addr = devsdk_protocols_properties (protocols, "Counter");
   if (addr == NULL)
   {
-    iot_log_error (lc, "No Counter protocol in device address");
-    return false;
+    return exceptionAndError0 (exception, lc, "No Counter protocol in device address");
   }
 
   unsigned long i = 0;
-  if (!edgex_nvpairs_ulong_value (addr, "Index", &i))
+  if (!devsdk_nvpairs_ulong_value (addr, "Index", &i))
   {
-    iot_log_error (lc, "No Index property in Counter protocol");
-    return false;
+    return exceptionAndError0 (exception, lc, "No Index property in Counter protocol");
   }
   if (i >= NCOUNTERS)
   {
-    iot_log_error (lc, "Index %ul out of range", i);
-    return false;
+    return exceptionAndErrorN (exception, lc, "Index %ul out of range", i);
   }
 
   *index = i;
@@ -63,40 +83,39 @@ static bool getDeviceAddress
 
 static bool counter_get_handler
 (
-  void *impl,
-  const char *devname,
-  const edgex_protocols *protocols,
-  uint32_t nreadings,
-  const edgex_device_commandrequest *requests,
-  edgex_device_commandresult *readings
+ void *impl,
+ const char *devname,
+ const devsdk_protocols *protocols,
+ uint32_t nreadings,
+ const devsdk_commandrequest *requests,
+ devsdk_commandresult *readings,
+ const devsdk_nvpairs *qparms,
+ iot_data_t **exception
 )
 {
   counter_driver *driver = (counter_driver *)impl;
   unsigned long index;
 
-  if (!getDeviceAddress (driver->lc, &index, protocols))
+  if (!getDeviceAddress (driver->lc, &index, protocols, exception))
   {
     return false;
   }
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    const char *reg = edgex_nvpairs_value (requests[i].attributes, "register");
+    const char *reg = devsdk_nvpairs_value (requests[i].attributes, "register");
     if (reg == NULL)
     {
-      iot_log_error (driver->lc, "No register attribute in GET request");
-      return false;
+      return exceptionAndError0 (exception, driver->lc, "No register attribute in GET request");
     }
     if (strcmp (reg, "count01") == 0)
     {
-      readings[i].type = Uint32;
-      readings[i].value.ui32_result = atomic_fetch_add (&driver->counters[index], 1);
+      readings[i].value = iot_data_alloc_ui32 (atomic_fetch_add (&driver->counters[index], 1));
     }
     /* else ifs for other registers... */
     else
     {
-      iot_log_error (driver->lc, "Request for nonexistent register %s", reg);
-      return false;
+      return exceptionAndErrorN (exception, driver->lc, "Request for nonexistent register %s", reg);
     }
   }
   return true;
@@ -106,45 +125,37 @@ static bool counter_put_handler
 (
   void *impl,
   const char *devname,
-  const edgex_protocols *protocols,
+  const devsdk_protocols *protocols,
   uint32_t nvalues,
-  const edgex_device_commandrequest *requests,
-  const edgex_device_commandresult *values
+  const devsdk_commandrequest *requests,
+  const iot_data_t *values[],
+  iot_data_t **exception
 )
 {
   counter_driver *driver = (counter_driver *)impl;
   unsigned long index;
 
-  if (!getDeviceAddress (driver->lc, &index, protocols))
+  if (!getDeviceAddress (driver->lc, &index, protocols, exception))
   {
     return false;
   }
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char *reg = edgex_nvpairs_value (requests[i].attributes, "register");
+    const char *reg = devsdk_nvpairs_value (requests[i].attributes, "register");
     if (reg == NULL)
     {
-      iot_log_error (driver->lc, "No register attribute in PUT request");
-      return false;
+      return exceptionAndError0 (exception, driver->lc, "No register attribute in PUT request");
     }
     if (strcmp (reg, "count01") == 0)
     {
-      atomic_store (&driver->counters[index], values[i].value.ui32_result);
+      atomic_store (&driver->counters[index], iot_data_ui32 (values[i]));
     }
     else
     {
-      iot_log_error (driver->lc, "Request for nonexistent register %s", reg);
-      return false;
+      return exceptionAndErrorN (exception, driver->lc, "Request for nonexistent register %s", reg);
     }
   }
-  return true;
-}
-
-/* ---- Disconnect ---- */
-/* Disconnect handles protocol-specific cleanup when a device is removed. */
-static bool counter_disconnect (void *impl, edgex_protocols *device)
-{
   return true;
 }
 
@@ -152,20 +163,29 @@ static bool counter_disconnect (void *impl, edgex_protocols *device)
 /* Stop performs any final actions before the device service is terminated */
 static void counter_stop (void *impl, bool force) {}
 
-
 int main (int argc, char *argv[])
 {
-  edgex_device_svcparams params = { "device-counter", NULL, NULL, NULL };
   sigset_t set;
   int sigret;
 
   counter_driver * impl = malloc (sizeof (counter_driver));
   impl->lc = NULL;
 
-  if (!edgex_device_service_processparams (&argc, argv, &params))
+  devsdk_error e;
+  e.code = 0;
+
+  devsdk_callbacks counterImpls =
   {
-    return  0;
-  }
+    counter_init,         /* Initialize */
+    NULL,                 /* Discovery */
+    counter_get_handler,  /* Get */
+    counter_put_handler,  /* Put */
+    counter_stop          /* Stop */
+  };
+
+  devsdk_service_t *service = devsdk_service_new
+    ("device-counter", "1.0", impl, counterImpls, &argc, argv, &e);
+  ERR_CHECK (e);
 
   int n = 1;
   while (n < argc)
@@ -173,8 +193,7 @@ int main (int argc, char *argv[])
     if (strcmp (argv[n], "-h") == 0 || strcmp (argv[n], "--help") == 0)
     {
       printf ("Options:\n");
-      printf ("  -h, --help\t\t: Show this text\n");
-      edgex_device_service_usage ();
+      printf ("  -h, --help\t\t\tShow this text\n");
       return 0;
     }
     else
@@ -184,34 +203,19 @@ int main (int argc, char *argv[])
     }
   }
 
-  edgex_error e;
-  e.code = 0;
-
-  edgex_device_callbacks counterImpls =
-  {
-    counter_init,         /* Initialize */
-    NULL,                 /* Discovery */
-    counter_get_handler,  /* Get */
-    counter_put_handler,  /* Put */
-    counter_disconnect,   /* Disconnect */
-    counter_stop          /* Stop */
-  };
-
-  edgex_device_service *service = edgex_device_service_new
-    (params.svcname, "1.0", impl, counterImpls, &e);
-  ERR_CHECK (e);
-
-  edgex_device_service_start (service, params.regURL, params.profile, params.confdir, &e);
+  devsdk_service_start (service, &e);
   ERR_CHECK (e);
 
   sigemptyset (&set);
   sigaddset (&set, SIGINT);
+  sigprocmask (SIG_BLOCK, &set, NULL);
   sigwait (&set, &sigret);
+  sigprocmask (SIG_UNBLOCK, &set, NULL);
 
-  edgex_device_service_stop (service, true, &e);
+  devsdk_service_stop (service, true, &e);
   ERR_CHECK (e);
 
-  edgex_device_service_free (service);
+  devsdk_service_free (service);
   free (impl);
   return 0;
 }
