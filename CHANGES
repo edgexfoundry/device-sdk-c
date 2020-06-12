@@ -1,8 +1,9 @@
-This is the C SDK for EdgeX. It is based largely on the Go SDK but the API
-differs as follows:
+This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
-* Asynchronous device readings are submitted using an API function call rather
-  than Go's "channel" facility.
+Changes for 1.3.0 "Hanoi":
+
+- Event transmission is serialized and operates from a queue with configurable
+  maximum length.
 
 Changes for 1.2.1:
 

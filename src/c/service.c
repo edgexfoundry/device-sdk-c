@@ -40,13 +40,6 @@
 
 #define POOL_THREADS 8
 
-typedef struct postparams
-{
-  devsdk_service_t *svc;
-  edgex_event_cooked *event;
-  const char *devname;
-} postparams;
-
 void devsdk_usage ()
 {
   printf ("  -cp, --configProvider=<url>\tIndicates to use Configuration Provider service at specified URL.\n"
@@ -373,6 +366,9 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   svc->adminstate = UNLOCKED;
   svc->opstate = ENABLED;
+
+  svc->eventq = iot_threadpool_alloc (1, svc->config.device.eventqlen, IOT_THREAD_NO_PRIORITY, IOT_THREAD_NO_AFFINITY, svc->logger);
+  iot_threadpool_start (svc->eventq);
 
   /* Wait for metadata and data to be available */
 
@@ -854,27 +850,6 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
   }
 }
 
-static void *doPost (void *p)
-{
-  postparams *pp = (postparams *) p;
-  devsdk_error err = EDGEX_OK;
-  edgex_data_client_add_event
-  (
-    pp->svc->logger,
-    &pp->svc->config.endpoints,
-    pp->event,
-    &err
-  );
-
-  edgex_event_cooked_free (pp->event);
-  if (pp->svc->config.device.updatelastconnected)
-  {
-    edgex_metadata_client_update_lastconnected (pp->svc->logger, &pp->svc->config.endpoints, pp->devname, &err);
-  }
-  free (pp);
-  return NULL;
-}
-
 void devsdk_register_http_handler
 (
   devsdk_service_t *svc,
@@ -923,11 +898,12 @@ void devsdk_post_readings
 
     if (event)
     {
-      postparams *pp = malloc (sizeof (postparams));
-      pp->svc = svc;
-      pp->event = event;
-      pp->devname = devname;
-      iot_threadpool_add_work (svc->thpool, doPost, pp, -1);
+      edgex_data_client_add_event (svc, event);
+      if (svc->config.device.updatelastconnected)
+      {
+        devsdk_error err = EDGEX_OK;
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, devname, &err);
+      }
     }
   }
   else
@@ -957,7 +933,6 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
     edgex_rest_server_destroy (svc->daemon);
   }
   svc->userfns.stop (svc->userdata, force);
-  edgex_devmap_clear (svc->devices);
   if (svc->registry)
   {
     devsdk_registry_deregister_service (svc->registry, svc->name, err);
@@ -966,8 +941,10 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
       iot_log_error (svc->logger, "Unable to deregister service from registry");
     }
   }
-  iot_scheduler_free (svc->scheduler);
+  iot_threadpool_wait (svc->eventq);
   iot_threadpool_wait (svc->thpool);
+  edgex_devmap_clear (svc->devices);
+  iot_scheduler_free (svc->scheduler);
   iot_log_info (svc->logger, "Stopped device service");
 }
 
@@ -978,6 +955,7 @@ void devsdk_service_free (devsdk_service_t *svc)
     edgex_devmap_free (svc->devices);
     edgex_watchlist_free (svc->watchlist);
     iot_threadpool_free (svc->thpool);
+    iot_threadpool_free (svc->eventq);
     devsdk_registry_free (svc->registry);
     devsdk_registry_fini ();
     pthread_mutex_destroy (&svc->discolock);

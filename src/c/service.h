@@ -42,6 +42,7 @@ struct devsdk_service_t
   edgex_devmap_t *devices;
   edgex_watchlist_t *watchlist;
   iot_threadpool_t *thpool;
+  iot_threadpool_t *eventq;
   iot_scheduler_t *scheduler;
   iot_schedule_t *discosched;
   pthread_mutex_t discolock;

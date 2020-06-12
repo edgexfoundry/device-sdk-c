@@ -52,6 +52,7 @@ typedef struct edgex_device_deviceinfo
   char *profilesdir;
   bool sendreadingsonchanged;
   bool updatelastconnected;
+  uint32_t eventqlen;
 } edgex_device_deviceinfo;
 
 typedef struct edgex_device_logginginfo

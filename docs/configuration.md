@@ -70,6 +70,7 @@ RemoveCmdArgs | String | Not implemented. Specifies arguments to be included wit
 ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
 SendReadingsOnChanged | Bool | Not implemented. To be used to suppress the submission of readings to core-data if the value has not changed.
 UpdateLastConnected | Bool | If true, update the LastConnected attribute of a device whenever it is successfully accessed. Defaults to false.
+EventQLength | Int | Sets the maximum number of events to be queued for transmission to core-data before blocking. Zero (default) results in no limit.
 
 ## Logging section
 

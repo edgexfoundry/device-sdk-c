@@ -42,6 +42,7 @@ typedef enum { JSON, CBOR} edgex_event_encoding;
 
 typedef struct edgex_event_cooked
 {
+  atomic_uint_fast32_t refs;
   edgex_event_encoding encoding;
   union
   {
@@ -75,6 +76,7 @@ typedef struct
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
+void edgex_event_cooked_add_ref (edgex_event_cooked *e);
 void edgex_event_cooked_free (edgex_event_cooked *e);
 
 edgex_event_cooked *edgex_data_process_event
@@ -85,13 +87,9 @@ edgex_event_cooked *edgex_data_process_event
   bool doTransforms
 );
 
-void edgex_data_client_add_event
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  edgex_event_cooked *eventval,
-  devsdk_error *err
-);
+void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *eventval);
+
+void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked *eventval);
 
 edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
 (

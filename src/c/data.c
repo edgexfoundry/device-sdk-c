@@ -10,12 +10,18 @@
 #include "rest.h"
 #include "data.h"
 #include "errorlist.h"
-#include "config.h"
 #include "iot/time.h"
+#include "service.h"
 #include "transform.h"
 #include "iot/base64.h"
 
 #include <cbor.h>
+
+typedef struct postparams
+{
+  devsdk_service_t *svc;
+  edgex_event_cooked *event;
+} postparams;
 
 static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
 {
@@ -184,6 +190,7 @@ edgex_event_cooked *edgex_data_process_event
   }
 
   result = malloc (sizeof (edgex_event_cooked));
+  atomic_store (&result->refs, 1);
   if (useCBOR)
   {
     size_t bsize = 0;
@@ -256,7 +263,6 @@ edgex_event_cooked *edgex_data_process_event
     result->encoding = CBOR;
     result->value.cbor.length = cbor_serialize_alloc (cevent, &result->value.cbor.data, &bsize);
     cbor_decref (&cevent);
-    return result;
   }
   else
   {
@@ -305,16 +311,12 @@ edgex_event_cooked *edgex_data_process_event
   return result;
 }
 
-void edgex_data_client_add_event
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  edgex_event_cooked *eventval,
-  devsdk_error *err
-)
+static void *edgex_data_post (void *p)
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
+  postparams *pp = (postparams *) p;
+  devsdk_error err = EDGEX_OK;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -322,29 +324,53 @@ void edgex_data_client_add_event
     url,
     URL_BUF_SIZE - 1,
     "http://%s:%u/api/v1/event",
-    endpoints->data.host,
-    endpoints->data.port
+    pp->svc->config.endpoints.data.host,
+    pp->svc->config.endpoints.data.port
   );
 
-  switch (eventval->encoding)
+  switch (pp->event->encoding)
   {
     case JSON:
     {
-      edgex_http_post (lc, &ctx, url, eventval->value.json, NULL, err);
+      edgex_http_post (pp->svc->logger, &ctx, url, pp->event->value.json, NULL, &err);
       break;
     }
     case CBOR:
     {
       edgex_http_postbin
-        (lc, &ctx, url, eventval->value.cbor.data, eventval->value.cbor.length, CONTENT_CBOR, NULL, err);
+        (pp->svc->logger, &ctx, url, pp->event->value.cbor.data, pp->event->value.cbor.length, CONTENT_CBOR, NULL, &err);
       break;
     }
   }
+  edgex_event_cooked_free (pp->event);
+  free (pp);
+  return NULL;
+}
+
+void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *ev)
+{
+  postparams *pp = malloc (sizeof (postparams));
+  pp->svc = svc;
+  pp->event = ev;
+  iot_threadpool_add_work (svc->eventq, edgex_data_post, pp, -1);
+}
+
+void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked *ev)
+{
+  postparams *pp = malloc (sizeof (postparams));
+  pp->svc = svc;
+  pp->event = ev;
+  edgex_data_post (pp);
+}
+
+void edgex_event_cooked_add_ref (edgex_event_cooked *e)
+{
+  atomic_fetch_add (&e->refs, 1);
 }
 
 void edgex_event_cooked_free (edgex_event_cooked *e)
 {
-  if (e)
+  if (e && (atomic_fetch_add (&e->refs, -1) == 1))
   {
     switch (e->encoding)
     {
