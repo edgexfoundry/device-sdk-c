@@ -788,7 +788,10 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
     devsdk_error e;
     devsdk_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
     devsdk_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
-    devsdk_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
+    if (svc->config.logging.useremote)
+    {
+      devsdk_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
+    }
   }
   else
   {
