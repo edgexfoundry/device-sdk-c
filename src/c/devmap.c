@@ -121,6 +121,24 @@ void edgex_devmap_populate_devices
   pthread_rwlock_unlock (&map->lock);
 }
 
+devsdk_devices *edgex_devmap_copydevices_generic (edgex_devmap_t *map)
+{
+  devsdk_devices *result = NULL;
+  devsdk_devices *entry = NULL;
+  const char *key;
+
+  pthread_rwlock_rdlock (&map->lock);
+  edgex_map_iter iter = edgex_map_iter (map->devices);
+  while ((key = edgex_map_next (&map->devices, &iter)))
+  {
+    entry = edgex_device_todevsdk (*edgex_map_get (&map->devices, key));
+    entry->next = result;
+    result = entry;
+  }
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
 edgex_device *edgex_devmap_copydevices (edgex_devmap_t *map)
 {
   edgex_device *result = NULL;

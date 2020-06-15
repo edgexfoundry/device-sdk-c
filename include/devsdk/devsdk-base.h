@@ -84,6 +84,22 @@ typedef struct devsdk_discovered_device
   const devsdk_strings *labels;
 } devsdk_discovered_device;
 
+typedef struct devsdk_device_resources
+{
+  const devsdk_commandrequest *request;
+  bool readable;
+  bool writable;
+  struct devsdk_device_resources *next;
+} devsdk_device_resources;
+
+typedef struct devsdk_devices
+{
+  const char *devname;
+  const devsdk_protocols *protocols;
+  devsdk_device_resources *resources;
+  struct devsdk_devices *next;
+} devsdk_devices;
+
 /**
  * @brief Free an strings list.
  * @param p The list to free.

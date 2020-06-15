@@ -283,7 +283,7 @@ static void compat_stop (void *impl, bool force)
   v1->implfns.stop (v1->impldata, force);
 }
 
-static void compat_add_device (void *impl, const char *devname, const devsdk_protocols *protocols, bool adminEnabled)
+static void compat_add_device (void *impl, const char *devname, const devsdk_protocols *protocols, const devsdk_device_resources *resources, bool adminEnabled)
 {
   edgex_device_service *v1 = (edgex_device_service *)impl;
   if (v1->add_device)

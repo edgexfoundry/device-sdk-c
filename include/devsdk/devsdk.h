@@ -147,10 +147,11 @@ typedef void (*devsdk_autoevent_stop_handler) (void *impl, void *handle);
  * @param impl The context data passed in when the service was created.
  * @param devname The name of the new device.
  * @param protocols The protocol properties that comprise the device's address.
- * @param state The device's initial adminstate.
+ * @param resources The operations supported by the device.
+ * @param adminEnabled Whether the device is administratively enabled.
  */
 
-typedef void (*devsdk_add_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols, bool adminEnabled);
+typedef void (*devsdk_add_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols, const devsdk_device_resources *resources, bool adminEnabled);
 
 /**
  * @brief Callback function indicating that a device's address or adminstate has been updated.
@@ -220,6 +221,29 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err);
 void devsdk_post_readings (devsdk_service_t *svc, const char *device_name, const char *resource_name, devsdk_commandresult *values);
 
 void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, devsdk_discovered_device *devices);
+
+/**
+ * @brief Obtain a list of devices known to the system.
+ * @param svc The device service.
+ */
+
+devsdk_devices *devsdk_get_devices (devsdk_service_t *svc);
+
+/**
+ * @brief Obtain a device known to the system, by name.
+ * @param svc The device service.
+ * @param name The name of the device to retrieve.
+ */
+
+devsdk_devices *devsdk_get_device (devsdk_service_t *svc, const char *name);
+
+/**
+ * @brief Free a device structure or list of device structures.
+ * @param d The device list.
+ */
+
+void devsdk_free_devices (devsdk_devices *d);
+
 
 /**
  * @brief Stop the event service. Any automatic events will be cancelled and the rest api for the device service will be shut down.
