@@ -102,21 +102,13 @@ static void *ae_runner (void *p)
           edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
         if (event)
         {
-          edgex_data_client_add_event (ai->svc->logger, &ai->svc->config.endpoints, event, &err);
-          if (err.code == 0)
+          edgex_data_client_add_event (ai->svc, event);
+          if (ai->onChange)
           {
-            if (ai->onChange)
-            {
-              devsdk_commandresult_free (ai->last, ai->resource->nreqs);
-              ai->last = resdup;
-              resdup = NULL;
-            }
+            devsdk_commandresult_free (ai->last, ai->resource->nreqs);
+            ai->last = resdup;
+            resdup = NULL;
           }
-          else
-          {
-            iot_log_error (ai->svc->logger, "AutoEvent: unable to push new event");
-          }
-          edgex_event_cooked_free (event);
           if (ai->svc->config.device.updatelastconnected)
           {
             edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);

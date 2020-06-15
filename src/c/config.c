@@ -589,6 +589,8 @@ void edgex_device_populateConfig
     get_nv_config_bool (config, "Device/SendReadingsOnChanged", false);
   svc->config.device.updatelastconnected =
     get_nv_config_bool (config, "Device/UpdateLastConnected", false);
+  svc->config.device.eventqlen =
+    get_nv_config_uint32 (svc->logger, config, "Device/EventQLength", err);
 
   svc->config.driverconf = iot_data_alloc_map (IOT_DATA_STRING);
   for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
@@ -763,6 +765,7 @@ int edgex_device_handler_config
     (dobj, "SendReadingsOnChanged", svc->config.device.sendreadingsonchanged);
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
+  json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
   json_object_set_value (obj, "Device", dval);
 
   if (svc->config.driverconf)

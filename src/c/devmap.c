@@ -56,16 +56,20 @@ void edgex_devmap_clear (edgex_devmap_t *map)
 {
   const char *key;
   const char *next;
+
+  pthread_rwlock_wrlock (&map->lock);
   edgex_map_iter i = edgex_map_iter (map->devices);
   key = edgex_map_next (&map->devices, &i);
   while (key)
   {
     edgex_device **e = edgex_map_get (&map->devices, key);
+    edgex_map_remove (&map->name_to_id, (*e)->name);
     edgex_device_release (*e);
     next = edgex_map_next (&map->devices, &i);
     edgex_map_remove (&map->devices, key);
     key = next;
   }
+  pthread_rwlock_unlock (&map->lock);
 }
 
 void edgex_devmap_free (edgex_devmap_t *map)

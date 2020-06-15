@@ -625,7 +625,8 @@ static int edgex_device_runget
     if (*reply)
     {
       retcode = MHD_HTTP_OK;
-      edgex_data_client_add_event (svc->logger, &svc->config.endpoints, *reply, &err);
+      edgex_event_cooked_add_ref (*reply);
+      edgex_data_client_add_event_now (svc, *reply);
       if (svc->config.device.updatelastconnected)
       {
         edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
