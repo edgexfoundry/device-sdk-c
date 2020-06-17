@@ -13,6 +13,7 @@
 #include "service.h"
 #include "metadata.h"
 #include "edgex-rest.h"
+#include "devutil.h"
 
 #include <microhttpd.h>
 
@@ -156,7 +157,9 @@ static int updateDevice
             case CREATED:
               if (svc->userfns.device_added)
               {
-                svc->userfns.device_added (svc->userdata, newdev->name, (const devsdk_protocols *)newdev->protocols, newdev->adminState);
+                devsdk_device_resources *res = edgex_profile_toresources (newdev->profile);
+                svc->userfns.device_added (svc->userdata, newdev->name, (const devsdk_protocols *)newdev->protocols, res, newdev->adminState);
+                devsdk_free_resources (res);
               }
               break;
             case UPDATED_DRIVER:

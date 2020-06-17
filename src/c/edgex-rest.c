@@ -1402,6 +1402,52 @@ edgex_device *edgex_device_dup (const edgex_device *e)
   return result;
 }
 
+iot_typecode_t *edgex_propertytype_totypecode (edgex_propertytype pt)
+{
+  if (pt <= Edgex_String)
+  {
+    return iot_typecode_alloc_basic (pt);
+  }
+  if (pt == Edgex_Binary)
+  {
+    return iot_typecode_alloc_array (IOT_DATA_UINT8);
+  }
+  else
+  {
+    return iot_typecode_alloc_array (pt - (Edgex_Int8Array - Edgex_Int8));
+  }
+}
+
+devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p)
+{
+  devsdk_device_resources *result = NULL;
+
+  for (const edgex_deviceresource *r = p->device_resources; r; r = r->next)
+  {
+    devsdk_device_resources *entry = malloc (sizeof (devsdk_device_resources));
+    devsdk_commandrequest *req = malloc (sizeof (devsdk_commandrequest));
+    req->resname = strdup (r->name);
+    req->attributes = devsdk_nvpairs_dup ((const devsdk_nvpairs *)r->attributes);
+    req->type = edgex_propertytype_totypecode (r->properties->value->type);
+    entry->request = req;
+    entry->readable = r->properties->value->readable;
+    entry->writable = r->properties->value->writable;
+    entry->next = result;
+    result = entry;
+  }
+  return result;
+}
+
+devsdk_devices *edgex_device_todevsdk (const edgex_device *e)
+{
+  devsdk_devices *result = malloc (sizeof (devsdk_devices));
+  result->devname = strdup (e->name);
+  result->protocols = devsdk_protocols_dup (e->protocols);
+  result->resources = edgex_profile_toresources (e->profile);
+  result->next = NULL;
+  return result;
+}
+
 void edgex_device_free (edgex_device *e)
 {
   while (e)
