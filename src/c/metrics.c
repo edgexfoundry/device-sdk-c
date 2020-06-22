@@ -21,18 +21,7 @@
 
 #include <microhttpd.h>
 
-int edgex_device_handler_metrics
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+void edgex_device_handler_metrics (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   struct rusage rstats;
   devsdk_service_t *svc = (devsdk_service_t *)ctx;
@@ -66,9 +55,12 @@ int edgex_device_handler_metrics
     json_object_set_number (obj, "CpuTime", cputime);
     json_object_set_number (obj, "CpuAvgUsage", cputime / walltime);
   }
-  *reply = json_serialize_to_string (val);
-  *reply_size = strlen (*reply);
-  *reply_type = CONTENT_JSON;
+
+  char *json = json_serialize_to_string (val);
   json_value_free (val);
-  return MHD_HTTP_OK;
+
+  reply->data.bytes = json;
+  reply->data.size = strlen (json);
+  reply->content_type = CONTENT_JSON;
+  reply->code = MHD_HTTP_OK;
 }

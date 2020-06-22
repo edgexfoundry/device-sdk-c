@@ -17,15 +17,15 @@ typedef struct edgex_rest_server edgex_rest_server;
 extern edgex_rest_server *edgex_rest_server_create
   (iot_logger_t *lc, uint16_t port, devsdk_error *err);
 
+
+extern void edgex_rest_server_destroy (edgex_rest_server *svr);
+
 extern bool edgex_rest_server_register_handler
 (
   edgex_rest_server *svr,
   const char *url,
-  edgex_http_method method,
+  devsdk_http_method methods,
   void *context,
-  edgex_http_handler_fn handler
+  devsdk_http_handler_fn handler
 );
-
-extern void edgex_rest_server_destroy (edgex_rest_server *svr);
-
 #endif

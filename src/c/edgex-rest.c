@@ -11,6 +11,7 @@
 #include "autoevent.h"
 #include "watchers.h"
 #include "parson.h"
+#include <microhttpd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1820,6 +1821,78 @@ void edgex_watcher_free (edgex_watcher *e)
     free (ew);
     ew = next;
   }
+}
+
+static JSON_Value *edgex_parse_json (devsdk_http_data d)
+{
+  return json_parse_string ((char *)d.bytes);
+}
+
+static edgex_baserequest *baserequest_read (JSON_Object *obj)
+{
+  edgex_baserequest *res = malloc (sizeof (edgex_baserequest));
+  res->requestId = get_string (obj, "requestId");
+  return res;
+}
+
+edgex_baserequest *edgex_baserequest_read (devsdk_http_data d)
+{
+  JSON_Value *val = edgex_parse_json (d);
+  JSON_Object *obj = json_value_get_object (val);
+  edgex_baserequest *res = baserequest_read (obj);
+  json_value_free (val);
+  return res;
+}
+
+void edgex_baserequest_free (edgex_baserequest *e)
+{
+  free (e->requestId);
+  free (e);
+}
+
+
+void edgex_baseresponse_populate (edgex_baseresponse *e, const char *reqId, int code, const char *msg)
+{
+  e->requestId = reqId;
+  e->statusCode = code;
+  e->message = msg;
+}
+
+static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
+{
+  JSON_Value *result = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (result);
+  json_object_set_string (obj, "requestId", br->requestId);
+  json_object_set_uint (obj, "statusCode", br->statusCode);
+  if (br->message)
+  {
+    json_object_set_string (obj, "message", br->message);
+  }
+  return result;
+}
+
+static JSON_Value *pingresponse_write (const edgex_pingresponse *pr)
+{
+  char buff[128];
+  struct tm ftm;
+  localtime_r (&pr->timestamp, &ftm);
+  strftime (buff, sizeof (buff), "%a, %d %b %Y %H:%M:%S %Z", &ftm);
+
+  JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)pr);
+  JSON_Object *obj = json_value_get_object (result);
+  json_object_set_string (obj, "timestamp", buff);
+  return result;
+}
+
+void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *reply)
+{
+  JSON_Value *val = pingresponse_write (pr);
+  char *result = json_serialize_to_string (val);
+  json_value_free (val);
+  reply->data.bytes = result;
+  reply->data.size = strlen (result);
+  reply->code = MHD_HTTP_OK;
+  reply->content_type = CONTENT_JSON;
 }
 
 #ifdef EDGEX_DEBUG_DUMP

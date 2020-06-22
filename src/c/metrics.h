@@ -13,17 +13,6 @@
 
 #include <stddef.h>
 
-extern int edgex_device_handler_metrics
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-);
+extern void edgex_device_handler_metrics (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
 #endif

@@ -670,18 +670,7 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   edgex_map_deinit (&svc->config.watchers);
 }
 
-int edgex_device_handler_config
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *)ctx;
 
@@ -781,12 +770,13 @@ int edgex_device_handler_config
     json_object_set_value (obj, "Driver", dval);
   }
 
-  *reply = json_serialize_to_string (val);
-  *reply_size = strlen (*reply);
-  *reply_type = CONTENT_JSON;
+  char *json = json_serialize_to_string (val);
   json_value_free (val);
 
-  return MHD_HTTP_OK;
+  reply->data.bytes = json;
+  reply->data.size = strlen (json);
+  reply->content_type = CONTENT_JSON;
+  reply->code = MHD_HTTP_OK;
 }
 
 void edgex_device_process_configured_devices

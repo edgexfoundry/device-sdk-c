@@ -14,18 +14,11 @@
 #include "rest-server.h"
 #include "cmdinfo.h"
 
-extern int edgex_device_handler_device
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-);
+extern void edgex_device_handler_device (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
+
+extern void edgex_device_handler_device_name (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
+
+extern void edgex_device_handler_device_all (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
 extern const struct edgex_cmdinfo *edgex_deviceprofile_findcommand
   (const char *name, edgex_deviceprofile *prof, bool forGet);
