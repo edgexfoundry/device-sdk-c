@@ -8,7 +8,7 @@ If configuration is to be obtained from the Registry, its location may be specif
 
 |Long option | Short option|Environment ||
 |-|-|-|-|
-`--configProvider` | `-cp` | `EDGEX_REGISTRY` | specifies the registry URL.
+`--configProvider` | `-cp` | `EDGEX_CONFIGURATION_PROVIDER` | specifies the registry URL.
 
 ## Service name
 
