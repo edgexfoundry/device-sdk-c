@@ -21,10 +21,15 @@
 
 static const char *rwstrings[2][2] = { { "", "W" }, { "R", "RW" } };
 
-static char *get_string (const JSON_Object *obj, const char *name)
+static char *get_string_dfl (const JSON_Object *obj, const char *name, const char *dfl)
 {
   const char *str = json_object_get_string (obj, name);
-  return strdup (str ? str : "");
+  return strdup (str ? str : dfl);
+}
+
+static char *get_string (const JSON_Object *obj, const char *name)
+{
+  return get_string_dfl (obj, name, "");
 }
 
 static char *get_array_string (const JSON_Array *array, size_t index)
@@ -324,7 +329,7 @@ static edgex_propertyvalue *propertyvalue_read
 #else
     result->floatAsBinary = !(fe && (strcmp (fe, "eNotation") == 0));
 #endif
-    result->mediaType = get_string (obj, "mediaType");
+    result->mediaType = get_string_dfl (obj, "mediaType", (pt == Edgex_Binary) ? "application/octet-stream" : "");
   }
   else
   {

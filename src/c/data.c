@@ -200,8 +200,17 @@ edgex_event_cooked *edgex_data_process_event
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
       cbor_item_t *cread;
-      cbor_item_t *crdg = cbor_new_definite_map (3);
+      cbor_item_t *crdg;
+
       edgex_propertytype pt = edgex_propertytype_data (values[i].value);
+      if (pt == Edgex_Binary || pt == Edgex_Float32 || pt == Edgex_Float64 || pt == Edgex_Float32Array || pt == Edgex_Float64Array)
+      {
+        crdg = cbor_new_definite_map (5);
+      }
+      else
+      {
+        crdg = cbor_new_definite_map (4);
+      }
 
       if (pt == Edgex_Binary)
       {
