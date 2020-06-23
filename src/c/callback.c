@@ -20,15 +20,15 @@
 static int updateProfile
 (
   devsdk_service_t *svc,
-  edgex_http_method method,
+  devsdk_http_method method,
   const char *id
 )
 {
-  if (method == POST)
+  if (method == DevSDK_Post)
   {
     return MHD_HTTP_OK;  // we'll fetch it on demand (for a new device)
   }
-  if (method == PUT || method == DELETE)
+  if (method == DevSDK_Put || method == DevSDK_Delete)
   {
     // Update or remove. Should only happen if there are no devices left for this profile.
     // In either case we simply forget the profile.
@@ -52,7 +52,7 @@ static int updateProfile
 static int updateWatcher
 (
   devsdk_service_t *svc,
-  edgex_http_method method,
+  devsdk_http_method method,
   const char *id
 )
 {
@@ -62,14 +62,14 @@ static int updateWatcher
 
   switch (method)
   {
-    case DELETE:
+    case DevSDK_Delete:
       iot_log_info (svc->logger, "callback: Delete watcher %s", id);
       if (!edgex_watchlist_remove_watcher (svc->watchlist, id))
       {
         iot_log_error (svc->logger, "callback: Watcher %s not found for deletion", id);
       }
       break;
-    case POST:
+    case DevSDK_Post:
       iot_log_info (svc->logger, "callback: New watcher %s", id);
       w = edgex_metadata_client_get_watcher
         (svc->logger, &svc->config.endpoints, id, &err);
@@ -82,7 +82,7 @@ static int updateWatcher
         edgex_watcher_free (w);
       }
       break;
-    case PUT:
+    case DevSDK_Put:
       iot_log_info (svc->logger, "callback: Update watcher %s", id);
       w = edgex_metadata_client_get_watcher
         (svc->logger, &svc->config.endpoints, id, &err);
@@ -103,7 +103,7 @@ static int updateWatcher
 static int updateDevice
 (
   devsdk_service_t *svc,
-  edgex_http_method method,
+  devsdk_http_method method,
   const char *id
 )
 {
@@ -113,7 +113,7 @@ static int updateDevice
 
   switch (method)
   {
-    case DELETE:
+    case DevSDK_Delete:
       iot_log_info (svc->logger, "callback: Delete device %s", id);
       if (svc->userfns.device_removed)
       {
@@ -134,8 +134,8 @@ static int updateDevice
         edgex_devmap_removedevice_byid (svc->devices, id);
       }
       break;
-    case POST:
-    case PUT:
+    case DevSDK_Post:
+    case DevSDK_Put:
       newdev = edgex_metadata_client_get_device
         (svc->logger, &svc->config.endpoints, id, &err);
       if (newdev)
@@ -182,27 +182,16 @@ static int updateDevice
   return status;
 }
 
-int edgex_device_handler_callback
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+void edgex_device_handler_callback (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  int status = MHD_HTTP_OK;
+  reply->code = MHD_HTTP_BAD_REQUEST;
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  JSON_Value *jval = json_parse_string (upload_data);
+  JSON_Value *jval = json_parse_string (req->data.bytes);
   if (jval == NULL)
   {
     iot_log_error (svc->logger, "callback: Payload did not parse as JSON");
-    return MHD_HTTP_BAD_REQUEST;
+    return;
   }
 
   JSON_Object *jobj = json_value_get_object (jval);
@@ -211,29 +200,27 @@ int edgex_device_handler_callback
   if (!action || !id)
   {
     iot_log_error (svc->logger, "Callback: both 'type' and 'id' must be present");
-    iot_log_error (svc->logger, "Callback: JSON was %s", upload_data);
+    iot_log_error (svc->logger, "Callback: JSON was %s", req->data.bytes);
     json_value_free (jval);
-    return MHD_HTTP_BAD_REQUEST;
+    return;
   }
 
   if (strcmp (action, "DEVICE") == 0)
   {
-    status = updateDevice (svc, method, id);
+    reply->code = updateDevice (svc, req->method, id);
   }
   else if (strcmp (action, "PROVISIONWATCHER") == 0)
   {
-    status = updateWatcher (svc, method, id);
+    reply->code = updateWatcher (svc, req->method, id);
   }
   else if (strcmp (action, "PROFILE") == 0)
   {
-    status = updateProfile (svc, method, id);
+    reply->code = updateProfile (svc, req->method, id);
   }
   else
   {
     iot_log_error (svc->logger, "callback: Unexpected object type %s", action);
-    status = MHD_HTTP_BAD_REQUEST;
   }
 
   json_value_free (jval);
-  return status;
 }

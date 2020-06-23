@@ -33,10 +33,14 @@
 #define EDGEX_DEV_API_PING "/api/v1/ping"
 #define EDGEX_DEV_API_VERSION "/api/version"
 #define EDGEX_DEV_API_DISCOVERY "/api/v1/discovery"
-#define EDGEX_DEV_API_DEVICE "/api/v1/device/"
+#define EDGEX_DEV_API_DEVICE "/api/v1/device/{id}/{cmd}"
+#define EDGEX_DEV_API_DEVICE_NAME "/api/v1/device/name/{name}/{cmd}"
+#define EDGEX_DEV_API_DEVICE_ALL "/api/v1/device/all/{cmd}"
 #define EDGEX_DEV_API_CALLBACK "/api/v1/callback"
 #define EDGEX_DEV_API_CONFIG "/api/v1/config"
 #define EDGEX_DEV_API_METRICS "/api/v1/metrics"
+
+#define EDGEX_DEV_API2_PING "/api/v2/ping"
 
 #define POOL_THREADS 8
 
@@ -266,49 +270,40 @@ devsdk_service_t *devsdk_service_new
   return result;
 }
 
-static int ping_handler
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+static void ping_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  *reply = strdup (svc->version);
-  *reply_size = strlen (svc->version);
-  *reply_type = CONTENT_PLAINTEXT;
-  return MHD_HTTP_OK;
+  reply->data.bytes = strdup (svc->version);
+  reply->data.size = strlen (svc->version);
+  reply->content_type = CONTENT_PLAINTEXT;
+  reply->code = MHD_HTTP_OK;
 }
 
-static int version_handler
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  edgex_baserequest *br;
+  edgex_pingresponse pr;
+
+  br = edgex_baserequest_read (req->data);
+  edgex_baseresponse_populate ((edgex_baseresponse *)&pr, br->requestId, MHD_HTTP_OK, NULL);
+  pr.timestamp = iot_time_secs ();
+  edgex_pingresponse_write (&pr, reply);
+  edgex_baserequest_free (br);
+}
+
+static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
   json_object_set_string (obj, "version", svc->version);
   json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
-  *reply = json_serialize_to_string (val);
-  *reply_size = strlen (*reply);
-  *reply_type = CONTENT_JSON;
+  char *json = json_serialize_to_string (val);
   json_value_free (val);
-  return MHD_HTTP_OK;
+  reply->data.bytes = json;
+  reply->data.size = strlen (json);
+  reply->content_type = CONTENT_JSON;
+  reply->code = MHD_HTTP_OK;
 }
 
 static bool ping_client
@@ -500,7 +495,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_CALLBACK, PUT | POST | DELETE, svc,
+    svc->daemon, EDGEX_DEV_API_CALLBACK, DevSDK_Put | DevSDK_Post | DevSDK_Delete, svc,
     edgex_device_handler_callback
   );
 
@@ -547,33 +542,47 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_DEVICE, GET | PUT | POST, svc,
+    svc->daemon, EDGEX_DEV_API_DEVICE_ALL, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
+    edgex_device_handler_device_all
+  );
+
+  edgex_rest_server_register_handler
+  (
+    svc->daemon, EDGEX_DEV_API_DEVICE_NAME, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
+    edgex_device_handler_device_name
+  );
+
+  edgex_rest_server_register_handler
+  (
+    svc->daemon, EDGEX_DEV_API_DEVICE, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
     edgex_device_handler_device
   );
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_DISCOVERY, POST, svc,
+    svc->daemon, EDGEX_DEV_API_DISCOVERY, DevSDK_Post, svc,
     edgex_device_handler_discovery
   );
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_METRICS, GET, svc, edgex_device_handler_metrics
+    svc->daemon, EDGEX_DEV_API_METRICS, DevSDK_Get, svc, edgex_device_handler_metrics
   );
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_CONFIG, GET, svc, edgex_device_handler_config
+    svc->daemon, EDGEX_DEV_API_CONFIG, DevSDK_Get, svc, edgex_device_handler_config
   );
 
   edgex_rest_server_register_handler
-    (svc->daemon, EDGEX_DEV_API_VERSION, GET, svc, version_handler);
+    (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);
 
   edgex_rest_server_register_handler
   (
-    svc->daemon, EDGEX_DEV_API_PING, GET, svc, ping_handler
+    svc->daemon, EDGEX_DEV_API_PING, DevSDK_Get, svc, ping_handler
   );
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_PING, DevSDK_Get, svc, ping2_handler);
 
   /* Ready. Register ourselves and log that we have started. */
 
@@ -857,9 +866,9 @@ void devsdk_register_http_handler
 (
   devsdk_service_t *svc,
   const char *url,
-  edgex_http_method method,
+  devsdk_http_method methods,
   void *context,
-  edgex_http_handler_fn handler,
+  devsdk_http_handler_fn handler,
   devsdk_error *e
 )
 {
@@ -869,9 +878,9 @@ void devsdk_register_http_handler
     *e = EDGEX_HTTP_SERVER_FAIL;
     iot_log_error (iot_logger_default (), "devsdk_register_http_handler called before service is running");
   }
-  else if (!edgex_rest_server_register_handler (svc->daemon, url, method, context, handler))
+  else
   {
-    *e = EDGEX_INVALID_ARG;
+    edgex_rest_server_register_handler (svc->daemon, url, methods, context, handler);
   }
 }
 

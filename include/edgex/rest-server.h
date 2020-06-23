@@ -12,55 +12,56 @@
 #include "devsdk/devsdk-base.h"
 #include "iot/logger.h"
 
+#define CONTENT_JSON "application/json"
+#define CONTENT_CBOR "application/cbor"
+#define CONTENT_PLAINTEXT "text/plain"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef enum
 {
-  GET = 1,
-  POST = 2,
-  PUT = 4,
-  PATCH = 8,
-  DELETE = 16,
-  UNKNOWN = 1024
-} edgex_http_method;
+  DevSDK_Get = 1,
+  DevSDK_Post = 2,
+  DevSDK_Put = 4,
+  DevSDK_Patch = 8,
+  DevSDK_Delete = 16,
+  DevSDK_Unknown = 1024
+} devsdk_http_method;
 
-#define CONTENT_JSON "application/json"
-#define CONTENT_CBOR "application/cbor"
-#define CONTENT_PLAINTEXT "text/plain"
+typedef struct
+{
+  void *bytes;
+  size_t size;
+} devsdk_http_data;
 
-/**
- * @brief Function called to handle an http request.
- * @param context The context data passed in when the handler was registered.
- * @param url The trailing part of the requested url, if present.
- * @param qparams Any parameters specified in the query string of the url.
- * @param method The HTTP method requested.
- * @param upload_data Any payload passed in the request. For REST this should be a JSON string.
- * @param upload_data_size The size of upload_data.
- * @param reply Should be set to a block of data to return. This will be free'd once delivered.
- * @param reply_size The size of the reply data.
- * @param reply_type The MIME type of the returned data. This will not be free'd.
- * @return The HTTP return code to pass back.
- */
+typedef struct
+{
+  const devsdk_nvpairs *params;
+  devsdk_http_method method;
+  devsdk_http_data data;
+} devsdk_http_request;
 
-typedef int (*edgex_http_handler_fn)
+typedef struct
+{
+  int code;
+  devsdk_http_data data;
+  const char *content_type;
+} devsdk_http_reply;
+
+typedef void (*devsdk_http_handler_fn)
 (
   void *context,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
+  const devsdk_http_request *req,
+  devsdk_http_reply *reply
 );
 
 /**
  * @brief Register an http handler function.
  * @param svc The device service.
- * @param url The URL to handle. URLs ending in '/' are considered as a prefix to match against.
+ * @param url The URL path to handle. Path elements of the form {xxx} are wildcard matches,
+ *            and the handler will be given a parameter xxx=value containing the matched text.
  * @param method The HTTP methods to accept, these should be logical-OR'd together.
  * @param context Context data to pass to the handler on each call.
  * @param handler The handler function to call when the URL is matched.
@@ -71,9 +72,9 @@ extern void devsdk_register_http_handler
 (
   devsdk_service_t *svc,
   const char *url,
-  edgex_http_method method,
+  devsdk_http_method method,
   void *context,
-  edgex_http_handler_fn handler,
+  devsdk_http_handler_fn handler,
   devsdk_error *e
 );
 

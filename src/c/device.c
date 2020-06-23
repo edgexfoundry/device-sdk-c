@@ -37,19 +37,19 @@
  * the device implementation.
  */
 
-static const char *methStr (edgex_http_method method)
+static const char *methStr (devsdk_http_method method)
 {
   switch (method)
   {
-    case GET:
+    case DevSDK_Get:
       return "GET";
-    case POST:
+    case DevSDK_Post:
       return "POST";
-    case PUT:
+    case DevSDK_Put:
       return "PUT";
-    case PATCH:
+    case DevSDK_Patch:
       return "PATCH";
-    case DELETE:
+    case DevSDK_Delete:
       return "DELETE";
     default:
       return "UNKNOWN";
@@ -724,7 +724,7 @@ static int allCommand
 (
   devsdk_service_t *svc,
   const char *cmd,
-  edgex_http_method method,
+  devsdk_http_method method,
   const devsdk_nvpairs *qparams,
   const char *upload_data,
   size_t upload_data_size,
@@ -750,7 +750,7 @@ static int allCommand
   buff = malloc (bsize);
   strcpy (buff, "[");
 
-  cmdq = edgex_devmap_device_forcmd (svc->devices, cmd, method == GET);
+  cmdq = edgex_devmap_device_forcmd (svc->devices, cmd, method == DevSDK_Get);
 
   for (iter = cmdq; iter; iter = iter->next)
   {
@@ -831,7 +831,7 @@ static int oneCommand
   const char *id,
   bool byName,
   const char *cmd,
-  edgex_http_method method,
+  devsdk_http_method method,
   const devsdk_nvpairs *qparams,
   const char *upload_data,
   size_t upload_data_size,
@@ -858,7 +858,7 @@ static int oneCommand
   if (dev)
   {
     command = edgex_deviceprofile_findcommand
-      (cmd, dev->profile, method == GET);
+      (cmd, dev->profile, method == DevSDK_Get);
   }
 
   if (command)
@@ -919,62 +919,27 @@ static int oneCommand
   return result;
 }
 
-int edgex_device_handler_device
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+void edgex_device_handler_device_all (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  int result = MHD_HTTP_NOT_FOUND;
-  char *cmd;
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char *cmd = devsdk_nvpairs_value (req->params, "cmd");
+  reply->code = allCommand (svc, cmd, req->method, req->params, req->data.bytes, req->data.size, &reply->data.bytes, &reply->data.size, &reply->content_type);
+}
 
-  if (strlen (url) == 0)
-  {
-    iot_log_error (svc->logger, "No device specified in url");
-  }
-  else
-  {
-    if (strncmp (url, "all/", 4) == 0)
-    {
-      cmd = url + 4;
-      if (strlen (cmd))
-      {
-        result = allCommand (svc, cmd, method, qparams, upload_data, upload_data_size, reply, reply_size, reply_type);
-      }
-      else
-      {
-        iot_log_error (svc->logger, "No command specified in url");
-      }
-    }
-    else
-    {
-      bool byName = false;
-      if (strncmp (url, "name/", 4) == 0)
-      {
-        byName = true;
-        url += 5;
-      }
-      cmd = strchr (url, '/');
-      if (cmd == NULL || strlen (cmd + 1) == 0)
-      {
-        iot_log_error (svc->logger, "No command specified in url");
-      }
-      else
-      {
-         *cmd = '\0';
-         result = oneCommand
-           (svc, url, byName, cmd + 1, method, qparams, upload_data, upload_data_size, reply, reply_size, reply_type);
-         *cmd = '/';
-      }
-    }
-  }
-  return result;
+void edgex_device_handler_device_name (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char *cmd = devsdk_nvpairs_value (req->params, "cmd");
+  const char *name = devsdk_nvpairs_value (req->params, "name");
+  reply->code = oneCommand
+    (svc, name, true, cmd, req->method, req->params, req->data.bytes, req->data.size, &reply->data.bytes, &reply->data.size, &reply->content_type);
+}
+
+void edgex_device_handler_device (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char *cmd = devsdk_nvpairs_value (req->params, "cmd");
+  const char *id = devsdk_nvpairs_value (req->params, "id");
+  reply->code = oneCommand
+    (svc, id, false, cmd, req->method, req->params, req->data.bytes, req->data.size, &reply->data.bytes, &reply->data.size, &reply->content_type);
 }

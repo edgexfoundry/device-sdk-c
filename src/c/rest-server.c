@@ -21,10 +21,10 @@
 
 typedef struct handler_list
 {
-  const char *url;
+  devsdk_strings *url;
   uint32_t methods;
   void *ctx;
-  edgex_http_handler_fn handler;
+  devsdk_http_handler_fn handler;
   struct handler_list *next;
 } handler_list;
 
@@ -42,40 +42,41 @@ typedef struct http_context_s
   size_t m_size;
 } http_context_t;
 
-static edgex_http_method method_from_string (const char *str)
+static devsdk_http_method method_from_string (const char *str)
 {
   if (strcmp (str, "GET") == 0)
-  { return GET; }
+  { return DevSDK_Get; }
   if (strcmp (str, "POST") == 0)
-  { return POST; }
+  { return DevSDK_Post; }
   if (strcmp (str, "PUT") == 0)
-  { return PUT; }
+  { return DevSDK_Put; }
   if (strcmp (str, "PATCH") == 0)
-  { return PATCH; }
+  { return DevSDK_Patch; }
   if (strcmp (str, "DELETE") == 0)
-  { return DELETE; }
-  return UNKNOWN;
+  { return DevSDK_Delete; }
+  return DevSDK_Unknown;
 }
 
-static char *normalizeUrl (const char *url)
+static devsdk_strings *processUrl (const char *url)
 {
-  /* Only deduplication of '/' is performed */
-
-  char *res = malloc (strlen (url) + 1);
-  const char *upos = url;
-  char *rpos = res;
-  while (*upos)
+  devsdk_strings *result = NULL;
+  devsdk_strings *entry;
+  devsdk_strings **nextcomp = &result;
+  const char *p = url;
+  const char *nextp;
+  while (p)
   {
-    if ((*rpos++ = *upos++) == '/')
-    {
-      while (*upos == '/')
-      {
-        upos++;
-      }
-    }
+    while (*p == '/') p++;
+    nextp = strchr (p, '/');
+    *nextcomp =
+    entry = malloc (sizeof (devsdk_strings));
+    entry->str = nextp ? strndup (p, nextp - p) : strdup (p);
+    entry->next = NULL;
+    *nextcomp = entry;
+    nextcomp = &(entry->next);
+    p = nextp;
   }
-  *rpos = '\0';
-  return res;
+  return result;
 }
 
 static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
@@ -89,6 +90,32 @@ static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, con
   *list = devsdk_nvpairs_new (key, value ? value : "", *list);
 
   return MHD_YES;
+}
+
+static bool match_url_pattern (const devsdk_strings *pattern, const devsdk_strings *url, devsdk_nvpairs **params)
+{
+  bool result = true;
+  while (result && pattern && url)
+  {
+    if (strcmp (pattern->str, url->str))
+    {
+      size_t plen = strlen (pattern->str);
+      if (plen >= 3 && *pattern->str == '{' && *(pattern->str + plen - 1) == '}')
+      {
+        char *name = alloca (plen - 1);
+        strncpy (name, pattern->str + 1, plen - 2);
+        name[plen - 2] = '\0';
+        *params = devsdk_nvpairs_new (name, url->str, *params);
+      }
+      else
+      {
+        result = false;
+      }
+    }
+    pattern = pattern->next;
+    url = url->next;
+  }
+  return result && !(pattern || url);
 }
 
 static int http_handler
@@ -141,25 +168,31 @@ static int http_handler
   edgex_device_alloc_crlid
     (MHD_lookup_connection_value (conn, MHD_HEADER_KIND, EDGEX_CRLID_HDR));
 
-  edgex_http_method method = method_from_string (methodname);
+  devsdk_http_method method = method_from_string (methodname);
 
   if (strlen (url) == 0 || strcmp (url, "/") == 0)
   {
-    if (method == GET)
+    if (method == DevSDK_Get)
     {
       /* List available handlers */
       reply_size = 0;
       pthread_mutex_lock (&svr->lock);
       for (h = svr->handlers; h; h = h->next)
       {
-        reply_size += strlen (h->url) + 1;
+        for (devsdk_strings *s = h->url; s; s = s->next)
+        {
+          reply_size += strlen (s->str) + 1;
+        }
       }
       char *buff = malloc (reply_size + 1);
       buff[0] = '\0';
       for (h = svr->handlers; h; h = h->next)
       {
-        strcat (buff, h->url);
-        strcat (buff, "\n");
+        for (devsdk_strings *s = h->url; s; s = s->next)
+        {
+          strcat (buff, s->str);
+          strcat (buff, s->next ? "/" : "\n");
+        }
       }
       reply = buff;
       pthread_mutex_unlock (&svr->lock);
@@ -171,17 +204,13 @@ static int http_handler
   }
   else
   {
+    devsdk_nvpairs *params = NULL;
+    devsdk_strings *elems = processUrl (url);
     status = MHD_HTTP_NOT_FOUND;
-    char *nurl = normalizeUrl (url);
     pthread_mutex_lock (&svr->lock);
     for (h = svr->handlers; h; h = h->next)
     {
-      if
-      (
-        (h->url[strlen (h->url) - 1] == '/') ?
-        (strncmp (nurl, h->url, strlen (h->url)) == 0) :
-        (strcmp (nurl, h->url) == 0)
-      )
+      if (match_url_pattern (h->url, elems, &params))
       {
         break;
       }
@@ -191,18 +220,27 @@ static int http_handler
     {
       if (method & h->methods)
       {
-        devsdk_nvpairs *qparams = NULL;
-        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, &qparams);
-        status = h->handler
-          (h->ctx, nurl + strlen (h->url), qparams, method, ctx->m_data, ctx->m_size, &reply, &reply_size, &reply_type);
-        devsdk_nvpairs_free (qparams);
+        devsdk_http_request req;
+        devsdk_http_reply rep;
+        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, &params);
+        req.params = params;
+        req.method = method;
+        req.data.bytes = ctx->m_data;
+        req.data.size = ctx->m_size;
+        memset (&rep, 0, sizeof (devsdk_http_reply));
+        h->handler (h->ctx, &req, &rep);
+        status = rep.code;
+        reply = rep.data.bytes;
+        reply_size = rep.data.size;
+        reply_type = rep.content_type;
       }
       else
       {
         status = MHD_HTTP_METHOD_NOT_ALLOWED;
       }
     }
-    free (nurl);
+    devsdk_nvpairs_free (params);
+    devsdk_strings_free (elems);
   }
 
   /* Send reply */
@@ -259,50 +297,29 @@ edgex_rest_server *edgex_rest_server_create
   }
 }
 
-static bool urlClash (const char *u1, const char *u2)
-{
-  unsigned i;
-  for (i = 0; u1[i] && u2[i]; i++)
-  {
-    if (u1[i] != u2[i])
-    {
-      return false;
-    }
-  }
-  return (u1[i] == '/') || (u2[i] == '/');
-}
-
 bool edgex_rest_server_register_handler
 (
   edgex_rest_server *svr,
   const char *url,
   uint32_t methods,
   void *context,
-  edgex_http_handler_fn handler
+  devsdk_http_handler_fn handler
 )
 {
   bool result = true;
   handler_list *entry = malloc (sizeof (handler_list));
   entry->handler = handler;
-  entry->url = url;
+  entry->url = processUrl (url);
   entry->methods = methods;
   entry->ctx = context;
+  entry->next = NULL;
   pthread_mutex_lock (&svr->lock);
-  for (handler_list *match = svr->handlers; match; match = match->next)
+  handler_list **tail = &svr->handlers;
+  while (*tail)
   {
-    if (urlClash (match->url, url))
-    {
-      result = false;
-      iot_log_error (svr->lc, "Register handler: \"%s\" conflicts with \"%s\", skipping", url, match->url);
-      free (entry);
-      break;
-    }
+    tail = &((*tail)->next);
   }
-  if (result)
-  {
-    entry->next = svr->handlers;
-    svr->handlers = entry;
-  }
+  *tail = entry;
   pthread_mutex_unlock (&svr->lock);
   return result;
 }
@@ -317,6 +334,7 @@ void edgex_rest_server_destroy (edgex_rest_server *svr)
   while (svr->handlers)
   {
     tmp = svr->handlers->next;
+    devsdk_strings_free (svr->handlers->url);
     free (svr->handlers);
     svr->handlers = tmp;
   }

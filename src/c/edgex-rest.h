@@ -12,6 +12,8 @@
 #include "edgex/edgex.h"
 #include "edgex/edgex-logging.h"
 #include "data.h"
+#include "edgex2.h"
+#include "rest-server.h"
 
 devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs);
 void devsdk_strings_free (devsdk_strings *strs);
@@ -50,6 +52,15 @@ edgex_watcher *edgex_watcher_read (const char *json);
 edgex_watcher *edgex_watchers_read (const char *json);
 edgex_watcher *edgex_watcher_dup (const edgex_watcher *e);
 void edgex_watcher_free (edgex_watcher *e);
+
+// V2 DTOs
+
+edgex_baserequest *edgex_baserequest_read (devsdk_http_data d);
+void edgex_baserequest_free (edgex_baserequest *e);
+
+void edgex_baseresponse_populate (edgex_baseresponse *e, const char *reqId, int code, const char *msg);
+void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *reply);
+
 
 #ifdef EDGEX_DEBUG_DUMP
 void edgex_deviceprofile_dump (edgex_deviceprofile * e);

@@ -55,54 +55,45 @@ void *edgex_device_periodic_discovery (void *s)
   return NULL;
 }
 
-int edgex_device_handler_discovery
-(
-  void *ctx,
-  char *url,
-  const devsdk_nvpairs *qparams,
-  edgex_http_method method,
-  const char *upload_data,
-  size_t upload_data_size,
-  void **reply,
-  size_t *reply_size,
-  const char **reply_type
-)
+void edgex_device_handler_discovery (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  int retcode;
+  char *ret;
 
   if (svc->userfns.discover == NULL)
   {
-    *reply = strdup ("Dynamic discovery is not implemented in this device service\n");
-    retcode = MHD_HTTP_NOT_IMPLEMENTED;
+    ret = strdup ("Dynamic discovery is not implemented in this device service\n");
+    reply->code = MHD_HTTP_NOT_IMPLEMENTED;
   }
   else if (svc->adminstate == LOCKED)
   {
-    *reply = strdup ("Device service is administratively locked\n");
-    retcode = MHD_HTTP_LOCKED;
+    ret = strdup ("Device service is administratively locked\n");
+    reply->code = MHD_HTTP_LOCKED;
   }
   else if (svc->opstate == DISABLED)
   {
-    *reply = strdup ("Device service is disabled\n");
-    retcode = MHD_HTTP_LOCKED;
+    ret = strdup ("Device service is disabled\n");
+    reply->code = MHD_HTTP_LOCKED;
   }
   else if (!svc->config.device.discovery_enabled)
   {
-    *reply = strdup ("Discovery disabled by configuration\n");
-    retcode = MHD_HTTP_SERVICE_UNAVAILABLE;
+    ret = strdup ("Discovery disabled by configuration\n");
+    reply->code = MHD_HTTP_SERVICE_UNAVAILABLE;
   }
   else if (pthread_mutex_trylock (&svc->discolock) == 0)
   {
     iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc, -1);
     pthread_mutex_unlock (&svc->discolock);
-    *reply = strdup ("Running discovery\n");
-    retcode = MHD_HTTP_ACCEPTED;
+    ret = strdup ("Running discovery\n");
+    reply->code = MHD_HTTP_ACCEPTED;
   }
   else
   {
-    *reply = strdup ("Discovery already running; ignoring new request\n");
-    retcode = MHD_HTTP_ACCEPTED;
+    ret = strdup ("Discovery already running; ignoring new request\n");
+    reply->code = MHD_HTTP_ACCEPTED;
   }
-  *reply_size = strlen (*reply);
-  return retcode;
+
+  reply->data.bytes = ret;
+  reply->data.size = strlen (ret);
+  reply->content_type = CONTENT_PLAINTEXT;
 }
