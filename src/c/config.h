@@ -109,4 +109,6 @@ void edgex_device_process_configured_devices (devsdk_service_t *svc, toml_array_
 
 void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
+void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
+
 #endif

@@ -670,10 +670,8 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   edgex_map_deinit (&svc->config.watchers);
 }
 
-void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+static char *edgex_device_serialize_config (devsdk_service_t *svc)
 {
-  devsdk_service_t *svc = (devsdk_service_t *)ctx;
-
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
 
@@ -770,13 +768,32 @@ void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, dev
     json_object_set_value (obj, "Driver", dval);
   }
 
-  char *json = json_serialize_to_string (val);
+  char *result = json_serialize_to_string (val);
   json_value_free (val);
+  return result;
+}
 
+void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  char *json = edgex_device_serialize_config ((devsdk_service_t *)ctx);
   reply->data.bytes = json;
   reply->data.size = strlen (json);
   reply->content_type = CONTENT_JSON;
   reply->code = MHD_HTTP_OK;
+}
+
+void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  edgex_baserequest *br;
+  edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));
+
+  br = edgex_baserequest_read (req->data);
+  edgex_baseresponse_populate ((edgex_baseresponse *)cr, br->requestId, MHD_HTTP_OK, NULL);
+  cr->config = edgex_device_serialize_config ((devsdk_service_t *)ctx);
+
+  edgex_configresponse_write (cr, reply);
+  edgex_configresponse_free (cr);
+  edgex_baserequest_free (br);
 }
 
 void edgex_device_process_configured_devices

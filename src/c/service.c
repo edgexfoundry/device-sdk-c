@@ -41,6 +41,7 @@
 #define EDGEX_DEV_API_METRICS "/api/v1/metrics"
 
 #define EDGEX_DEV_API2_PING "/api/v2/ping"
+#define EDGEX_DEV_API2_CONFIG "/api/v2/config"
 
 #define POOL_THREADS 8
 
@@ -573,6 +574,8 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   (
     svc->daemon, EDGEX_DEV_API_CONFIG, DevSDK_Get, svc, edgex_device_handler_config
   );
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 
   edgex_rest_server_register_handler
     (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);

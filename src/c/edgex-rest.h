@@ -60,6 +60,8 @@ void edgex_baserequest_free (edgex_baserequest *e);
 
 void edgex_baseresponse_populate (edgex_baseresponse *e, const char *reqId, int code, const char *msg);
 void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *reply);
+void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_reply *reply);
+void edgex_configresponse_free (edgex_configresponse *cr);
 
 
 #ifdef EDGEX_DEBUG_DUMP
