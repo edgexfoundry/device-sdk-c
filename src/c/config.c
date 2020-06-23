@@ -861,7 +861,7 @@ void edgex_device_process_configured_devices
             while ((aetable = toml_table_at (arr, i++)))
             {
               edgex_device_autoevents *newauto =
-                calloc (sizeof (edgex_device_autoevents), 1);
+                calloc (1, sizeof (edgex_device_autoevents));
               toml_rtos2
                 (toml_raw_in (aetable, "Resource"), &newauto->resource);
               toml_rtos2

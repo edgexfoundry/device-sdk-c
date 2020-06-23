@@ -68,10 +68,8 @@ static devsdk_strings *processUrl (const char *url)
   {
     while (*p == '/') p++;
     nextp = strchr (p, '/');
-    *nextcomp =
-    entry = malloc (sizeof (devsdk_strings));
+    entry = calloc (1, sizeof (devsdk_strings));
     entry->str = nextp ? strndup (p, nextp - p) : strdup (p);
-    entry->next = NULL;
     *nextcomp = entry;
     nextcomp = &(entry->next);
     p = nextp;
