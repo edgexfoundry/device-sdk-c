@@ -25,6 +25,8 @@ typedef struct
   const char *message;
 } edgex_baseresponse;
 
+typedef edgex_baseresponse edgex_errorresponse;
+
 typedef struct
 {
   edgex_baseresponse base;

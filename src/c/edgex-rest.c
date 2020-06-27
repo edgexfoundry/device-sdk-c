@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -1879,6 +1879,37 @@ static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
     json_object_set_string (obj, "message", br->message);
   }
   return result;
+}
+
+void edgex_baseresponse_write (const edgex_baseresponse *br, devsdk_http_reply *reply)
+{
+  JSON_Value *val = baseresponse_write (br);
+  value_write (val, reply);
+}
+
+edgex_errorresponse *edgex_errorresponse_create (uint64_t code, char *msg)
+{
+  edgex_errorresponse *res = malloc (sizeof (edgex_errorresponse));
+  res->statusCode = code;
+  res->message = msg;
+  res->requestId = "";
+  return res;
+}
+
+void edgex_errorresponse_write (const edgex_errorresponse *er, devsdk_http_reply *reply)
+{
+  JSON_Value *val = baseresponse_write (er);
+  value_write (val, reply);
+  reply->code = er->statusCode;
+}
+
+void edgex_errorresponse_free (edgex_errorresponse *e)
+{
+  if (e)
+  {
+    free ((char *)e->message);
+    free (e);
+  }
 }
 
 static JSON_Value *pingresponse_write (const edgex_pingresponse *pr)

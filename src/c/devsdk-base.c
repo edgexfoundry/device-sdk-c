@@ -34,6 +34,12 @@ const char *devsdk_nvpairs_value (const devsdk_nvpairs *nvp, const char *name)
   return NULL;
 }
 
+const char *devsdk_nvpairs_value_dfl (const devsdk_nvpairs *nvp, const char *name, const char *dfl)
+{
+  const char *res = devsdk_nvpairs_value (nvp, name);
+  return res ? res : dfl;
+}
+
 bool devsdk_nvpairs_long_value (const devsdk_nvpairs *nvp, const char *name, long *val)
 {
   bool result = false;

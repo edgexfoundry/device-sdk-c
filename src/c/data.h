@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -12,6 +12,7 @@
 #include "devsdk/devsdk.h"
 #include "parson.h"
 #include "cmdinfo.h"
+#include "rest-server.h"
 
 typedef struct edgex_reading
 {
@@ -77,6 +78,7 @@ typedef struct
 typedef struct edgex_service_endpoints edgex_service_endpoints;
 
 void edgex_event_cooked_add_ref (edgex_event_cooked *e);
+void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *rep);
 void edgex_event_cooked_free (edgex_event_cooked *e);
 
 edgex_event_cooked *edgex_data_process_event

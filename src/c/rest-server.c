@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@
  */
 
 #include "rest-server.h"
+#include "api.h"
 #include "edgex-rest.h"
 #include "microhttpd.h"
 #include "correlation.h"
@@ -17,7 +18,6 @@
 #include <pthread.h>
 
 #define STR_BLK_SIZE 512
-#define EDGEX_DS_PREFIX "ds-"
 
 typedef struct handler_list
 {
@@ -41,6 +41,8 @@ typedef struct http_context_s
   char *m_data;
   size_t m_size;
 } http_context_t;
+
+static const char *ds_paramlist[] = DS_PARAMLIST;
 
 static devsdk_http_method method_from_string (const char *str)
 {
@@ -79,9 +81,20 @@ static devsdk_strings *processUrl (const char *url)
 
 static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
 {
-  if (strncmp (key, EDGEX_DS_PREFIX, strlen (EDGEX_DS_PREFIX)) == 0)
+  if (strncmp (key, DS_PREFIX, strlen (DS_PREFIX)) == 0)
   {
-    return MHD_YES;
+    unsigned i;
+    for (i = 0; i < sizeof (ds_paramlist) / sizeof (*ds_paramlist); i++)
+    {
+      if (strcmp (key, ds_paramlist[i]) == 0)
+      {
+        break;
+      }
+    }
+    if (i == sizeof (ds_paramlist) / sizeof (*ds_paramlist))
+    {
+      return MHD_YES;
+    }
   }
 
   devsdk_nvpairs **list = (devsdk_nvpairs **)p;

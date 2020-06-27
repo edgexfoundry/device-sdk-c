@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@
  */
 
 #include "device.h"
+#include "api.h"
 #include "service.h"
 #include "errorlist.h"
 #include "parson.h"
@@ -36,6 +37,8 @@
  * parameters, perform the conversions between strings and values, and call
  * the device implementation.
  */
+
+#define DEVICE_ERRBUFSZ 1024
 
 static const char *methStr (devsdk_http_method method)
 {
@@ -942,4 +945,268 @@ void edgex_device_handler_device (void *ctx, const devsdk_http_request *req, dev
   const char *id = devsdk_nvpairs_value (req->params, "id");
   reply->code = oneCommand
     (svc, id, false, cmd, req->method, req->params, req->data.bytes, req->data.size, &reply->data.bytes, &reply->data.size, &reply->content_type);
+}
+
+static void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, int code, char *msg, ...)
+{
+  char *buf = malloc (DEVICE_ERRBUFSZ);
+  va_list args;
+  va_start (args, msg);
+  vsnprintf (buf, DEVICE_ERRBUFSZ, msg, args);
+  va_end (args);
+
+  iot_log_error (lc, buf);
+  edgex_errorresponse *err = edgex_errorresponse_create (code, buf);
+  edgex_errorresponse_write (err, reply);
+  edgex_errorresponse_free (err);
+}
+
+static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const JSON_Object *jobj, devsdk_http_reply *reply)
+{
+  reply->code = MHD_HTTP_OK;
+  iot_data_t **results = calloc (cmdinfo->nreqs, sizeof (iot_data_t *));
+  for (int i = 0; i < cmdinfo->nreqs; i++)
+  {
+    const char *resname = cmdinfo->reqs[i].resname;
+    if (!cmdinfo->pvals[i]->writable)
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_METHOD_NOT_ALLOWED, "Attempt to write unwritable value %s", resname);
+      break;
+    }
+
+    const char *value = json_object_get_string (jobj, resname);
+    if (value == NULL && cmdinfo->dfls[i] == NULL)
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "No value supplied for %s", resname);
+      break;
+    }
+
+    results[i] = populateValue (cmdinfo->pvals[i]->type, value ? value : cmdinfo->dfls[i]);
+    if (!results[i])
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Unable to parse \"%s\" for %s", value ? value : cmdinfo->dfls[i], resname);
+      break;
+    }
+
+    if (svc->config.device.datatransform && value)
+    {
+      edgex_transform_incoming (&results[i], cmdinfo->pvals[i], cmdinfo->maps[i]);
+      if (!results[i])
+      {
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s overflows after transformations", value, resname);
+        break;
+      }
+    }
+  }
+
+  if (reply->code == MHD_HTTP_OK)
+  {
+    iot_data_t *e = NULL;
+    if (svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, (const iot_data_t **)results, &e))
+    {
+      edgex_baseresponse br;
+      edgex_baseresponse_populate (&br, "", MHD_HTTP_OK, "Data written successfully");
+      edgex_baseresponse_write (&br, reply);
+      if (svc->config.device.updatelastconnected)
+      {
+        devsdk_error err;
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+      }
+    }
+    else
+    {
+      edgex_error_response
+        (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on PUT: %s", dev->name, e ? iot_data_to_json (e) : "(unknown)");
+    }
+    iot_data_free (e);
+  }
+
+  for (int i = 0; i < cmdinfo->nreqs; i++)
+  {
+    iot_data_free (results[i]);
+  }
+  free (results);
+}
+
+static edgex_event_cooked *edgex_device_runget2
+  (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const devsdk_nvpairs *params, devsdk_http_reply *reply)
+{
+  for (int i = 0; i < cmdinfo->nreqs; i++)
+  {
+    if (!cmdinfo->pvals[i]->readable)
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_METHOD_NOT_ALLOWED, "Attempt to read unreadable value %s", cmdinfo->reqs[i].resname);
+      return NULL;
+    }
+  }
+
+  edgex_event_cooked *result = NULL;
+  iot_data_t *e = NULL;
+  devsdk_commandresult *results = calloc (cmdinfo->nreqs, sizeof (devsdk_commandresult));
+
+  if (svc->userfns.gethandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
+  {
+    devsdk_error err = EDGEX_OK;
+    result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+
+    if (result)
+    {
+      if (svc->config.device.updatelastconnected)
+      {
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+      }
+    }
+    else
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Assertion failed for device %s. Disabling.", dev->name);
+      edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
+    }
+  }
+  else
+  {
+    edgex_error_response
+      (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on GET: ", dev->name, e ? iot_data_to_json (e) : "(unknown)");
+  }
+
+  iot_data_free (e);
+  devsdk_commandresult_free (results, cmdinfo->nreqs);
+
+  return result;
+}
+
+static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  const char *cmdname = devsdk_nvpairs_value (req->params, "cmd");
+  const edgex_cmdinfo *cmd = edgex_deviceprofile_findcommand (cmdname, dev->profile, req->method == DevSDK_Get);
+  reply->code = MHD_HTTP_OK;
+
+  if (!cmd)
+  {
+    if (edgex_deviceprofile_findcommand (cmdname, dev->profile, req->method != DevSDK_Get))
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_METHOD_NOT_ALLOWED, "Wrong method for command %s (operation is %s-only)", cmdname, req->method == DevSDK_Get ? "write" : "read");
+    }
+    else
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "No command %s for device %s", cmdname, dev->name);
+    }
+  }
+  else if (dev->adminState == LOCKED)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device %s is locked", dev->name);
+  }
+  else if (dev->operatingState == DISABLED)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device %s is disabled", dev->name);
+  }
+  else if (cmd->nreqs > svc->config.device.maxcmdops)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "MaxCmdOps (%d) exceeded (%d) for command %s", svc->config.device.maxcmdops, cmd->nreqs, cmdname);
+  }
+
+  if (reply->code == MHD_HTTP_OK)
+  {
+    edgex_event_cooked *event = NULL;
+    if (req->method == DevSDK_Get)
+    {
+      event = edgex_device_runget2 (svc, dev, cmd, req->params, reply);
+      edgex_device_release (dev);
+      if (event)
+      {
+        edgex_baseresponse br;
+        bool postv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_POST, "no"), "yes") == 0;
+        bool retv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_RETURN, "yes"), "no") != 0;
+
+        if (postv)
+        {
+          if (retv)
+          {
+            edgex_event_cooked_add_ref (event);
+            edgex_data_client_add_event_now (svc, event);
+            edgex_event_cooked_write (event, reply);
+          }
+          else
+          {
+            edgex_data_client_add_event (svc, event);
+            edgex_baseresponse_populate (&br, "", MHD_HTTP_OK, "Event generated successfully");
+            edgex_baseresponse_write (&br, reply);
+          }
+        }
+        else
+        {
+          if (retv)
+          {
+            edgex_event_cooked_write (event, reply);
+          }
+          else
+          {
+            edgex_event_cooked_free (event);
+            edgex_baseresponse_populate (&br, "", MHD_HTTP_OK, "Reading performed successfully");
+            edgex_baseresponse_write (&br, reply);
+          }
+        }
+      }
+    }
+    else
+    {
+      if (req->data.size)
+      {
+        JSON_Value *jval = json_parse_string (req->data.bytes);
+        if (jval)
+        {
+          edgex_device_runput2 (svc, dev, cmd, json_value_get_object (jval), reply);
+          json_value_free (jval);
+        }
+        else
+        {
+          edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Payload did not parse as JSON");
+        }
+      }
+      else
+      {
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "PUT command recieved with no data");
+      }
+      edgex_device_release (dev);
+    }
+  }
+  else
+  {
+    edgex_device_release (dev);
+  }
+}
+
+void edgex_device_handler_devicev2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  edgex_device *dev;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char *id = devsdk_nvpairs_value (req->params, "id");
+
+  iot_log_debug (svc->logger, "Incoming %s command for device id %s", methStr (req->method), id);
+  dev = edgex_devmap_device_byid (svc->devices, id);
+  if (dev)
+  {
+    edgex_device_v2impl (svc, dev, req, reply);
+  }
+  else
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "No such device id %s", id);
+  }
+}
+
+void edgex_device_handler_device_namev2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  edgex_device *dev;
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char *name = devsdk_nvpairs_value (req->params, "name");
+
+  iot_log_debug (svc->logger, "Incoming %s command for device name %s", methStr (req->method), name);
+  dev = edgex_devmap_device_byname (svc->devices, name);
+  if (dev)
+  {
+    edgex_device_v2impl (svc, dev, req, reply);
+  }
+  else
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "No device named %s", name);
+  }
 }
