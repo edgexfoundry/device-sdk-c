@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -1858,6 +1858,16 @@ void edgex_baseresponse_populate (edgex_baseresponse *e, const char *reqId, int 
   e->message = msg;
 }
 
+static void value_write (JSON_Value *val, devsdk_http_reply *reply)
+{
+  char *result = json_serialize_to_string (val);
+  json_value_free (val);
+  reply->data.bytes = result;
+  reply->data.size = strlen (result);
+  reply->code = MHD_HTTP_OK;
+  reply->content_type = CONTENT_JSON;
+}
+
 static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
 {
   JSON_Value *result = json_value_init_object ();
@@ -1869,6 +1879,37 @@ static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
     json_object_set_string (obj, "message", br->message);
   }
   return result;
+}
+
+void edgex_baseresponse_write (const edgex_baseresponse *br, devsdk_http_reply *reply)
+{
+  JSON_Value *val = baseresponse_write (br);
+  value_write (val, reply);
+}
+
+edgex_errorresponse *edgex_errorresponse_create (uint64_t code, char *msg)
+{
+  edgex_errorresponse *res = malloc (sizeof (edgex_errorresponse));
+  res->statusCode = code;
+  res->message = msg;
+  res->requestId = "";
+  return res;
+}
+
+void edgex_errorresponse_write (const edgex_errorresponse *er, devsdk_http_reply *reply)
+{
+  JSON_Value *val = baseresponse_write (er);
+  value_write (val, reply);
+  reply->code = er->statusCode;
+}
+
+void edgex_errorresponse_free (edgex_errorresponse *e)
+{
+  if (e)
+  {
+    free ((char *)e->message);
+    free (e);
+  }
 }
 
 static JSON_Value *pingresponse_write (const edgex_pingresponse *pr)
@@ -1887,12 +1928,30 @@ static JSON_Value *pingresponse_write (const edgex_pingresponse *pr)
 void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *reply)
 {
   JSON_Value *val = pingresponse_write (pr);
-  char *result = json_serialize_to_string (val);
-  json_value_free (val);
-  reply->data.bytes = result;
-  reply->data.size = strlen (result);
-  reply->code = MHD_HTTP_OK;
-  reply->content_type = CONTENT_JSON;
+  value_write (val, reply);
+}
+
+static JSON_Value *configresponse_write (const edgex_configresponse *cr)
+{
+  JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)cr);
+  JSON_Object *obj = json_value_get_object (result);
+  json_object_set_string (obj, "config", cr->config);
+  return result;
+}
+
+void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_reply *reply)
+{
+  JSON_Value *val = configresponse_write (cr);
+  value_write (val, reply);
+}
+
+void edgex_configresponse_free (edgex_configresponse *cr)
+{
+  if (cr)
+  {
+    free (cr->config);
+    free (cr);
+  }
 }
 
 #ifdef EDGEX_DEBUG_DUMP

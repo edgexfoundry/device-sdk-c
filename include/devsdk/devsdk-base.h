@@ -128,6 +128,16 @@ devsdk_nvpairs *devsdk_nvpairs_new (const char *name, const char *value, devsdk_
 const char *devsdk_nvpairs_value (const devsdk_nvpairs *nvp, const char *name);
 
 /**
+ * @brief Finds a named value in an n-v pair list.
+ * @param nvp A list of name-value pairs.
+ * @param name The named value to search for.
+ * @param dfl The default for this query.
+ * @returns The value corresponding to the given name, or <default> if not found.
+ */
+
+const char *devsdk_nvpairs_value_dfl (const devsdk_nvpairs *nvp, const char *name, const char *dfl);
+
+/**
  * @brief Finds a named long value in an n-v pair list.
  * @param nvp A list of name-value pairs.
  * @param name The named value to search for.

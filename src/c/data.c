@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -16,6 +16,7 @@
 #include "iot/base64.h"
 
 #include <cbor.h>
+#include <microhttpd.h>
 
 typedef struct postparams
 {
@@ -375,6 +376,25 @@ void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked 
 void edgex_event_cooked_add_ref (edgex_event_cooked *e)
 {
   atomic_fetch_add (&e->refs, 1);
+}
+
+void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *reply)
+{
+  switch (e->encoding)
+  {
+    case JSON:
+      reply->data.bytes = e->value.json;
+      reply->data.size = strlen (e->value.json);
+      reply->content_type = CONTENT_JSON;
+      break;
+    case CBOR:
+      reply->data.bytes = e->value.cbor.data;
+      reply->data.size = e->value.cbor.length;
+      reply->content_type = CONTENT_CBOR;
+      break;
+  }
+  reply->code = MHD_HTTP_OK;
+  free (e);
 }
 
 void edgex_event_cooked_free (edgex_event_cooked *e)

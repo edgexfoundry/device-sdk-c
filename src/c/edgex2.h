@@ -11,6 +11,8 @@
 
 #include "edgex/edgex-base.h"
 
+/* Definitions of Data Transfer Objects for v2 REST API */
+
 typedef struct
 {
   char *requestId;
@@ -23,10 +25,18 @@ typedef struct
   const char *message;
 } edgex_baseresponse;
 
+typedef edgex_baseresponse edgex_errorresponse;
+
 typedef struct
 {
   edgex_baseresponse base;
   long timestamp;
 } edgex_pingresponse;
+
+typedef struct
+{
+  edgex_baseresponse base;
+  char *config;
+} edgex_configresponse;
 
 #endif

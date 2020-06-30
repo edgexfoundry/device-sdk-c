@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@
  */
 
 #include "service.h"
+#include "api.h"
 #include "device.h"
 #include "discovery.h"
 #include "callback.h"
@@ -29,18 +30,6 @@
 #include <sys/utsname.h>
 
 #include <microhttpd.h>
-
-#define EDGEX_DEV_API_PING "/api/v1/ping"
-#define EDGEX_DEV_API_VERSION "/api/version"
-#define EDGEX_DEV_API_DISCOVERY "/api/v1/discovery"
-#define EDGEX_DEV_API_DEVICE "/api/v1/device/{id}/{cmd}"
-#define EDGEX_DEV_API_DEVICE_NAME "/api/v1/device/name/{name}/{cmd}"
-#define EDGEX_DEV_API_DEVICE_ALL "/api/v1/device/all/{cmd}"
-#define EDGEX_DEV_API_CALLBACK "/api/v1/callback"
-#define EDGEX_DEV_API_CONFIG "/api/v1/config"
-#define EDGEX_DEV_API_METRICS "/api/v1/metrics"
-
-#define EDGEX_DEV_API2_PING "/api/v2/ping"
 
 #define POOL_THREADS 8
 
@@ -560,6 +549,18 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler
   (
+    svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
+    edgex_device_handler_device_namev2
+  );
+
+  edgex_rest_server_register_handler
+  (
+    svc->daemon, EDGEX_DEV_API2_DEVICE, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
+    edgex_device_handler_devicev2
+  );
+
+  edgex_rest_server_register_handler
+  (
     svc->daemon, EDGEX_DEV_API_DISCOVERY, DevSDK_Post, svc,
     edgex_device_handler_discovery
   );
@@ -573,6 +574,8 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   (
     svc->daemon, EDGEX_DEV_API_CONFIG, DevSDK_Get, svc, edgex_device_handler_config
   );
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 
   edgex_rest_server_register_handler
     (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);

@@ -142,7 +142,7 @@ static iot_data_t *data_from_reading (edgex_propertytype type, edgex_device_resu
 
 static edgex_device_commandrequest *compat_map_requests (uint32_t nreqs, const devsdk_commandrequest *requests, const devsdk_nvpairs *qparams)
 {
-  edgex_device_commandrequest *result = calloc (sizeof (edgex_device_commandrequest), nreqs);
+  edgex_device_commandrequest *result = calloc (nreqs, sizeof (edgex_device_commandrequest));
   char *qstr = NULL;
 
   if (qparams)
@@ -174,7 +174,7 @@ static bool compat_get_handler
   bool result;
   edgex_device_service *v1 = (edgex_device_service *)impl;
 
-  edgex_device_commandresult *ereadings = calloc (sizeof (edgex_device_commandresult), nreadings);
+  edgex_device_commandresult *ereadings = calloc (nreadings, sizeof (edgex_device_commandresult));
   edgex_device_commandrequest *erequests = compat_map_requests (nreadings, requests, qparams);
 
   result = v1->implfns.gethandler (v1->impldata, devname, protocols, nreadings, erequests, ereadings);
@@ -213,7 +213,7 @@ static bool compat_put_handler
 {
   bool result = true;
   edgex_device_service *v1 = (edgex_device_service *)impl;
-  edgex_device_commandresult *evalues = calloc (sizeof (edgex_device_commandresult), nvalues);
+  edgex_device_commandresult *evalues = calloc (nvalues, sizeof (edgex_device_commandresult));
   edgex_device_commandrequest *erequests = compat_map_requests (nvalues, requests, NULL);
 
   for (uint32_t i = 0; result && i < nvalues; i++)
@@ -480,7 +480,7 @@ edgex_device_service *edgex_device_service_new
   }
 
   *err = EX_ERROR(de);
-  edgex_device_service *res = calloc (sizeof (edgex_device_service), 1);
+  edgex_device_service *res = calloc (1, sizeof (edgex_device_service));
   res->name = name;
   res->version = version;
   res->impldata = impldata;
