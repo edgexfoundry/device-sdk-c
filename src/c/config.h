@@ -42,14 +42,9 @@ typedef struct edgex_device_deviceinfo
   bool datatransform;
   bool discovery_enabled;
   uint32_t discovery_interval;
-  char *initcmd;
-  char *initcmdargs;
   uint32_t maxcmdops;
   uint32_t maxcmdresultlen;
-  char *removecmd;
-  char *removecmdargs;
   char *profilesdir;
-  bool sendreadingsonchanged;
   bool updatelastconnected;
   uint32_t eventqlen;
 } edgex_device_deviceinfo;

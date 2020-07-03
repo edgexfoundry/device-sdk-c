@@ -18,14 +18,9 @@
 [Device]
   DataTransform = false
   Discovery = false
-  InitCmd = ''
-  InitCmdArgs = ''
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  RemoveCmd = ''
-  RemoveCmdArgs = ''
   ProfilesDir = ''
-  SendReadingsOnChanged = true
 
 [Logging]
   LogLevel = 'WARNING'

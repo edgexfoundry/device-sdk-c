@@ -572,21 +572,12 @@ void edgex_device_populateConfig
     get_nv_config_bool (config, "Device/DataTransform", true);
   svc->config.device.discovery_enabled = get_nv_config_bool (config, "Device/Discovery/Enabled", true);
   svc->config.device.discovery_interval = get_nv_config_uint32 (svc->logger, config, "Device/Discovery/Interval", err);
-  svc->config.device.initcmd = get_nv_config_string (config, "Device/InitCmd");
-  svc->config.device.initcmdargs =
-    get_nv_config_string (config, "Device/InitCmdArgs");
   svc->config.device.maxcmdops =
     get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdOps", err);
   svc->config.device.maxcmdresultlen =
     get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdResultLen", err);
-  svc->config.device.removecmd =
-    get_nv_config_string (config, "Device/RemoveCmd");
-  svc->config.device.removecmdargs =
-    get_nv_config_string (config, "Device/RemoveCmdArgs");
   svc->config.device.profilesdir =
     get_nv_config_string (config, "Device/ProfilesDir");
-  svc->config.device.sendreadingsonchanged =
-    get_nv_config_bool (config, "Device/SendReadingsOnChanged", false);
   svc->config.device.updatelastconnected =
     get_nv_config_bool (config, "Device/UpdateLastConnected", false);
   svc->config.device.eventqlen =
@@ -631,10 +622,6 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   free (svc->config.service.host);
   free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
-  free (svc->config.device.initcmd);
-  free (svc->config.device.initcmdargs);
-  free (svc->config.device.removecmd);
-  free (svc->config.device.removecmdargs);
   free (svc->config.device.profilesdir);
 
   if (svc->config.service.labels)
@@ -726,17 +713,10 @@ static char *edgex_device_serialize_config (devsdk_service_t *svc)
 
   json_object_set_boolean
     (dobj, "DataTransform", svc->config.device.datatransform);
-  json_object_set_string (dobj, "InitCmd", svc->config.device.initcmd);
-  json_object_set_string (dobj, "InitCmdArgs", svc->config.device.initcmdargs);
   json_object_set_uint (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
   json_object_set_uint
     (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
-  json_object_set_string (dobj, "RemoveCmd", svc->config.device.removecmd);
-  json_object_set_string
-    (dobj, "RemoveCmdArgs", svc->config.device.removecmdargs);
   json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
-  json_object_set_boolean
-    (dobj, "SendReadingsOnChanged", svc->config.device.sendreadingsonchanged);
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);

@@ -17,14 +17,9 @@
 
 [Device]
   DataTransform = true
-  InitCmd = ''
-  InitCmdArgs = ''
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  RemoveCmd = ''
-  RemoveCmdArgs = ''
   ProfilesDir = ''
-  SendReadingsOnChanged = true
   [Device.Discovery]
     Enabled = true
     Interval = 10
