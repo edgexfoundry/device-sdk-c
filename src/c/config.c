@@ -10,6 +10,7 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
+#include "edgex-logging.h"
 #include "devutil.h"
 #include "autoevent.h"
 #include "edgex/devices.h"
@@ -289,7 +290,6 @@ void edgex_device_parseTomlClients
   {
     parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
     parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
-    parseClient (lc, toml_table_in (clients, "Logging"), &endpoints->logging, err);
   }
 }
 
@@ -602,10 +602,6 @@ void edgex_device_populateConfig
     }
   }
 
-  svc->config.logging.useremote =
-    get_nv_config_bool (config, "Logging/EnableRemote", false);
-  svc->config.logging.file = get_nv_config_string (config, "Logging/File");
-
   edgex_device_updateConf (svc, config);
 }
 
@@ -632,8 +628,6 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
 
   free (svc->config.endpoints.data.host);
   free (svc->config.endpoints.metadata.host);
-  free (svc->config.endpoints.logging.host);
-  free (svc->config.logging.file);
   free (svc->config.service.host);
   free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
@@ -690,18 +684,11 @@ static char *edgex_device_serialize_config (devsdk_service_t *svc)
   json_object_set_uint (dobj, "Port", svc->config.endpoints.data.port);
   json_object_set_value (cobj, "Data", dval);
 
-  JSON_Value *lsval = json_value_init_object ();
-  JSON_Object *lsobj = json_value_get_object (lsval);
-  json_object_set_string (lsobj, "Host", svc->config.endpoints.logging.host);
-  json_object_set_uint (lsobj, "Port", svc->config.endpoints.logging.port);
-  json_object_set_value (cobj, "Data", lsval);
-
   json_object_set_value (obj, "Clients", cval);
 
   JSON_Value *lval = json_value_init_object ();
   JSON_Object *lobj = json_value_get_object (lval);
-  json_object_set_string (lobj, "File", svc->config.logging.file);
-  json_object_set_boolean (lobj, "EnableRemote", svc->config.logging.useremote);
+  json_object_set_string (lobj, "LogLevel", edgex_logger_levelname (svc->config.logging.level));
   json_object_set_value (obj, "Logging", lval);
 
   JSON_Value *sval = json_value_init_object ();

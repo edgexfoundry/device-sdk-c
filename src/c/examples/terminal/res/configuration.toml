@@ -15,10 +15,6 @@
     Host = 'localhost'
     Port = 48081
 
-  [Clients.Logging]
-    Host = 'localhost'
-    Port = 48061
-
 [Device]
   DataTransform = false
   Discovery = false
@@ -32,9 +28,7 @@
   SendReadingsOnChanged = true
 
 [Logging]
-  EnableRemote = false
-  File = 'device-terminal.log'
-  LogLevel = 'DEBUG'
+  LogLevel = 'WARNING'
 
 [[DeviceList]]
   Name = 'Terminal'

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -11,18 +11,6 @@
 
 #include "edgex/os.h"
 #include "iot/logger.h"
-
-/* Built-in logger: post to an EdgeX logging service */
-
-extern void edgex_log_torest
-(
-  struct iot_logger_t * logger,
-  iot_loglevel_t l,
-  time_t timestamp,
-  const char *message
-);
-
-/* Built-in logger: write to a file or stdout */
 
 extern void edgex_log_tofile
 (

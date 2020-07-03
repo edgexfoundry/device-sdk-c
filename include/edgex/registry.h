@@ -17,7 +17,6 @@
 
 #include "edgex/edgex-base.h"
 #include "edgex/error.h"
-#include "edgex/edgex-logging.h"
 #include "iot/threadpool.h"
 
 /* Callback for dynamic configuration */

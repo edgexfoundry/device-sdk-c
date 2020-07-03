@@ -15,10 +15,6 @@
     Host = 'localhost'
     Port = 48081
 
-  [Clients.Logging]
-    Host = 'localhost'
-    Port = 48061
-
 [Device]
   DataTransform = true
   InitCmd = ''
@@ -34,8 +30,6 @@
     Interval = 10
 
 [Logging]
-  EnableRemote = false
-  File = '-'
   LogLevel = 'DEBUG'
 
 [Driver]

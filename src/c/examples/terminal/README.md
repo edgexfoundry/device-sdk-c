@@ -43,7 +43,7 @@ An EdgeX system containing at least a database and the core-data and core-metada
 ./device-terminal -c res
 ```
 
-Note that for this example the service log is written to a file (`device-terminal.log`). To display a message on the terminal,
+Note that for this example the logging level is set to WARNING to keep the display clear in normal operation. To display a message on the terminal,
 
 ```
 curl -X PUT -d '{"Message":"Hello World", "Xposition":"35", "Yposition":"12"}' 0:49999/api/v1/device/name/Terminal/WriteMsg

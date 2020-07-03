@@ -10,7 +10,6 @@
 #define _EDGEX_REST_H_ 1
 
 #include "edgex/edgex.h"
-#include "edgex/edgex-logging.h"
 #include "data.h"
 #include "edgex2.h"
 #include "rest-server.h"

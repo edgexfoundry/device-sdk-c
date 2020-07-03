@@ -9,7 +9,6 @@
 #include "autoevent.h"
 #include "errorlist.h"
 #include "edgex/edgex.h"
-#include "edgex/edgex-logging.h"
 #include "device.h"
 #include "parson.h"
 #include "edgex-rest.h"
