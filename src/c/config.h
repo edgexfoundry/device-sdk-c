@@ -35,7 +35,6 @@ typedef struct edgex_service_endpoints
 {
   edgex_device_service_endpoint data;
   edgex_device_service_endpoint metadata;
-  edgex_device_service_endpoint logging;
 } edgex_service_endpoints;
 
 typedef struct edgex_device_deviceinfo
@@ -43,22 +42,15 @@ typedef struct edgex_device_deviceinfo
   bool datatransform;
   bool discovery_enabled;
   uint32_t discovery_interval;
-  char *initcmd;
-  char *initcmdargs;
   uint32_t maxcmdops;
   uint32_t maxcmdresultlen;
-  char *removecmd;
-  char *removecmdargs;
   char *profilesdir;
-  bool sendreadingsonchanged;
   bool updatelastconnected;
   uint32_t eventqlen;
 } edgex_device_deviceinfo;
 
 typedef struct edgex_device_logginginfo
 {
-  char *file;
-  bool useremote;
   iot_loglevel_t level;
 } edgex_device_logginginfo;
 

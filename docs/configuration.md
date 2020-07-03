@@ -47,13 +47,6 @@ Option | Type | Notes
 Host | String | Hostname on which to contact the core-metadata service.
 Port | Int | Port on which to contact the core-metadata service.
 
-### Logging
-
-Option | Type | Notes
-:--- | :--- | :---
-Host | String | Hostname on which to contact the support-logging service.
-Port | Int | Port on which to contact the support-logging service.
-
 ## Device section
 
 Option | Type | Notes
@@ -61,14 +54,9 @@ Option | Type | Notes
 DataTransform | Bool | For enabling/disabling transformations on data between the device and EdgeX. Defaults to true (enabled).
 Discovery/Enabled | Bool | For enabling/disabling device discovery. Defaults to true (enabled).
 Discovery/Interval | Int | Time between automatic discovery runs, in seconds. Defaults to zero (do not run discovery automatically).
-InitCmd | String | Not implemented. Specifies a resource command to be automatically generated when a device is added to the service.
-InitCmdArgs | String | Not implemented. Specifies arguments to be included with InitCmd.
 MaxCmdOps | Int | Defines the maximum number of resource operations that can be sent to the driver in a single command.
 MaxCmdResultLen | Int | Not implemented. Maximum string length for command results returned from the driver.
-RemoveCmd | String | Not implemented. Specifies a resource command to be automatically generated when a device is removed from the service.
-RemoveCmdArgs | String | Not implemented. Specifies arguments to be included with RemoveCmd.
 ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
-SendReadingsOnChanged | Bool | Not implemented. To be used to suppress the submission of readings to core-data if the value has not changed.
 UpdateLastConnected | Bool | If true, update the LastConnected attribute of a device whenever it is successfully accessed. Defaults to false.
 EventQLength | Int | Sets the maximum number of events to be queued for transmission to core-data before blocking. Zero (default) results in no limit.
 
@@ -76,8 +64,6 @@ EventQLength | Int | Sets the maximum number of events to be queued for transmis
 
 Option | Type | Notes
 :--- | :--- | :---
-EnableRemote | Boolean | If this option is set, logs will be submitted to the EdgeX logging service.
-File | String | If this option is set, logs will be written to the named file. Setting a value of "-" causes logs to be written to standard output.
 LogLevel | String | Sets the logging level. Available settings in order of increasing severity are: TRACE, DEBUG, INFO, WARNING, ERROR.
 
 ## Driver section

@@ -8,6 +8,7 @@
 
 #include "service.h"
 #include "api.h"
+#include "edgex-logging.h"
 #include "device.h"
 #include "discovery.h"
 #include "callback.h"
@@ -789,55 +790,15 @@ void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err)
     }
   }
 
-  if (svc->config.logging.file)
-  {
-    free (svc->logger->to);
-    svc->logger->to = strdup (svc->config.logging.file);
-  }
-
   if (svc->registry)
   {
     devsdk_error e;
     devsdk_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
     devsdk_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
-    if (svc->config.logging.useremote)
-    {
-      devsdk_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
-    }
   }
   else
   {
     edgex_device_parseTomlClients (svc->logger, toml_table_in (config, "Clients"), &svc->config.endpoints, err);
-  }
-
-  if (svc->config.logging.useremote)
-  {
-    if (ping_client (svc->logger, "support-logging", &svc->config.endpoints.logging, svc->config.service.connectretries, svc->config.service.timeout, err))
-    {
-      char url[URL_BUF_SIZE];
-      snprintf
-      (
-        url, URL_BUF_SIZE - 1,
-        "http://%s:%u/api/v1/logs",
-        svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
-      );
-      if (svc->config.logging.file)
-      {
-        svc->logger->next = iot_logger_alloc_custom (svc->name, svc->config.logging.level, url, edgex_log_torest, NULL, true);
-      }
-      else
-      {
-        svc->logger->impl = edgex_log_torest;
-        free (svc->logger->to);
-        svc->logger->to = strdup (url);
-      }
-    }
-    else
-    {
-      devsdk_nvpairs_free (confpairs);
-      toml_free (config);
-      return;
-    }
   }
 
   if (svc->config.device.profilesdir == NULL)

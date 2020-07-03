@@ -10,6 +10,7 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
+#include "edgex-logging.h"
 #include "devutil.h"
 #include "autoevent.h"
 #include "edgex/devices.h"
@@ -289,7 +290,6 @@ void edgex_device_parseTomlClients
   {
     parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
     parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
-    parseClient (lc, toml_table_in (clients, "Logging"), &endpoints->logging, err);
   }
 }
 
@@ -572,21 +572,12 @@ void edgex_device_populateConfig
     get_nv_config_bool (config, "Device/DataTransform", true);
   svc->config.device.discovery_enabled = get_nv_config_bool (config, "Device/Discovery/Enabled", true);
   svc->config.device.discovery_interval = get_nv_config_uint32 (svc->logger, config, "Device/Discovery/Interval", err);
-  svc->config.device.initcmd = get_nv_config_string (config, "Device/InitCmd");
-  svc->config.device.initcmdargs =
-    get_nv_config_string (config, "Device/InitCmdArgs");
   svc->config.device.maxcmdops =
     get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdOps", err);
   svc->config.device.maxcmdresultlen =
     get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdResultLen", err);
-  svc->config.device.removecmd =
-    get_nv_config_string (config, "Device/RemoveCmd");
-  svc->config.device.removecmdargs =
-    get_nv_config_string (config, "Device/RemoveCmdArgs");
   svc->config.device.profilesdir =
     get_nv_config_string (config, "Device/ProfilesDir");
-  svc->config.device.sendreadingsonchanged =
-    get_nv_config_bool (config, "Device/SendReadingsOnChanged", false);
   svc->config.device.updatelastconnected =
     get_nv_config_bool (config, "Device/UpdateLastConnected", false);
   svc->config.device.eventqlen =
@@ -601,10 +592,6 @@ void edgex_device_populateConfig
         (svc->config.driverconf, iot_data_alloc_string (iter->name + strlen ("Driver/"), IOT_DATA_COPY), iot_data_alloc_string (iter->value, IOT_DATA_COPY));
     }
   }
-
-  svc->config.logging.useremote =
-    get_nv_config_bool (config, "Logging/EnableRemote", false);
-  svc->config.logging.file = get_nv_config_string (config, "Logging/File");
 
   edgex_device_updateConf (svc, config);
 }
@@ -632,15 +619,9 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
 
   free (svc->config.endpoints.data.host);
   free (svc->config.endpoints.metadata.host);
-  free (svc->config.endpoints.logging.host);
-  free (svc->config.logging.file);
   free (svc->config.service.host);
   free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
-  free (svc->config.device.initcmd);
-  free (svc->config.device.initcmdargs);
-  free (svc->config.device.removecmd);
-  free (svc->config.device.removecmdargs);
   free (svc->config.device.profilesdir);
 
   if (svc->config.service.labels)
@@ -690,18 +671,11 @@ static char *edgex_device_serialize_config (devsdk_service_t *svc)
   json_object_set_uint (dobj, "Port", svc->config.endpoints.data.port);
   json_object_set_value (cobj, "Data", dval);
 
-  JSON_Value *lsval = json_value_init_object ();
-  JSON_Object *lsobj = json_value_get_object (lsval);
-  json_object_set_string (lsobj, "Host", svc->config.endpoints.logging.host);
-  json_object_set_uint (lsobj, "Port", svc->config.endpoints.logging.port);
-  json_object_set_value (cobj, "Data", lsval);
-
   json_object_set_value (obj, "Clients", cval);
 
   JSON_Value *lval = json_value_init_object ();
   JSON_Object *lobj = json_value_get_object (lval);
-  json_object_set_string (lobj, "File", svc->config.logging.file);
-  json_object_set_boolean (lobj, "EnableRemote", svc->config.logging.useremote);
+  json_object_set_string (lobj, "LogLevel", edgex_logger_levelname (svc->config.logging.level));
   json_object_set_value (obj, "Logging", lval);
 
   JSON_Value *sval = json_value_init_object ();
@@ -739,17 +713,10 @@ static char *edgex_device_serialize_config (devsdk_service_t *svc)
 
   json_object_set_boolean
     (dobj, "DataTransform", svc->config.device.datatransform);
-  json_object_set_string (dobj, "InitCmd", svc->config.device.initcmd);
-  json_object_set_string (dobj, "InitCmdArgs", svc->config.device.initcmdargs);
   json_object_set_uint (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
   json_object_set_uint
     (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
-  json_object_set_string (dobj, "RemoveCmd", svc->config.device.removecmd);
-  json_object_set_string
-    (dobj, "RemoveCmdArgs", svc->config.device.removecmdargs);
   json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
-  json_object_set_boolean
-    (dobj, "SendReadingsOnChanged", svc->config.device.sendreadingsonchanged);
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);

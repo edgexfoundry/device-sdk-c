@@ -17,7 +17,6 @@
 
 #include "edgex/edgex.h"
 #include "edgex/error.h"
-#include "edgex/edgex-logging.h"
 
 /**
  * @brief Post readings to the core-data service. This method allows readings

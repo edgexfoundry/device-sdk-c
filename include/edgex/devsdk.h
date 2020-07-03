@@ -21,7 +21,7 @@
 
 #include "edgex/edgex-base.h"
 #include "edgex/error.h"
-#include "edgex/edgex-logging.h"
+#include "iot/logger.h"
 
 /**
  * @brief Structure containing startup parameters.

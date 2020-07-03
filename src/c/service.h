@@ -10,7 +10,6 @@
 #define _EDGEX_DEVICE_SERVICE_H_ 1
 
 #include "devsdk/devsdk.h"
-#include "edgex/edgex-logging.h"
 #include "registry.h"
 #include "config.h"
 #include "devmap.h"
