@@ -191,7 +191,8 @@ int main (int argc, char * argv[])
   devsdk_callbacks terminalImpls =
   {
     terminal_init,         /* Initialize */
-    NULL,                 /* Discovery */
+    NULL,                  /* Reconfigure */
+    NULL,                  /* Discovery */
     terminal_get_handler,  /* Get */
     terminal_put_handler,  /* Put */
     terminal_stop          /* Stop */
@@ -217,7 +218,7 @@ int main (int argc, char * argv[])
     }
   }
 
-  devsdk_service_start (service, &e);
+  devsdk_service_start (service, NULL, &e);
   ERR_CHECK (e);
 
   sigemptyset (&set);

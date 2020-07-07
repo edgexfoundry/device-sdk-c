@@ -4,7 +4,7 @@ Certain aspects of a device service's operation are controlled by command-line o
 
 ## Registry
 
-If configuration is to be obtained from the Registry, its location may be specified as a URL. The `scheme` part of the URL indicates the registry implementation to use. Currently the only supported implentation in the SDK is `consul.http`, but other implementations may be added via the APIs presented in `edgex/registry.h`. For Consul, the URL takes the form `consul.http://hostname:port`.
+If configuration is to be obtained from the Registry, its location may be specified as a URL. The `scheme` part of the URL indicates the registry implementation to use. Currently the only supported implentation in the SDK is `consul.http`, where the URL takes the form `consul.http://hostname:port`.
 
 |Long option | Short option|Environment ||
 |-|-|-|-|

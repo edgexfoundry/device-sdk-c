@@ -153,6 +153,7 @@ int main (int argc, char *argv[])
   devsdk_callbacks randomImpls =
   {
     random_init,         /* Initialize */
+    NULL,                /* Reconfigure */
     random_discover,     /* Discovery */
     random_get_handler,  /* Get */
     random_put_handler,  /* Put */
@@ -181,7 +182,7 @@ int main (int argc, char *argv[])
   }
 
   /* Start the device service*/
-  devsdk_service_start (service, &e);
+  devsdk_service_start (service, NULL, &e);
   ERR_CHECK (e);
 
   /* Wait for interrupt */

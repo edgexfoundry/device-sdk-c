@@ -69,9 +69,7 @@ static devsdk_nvpairs *read_pairs
         }
         else
         {
-          iot_log_error (lc, "No Value field in consul response. JSON was %s", json);
-          *err = EDGEX_CONSUL_RESPONSE;
-          break;
+          result = devsdk_nvpairs_new (keyindex, "", result);
         }
       }
       else
@@ -192,7 +190,6 @@ devsdk_nvpairs *edgex_consul_client_get_config
     );
   }
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
-
   if (err->code == 0)
   {
     result = read_pairs (lc, ctx.buff, err);
@@ -217,13 +214,23 @@ devsdk_nvpairs *edgex_consul_client_get_config
   return result;
 }
 
+static char *value_to_b64 (const char *value)
+{
+  char *result;
+  size_t valsz = strlen (value);
+  size_t base64sz = iot_b64_encodesize (valsz);
+  result = malloc (base64sz);
+  iot_b64_encode (value, valsz, result, base64sz);
+  return result;
+}
+
 void edgex_consul_client_write_config
 (
   iot_logger_t *lc,
   void *location,
   const char *servicename,
   const char *profile,
-  const devsdk_nvpairs *config,
+  const iot_data_t *config,
   devsdk_error *err
 )
 {
@@ -241,16 +248,25 @@ void edgex_consul_client_write_config
   JSON_Value *jresult = json_value_init_array ();
   JSON_Array *jarray = json_value_get_array (jresult);
 
-  const devsdk_nvpairs *iter = config;
-  while (iter)
+  iot_data_map_iter_t iter;
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
   {
-    size_t valsz = strlen (iter->value);
-    size_t base64sz = iot_b64_encodesize (valsz);
-    char *base64val = malloc (base64sz);
-    iot_b64_encode (iter->value, valsz, base64val, base64sz);
+    char *base64val;
+    const iot_data_t *val = iot_data_map_iter_value (&iter);
+    if (iot_data_type (val) == IOT_DATA_STRING)
+    {
+      base64val = value_to_b64 (iot_data_string (val));
+    }
+    else
+    {
+      char *json = iot_data_to_json (val);
+      base64val = value_to_b64 (json);
+      free (json);
+    }
 
     size_t keysz =
-      strlen (CONF_PREFIX) + strlen (servicename) + strlen (iter->name) + 2;
+      strlen (CONF_PREFIX) + strlen (servicename) + strlen (iot_data_map_iter_string_key (&iter)) + 2;
     if (profile && *profile)
     {
       keysz += (strlen (profile) + 1);
@@ -259,11 +275,11 @@ void edgex_consul_client_write_config
     if (profile && *profile)
     {
       sprintf
-        (keystr, "%s%s;%s/%s", CONF_PREFIX, servicename, profile, iter->name);
+        (keystr, "%s%s;%s/%s", CONF_PREFIX, servicename, profile, iot_data_map_iter_string_key (&iter));
     }
     else
     {
-      sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, iter->name);
+      sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, iot_data_map_iter_string_key (&iter));
     }
 
     JSON_Value *kvfields = json_value_init_object ();
@@ -278,7 +294,6 @@ void edgex_consul_client_write_config
 
     free (base64val);
     free (keystr);
-    iter = iter->next;
   }
 
   char *json = json_serialize_to_string (jresult);

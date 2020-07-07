@@ -14,15 +14,17 @@
 #include "toml.h"
 #include "map.h"
 
+#include <stdatomic.h>
+
 typedef struct edgex_device_serviceinfo
 {
-  char *host;
+  const char *host;
   uint16_t port;
   uint32_t connectretries;
   char **labels;
-  char *startupmsg;
+  const char *startupmsg;
   struct timespec timeout;
-  char *checkinterval;
+  const char *checkinterval;
 } edgex_device_serviceinfo;
 
 typedef struct edgex_device_service_endpoint
@@ -39,13 +41,13 @@ typedef struct edgex_service_endpoints
 
 typedef struct edgex_device_deviceinfo
 {
-  bool datatransform;
-  bool discovery_enabled;
-  uint32_t discovery_interval;
-  uint32_t maxcmdops;
-  uint32_t maxcmdresultlen;
-  char *profilesdir;
-  bool updatelastconnected;
+  atomic_bool datatransform;
+  atomic_bool discovery_enabled;
+  _Atomic(uint32_t) discovery_interval;
+  _Atomic(uint32_t) maxcmdops;
+  _Atomic(uint32_t) maxcmdresultlen;
+  const char *profilesdir;
+  atomic_bool updatelastconnected;
   uint32_t eventqlen;
 } edgex_device_deviceinfo;
 
@@ -71,6 +73,7 @@ typedef struct edgex_device_config
   edgex_device_deviceinfo device;
   edgex_device_logginginfo logging;
   iot_data_t *driverconf;
+  iot_data_t *sdkconf;
   edgex_map_device_watcherinfo watchers;
 } edgex_device_config;
 
@@ -83,17 +86,25 @@ toml_table_t *edgex_device_loadConfig
   devsdk_error *err
 );
 
-char *edgex_device_getRegURL (toml_table_t *config);
+iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *driverconf);
 
-devsdk_nvpairs *edgex_device_parseToml (toml_table_t *config);
+char *edgex_device_getRegURL (toml_table_t *config);
 
 void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err);
 
-void edgex_device_populateConfig (devsdk_service_t *svc, const devsdk_nvpairs *config, devsdk_error *err);
+void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config);
 
-void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nvpairs *config);
+void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, bool v1compat);
+
+void edgex_device_overrideConfig_env (iot_logger_t *lc, const char *sname, iot_data_t *config);
+
+void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpairs *pairs);
 
 void edgex_device_updateConf (void *svc, const devsdk_nvpairs *config);
+
+void edgex_device_processDriverConfig (iot_data_t *driverconf, const iot_data_t *allconf);
+
+void edgex_device_dumpConfig (iot_logger_t *lc, iot_data_t *config);
 
 void edgex_device_freeConfig (devsdk_service_t *svc);
 

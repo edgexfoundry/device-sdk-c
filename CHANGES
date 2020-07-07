@@ -2,6 +2,9 @@ This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
 Changes for 1.3.0 "Hanoi":
 
+- v2 API update: Callback added to inform the driver of a configuration update.
+- v2 API update: Implementations to supply default values for their configuration.
+  - This allows use of numerics/boolean types as well as Strings.
 - Support for logging to file or the support-logging service is removed.
   - Logs are always written to stdout
 - Event transmission is serialized and operates from a queue with configurable

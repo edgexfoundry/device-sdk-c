@@ -65,6 +65,25 @@ static bool template_init
   return true;
 }
 
+/* --- Reconfigure ---- */
+/* Reconfigure is called if the driver configuration is updated.
+ */
+static void template_reconfigure
+(
+  void *impl,
+  const iot_data_t *config
+)
+{
+  iot_data_map_iter_t iter;
+  template_driver *driver = (template_driver *) impl;
+  iot_log_debug (driver->lc, "Template Reconfiguration. New Config follows:");
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
+  {
+    iot_log_debug (driver->lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+  }
+}
+
 /* ---- Discovery ---- */
 /* Device services which are capable of device discovery should implement it
  * in this callback. It is called in response to a request on the
@@ -218,11 +237,16 @@ int main (int argc, char *argv[])
   devsdk_callbacks templateImpls =
   {
     template_init,         /* Initialize */
+    template_reconfigure,  /* Reconfigure */
     template_discover,     /* Discovery */
     template_get_handler,  /* Get */
     template_put_handler,  /* Put */
     template_stop          /* Stop */
   };
+
+  iot_data_t *confparams = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (confparams, "TestParam1", iot_data_alloc_string ("X", IOT_DATA_REF));
+  iot_data_string_map_add (confparams, "TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
 
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
@@ -249,7 +273,7 @@ int main (int argc, char *argv[])
   impl->svc = service;
 
   /* Start the device service*/
-  devsdk_service_start (service, &e);
+  devsdk_service_start (service, confparams, &e);
   ERR_CHECK (e);
 
   /* Wait for interrupt */
@@ -265,5 +289,6 @@ int main (int argc, char *argv[])
 
   devsdk_service_free (service);
   free (impl);
+  iot_data_free (confparams);
   return 0;
 }

@@ -6,6 +6,9 @@
  *
  */
 
+#define DRV_PREFIX "Driver/"
+#define DRV_PREFIXLEN (sizeof (DRV_PREFIX) - 1)
+
 #include "config.h"
 #include "service.h"
 #include "errorlist.h"
@@ -13,6 +16,7 @@
 #include "edgex-logging.h"
 #include "devutil.h"
 #include "autoevent.h"
+#include "device.h"
 #include "edgex/devices.h"
 
 #include <microhttpd.h>
@@ -20,11 +24,52 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-/* TODO: Use iot_data_t maps as the "native" representation throughout */
+#include <sys/utsname.h>
 
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
+
+iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *driverconf)
+{
+  struct utsname utsbuffer;
+  uname (&utsbuffer);
+
+  iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
+
+  iot_data_string_map_add (result, "Service/Host", iot_data_alloc_string (utsbuffer.nodename, IOT_DATA_COPY));
+  iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (49999));
+  iot_data_string_map_add (result, "Service/Timeout", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Service/ConnectRetries", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
+
+  iot_data_string_map_add (result, "Device/DataTransform", iot_data_alloc_bool (true));
+  iot_data_string_map_add (result, "Device/Discovery/Enabled", iot_data_alloc_bool (true));
+  iot_data_string_map_add (result, "Device/Discovery/Interval", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Device/MaxCmdOps", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Device/MaxCmdResultLen", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string (dflprofiledir, IOT_DATA_COPY));
+  iot_data_string_map_add (result, "Device/UpdateLastConnected", iot_data_alloc_bool (false));
+  iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
+
+  iot_data_string_map_add (result, "Logging/LogLevel", iot_data_alloc_string ("WARNING", IOT_DATA_REF));
+
+  if (driverconf)
+  {
+    iot_data_map_iter_t iter;
+    iot_data_map_iter (driverconf, &iter);
+    while (iot_data_map_iter_next (&iter))
+    {
+      const char *key = iot_data_map_iter_string_key (&iter);
+      char *dkey = malloc (DRV_PREFIXLEN + strlen (key) + 1);
+      strcpy (dkey, DRV_PREFIX);
+      strcat (dkey, key);
+      iot_data_map_add (result, iot_data_alloc_string (dkey, IOT_DATA_TAKE), iot_data_copy (iot_data_map_iter_value (&iter)));
+    }
+  }
+  return result;
+}
 
 toml_table_t *edgex_device_loadConfig
 (
@@ -232,11 +277,6 @@ static devsdk_nvpairs *processTable (toml_table_t *config, devsdk_nvpairs *resul
   return result;
 }
 
-devsdk_nvpairs *edgex_device_parseToml (toml_table_t *config)
-{
-  return processTable (config, NULL, "");
-}
-
 char *edgex_device_getRegURL (toml_table_t *config)
 {
   toml_table_t *table = NULL;
@@ -293,7 +333,7 @@ void edgex_device_parseTomlClients
   }
 }
 
-static bool checkOverride (char *qstr, char **val)
+static char *checkOverride (char *qstr)
 {
   char *env;
   char *slash = qstr;
@@ -303,39 +343,100 @@ static bool checkOverride (char *qstr, char **val)
     *slash = '_';
   }
   env = getenv (qstr);
-  if (env)
+  if (env == NULL)
   {
-    free (*val); 
-    *val = strdup (env);
-    return true;
-  }
-
-  for (char *c = qstr; *c; c++)
-  {
-    if (islower (*c))
+    for (char *c = qstr; *c; c++)
     {
-      *c = toupper (*c);
+      if (islower (*c))
+      {
+        *c = toupper (*c);
+      }
     }
+    env = getenv (qstr);
   }
-  env = getenv (qstr);
-  if (env)
-  {
-    free (*val);
-    *val = strdup (env);
-    return true;
-  }
-
-  return false;
+  return env;
 }
 
-void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nvpairs *config)
+static const char *findEntry (char *key, toml_table_t *table)
+{
+  const char *result = NULL;
+  if (table)
+  {
+    char *slash = strchr (key, '/');
+    if (slash)
+    {
+      *slash = '\0';
+      result = findEntry (slash + 1, toml_table_in (table, key));
+      *slash = '/';
+    }
+    else
+    {
+      result = toml_raw_in (table, key);
+    }
+  }
+  return result;
+}
+
+void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, bool v1compat)
+{
+  char *key;
+  const char *raw;
+  iot_data_map_iter_t iter;
+
+  if (v1compat)
+  {
+    // Add placeholder defaults for [Driver] configuration
+    devsdk_nvpairs *allconf = processTable (toml, NULL, "");
+    for (const devsdk_nvpairs *iter = allconf; iter; iter = iter->next)
+    {
+      if (strncmp (iter->name, DRV_PREFIX, DRV_PREFIXLEN) == 0)
+      {
+        iot_data_map_add (config, iot_data_alloc_string (iter->name, IOT_DATA_COPY), iot_data_alloc_string ("", IOT_DATA_REF));
+      }
+    }
+    devsdk_nvpairs_free (allconf);
+  }
+
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
+  {
+    key = strdup (iot_data_map_iter_string_key (&iter));
+    raw = findEntry (key, toml);
+    if (raw)
+    {
+      iot_data_t *newval;
+      if (iot_data_type (iot_data_map_iter_value (&iter)) == IOT_DATA_STRING)
+      {
+        char *newtxt;
+        toml_rtos (raw, &newtxt);
+        newval = iot_data_alloc_string (newtxt, IOT_DATA_TAKE);
+      }
+      else
+      {
+        newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
+      }
+      if (newval)
+      {
+        iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
+      }
+    }
+    free (key);
+  }
+}
+
+void edgex_device_overrideConfig_env (iot_logger_t *lc, const char *sname, iot_data_t *config)
 {
   char *query = NULL;
   size_t qsize = 0;
+  const char *key;
+  iot_data_map_iter_t iter;
+  size_t extra = strlen (sname) + 2;
 
-  for (devsdk_nvpairs *iter = config; iter; iter = iter->next)
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
   {
-    size_t req = strlen (iter->name) + strlen (sname) + 2;
+    key = iot_data_map_iter_string_key (&iter);
+    size_t req = strlen (key) + extra;
     if (qsize < req)
     {
       query = realloc (query, req);
@@ -343,271 +444,183 @@ void edgex_device_overrideConfig (iot_logger_t *lc, const char *sname, devsdk_nv
     }
     strcpy (query, sname);
     strcat (query, "_");
-    strcat (query, iter->name);
-    if (checkOverride (query, &iter->value))
-    {
-      iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
-    }
-    else
+    strcat (query, key);
+    char *newtxt = checkOverride (query);
+    if (newtxt == NULL)
     {
       for (int i = 0; i < strlen (sname); i++)
       {
         query[i] = (sname[i] == '-') ? '_' : sname[i];
       }
-      if (checkOverride (query, &iter->value))
+      newtxt = checkOverride (query);
+    }
+    if (newtxt == NULL)
+    {
+      strcpy (query, key);
+      newtxt = checkOverride (query);
+    }
+    if (newtxt)
+    {
+      iot_data_t *newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), newtxt);
+      if (newval)
       {
-        iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
-      }
-      else
-      {
-        strcpy (query, iter->name);
-        if (checkOverride (query, &iter->value))
-        {
-          iot_log_info (lc, "Override config %s = %s", iter->name, iter->value);
-        }
+        iot_log_info (lc, "Override config %s = %s", key, newtxt);
+        iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
       }
     }
   }
   free (query);
 }
 
-#if 0
-void edgex_device_process_configured_watchers
-  (devsdk_service_t *svc, toml_array_t *watchers, devsdk_error *err)
+void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpairs *pairs)
 {
   const char *raw;
-  char *namestr;
-  toml_table_t *table;
+  iot_data_map_iter_t iter;
 
-  if (watchers)
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
   {
-    int n = 0;
-    while ((table = toml_table_at (watchers, n++)))
+    raw = devsdk_nvpairs_value (pairs, iot_data_map_iter_string_key (&iter));
+    if (raw)
     {
-      edgex_device_watcherinfo watcher;
-      watcher.profile = NULL;
-      watcher.key = NULL;
-      watcher.matchstring = NULL;
-      namestr = NULL;
-      toml_rtos2 (toml_raw_in (table, "Name"), &namestr);
-      toml_rtos2 (toml_raw_in (table, "DeviceProfile"), &watcher.profile);
-      toml_rtos2 (toml_raw_in (table, "Key"), &watcher.key);
-      toml_rtos2 (toml_raw_in (table, "MatchString"), &watcher.matchstring);
-      int n = 0;
-      toml_array_t *arr = toml_array_in (table, "Identifiers");
-      if (arr)
+      iot_data_t *newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
+      if (newval)
       {
-        while (toml_raw_at (arr, n))
-        { n++; }
-      }
-      watcher.ids = malloc (sizeof (char *) * (n + 1));
-      for (int j = 0; j < n; j++)
-      {
-        raw = toml_raw_at (arr, j);
-        toml_rtos2 (raw, &watcher.ids[j]);
-      }
-      watcher.ids[n] = NULL;
-      if (namestr && watcher.profile && watcher.key)
-      {
-        edgex_map_set (&svc->config.watchers, namestr, watcher);
-      }
-      else
-      {
-        iot_log_error
-        (
-          svc->logger,
-          "Watcher: Name, DeviceProfile and Key must be configured"
-        );
-        free (watcher.profile);
-        free (watcher.key);
-        free (watcher.matchstring);
-        if (watcher.ids)
-        {
-          for (int n = 0; watcher.ids[n]; n++)
-          {
-            free (watcher.ids[n]);
-          }
-          free (watcher.ids);
-        }
-        *err = EDGEX_BAD_CONFIG;
+        iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
       }
     }
   }
 }
-#endif
 
-static char *get_nv_config_string
-  (const devsdk_nvpairs *config, const char *key)
+static void edgex_device_populateConfigFromMap (edgex_device_config *config, const iot_data_t *map)
 {
-  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
+  config->service.host = iot_data_string_map_get_string (map, "Service/Host");
+  config->service.port = iot_data_ui16 (iot_data_string_map_get (map, "Service/Port"));
+  uint32_t tm = iot_data_ui32 (iot_data_string_map_get (map, "Service/Timeout"));
+  config->service.timeout.tv_sec = tm / 1000;
+  config->service.timeout.tv_nsec = 1000000 * (tm % 1000);
+  config->service.connectretries = iot_data_ui32 (iot_data_string_map_get (map, "Service/ConnectRetries"));
+  config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
+  config->service.checkinterval = iot_data_string_map_get_string (map, "Service/CheckInterval");
+
+  if (config->service.labels)
   {
-    if (strcasecmp (iter->name, key) == 0)
+    for (int i = 0; config->service.labels[i]; i++)
     {
-      return strdup (iter->value);
+      free (config->service.labels[i]);
     }
+    free (config->service.labels);
   }
-  return NULL;
-}
 
-static uint32_t get_nv_config_uint32
-(
-  iot_logger_t *lc,
-  const devsdk_nvpairs *config,
-  const char *key,
-  devsdk_error *err
-)
-{
-  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
+  const char *lstr = iot_data_string_map_get_string (map, "Service/Labels");
+  if (lstr && *lstr)
   {
-    if (strcasecmp (iter->name, key) == 0)
-    {
-      unsigned long long tmp;
-      errno = 0;
-      tmp = strtoull (iter->value, NULL, 0);
-      if (errno == 0 && tmp >= 0 && tmp <= UINT32_MAX)
-      {
-        return tmp;
-      }
-      else
-      {
-        *err = EDGEX_BAD_CONFIG;
-        iot_log_error (lc, "Unable to parse %s as uint32", iter->value);
-        return 0;
-      }
-    }
-  }
-  return 0;
-}
-
-static uint16_t get_nv_config_uint16
-(
-  iot_logger_t *lc,
-  const devsdk_nvpairs *config,
-  const char *key,
-  devsdk_error *err
-)
-{
-  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
-  {
-    if (strcasecmp (iter->name, key) == 0)
-    {
-      unsigned long long tmp;
-      errno = 0;
-      tmp = strtoull (iter->value, NULL, 0);
-      if (errno == 0 && tmp >= 0 && tmp <= UINT16_MAX)
-      {
-        return tmp;
-      }
-      else
-      {
-        *err = EDGEX_BAD_CONFIG;
-        iot_log_error (lc, "Unable to parse %s as uint16", iter->value);
-        return 0;
-      }
-    }
-  }
-  return 0;
-}
-
-static bool get_nv_config_bool
-  (const devsdk_nvpairs *config, const char *key, bool dfl)
-{
-  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
-  {
-    if (strcasecmp (iter->name, key) == 0)
-    {
-      return (strcasecmp (iter->value, "true") == 0);
-    }
-  }
-  return dfl;
-}
-
-void edgex_device_populateConfig
-  (devsdk_service_t *svc, const devsdk_nvpairs *config, devsdk_error *err)
-{
-  svc->config.service.host = get_nv_config_string (config, "Service/Host");
-  svc->config.service.port =
-    get_nv_config_uint16 (svc->logger, config, "Service/Port", err);
-  uint32_t tm =
-    get_nv_config_uint32 (svc->logger, config, "Service/Timeout", err);
-  svc->config.service.timeout.tv_sec = tm / 1000;
-  svc->config.service.timeout.tv_nsec = 1000000 * (tm % 1000);
-  svc->config.service.connectretries =
-    get_nv_config_uint32 (svc->logger, config, "Service/ConnectRetries", err);
-  svc->config.service.startupmsg =
-    get_nv_config_string (config, "Service/StartupMsg");
-  svc->config.service.checkinterval =
-    get_nv_config_string (config, "Service/CheckInterval");
-
-  char *lstr = get_nv_config_string (config, "Service/Labels");
-  if (lstr)
-  {
-    char *iter = lstr;
+    const char *iter = lstr;
     int n = 1;
     while ((iter = strchr (iter, ',')))
     {
       iter++;
       n++;
     }
-    svc->config.service.labels = malloc (sizeof (char *) * (n + 1));
+    config->service.labels = malloc (sizeof (char *) * (n + 1));
 
-    char *ctx;
+    iter = lstr;
+    const char *next;
     n = 0;
-    iter = strtok_r (lstr, ",", &ctx);
-    do
+    while ((next = strchr (iter, ',')))
     {
-      svc->config.service.labels[n++] = strdup (iter);
-      iter = strtok_r (NULL, ",", &ctx);
-    } while (iter);
-    svc->config.service.labels[n] = NULL;
-    free (lstr);
+      config->service.labels[n++] = strndup (iter, next - iter);
+    }
+    config->service.labels[n++] = strdup (iter);
+    config->service.labels[n] = NULL;
   }
   else
   {
-    svc->config.service.labels = malloc (sizeof (char *));
-    svc->config.service.labels[0] = NULL;
+    config->service.labels = malloc (sizeof (char *));
+    config->service.labels[0] = NULL;
   }
 
-  svc->config.device.datatransform =
-    get_nv_config_bool (config, "Device/DataTransform", true);
-  svc->config.device.discovery_enabled = get_nv_config_bool (config, "Device/Discovery/Enabled", true);
-  svc->config.device.discovery_interval = get_nv_config_uint32 (svc->logger, config, "Device/Discovery/Interval", err);
-  svc->config.device.maxcmdops =
-    get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdOps", err);
-  svc->config.device.maxcmdresultlen =
-    get_nv_config_uint32 (svc->logger, config, "Device/MaxCmdResultLen", err);
-  svc->config.device.profilesdir =
-    get_nv_config_string (config, "Device/ProfilesDir");
-  svc->config.device.updatelastconnected =
-    get_nv_config_bool (config, "Device/UpdateLastConnected", false);
-  svc->config.device.eventqlen =
-    get_nv_config_uint32 (svc->logger, config, "Device/EventQLength", err);
+  config->device.datatransform = iot_data_bool (iot_data_string_map_get (map, "Device/DataTransform"));
+  config->device.discovery_enabled = iot_data_bool (iot_data_string_map_get (map, "Device/Discovery/Enabled"));
+  config->device.discovery_interval = iot_data_ui32 (iot_data_string_map_get (map, "Device/Discovery/Interval"));
+  config->device.maxcmdops = iot_data_ui32 (iot_data_string_map_get (map, "Device/MaxCmdOps"));
+  config->device.maxcmdresultlen = iot_data_ui32 (iot_data_string_map_get (map, "Device/MaxCmdResultLen"));
+  config->device.profilesdir = iot_data_string_map_get_string (map, "Device/ProfilesDir");
+  config->device.updatelastconnected = iot_data_bool (iot_data_string_map_get (map, "Device/UpdateLastConnected"));
+  config->device.eventqlen = iot_data_ui32 (iot_data_string_map_get (map, "Device/EventQLength"));
+}
 
+void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config)
+{
+  iot_data_map_iter_t iter;
+
+  svc->config.sdkconf = config;
   svc->config.driverconf = iot_data_alloc_map (IOT_DATA_STRING);
-  for (const devsdk_nvpairs *iter = config; iter; iter = iter->next)
+
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
   {
-    if (strncmp (iter->name, "Driver/", strlen ("Driver/")) == 0)
+    const char *key = iot_data_map_iter_string_key (&iter);
+    if (strncmp (key, DRV_PREFIX, DRV_PREFIXLEN) == 0)
     {
-      iot_data_map_add
-        (svc->config.driverconf, iot_data_alloc_string (iter->name + strlen ("Driver/"), IOT_DATA_COPY), iot_data_alloc_string (iter->value, IOT_DATA_COPY));
+      iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (key + DRV_PREFIXLEN, IOT_DATA_COPY), iot_data_copy (iot_data_map_iter_value (&iter)));
     }
   }
 
-  edgex_device_updateConf (svc, config);
+  edgex_device_populateConfigFromMap (&svc->config, config);
+
+  edgex_config_setloglevel (svc->logger, iot_data_string_map_get_string (config, "Logging/LogLevel"), &svc->config.logging.level);
 }
 
 void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
 {
+  iot_data_map_iter_t iter;
+  bool updatedriver = false;
   devsdk_service_t *svc = (devsdk_service_t *)p;
-  char *lname = get_nv_config_string (config, "Writable/LogLevel");
+
+  edgex_device_overrideConfig_nvpairs (svc->config.sdkconf, config);
+  edgex_device_populateConfigFromMap (&svc->config, svc->config.sdkconf);
+
+  const char *lname = devsdk_nvpairs_value (config, "Writable/LogLevel");
   if (lname == NULL)
   {
-    lname = get_nv_config_string (config, "Logging/LogLevel");
+    lname = devsdk_nvpairs_value (config, "Logging/LogLevel");
   }
   if (lname)
   {
     edgex_config_setloglevel (svc->logger, lname, &svc->config.logging.level);
-    free (lname);
+  }
+
+  iot_data_map_iter (svc->config.sdkconf, &iter);
+  while (iot_data_map_iter_next (&iter))
+  {
+    const char *key = iot_data_map_iter_string_key (&iter);
+    if (strncmp (key, DRV_PREFIX, DRV_PREFIXLEN) == 0)
+    {
+      const iot_data_t *driverval = iot_data_string_map_get (svc->config.driverconf, key + DRV_PREFIXLEN);
+      if (driverval && !iot_data_equal (driverval, iot_data_map_iter_value (&iter)))
+      {
+        updatedriver = true;
+        iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (key + DRV_PREFIXLEN, IOT_DATA_COPY), iot_data_copy (iot_data_map_iter_value (&iter)));
+      }
+    }
+  }
+  if (updatedriver)
+  {
+    svc->userfns.reconfigure (svc->userdata, svc->config.driverconf);
+  }
+}
+
+void edgex_device_dumpConfig (iot_logger_t *lc, iot_data_t *config)
+{
+  char *val;
+  iot_data_map_iter_t iter;
+  iot_data_map_iter (config, &iter);
+  while (iot_data_map_iter_next (&iter))
+  {
+    val = iot_data_to_json (iot_data_map_iter_value (&iter));
+    iot_log_debug (lc, "%s=%s", iot_data_map_iter_string_key (&iter), val);
+    free (val);
   }
 }
 
@@ -616,13 +629,6 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   edgex_device_watcherinfo *watcher;
   edgex_map_iter iter;
   const char *key;
-
-  free (svc->config.endpoints.data.host);
-  free (svc->config.endpoints.metadata.host);
-  free (svc->config.service.host);
-  free (svc->config.service.startupmsg);
-  free (svc->config.service.checkinterval);
-  free (svc->config.device.profilesdir);
 
   if (svc->config.service.labels)
   {
@@ -633,6 +639,10 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
     free (svc->config.service.labels);
   }
 
+  free (svc->config.endpoints.data.host);
+  free (svc->config.endpoints.metadata.host);
+
+  iot_data_free (svc->config.sdkconf);
   iot_data_free (svc->config.driverconf);
 
   iter = edgex_map_iter (svc->config.watchers);

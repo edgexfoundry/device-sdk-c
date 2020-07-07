@@ -84,7 +84,7 @@ typedef void (*devsdk_registry_put_config_impl)
   void *location,
   const char *servicename,
   const char *profile,
-  const devsdk_nvpairs *config,
+  const iot_data_t *config,
   devsdk_error *err
 );
 
@@ -224,6 +224,16 @@ devsdk_registry *devsdk_registry_get_registry
 bool devsdk_registry_ping (devsdk_registry *registry, devsdk_error *err);
 
 /**
+ * @brief Wait for the registry service to be running. The time to wait is
+ *        controlled by the EDGEX_STARTUP_INTERVAL and EDGEX_STARTUP_DURATION
+ *        environment variables.
+ * @param registry The registry instance.
+ * @returns true if the registry service is running after waiting.
+ */
+
+bool devsdk_registry_waitfor (devsdk_registry *registry);
+
+/**
  * @brief Retrieve configuration values from the registry.
  * @param registry The registry instance.
  * @param servicename The name of this device service.
@@ -261,7 +271,7 @@ void devsdk_registry_put_config
   devsdk_registry *registry,
   const char *servicename,
   const char *profile,
-  const devsdk_nvpairs *config,
+  const iot_data_t *config,
   devsdk_error *err
 );
 
