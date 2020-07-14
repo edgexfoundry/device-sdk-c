@@ -85,97 +85,105 @@ static bool readFloat64 (const char *val, double *d)
   }
 }
 
-static iot_data_t *populateValue (edgex_propertytype rtype, const char *val)
+iot_data_t *edgex_data_from_string (iot_data_type_t rtype, const char *val)
 {
-  JSON_Value *jval = NULL;
-  JSON_Array *jarr = NULL;
-  size_t jsz = 0;
-  if (rtype >= Edgex_Int8Array && rtype <= Edgex_BoolArray)
-  {
-    jval = json_parse_string (val);
-    if (jval)
-    {
-      jarr = json_value_get_array (jval);
-      if (jarr == NULL)
-      {
-        json_value_free (jval);
-        return NULL;
-      }
-      jsz = json_array_get_count (jarr);
-    }
-    else
-    {
-      return NULL;
-    }
-  }
-
   switch (rtype)
   {
-    case Edgex_Uint8:
+    case IOT_DATA_UINT8:
     {
       uint8_t i;
       return (sscanf (val, "%" SCNu8, &i) == 1) ? iot_data_alloc_ui8 (i) : NULL;
     }
-    case Edgex_Int8:
+    case IOT_DATA_INT8:
     {
       int8_t i;
       return (sscanf (val, "%" SCNi8, &i) == 1) ? iot_data_alloc_i8 (i) : NULL;
     }
-    case Edgex_Uint16:
+    case IOT_DATA_UINT16:
     {
       uint16_t i;
       return (sscanf (val, "%" SCNu16, &i) == 1) ? iot_data_alloc_ui16 (i) : NULL;
     }
-    case Edgex_Int16:
+    case IOT_DATA_INT16:
     {
       int16_t i;
       return (sscanf (val, "%" SCNi16, &i) == 1) ? iot_data_alloc_i16 (i) : NULL;
     }
-    case Edgex_Uint32:
+    case IOT_DATA_UINT32:
     {
       uint32_t i;
       return (sscanf (val, "%" SCNu32, &i) == 1) ? iot_data_alloc_ui32 (i) : NULL;
     }
-    case Edgex_Int32:
+    case IOT_DATA_INT32:
     {
       int32_t i;
       return (sscanf (val, "%" SCNi32, &i) == 1) ? iot_data_alloc_i32 (i) : NULL;
     }
-    case Edgex_Uint64:
+    case IOT_DATA_UINT64:
     {
       uint64_t i;
       return (sscanf (val, "%" SCNu64, &i) == 1) ? iot_data_alloc_ui64 (i) : NULL;
     }
-    case Edgex_Int64:
+    case IOT_DATA_INT64:
     {
       int64_t i;
       return (sscanf (val, "%" SCNi64, &i) == 1) ? iot_data_alloc_i64 (i) : NULL;
     }
-    case Edgex_Float32:
+    case IOT_DATA_FLOAT32:
     {
       float f;
       return readFloat32 (val, &f) ? iot_data_alloc_f32 (f) : NULL;
     }
-    case Edgex_Float64:
+    case IOT_DATA_FLOAT64:
     {
       double d;
       return readFloat64 (val, &d) ? iot_data_alloc_f64 (d) : NULL;
     }
-    case Edgex_String:
+    case IOT_DATA_STRING:
       return iot_data_alloc_string (val, IOT_DATA_COPY);
-    case Edgex_Bool:
+    case IOT_DATA_BOOL:
       return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
-    case Edgex_Binary:
-    {
-      iot_data_t *res = iot_data_alloc_array_from_base64 (val);
-      iot_data_t *b = iot_data_alloc_bool (true);
-      iot_data_set_metadata (res, b);
-      iot_data_free (b);
-      return res;
-    }
-    case Edgex_Unused1:
-    case Edgex_Unused2:
+    default:
       return NULL;
+  }
+}
+
+static iot_data_t *populateValue (edgex_propertytype rtype, const char *val)
+{
+  if (rtype <= Edgex_String)
+  {
+    return edgex_data_from_string (rtype, val);
+  }
+  else if (rtype == Edgex_Binary)
+  {
+    iot_data_t *res = iot_data_alloc_array_from_base64 (val);
+    iot_data_t *b = iot_data_alloc_bool (true);
+    iot_data_set_metadata (res, b);
+    iot_data_free (b);
+    return res;
+  }
+
+  JSON_Value *jval = NULL;
+  JSON_Array *jarr = NULL;
+  size_t jsz = 0;
+  jval = json_parse_string (val);
+  if (jval)
+  {
+    jarr = json_value_get_array (jval);
+    if (jarr == NULL)
+    {
+      json_value_free (jval);
+      return NULL;
+    }
+    jsz = json_array_get_count (jarr);
+  }
+  else
+  {
+    return NULL;
+  }
+
+  switch (rtype)
+  {
     case Edgex_Int8Array:
     {
       int8_t *arr = malloc (jsz);
@@ -336,8 +344,9 @@ static iot_data_t *populateValue (edgex_propertytype rtype, const char *val)
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_BOOL, IOT_DATA_TAKE);
     }
+    default:
+      return NULL;
   }
-  return false;
 }
 
 static edgex_deviceresource *findDevResource

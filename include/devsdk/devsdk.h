@@ -38,11 +38,19 @@ void devsdk_usage (void);
  * @brief Function called during service start operation.
  * @param impl The context data passed in when the service was created.
  * @param lc A logging client for the device service.
- * @param config A string map containing the the configuration specified in the service's "Driver" section.
+ * @param config A string map containing the configuration specified in the service's "Driver" section.
  * @return true if the operation was successful, false otherwise.
  */
 
 typedef bool (*devsdk_initialize) (void *impl, struct iot_logger_t *lc, const iot_data_t *config);
+
+/**
+ * @brief Function called when configuration is updated.
+ * @param impl The context data passed in when the service was created.
+ * @param config A string map containing the new configuration.
+ */
+
+typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
 
 /**
  * @brief Optional callback for dynamic discovery of devices. The implementation should detect devices and register them using
@@ -175,6 +183,7 @@ typedef void (*devsdk_remove_device_callback) (void *impl, const char *devname, 
 typedef struct devsdk_callbacks
 {
   devsdk_initialize init;
+  devsdk_reconfigure reconfigure;
   devsdk_discover discover;                     /* NULL for no discovery */
   devsdk_handle_get gethandler;
   devsdk_handle_put puthandler;
@@ -205,10 +214,11 @@ devsdk_service_t *devsdk_service_new
 /**
  * @brief Start a device service.
  * @param svc The service to start.
+ * @param driverdfls The default implementation-specific configuration.
  * @param err Nonzero reason codes will be set here in the event of errors.
  */
 
-void devsdk_service_start (devsdk_service_t *svc, devsdk_error *err);
+void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk_error *err);
 
 /**
  * @brief Post readings to the core-data service. This method allows readings to be generated other than in response to a device GET invocation.

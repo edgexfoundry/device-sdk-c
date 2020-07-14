@@ -45,9 +45,9 @@ When no longer needed, an `iot_data_t` must be released:
 void iot_data_free (iot_data_t * data)
 ```
 
-However in all interactions between the SDK and the DS implementation, `iot_data_free` occurs in the SDK.
+Note however that in the get and set handler interactions, `iot_data_free` occurs in the SDK.
 
-Note that when allocating strings and blobs, the required ownership semantic is
+When allocating strings and blobs, the required ownership semantic is
 specified. This can take the following values:
 
 - `IOT_DATA_COPY` The data is copied on allocation and freed on free
@@ -59,7 +59,8 @@ This enables more choices for memory management in the device service and the po
 #### Callback functions
 
 ```
-bool (*devsdk_device_initialize)
+bool (*devsdk_initialize)
+void (*devsdk_reconfigure)
 void (*devsdk_discover)
 bool (*devsdk_handle_get)
 bool (*devsdk_handle_put)
@@ -74,6 +75,8 @@ void (*devsdk_remove_device_callback)
 These are mostly identical to their v1 counterparts, with the following changes
 
 - In `initialize`, Driver configuration is passed via an `iot_data_t` of `IOT_DATA_MAP` type rather than a name-value pair list. This permits numeric types to be passed as such rather than in strings.
+
+- The new `reconfigure` callback allows the driver to respond to dynamic reconfiguration requests. This is possible when using the Registry.
 
 - In `handle_get`, the incoming query parameters are passed as a name-value pair list instead of being marshalled into a special `Attribute`
 
@@ -101,7 +104,9 @@ devsdk_service_stop
 devsdk_service_free
 ```
 
-The various initialization parameters have been removed from the `service_start` function, all such setup is now handled in the `service_new` function. This takes `argc` and `argv` and processes them in the same way as `service_processparams` did in v1. The default name for the service must be provided. No other changes have been made to these functions.
+The various initialization parameters have been removed from the `service_start` function, all such setup is now handled in the `service_new` function. This takes `argc` and `argv` and processes them in the same way as `service_processparams` did in v1. The default name for the service must be provided.
+
+The device_service_start function now takes an iot_data_t* which should hold a map of all implementation-specific configuration options with their default values. These will be overridden by values specified in the configuration file or registry, and by environment variables, before being passed back to the implementation in the initialize callback.
 
 #### Device and Profile management
 

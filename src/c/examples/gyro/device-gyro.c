@@ -116,6 +116,7 @@ int main (int argc, char * argv[])
   devsdk_callbacks gyroImpls =
   {
     gyro_init,         /* Initialize */
+    NULL,              /* Reconfigure */
     NULL,              /* Discovery */
     gyro_get_handler,  /* Get */
     gyro_put_handler,  /* Put */
@@ -142,7 +143,7 @@ int main (int argc, char * argv[])
     }
   }
 
-  devsdk_service_start (service, &e);
+  devsdk_service_start (service, NULL, &e);
   ERR_CHECK (e);
 
   sigemptyset (&set);

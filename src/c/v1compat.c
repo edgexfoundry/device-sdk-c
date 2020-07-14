@@ -6,6 +6,7 @@
  *
  */
 
+#include "v1compat.h"
 #include "devsdk/devsdk.h"
 #undef DEVSDKV2
 #include "edgex/devsdk.h"
@@ -36,7 +37,7 @@ struct edgex_device_service
   edgex_nvpairs *config;
 };
 
-static bool compat_init (void *impl, struct iot_logger_t *lc, const iot_data_t *config)
+bool compat_init (void *impl, struct iot_logger_t *lc, const iot_data_t *config)
 {
   edgex_device_service *v1 = (edgex_device_service *)impl;
   v1->lc = lc;
@@ -52,6 +53,10 @@ static bool compat_init (void *impl, struct iot_logger_t *lc, const iot_data_t *
   }
 
   return v1->implfns.init (v1->impldata, lc, v1->config);
+}
+
+static void compat_reconfigure (void *impl, const iot_data_t *config)
+{
 }
 
 static void compat_discover (void *impl)
@@ -506,6 +511,7 @@ void edgex_device_service_start
   devsdk_callbacks callbacks =
   {
     compat_init,
+    compat_reconfigure,
     compat_discover,
     compat_get_handler,
     compat_put_handler,
@@ -539,7 +545,7 @@ void edgex_device_service_start
   svc->impl = devsdk_service_new (svc->name, svc->version, svc, callbacks, &argc, argv, &de);
   if (svc->impl)
   {
-    devsdk_service_start (svc->impl, &de);
+    devsdk_service_start (svc->impl, NULL, &de);
   }
   if (de.code)
   {

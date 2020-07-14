@@ -177,6 +177,7 @@ int main (int argc, char *argv[])
   devsdk_callbacks counterImpls =
   {
     counter_init,         /* Initialize */
+    NULL,                 /* Reconfigure */
     NULL,                 /* Discovery */
     counter_get_handler,  /* Get */
     counter_put_handler,  /* Put */
@@ -203,7 +204,7 @@ int main (int argc, char *argv[])
     }
   }
 
-  devsdk_service_start (service, &e);
+  devsdk_service_start (service, NULL, &e);
   ERR_CHECK (e);
 
   sigemptyset (&set);

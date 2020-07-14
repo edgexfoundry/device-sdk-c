@@ -37,7 +37,7 @@ void edgex_consul_client_write_config
   void *location,
   const char *servicename,
   const char *profile,
-  const devsdk_nvpairs *config,
+  const iot_data_t *config,
   devsdk_error *err
 );
 
