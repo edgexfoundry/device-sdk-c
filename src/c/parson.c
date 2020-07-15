@@ -26,6 +26,8 @@
 #endif /* _CRT_SECURE_NO_WARNINGS */
 #endif /* _MSC_VER */
 
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+
 #include "parson.h"
 
 #include <stdio.h>

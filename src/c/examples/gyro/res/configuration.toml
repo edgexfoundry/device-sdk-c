@@ -20,7 +20,6 @@
   Discovery = false
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  ProfilesDir = ''
 
 [Logging]
   LogLevel = 'DEBUG'

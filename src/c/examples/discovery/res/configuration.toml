@@ -19,7 +19,6 @@
   DataTransform = true
   MaxCmdOps = 128
   MaxCmdResultLen = 256
-  ProfilesDir = ''
   [Device.Discovery]
     Enabled = true
     Interval = 10
