@@ -1,0 +1,32 @@
+[Service]
+  Port = 49999
+  Timeout = 5000
+  ConnectRetries = 10
+  Labels = [ 'Bitfields' ]
+  StartupMsg = 'Example bitfields device service started'
+  CheckInterval = '10s'
+
+[Clients]
+  [Clients.Data]
+    Host = 'localhost'
+    Port = 48080
+
+  [Clients.Metadata]
+    Host = 'localhost'
+    Port = 48081
+
+[Device]
+  DataTransform = true
+  Discovery = false
+  MaxCmdOps = 128
+  MaxCmdResultLen = 256
+
+[Logging]
+  LogLevel = 'DEBUG'
+
+[[DeviceList]]
+  Name = 'Bitfields'
+  Profile = 'Example-Bitfields'
+  Description = 'An Example Bitfields Device'
+  [DeviceList.Protocols]
+    [DeviceList.Protocols.Bitfields]

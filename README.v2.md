@@ -27,6 +27,8 @@ The type of data held in an `iot_data_t` may be obtained using the following fun
 
 The tags in `edgex_propertytype` are now scoped with the `Edgex_` prefix, although the old type names are still available via `#define` constants.
 
+The command request now contains a 'mask' field. If this is nonzero, implementations of the put handler should first read the current value in the resource, then compute `(current-value & mask) | request-value` and write that value. The driver should lock the resource so as to make this operation atomic.
+
 Data is stored in an `iot_data_t` using the following functions:
 
 ```

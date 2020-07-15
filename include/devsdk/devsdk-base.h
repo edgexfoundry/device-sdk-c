@@ -62,6 +62,8 @@ typedef struct devsdk_commandrequest
   const devsdk_nvpairs *attributes;
   /** Type of the data to be read or written */
   const iot_typecode_t *type;
+  /** Mask to be applied for write requests */
+  uint64_t mask;
 } devsdk_commandrequest;
 
 /**

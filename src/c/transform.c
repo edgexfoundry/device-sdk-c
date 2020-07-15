@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -198,7 +198,7 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
           result <<= props->shift.value.ival;
         }
       }
-      // Mask transform NYI. Possibly will be done in the driver.
+      if (props->mask.enabled) result &= props->mask.value.ival;
       iot_data_free (*cres);
       *cres = setLLInt (result, props->type);
     }
