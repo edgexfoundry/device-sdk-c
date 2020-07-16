@@ -2,8 +2,8 @@
   Port = 49999
   Timeout = 5000
   ConnectRetries = 10
-  Labels = [ 'Gyro' ]
-  StartupMsg = 'Example gyro device service started'
+  Labels = [ 'Bitfields' ]
+  StartupMsg = 'Example bitfields device service started'
   CheckInterval = '10s'
 
 [Clients]
@@ -16,7 +16,7 @@
     Port = 48081
 
 [Device]
-  DataTransform = false
+  DataTransform = true
   Discovery = false
   MaxCmdOps = 128
   MaxCmdResultLen = 256
@@ -25,8 +25,8 @@
   LogLevel = 'DEBUG'
 
 [[DeviceList]]
-  Name = 'Gyro'
-  Profile = 'Example-Gyro'
-  Description = 'An Example Gyro Device'
+  Name = 'Bitfields'
+  Profile = 'Example-Bitfields'
+  Description = 'An Example Bitfields Device'
   [DeviceList.Protocols]
-    [DeviceList.Protocols.Gyro]
+    [DeviceList.Protocols.Bitfields]

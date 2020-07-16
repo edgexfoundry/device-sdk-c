@@ -93,7 +93,8 @@ writable.
 
 The processing defined by base, scale, offset, mask and shift is applied in
 that order. This is done within the SDK. A reverse transformation is applied
-by the SDK to incoming data on set operations (NB mask transforms on set are NYI)
+by the SDK to incoming data on set operations (mask transforms on set are
+implemented in the driver)
 
 The units property is used to indicate the units of the value, eg Amperes,
 degrees C, etc. It should have only one field, a defaultValue that specifies the units.

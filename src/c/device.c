@@ -399,6 +399,10 @@ static edgex_cmdinfo *infoForRes
     result->reqs[n].resname = devres->name;
     result->reqs[n].attributes = devres->attributes;
     result->reqs[n].type = typecodeFromType (devres->properties->value->type);
+    if (devres->properties->value->mask.enabled)
+    {
+      result->reqs[n].mask = ~devres->properties->value->mask.value.ival;
+    }
     result->pvals[n] = devres->properties->value;
     result->maps[n] = ro->mappings;
     if (ro->parameter && *ro->parameter)
@@ -427,6 +431,10 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->reqs[0].resname = devres->name;
   result->reqs[0].attributes = devres->attributes;
   result->reqs[0].type = typecodeFromType (devres->properties->value->type);
+  if (devres->properties->value->mask.enabled)
+  {
+    result->reqs[0].mask = ~devres->properties->value->mask.value.ival;
+  }
   result->pvals[0] = devres->properties->value;
   result->maps[0] = NULL;
   if (devres->properties->value->defaultvalue && *devres->properties->value->defaultvalue)
