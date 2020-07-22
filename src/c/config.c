@@ -538,6 +538,7 @@ void edgex_device_populateConfig
     get_nv_config_string (config, "Service/StartupMsg");
   svc->config.service.checkinterval =
     get_nv_config_string (config, "Service/CheckInterval");
+  svc->config.service.bindaddr = get_nv_config_string (config, "Service/ServerBindAddr");
 
   char *lstr = get_nv_config_string (config, "Service/Labels");
   if (lstr)
@@ -635,6 +636,7 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   free (svc->config.service.host);
   free (svc->config.service.startupmsg);
   free (svc->config.service.checkinterval);
+  free (svc->config.service.bindaddr);
   free (svc->config.device.initcmd);
   free (svc->config.device.initcmdargs);
   free (svc->config.device.removecmd);
@@ -728,6 +730,7 @@ int edgex_device_handler_config
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
   json_object_set_string
     (sobj, "CheckInterval", svc->config.service.checkinterval);
+  json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
 
   lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);

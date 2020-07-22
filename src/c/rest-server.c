@@ -15,6 +15,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 #define STR_BLK_SIZE 512
 #define EDGEX_DS_PREFIX "ds-"
@@ -229,27 +232,70 @@ static int http_handler
   return MHD_YES;
 }
 
+static void edgex_rest_sa_out (char *res, const struct sockaddr *sa)
+{
+  switch (sa->sa_family)
+  {
+    case AF_INET:
+    {
+      struct sockaddr_in *sa4 = (struct sockaddr_in *)sa;
+      inet_ntop (AF_INET, &sa4->sin_addr, res, INET6_ADDRSTRLEN);
+      break;
+    }
+    case AF_INET6:
+    {
+      struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)sa;
+      inet_ntop (AF_INET6, &sa6->sin6_addr, res, INET6_ADDRSTRLEN);
+      break;
+    }
+    default:
+      sprintf (res, "(unknown family)");
+  }
+}
+
 edgex_rest_server *edgex_rest_server_create
-  (iot_logger_t *lc, uint16_t port, devsdk_error *err)
+  (iot_logger_t *lc, const char *bindaddr, uint16_t port, devsdk_error *err)
 {
   edgex_rest_server *svr;
   uint16_t flags = MHD_USE_THREAD_PER_CONNECTION;
   /* config: flags |= MHD_USE_IPv6 ? */
 
-  svr = malloc (sizeof (edgex_rest_server));
+  svr = calloc (1, sizeof (edgex_rest_server));
   svr->lc = lc;
-  svr->handlers = NULL;
+
   pthread_mutex_init (&svr->lock, NULL);
 
   /* Start http server */
 
-  iot_log_debug (lc, "Starting HTTP server on port %d", port);
-  svr->daemon =
-    MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_END);
+  if (strlen (bindaddr) && strcmp (bindaddr, "0.0.0.0"))
+  {
+    struct addrinfo *res;
+    char svc[6];
+    char resaddr[INET6_ADDRSTRLEN];
+    sprintf (svc, "%" PRIu16, port);
+    if (getaddrinfo (bindaddr, svc, NULL, &res) == 0)
+    {
+      iot_log_info (lc, "Starting HTTP server on interface %s, port %d", bindaddr, port);
+      edgex_rest_sa_out (resaddr, res->ai_addr);
+      iot_log_debug (lc, "Resolved interface is %s", resaddr);
+      svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_SOCK_ADDR, res->ai_addr, MHD_OPTION_END);
+      freeaddrinfo (res);
+    }
+    else
+    {
+      iot_log_error (lc, "HTTP server: unable to resolve bind address %s", bindaddr);
+    }
+  }
+  else
+  {
+    iot_log_info (lc, "Starting HTTP server on port %d (all interfaces)", port);
+    svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_END);
+  }
+
   if (svr->daemon == NULL)
   {
     *err = EDGEX_HTTP_SERVER_FAIL;
-    iot_log_debug (lc, "MHD_start_daemon failed");
+    iot_log_error (lc, "Unable to start HTTP server");
     edgex_rest_server_destroy (svr);
     return NULL;
   }
