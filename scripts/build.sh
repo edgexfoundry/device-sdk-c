@@ -81,5 +81,5 @@ fi
 
 mkdir -p $ROOT/build/debug
 cd $ROOT/build/debug
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCSDK_BUILD_DEBUG=ON -DCMAKE_BUILD_TYPE=Debug $ROOT/src
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug $ROOT/src
 make 2>&1 | tee debug.log

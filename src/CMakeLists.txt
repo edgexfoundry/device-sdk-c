@@ -42,7 +42,6 @@ message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 
 # Configuration variables
 
-set (CSDK_BUILD_DEBUG OFF CACHE BOOL "Build Debug")
 set (CSDK_BUILD_LCOV OFF CACHE BOOL "Build LCov")
 
 # Configure for different target systems
