@@ -43,6 +43,7 @@ iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *
   iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("0.0.0.0", IOT_DATA_REF));
 
   iot_data_string_map_add (result, "Device/DataTransform", iot_data_alloc_bool (true));
   iot_data_string_map_add (result, "Device/Discovery/Enabled", iot_data_alloc_bool (true));
@@ -502,6 +503,7 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
   config->service.connectretries = iot_data_ui32 (iot_data_string_map_get (map, "Service/ConnectRetries"));
   config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
   config->service.checkinterval = iot_data_string_map_get_string (map, "Service/CheckInterval");
+  config->service.bindaddr = iot_data_string_map_get_string (map, "Service/ServerBindAddr");
 
   if (config->service.labels)
   {
@@ -701,6 +703,7 @@ static char *edgex_device_serialize_config (devsdk_service_t *svc)
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
   json_object_set_string
     (sobj, "CheckInterval", svc->config.service.checkinterval);
+  json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
 
   lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);

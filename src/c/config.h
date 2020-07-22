@@ -25,6 +25,7 @@ typedef struct edgex_device_serviceinfo
   const char *startupmsg;
   struct timespec timeout;
   const char *checkinterval;
+  const char *bindaddr;
 } edgex_device_serviceinfo;
 
 typedef struct edgex_device_service_endpoint
