@@ -4,6 +4,11 @@ differs as follows:
 * Asynchronous device readings are submitted using an API function call rather
   than Go's "channel" facility.
 
+Changes for 1.2.2:
+
+- Add ServerBindAddr configuration option for restricting the REST listener
+  to a single address.
+
 Changes for 1.2.1:
 
 - Fixes in the compatibility layer for the v1 API.
