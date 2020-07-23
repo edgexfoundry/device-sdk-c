@@ -821,7 +821,6 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
   {
     edgex_rest_server_destroy (svc->daemon);
   }
-  svc->userfns.stop (svc->userdata, force);
   if (svc->registry)
   {
     devsdk_registry_deregister_service (svc->registry, svc->name, err);
@@ -832,8 +831,8 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
   }
   iot_threadpool_wait (svc->eventq);
   iot_threadpool_wait (svc->thpool);
+  svc->userfns.stop (svc->userdata, force);
   edgex_devmap_clear (svc->devices);
-  iot_scheduler_free (svc->scheduler);
   iot_log_info (svc->logger, "Stopped device service");
 }
 
@@ -841,6 +840,7 @@ void devsdk_service_free (devsdk_service_t *svc)
 {
   if (svc)
   {
+    iot_scheduler_free (svc->scheduler);
     edgex_devmap_free (svc->devices);
     edgex_watchlist_free (svc->watchlist);
     iot_threadpool_free (svc->thpool);

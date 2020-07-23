@@ -317,6 +317,7 @@ edgex_device *edgex_metadata_client_get_devices
   curl_free (ename);
   if (err->code)
   {
+    free (ctx.buff);
     return 0;
   }
 
@@ -421,6 +422,7 @@ edgex_device *edgex_metadata_client_get_device
 
   if (err->code)
   {
+    free (ctx.buff);
     return 0;
   }
 
@@ -561,6 +563,7 @@ edgex_watcher *edgex_metadata_client_get_watchers
   curl_free (ename);
   if (err->code)
   {
+    free (ctx.buff);
     return 0;
   }
 
@@ -597,6 +600,7 @@ edgex_watcher *edgex_metadata_client_get_watcher
 
   if (err->code)
   {
+    free (ctx.buff);
     return 0;
   }
 
