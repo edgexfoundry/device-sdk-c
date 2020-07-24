@@ -7,10 +7,13 @@ Changes for 1.3.0 "Hanoi":
 - v2 API update: Callback added to inform the driver of a configuration update.
 - v2 API update: Implementations to supply default values for their configuration.
   - This allows use of numerics/boolean types as well as Strings.
-- Support for logging to file or the support-logging service is removed.
-  - Logs are always written to stdout
 - Event transmission is serialized and operates from a queue with configurable
   maximum length.
+
+Changes for 1.2.2:
+
+- Add ServerBindAddr configuration option for restricting the REST listener
+  to a single address.
 
 Changes for 1.2.1:
 

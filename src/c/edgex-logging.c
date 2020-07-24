@@ -12,25 +12,73 @@
 #include <stdlib.h>
 
 #include "correlation.h"
+#include "errorlist.h"
+#include "rest.h"
+#include "parson.h"
 
 #define EDGEX_TSIZE 32
 
 static const char *edgex_log_levels[] = {"", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"};
 
+void edgex_log_torest (struct iot_logger_t *logger, iot_loglevel_t l, time_t timestamp, const char *message)
+{
+  edgex_ctx ctx;
+  char *json;
+  devsdk_error err = EDGEX_OK;
+
+  memset (&ctx, 0, sizeof (ctx));
+
+  JSON_Value *jval = json_value_init_object ();
+  JSON_Object *jobj = json_value_get_object (jval);
+
+  json_object_set_string (jobj, "originService", logger->name);
+  json_object_set_string (jobj, "logLevel", edgex_logger_levelname (l));
+  json_object_set_number (jobj, "created", timestamp);
+  json_object_set_string (jobj, "message", message);
+
+  json = json_serialize_to_string (jval);
+  edgex_http_post (iot_logger_default (), &ctx, logger->to, json, NULL, &err);
+  json_free_serialized_string (json);
+
+  json_value_free (jval);
+}
+
 void edgex_log_tofile (struct iot_logger_t * logger, iot_loglevel_t l, time_t timestamp, const char *message)
 {
+  FILE *f;
   struct tm tsparts;
   char ts8601[EDGEX_TSIZE];
   const char *crlid;
   const char *lname;
+
+  if (strlen (logger->to) == 0 || strcmp (logger->to, "-") == 0)
+  {
+    f = stdout;
+  }
+  else
+  {
+    f = fopen (logger->to, "a");
+    if (!f)
+    {
+      f = stdout;
+    }
+  }
 
   crlid = edgex_device_get_crlid ();
   lname = logger->name ? logger->name : "(default)";
   gmtime_r (&timestamp, &tsparts);
   strftime (ts8601, EDGEX_TSIZE, "%FT%TZ", &tsparts);
 
-  printf ("level=%s ts=%s app=%s%s%s msg=\"%s\"\n", edgex_logger_levelname (l), ts8601, lname, crlid ? " correlation-id=" : "", crlid ? crlid : "", message);
-  fflush (stdout);
+  fprintf (f, "level=%s ts=%s app=%s%s%s msg=\"%s\"\n", edgex_logger_levelname (l), ts8601, lname, crlid ? " correlation-id=" : "", crlid ? crlid : "", message);
+
+  if (f == stdout)
+  {
+    fflush (f);
+  }
+  else
+  {
+    fclose (f);
+  }
 }
 
 const char *edgex_logger_levelname (iot_loglevel_t l)
