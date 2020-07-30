@@ -1,0 +1,19 @@
+[Clients]
+  [Clients.Data]
+    Host = 'localhost'
+    Port = 48080
+
+  [Clients.Metadata]
+    Host = 'localhost'
+    Port = 48081
+
+[Logging]
+  LogLevel = 'DEBUG'
+
+[[DeviceList]]
+  Name = 'File1'
+  Profile = 'FileProfile'
+  Description = 'An Example File Device'
+  [DeviceList.Protocols]
+    [DeviceList.Protocols.Filename]
+      Name = './res/lorem.txt'

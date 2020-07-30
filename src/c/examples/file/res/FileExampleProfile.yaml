@@ -1,0 +1,15 @@
+name: "FileProfile"
+manufacturer: "IoTechSystems"
+model: "IoT5"
+description: "File Example Sensor"
+
+deviceResources:
+      -
+        name: File
+        description: "The content of a file"
+        properties:
+            value:
+                { type: "binary", readWrite: "R", mediaType: "text/plain" }
+            units:
+                { defaultValue: "data" }
+

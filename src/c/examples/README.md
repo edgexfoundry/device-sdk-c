@@ -2,7 +2,17 @@
 
 An outline device service, `template.c` is provided here.
 
-Example device services "Random", "Counters", "Gyro" and "Terminal" are contained within their own subdirectories.
+A number of example device services illustrating specific concepts are provided within their own subdirectories:
+
+Example | Notes
+--- | ---
+[Random](random/README.md) | A simple device service
+[Counters](counters/README.md) | Device addressing via ProtocolProperties
+[Discovery](discovery/README.md) | Dynamic device discovery and provision watchers
+[Gyro](gyro/README.md) | Use of `resourceCommand` to aggregate Readings
+[Terminal](terminal/README.md) | One possible mechanism for accepting actuation commands
+[Bitfields](bitfields/README.md) | Use `mask` and `shift` attributes to access bitfields within a device register
+[File](file/README.md) | Use of `devsdk_post_readings` to generate Events autonomously
 
 ## Template device service
 
