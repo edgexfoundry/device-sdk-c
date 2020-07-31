@@ -142,7 +142,17 @@ iot_data_t *edgex_data_from_string (iot_data_type_t rtype, const char *val)
     case IOT_DATA_STRING:
       return iot_data_alloc_string (val, IOT_DATA_COPY);
     case IOT_DATA_BOOL:
-      return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
+      if (strcasecmp (val, "true") == 0)
+      {
+        return iot_data_alloc_bool (true);
+      } else if (strcasecmp (val, "false") == 0)
+      {
+        return iot_data_alloc_bool (false);
+      }
+      else
+      {
+        return NULL;
+      }
     default:
       return NULL;
   }
