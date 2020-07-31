@@ -40,8 +40,8 @@ a .deb or .rpm file is also created, as appropriate.
 The main include file ```devsdk/devsdk.h``` contains the functions provided by
 the SDK and defines the callbacks which a device service implementor needs to
 create. Documentation is provided within that file in doxygen format.
-An outline device service is provided in ```src/c/examples``` to illustrate
-usage.
+An outline device service and various examples are provided in
+[```src/c/examples```](src/c/examples/README.md) to illustrate usage.
 
 ### Building with docker
 
