@@ -9,7 +9,6 @@
 #include "rest-server.h"
 #include "api.h"
 #include "edgex-rest.h"
-#include "microhttpd.h"
 #include "correlation.h"
 #include "errorlist.h"
 
@@ -19,6 +18,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <microhttpd.h>
 
 #define STR_BLK_SIZE 512
 
@@ -241,6 +241,7 @@ static int http_handler
         req.method = method;
         req.data.bytes = ctx->m_data;
         req.data.size = ctx->m_size;
+        req.content_type = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
         memset (&rep, 0, sizeof (devsdk_http_reply));
         h->handler (h->ctx, &req, &rep);
         status = rep.code;
