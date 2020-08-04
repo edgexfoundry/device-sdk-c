@@ -17,6 +17,7 @@
 #include "cmdinfo.h"
 #include "iot/base64.h"
 #include "transform.h"
+#include "reqdata.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -142,7 +143,17 @@ iot_data_t *edgex_data_from_string (iot_data_type_t rtype, const char *val)
     case IOT_DATA_STRING:
       return iot_data_alloc_string (val, IOT_DATA_COPY);
     case IOT_DATA_BOOL:
-      return iot_data_alloc_bool (strcasecmp (val, "true") == 0);
+      if (strcasecmp (val, "true") == 0)
+      {
+        return iot_data_alloc_bool (true);
+      } else if (strcasecmp (val, "false") == 0)
+      {
+        return iot_data_alloc_bool (false);
+      }
+      else
+      {
+        return NULL;
+      }
     default:
       return NULL;
   }
@@ -978,7 +989,7 @@ static void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, in
   edgex_errorresponse_free (err);
 }
 
-static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const JSON_Object *jobj, devsdk_http_reply *reply)
+static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const edgex_reqdata_t *rdata, devsdk_http_reply *reply)
 {
   reply->code = MHD_HTTP_OK;
   iot_data_t **results = calloc (cmdinfo->nreqs, sizeof (iot_data_t *));
@@ -991,27 +1002,38 @@ static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, cons
       break;
     }
 
-    const char *value = json_object_get_string (jobj, resname);
-    if (value == NULL && cmdinfo->dfls[i] == NULL)
+    if (cmdinfo->pvals[i]->type != Edgex_Binary)
     {
-      edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "No value supplied for %s", resname);
-      break;
-    }
+      const char *value = edgex_reqdata_get (rdata, resname, cmdinfo->dfls[i]);
+      if (value == NULL)
+      {
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "No value supplied for %s", resname);
+        break;
+      }
 
-    results[i] = populateValue (cmdinfo->pvals[i]->type, value ? value : cmdinfo->dfls[i]);
-    if (!results[i])
-    {
-      edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Unable to parse \"%s\" for %s", value ? value : cmdinfo->dfls[i], resname);
-      break;
-    }
-
-    if (svc->config.device.datatransform && value)
-    {
-      edgex_transform_incoming (&results[i], cmdinfo->pvals[i], cmdinfo->maps[i]);
+      results[i] = populateValue (cmdinfo->pvals[i]->type, value);
       if (!results[i])
       {
-        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s overflows after transformations", value, resname);
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Unable to parse \"%s\" for %s", value ? value : cmdinfo->dfls[i], resname);
         break;
+      }
+
+      if (svc->config.device.datatransform && value)
+      {
+        edgex_transform_incoming (&results[i], cmdinfo->pvals[i], cmdinfo->maps[i]);
+        if (!results[i])
+        {
+          edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s overflows after transformations", value, resname);
+          break;
+        }
+      }
+    }
+    else
+    {
+      results[i] = edgex_reqdata_get_binary (rdata, resname);
+      if (results[i] == NULL)
+      {
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "No value supplied for %s", resname);
       }
     }
   }
@@ -1168,15 +1190,15 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
     {
       if (req->data.size)
       {
-        JSON_Value *jval = json_parse_string (req->data.bytes);
-        if (jval)
+        edgex_reqdata_t *data = edgex_reqdata_parse (svc->logger, req);
+        if (data)
         {
-          edgex_device_runput2 (svc, dev, cmd, json_value_get_object (jval), reply);
-          json_value_free (jval);
+          edgex_device_runput2 (svc, dev, cmd, data, reply);
+          edgex_reqdata_free (data);
         }
         else
         {
-          edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Payload did not parse as JSON");
+          edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Unable to parse payload for device PUT command");
         }
       }
       else
