@@ -216,3 +216,51 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
     break;
   }
 }
+
+bool edgex_transform_validate (const iot_data_t *val, const edgex_propertyvalue *props)
+{
+  bool result = true;
+  if (props->minimum.enabled || props->maximum.enabled)
+  {
+    switch (props->type)
+    {
+      case IOT_DATA_FLOAT32:
+      case IOT_DATA_FLOAT64:
+      {
+        long double ldval = getLongDouble (val, props->type);
+        if (props->maximum.enabled)
+        {
+          result = (ldval <= props->maximum.value.dval);
+        }
+        if (result && props->minimum.enabled)
+        {
+          result = (ldval >= props->minimum.value.dval);
+        }
+      }
+      break;
+      case IOT_DATA_INT8:
+      case IOT_DATA_UINT8:
+      case IOT_DATA_INT16:
+      case IOT_DATA_UINT16:
+      case IOT_DATA_INT32:
+      case IOT_DATA_UINT32:
+      case IOT_DATA_INT64:
+      case IOT_DATA_UINT64:
+      {
+        long long int llval = getLLInt (val, props->type);
+        if (props->maximum.enabled)
+        {
+          result = (llval <= props->maximum.value.ival);
+        }
+        if (result && props->minimum.enabled)
+        {
+          result = (llval >= props->minimum.value.ival);
+        }
+      }
+      break;
+      default:
+      break;
+    }
+  }
+  return result;
+}

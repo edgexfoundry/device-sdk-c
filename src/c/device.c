@@ -1018,7 +1018,7 @@ static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, cons
         break;
       }
 
-      if (svc->config.device.datatransform && value)
+      if (svc->config.device.datatransform)
       {
         edgex_transform_incoming (&results[i], cmdinfo->pvals[i], cmdinfo->maps[i]);
         if (!results[i])
@@ -1026,6 +1026,11 @@ static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, cons
           edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s overflows after transformations", value, resname);
           break;
         }
+      }
+      if (!edgex_transform_validate (results[i], cmdinfo->pvals[i]))
+      {
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s out of range specified in profile", value, resname);
+        break;
       }
     }
     else

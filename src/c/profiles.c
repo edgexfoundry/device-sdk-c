@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -48,6 +48,25 @@ static bool need_vds (devsdk_service_t *svc)
   return result;
 }
 
+static void write_limitval (char *s, edgex_transformArg arg, char typ)
+{
+  if (arg.enabled)
+  {
+    if (typ == 'f')
+    {
+      sprintf (s, "%f", arg.value.dval);
+    }
+    else
+    {
+      sprintf (s, "%" PRIi64, arg.value.ival);
+    }
+  }
+  else
+  {
+    s[0] = '\0';
+  }
+}
+
 static void generate_value_descriptors
 (
   devsdk_service_t *svc,
@@ -61,20 +80,26 @@ static void generate_value_descriptors
     edgex_propertyvalue *pv = res->properties->value;
     edgex_units *units = res->properties->units;
     char type[2];
+    char min[32];
+    char max[32];
     edgex_valuedescriptor *vd;
     devsdk_error err;
     iot_logger_t *lc = svc->logger;
 
     type[0] = edgex_propertytype_tostring (pv->type)[0];
     type[1] = '\0';
+
+    write_limitval (min, pv->minimum, type[0]);
+    write_limitval (max, pv->maximum, type[0]);
+
     vd = edgex_data_client_add_valuedescriptor
     (
       lc,
       &svc->config.endpoints,
       res->name,
       timenow,
-      pv->minimum,
-      pv->maximum,
+      min,
+      max,
       type,
       units->defaultvalue,
       pv->defaultvalue,

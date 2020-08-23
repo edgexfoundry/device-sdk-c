@@ -90,11 +90,16 @@ writable.
 * offset - a value to be added to a reading before it is returned.
 * mask - a binary mask which will be applied to an integer reading.
 * shift - a number of bits by which an integer reading will be shifted right.
+* minimum - a minimum value for data specified in set operations.
+* maxumum - a maximum value for data specified in set operations.
 
 The processing defined by base, scale, offset, mask and shift is applied in
 that order. This is done within the SDK. A reverse transformation is applied
 by the SDK to incoming data on set operations (mask transforms on set are
 implemented in the driver)
+
+The minimum and maximum values may be used to enforce a range limit on values
+provided in write requests. They are only valid for numeric data, ie ints and floats.
 
 The units property is used to indicate the units of the value, eg Amperes,
 degrees C, etc. It should have only one field, a defaultValue that specifies the units.
