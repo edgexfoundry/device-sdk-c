@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2020
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -75,8 +75,8 @@ typedef struct
   edgex_propertytype type;
   bool readable;
   bool writable;
-  char *minimum;
-  char *maximum;
+  edgex_transformArg minimum;
+  edgex_transformArg maximum;
   char *defaultvalue;
   char *lsb;
   edgex_transformArg mask;

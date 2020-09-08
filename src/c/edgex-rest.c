@@ -243,7 +243,7 @@ static bool get_transformArg
       int64_t i = strtol (str, &end, 0);
       if (errno || (end && *end))
       {
-        iot_log_error (lc, "Unable to parse \"%s\" as integer for transform \"%s\"", str, name);
+        iot_log_error (lc, "Unable to parse \"%s\" as integer for valueproperty \"%s\"", str, name);
         ok = false;
       }
       else
@@ -258,7 +258,7 @@ static bool get_transformArg
       double d = strtod (str, &end);
       if (errno || (end && *end))
       {
-        iot_log_error ( lc, "Unable to parse \"%s\" as float for transform \"%s\"", str, name);
+        iot_log_error ( lc, "Unable to parse \"%s\" as float for valueproperty \"%s\"", str, name);
         ok = false;
       }
       else
@@ -269,7 +269,7 @@ static bool get_transformArg
     }
     else
     {
-      iot_log_error (lc, "Transform \"%s\" specified for non-numeric data", name);
+      iot_log_error (lc, "Valueproperty \"%s\" specified for non-numeric data", name);
       ok = false;
     }
   }
@@ -301,6 +301,8 @@ static edgex_propertyvalue *propertyvalue_read
         ok = false;
       }
     }
+    ok &= get_transformArg (lc, obj, "minimum", pt, &result->minimum);
+    ok &= get_transformArg (lc, obj, "maximum", pt, &result->maximum);
     if (!ok)
     {
       free (result);
@@ -318,8 +320,6 @@ static edgex_propertyvalue *propertyvalue_read
       result->readable = true;
       result->writable = true;
     }
-    result->minimum = get_string (obj, "minimum");
-    result->maximum = get_string (obj, "maximum");
     result->defaultvalue = get_string (obj, "defaultValue");
     result->lsb = get_string (obj, "lsb");
     result->assertion = get_string (obj, "assertion");
@@ -369,8 +369,8 @@ static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
   json_object_set_string (obj, "type", edgex_propertytype_tostring (e->type));
   json_object_set_string
     (obj, "readWrite", rwstrings[e->readable][e->writable]);
-  json_object_set_string (obj, "minimum", e->minimum);
-  json_object_set_string (obj, "maximum", e->maximum);
+  set_arg (obj, "minimum", e->minimum, e->type);
+  set_arg (obj, "maximum", e->maximum, e->type);
   json_object_set_string (obj, "defaultValue", e->defaultvalue);
   json_object_set_string (obj, "lsb", e->lsb);
   set_arg (obj, "mask", e->mask, e->type);
@@ -395,8 +395,8 @@ static edgex_propertyvalue *propertyvalue_dup (const edgex_propertyvalue *pv)
     result->type = pv->type;
     result->readable = pv->readable;
     result->writable = pv->writable;
-    result->minimum = strdup (pv->minimum);
-    result->maximum = strdup (pv->maximum);
+    result->minimum = pv->minimum;
+    result->maximum = pv->maximum;
     result->defaultvalue = strdup (pv->defaultvalue);
     result->lsb = strdup (pv->lsb);
     result->mask = pv->mask;
@@ -414,8 +414,6 @@ static edgex_propertyvalue *propertyvalue_dup (const edgex_propertyvalue *pv)
 
 static void propertyvalue_free (edgex_propertyvalue *e)
 {
-  free (e->minimum);
-  free (e->maximum);
   free (e->defaultvalue);
   free (e->lsb);
   free (e->assertion);
