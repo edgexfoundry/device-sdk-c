@@ -150,6 +150,28 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
   return res;
 }
 
+/* Event data structure:
+
+Reading:
+  id: String (filled in by core-data)
+  created, modified, pushed: Timestamps (filled in by core-data)
+  name: String (name of the DeviceResource)
+  origin: Timestamp (filled in by the implementation or the SDK)
+  valueType: String
+  value: String
+  binaryValue: String (one of value or binaryValue is used)
+  mediaType: String (only if binaryValue)
+  floatEncoding: String (only for float types)
+
+Event:
+  id: String (filled in by core-data)
+  created, modified, pushed: Timestamps (filled in by core-data)
+  device: String (name of the Device)
+  origin: Timestamp (filled in by the SDK)
+  tags: Array of Strings (may be added to at any stage)
+  readings: Array of Readings
+*/
+
 edgex_event_cooked *edgex_data_process_event
 (
   const char *device_name,
