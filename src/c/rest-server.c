@@ -317,7 +317,7 @@ edgex_rest_server *edgex_rest_server_create
 
   /* Start http server */
 
-  if (strlen (bindaddr) && strcmp (bindaddr, "0.0.0.0"))
+  if (strcmp (bindaddr, "0.0.0.0"))
   {
     struct addrinfo *res;
     char svc[6];

@@ -14,31 +14,6 @@
 #include "cmdinfo.h"
 #include "rest-server.h"
 
-typedef struct edgex_reading
-{
-  uint64_t created;
-  char *id;
-  uint64_t modified;
-  const char *name;
-  uint64_t origin;
-  uint64_t pushed;
-  devsdk_commandresult value;
-  bool binfloat;
-  struct edgex_reading *next;
-} edgex_reading;
-
-typedef struct edgex_event
-{
-  uint64_t created;
-  const char *device;
-  char *id;
-  uint64_t modified;
-  uint64_t origin;
-  uint64_t pushed;
-  edgex_reading *readings;
-  struct edgex_event *next;
-} edgex_event;
-
 typedef enum { JSON, CBOR} edgex_event_encoding;
 
 typedef struct edgex_event_cooked

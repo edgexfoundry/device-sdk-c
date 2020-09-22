@@ -43,7 +43,7 @@ iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *
   iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
-  iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("0.0.0.0", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
 
   iot_data_string_map_add (result, "Device/DataTransform", iot_data_alloc_bool (true));
   iot_data_string_map_add (result, "Device/Discovery/Enabled", iot_data_alloc_bool (true));
