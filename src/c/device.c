@@ -350,7 +350,21 @@ static iot_data_t *populateValue (edgex_propertytype rtype, const char *val)
       bool *arr = malloc (jsz * sizeof (bool));
       for (size_t i = 0; i < jsz; i++)
       {
-        arr[i] = (strcasecmp (json_array_get_string (jarr, i), "true") == 0);
+        const char *bval = json_array_get_string (jarr, i);
+        if (strcasecmp (bval, "true") == 0)
+        {
+          arr[i] = true;
+        }
+        else if (strcasecmp (bval, "false") == 0)
+        {
+          arr[i] = false;
+        }
+        else
+        {
+          free (arr);
+          json_value_free (jval);
+          return NULL;
+        }
       }
       json_value_free (jval);
       return iot_data_alloc_array (arr, jsz, IOT_DATA_BOOL, IOT_DATA_TAKE);
