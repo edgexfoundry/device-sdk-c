@@ -229,7 +229,7 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
   }
 }
 
-void edgex_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err)
+void devsdk_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err)
 {
   *err = EDGEX_OK;
   edgex_metadata_client_set_device_opstate_byname
