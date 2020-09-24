@@ -115,16 +115,6 @@ edgex_device * edgex_get_device (devsdk_service_t *svc, const char *id);
 edgex_device * edgex_get_device_byname (devsdk_service_t *svc, const char *name);
 
 /**
- * @brief Set the operational state of a device
- * @param svc The device service.
- * @param devname The device name.
- * @param operational true if the device is operational (enabled)
- * @param err Nonzero reason codes will be set here in the event of errors.
- */
-
-void edgex_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err);
-
-/**
  * @brief Free a device structure or list of device structures.
  * @param d The device or the first device in the list.
  */

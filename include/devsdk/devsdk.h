@@ -254,6 +254,16 @@ devsdk_devices *devsdk_get_device (devsdk_service_t *svc, const char *name);
 
 void devsdk_free_devices (devsdk_devices *d);
 
+/**
+ * @brief Set the operational state of a device
+ * @param svc The device service.
+ * @param devname The device name.
+ * @param operational true if the device is operational (enabled)
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ */
+
+void devsdk_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err);
+
 
 /**
  * @brief Stop the event service. Any automatic events will be cancelled and the rest api for the device service will be shut down.

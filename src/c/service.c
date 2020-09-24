@@ -231,6 +231,7 @@ devsdk_service_t *devsdk_service_new
     return NULL;
   }
 
+  iot_init ();
   if (result->name)
   {
     const char *n = result->name;
@@ -622,7 +623,6 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   *err = EDGEX_OK;
   svc->starttime = iot_time_msecs();
-  iot_init ();
   iot_threadpool_start (svc->thpool);
 
   configmap = edgex_config_defaults (svc->confdir, driverdfls);

@@ -116,15 +116,19 @@ void edgex_metadata_client_set_device_opstate_byname
 )
 {
   edgex_ctx ctx;
+  char *ename;
   char url[URL_BUF_SIZE];
   char data[sizeof ("{*operatingstate*:*disabled*}")];
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/device/name/%s", endpoints->metadata.host, endpoints->metadata.port, devicename);
+  ename = curl_easy_escape (NULL, devicename, 0);
+
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/device/name/%s", endpoints->metadata.host, endpoints->metadata.port, ename);
   sprintf (data, "{\"operatingstate\":\"%s\"}", (opstate == ENABLED) ? "enabled" : "disabled");
 
   edgex_http_put (lc, &ctx, url, data, edgex_http_write_cb, err);
   free (ctx.buff);
+  curl_free (ename);
 }
 
 void edgex_metadata_client_set_device_adminstate

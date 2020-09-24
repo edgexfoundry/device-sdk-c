@@ -244,10 +244,6 @@ int main (int argc, char *argv[])
     template_stop          /* Stop */
   };
 
-  iot_data_t *confparams = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (confparams, "TestParam1", iot_data_alloc_string ("X", IOT_DATA_REF));
-  iot_data_string_map_add (confparams, "TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
-
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
     ("device-template", "1.0", impl, templateImpls, &argc, argv, &e);
@@ -271,6 +267,9 @@ int main (int argc, char *argv[])
   }
 
   impl->svc = service;
+  iot_data_t *confparams = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (confparams, "TestParam1", iot_data_alloc_string ("X", IOT_DATA_REF));
+  iot_data_string_map_add (confparams, "TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
 
   /* Start the device service*/
   devsdk_service_start (service, confparams, &e);
