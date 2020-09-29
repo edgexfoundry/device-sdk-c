@@ -1337,48 +1337,26 @@ static edgex_device *device_read
   return result;
 }
 
-static JSON_Value *device_write (const edgex_device *e, bool create)
+static JSON_Value *device_write (const edgex_device *e)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
 
-  if (create)
+  json_object_set_value (obj, "profile", deviceprofile_write_name (e->profile));
+  json_object_set_value (obj, "service", deviceservice_write_name (e->service));
+  json_object_set_uint (obj, "lastConnected", 0);
+  json_object_set_uint (obj, "lastReported", 0);
+  if (e->id)
   {
-    json_object_set_value
-      (obj, "profile", deviceprofile_write_name (e->profile));
-    json_object_set_value
-      (obj, "service", deviceservice_write_name (e->service));
-    json_object_set_uint (obj, "lastConnected", 0);
-    json_object_set_uint (obj, "lastReported", 0);
-  }
-  else
-  {
-    json_object_set_string
-      (obj, "adminState", edgex_adminstate_tostring (e->adminState));
-    json_object_set_string
-      (obj, "operatingState", edgex_operatingstate_tostring(e->operatingState));
     json_object_set_string (obj, "id", e->id);
-    json_object_set_uint (obj, "created", e->created);
-    json_object_set_uint (obj, "modified", e->modified);
-    json_object_set_value
-      (obj, "profile", deviceprofile_write (e->profile, false));
-    json_object_set_value
-      (obj, "service", deviceservice_write (e->service, false));
-    json_object_set_uint (obj, "lastConnected", e->lastConnected);
-    json_object_set_uint (obj, "lastReported", e->lastReported);
   }
-
-  json_object_set_value
-    (obj, "protocols", protocols_write (e->protocols));
-  json_object_set_value
-    (obj, "autoevents", autoevents_write (e->autos));
-  json_object_set_string
-    (obj, "adminState", edgex_adminstate_tostring (e->adminState));
+  json_object_set_value (obj, "protocols", protocols_write (e->protocols));
+  json_object_set_value (obj, "autoevents", autoevents_write (e->autos));
+  json_object_set_string (obj, "adminState", edgex_adminstate_tostring (e->adminState));
+  json_object_set_string (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
   json_object_set_string (obj, "name", e->name);
   json_object_set_string (obj, "description", e->description);
   json_object_set_value (obj, "labels", strings_to_array (e->labels));
-  json_object_set_string
-    (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
   json_object_set_uint (obj, "origin", e->origin);
 
   return result;
@@ -1491,12 +1469,12 @@ edgex_device *edgex_device_read (iot_logger_t *lc, const char *json)
   return result;
 }
 
-char *edgex_device_write (const edgex_device *e, bool create)
+char *edgex_device_write (const edgex_device *e)
 {
   char *result;
   JSON_Value *val;
 
-  val = device_write (e, create);
+  val = device_write (e);
   result = json_serialize_to_string (val);
   json_value_free (val);
   return result;

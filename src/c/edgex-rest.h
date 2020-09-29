@@ -34,7 +34,7 @@ edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e);
 void edgex_deviceservice_free (edgex_deviceservice *e);
 void edgex_device_autoevents_free (edgex_device_autoevents *e);
 edgex_device *edgex_device_read (iot_logger_t *lc, const char *json);
-char *edgex_device_write (const edgex_device *e, bool create);
+char *edgex_device_write (const edgex_device *e);
 char *edgex_device_write_sparse (const char *name, const char *id, const char *description, const devsdk_strings *labels, const char *profile_name);
 edgex_device *edgex_device_dup (const edgex_device *e);
 devsdk_devices *edgex_device_todevsdk (const edgex_device *e);

@@ -213,15 +213,33 @@ void edgex_free_device (edgex_device *e)
 
 void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, devsdk_discovered_device *devices)
 {
+  edgex_device *existing;
   for (uint32_t i = 0; i < ndevices; i++)
   {
+    existing = edgex_devmap_device_byname (svc->devices, devices[i].name);
+    if (existing)
+    {
+      edgex_device_release (existing);
+      continue;
+    }
+
     for (devsdk_protocols *prots = devices[i].protocols; prots; prots = prots->next)
     {
       edgex_watcher *w = edgex_watchlist_match (svc->watchlist, prots->properties);
       if (w)
       {
-        devsdk_error e;
-        free (edgex_add_device (svc, devices[i].name, devices[i].description, devices[i].labels, w->profile, devices[i].protocols, w->adminstate == LOCKED, NULL, &e));
+        edgex_metadata_client_add_or_modify_device
+        (
+          svc->logger,
+          &svc->config.endpoints,
+          devices[i].name,
+          devices[i].description,
+          devices[i].labels,
+          w->adminstate,
+          devices[i].protocols,
+          svc->name,
+          w->profile
+        );
         edgex_watcher_free (w);
         break;
       }
