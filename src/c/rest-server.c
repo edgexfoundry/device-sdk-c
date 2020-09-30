@@ -271,6 +271,7 @@ static int http_handler
   }
   response = MHD_create_response_from_buffer (reply_size, reply, MHD_RESPMEM_MUST_FREE);
   MHD_add_response_header (response, "Content-Type", reply_type);
+  MHD_add_response_header (response, "X-Correlation-ID", edgex_device_get_crlid ());
   MHD_queue_response (conn, status, response);
   MHD_destroy_response (response);
 

@@ -14,5 +14,6 @@
 #include <stddef.h>
 
 extern void edgex_device_handler_metrics (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
+extern void edgex_device_handler_metricsv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
 #endif

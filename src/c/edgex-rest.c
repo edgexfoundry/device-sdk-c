@@ -1827,8 +1827,9 @@ void edgex_baserequest_free (edgex_baserequest *e)
 }
 
 
-void edgex_baseresponse_populate (edgex_baseresponse *e, const char *reqId, int code, const char *msg)
+void edgex_baseresponse_populate (edgex_baseresponse *e, const char *version, const char *reqId, int code, const char *msg)
 {
+  e->apiVersion = version;
   e->requestId = reqId;
   e->statusCode = code;
   e->message = msg;
@@ -1848,6 +1849,7 @@ static JSON_Value *baseresponse_write (const edgex_baseresponse *br)
 {
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
+  json_object_set_string (obj, "apiVersion", br->apiVersion);
   json_object_set_string (obj, "requestId", br->requestId);
   json_object_set_uint (obj, "statusCode", br->statusCode);
   if (br->message)
@@ -1911,7 +1913,7 @@ static JSON_Value *configresponse_write (const edgex_configresponse *cr)
 {
   JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)cr);
   JSON_Object *obj = json_value_get_object (result);
-  json_object_set_string (obj, "config", cr->config);
+  json_object_set_value (obj, "config", cr->config);
   return result;
 }
 
@@ -1923,11 +1925,28 @@ void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_rep
 
 void edgex_configresponse_free (edgex_configresponse *cr)
 {
-  if (cr)
-  {
-    free (cr->config);
-    free (cr);
-  }
+  free (cr);
+}
+
+static JSON_Value *metricsesponse_write (const edgex_metricsresponse *mr)
+{
+  JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)mr);
+  JSON_Object *obj = json_value_get_object (result);
+#ifdef __GNU_LIBRARY__
+  json_object_set_uint (obj, "Alloc", mr->alloc);
+  json_object_set_uint (obj, "TotalAlloc", mr->totalloc);
+  json_object_set_number (obj, "CpuLoadAvg", mr->loadavg);
+#endif
+  json_object_set_number (obj, "CpuTime", mr->cputime);
+  json_object_set_number (obj, "CpuAvgUsage", mr->cpuavg);
+
+  return result;
+}
+
+void edgex_metricsresponse_write (const edgex_metricsresponse *mr, devsdk_http_reply *reply)
+{
+  JSON_Value *val = metricsesponse_write (mr);
+  value_write (val, reply);
 }
 
 #ifdef EDGEX_DEBUG_DUMP

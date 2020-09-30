@@ -1063,7 +1063,7 @@ static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, cons
     if (svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, (const iot_data_t **)results, &e))
     {
       edgex_baseresponse br;
-      edgex_baseresponse_populate (&br, "", MHD_HTTP_OK, "Data written successfully");
+      edgex_baseresponse_populate (&br, "v2", "", MHD_HTTP_OK, "Data written successfully");
       edgex_baseresponse_write (&br, reply);
       if (svc->config.device.updatelastconnected)
       {
@@ -1186,7 +1186,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
           else
           {
             edgex_data_client_add_event (svc, event);
-            edgex_baseresponse_populate (&br, "", MHD_HTTP_OK, "Event generated successfully");
+            edgex_baseresponse_populate (&br, "v2", "", MHD_HTTP_OK, "Event generated successfully");
             edgex_baseresponse_write (&br, reply);
           }
         }
@@ -1199,7 +1199,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
           else
           {
             edgex_event_cooked_free (event);
-            edgex_baseresponse_populate (&br, "", MHD_HTTP_OK, "Reading performed successfully");
+            edgex_baseresponse_populate (&br, "v2", "", MHD_HTTP_OK, "Reading performed successfully");
             edgex_baseresponse_write (&br, reply);
           }
         }

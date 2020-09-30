@@ -13,6 +13,7 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
+#include "correlation.h"
 #include "edgex-logging.h"
 #include "devutil.h"
 #include "autoevent.h"
@@ -670,7 +671,7 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
   edgex_map_deinit (&svc->config.watchers);
 }
 
-static char *edgex_device_serialize_config (devsdk_service_t *svc)
+static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
 {
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
@@ -763,14 +764,15 @@ static char *edgex_device_serialize_config (devsdk_service_t *svc)
     json_object_set_value (obj, "Driver", dval);
   }
 
-  char *result = json_serialize_to_string (val);
-  json_value_free (val);
-  return result;
+  return val;
 }
 
 void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  char *json = edgex_device_serialize_config ((devsdk_service_t *)ctx);
+  JSON_Value *cval = edgex_device_config_toJson ((devsdk_service_t *)ctx);
+
+  char *json = json_serialize_to_string (cval);
+  json_value_free (cval);
   reply->data.bytes = json;
   reply->data.size = strlen (json);
   reply->content_type = CONTENT_JSON;
@@ -779,16 +781,13 @@ void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, dev
 
 void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  edgex_baserequest *br;
   edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));
 
-  br = edgex_baserequest_read (req->data);
-  edgex_baseresponse_populate ((edgex_baseresponse *)cr, br->requestId, MHD_HTTP_OK, NULL);
-  cr->config = edgex_device_serialize_config ((devsdk_service_t *)ctx);
+  edgex_baseresponse_populate ((edgex_baseresponse *)cr, "v2", edgex_device_get_crlid (), MHD_HTTP_OK, NULL);
+  cr->config = edgex_device_config_toJson ((devsdk_service_t *)ctx);
 
   edgex_configresponse_write (cr, reply);
   edgex_configresponse_free (cr);
-  edgex_baserequest_free (br);
 }
 
 void edgex_device_process_configured_devices

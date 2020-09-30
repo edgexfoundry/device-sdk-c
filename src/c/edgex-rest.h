@@ -57,7 +57,7 @@ void edgex_watcher_free (edgex_watcher *e);
 edgex_baserequest *edgex_baserequest_read (devsdk_http_data d);
 void edgex_baserequest_free (edgex_baserequest *e);
 
-void edgex_baseresponse_populate (edgex_baseresponse *e, const char *reqId, int code, const char *msg);
+void edgex_baseresponse_populate (edgex_baseresponse *e, const char *version, const char *reqId, int code, const char *msg);
 
 edgex_errorresponse *edgex_errorresponse_create (uint64_t code, char *msg);
 void edgex_errorresponse_write (const edgex_errorresponse *er, devsdk_http_reply *reply);
@@ -67,6 +67,7 @@ void edgex_baseresponse_write (const edgex_baseresponse *br, devsdk_http_reply *
 void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *reply);
 void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_reply *reply);
 void edgex_configresponse_free (edgex_configresponse *cr);
+void edgex_metricsresponse_write (const edgex_metricsresponse *mr, devsdk_http_reply *reply);
 
 
 #ifdef EDGEX_DEBUG_DUMP
