@@ -28,4 +28,7 @@ extern bool edgex_rest_server_register_handler
   void *context,
   devsdk_http_handler_fn handler
 );
+
+void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, int code, char *msg, ...);
+
 #endif

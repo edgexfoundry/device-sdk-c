@@ -13,7 +13,6 @@
 #include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
-#include "correlation.h"
 #include "edgex-logging.h"
 #include "devutil.h"
 #include "autoevent.h"
@@ -783,7 +782,7 @@ void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, d
 {
   edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));
 
-  edgex_baseresponse_populate ((edgex_baseresponse *)cr, "v2", edgex_device_get_crlid (), MHD_HTTP_OK, NULL);
+  edgex_baseresponse_populate ((edgex_baseresponse *)cr, "v2", MHD_HTTP_OK, NULL);
   cr->config = edgex_device_config_toJson ((devsdk_service_t *)ctx);
 
   edgex_configresponse_write (cr, reply);

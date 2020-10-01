@@ -177,12 +177,15 @@ edgex_event_cooked *edgex_data_process_event
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
-  bool doTransforms
+  bool doTransforms,
+  const char *apiversion
 )
 {
   edgex_event_cooked *result = NULL;
   bool useCBOR = false;
+  bool apiv = (strlen (apiversion) > 0);
   uint64_t timenow = iot_time_nsecs ();
+
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
     if (commandinfo->pvals[i]->type == Edgex_Binary)
@@ -217,7 +220,7 @@ edgex_event_cooked *edgex_data_process_event
   if (useCBOR)
   {
     size_t bsize = 0;
-    cbor_item_t *cevent = cbor_new_definite_map (3);
+    cbor_item_t *cevent = cbor_new_definite_map (apiv ? 4 : 3);
     cbor_item_t *crdgs = cbor_new_definite_array (commandinfo->nreqs);
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
@@ -228,11 +231,11 @@ edgex_event_cooked *edgex_data_process_event
       edgex_propertytype pt = edgex_propertytype_data (values[i].value);
       if (pt == Edgex_Binary || pt == Edgex_Float32 || pt == Edgex_Float64 || pt == Edgex_Float32Array || pt == Edgex_Float64Array)
       {
-        crdg = cbor_new_definite_map (5);
+        crdg = cbor_new_definite_map (apiv ? 7 : 6);
       }
       else
       {
-        crdg = cbor_new_definite_map (4);
+        crdg = cbor_new_definite_map (apiv ? 6 : 5);
       }
 
       if (pt == Edgex_Binary)
@@ -255,10 +258,25 @@ edgex_event_cooked *edgex_data_process_event
           { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
       }
 
+      if (apiv)
+      {
+        cbor_map_add (crdg, (struct cbor_pair)
+        {
+          .key = cbor_move (cbor_build_string ("apiVersion")),
+          .value = cbor_move (cbor_build_string (apiversion))
+        });
+      }
+
       cbor_map_add (crdg, (struct cbor_pair)
       {
         .key = cbor_move (cbor_build_string ("name")),
         .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
+      });
+
+      cbor_map_add (crdg, (struct cbor_pair)
+      {
+        .key = cbor_move (cbor_build_string ("deviceName")),
+        .value = cbor_move (cbor_build_string (device_name))
       });
 
       cbor_map_add (crdg, (struct cbor_pair)
@@ -285,6 +303,11 @@ edgex_event_cooked *edgex_data_process_event
       cbor_array_push (crdgs, cbor_move (crdg));
     }
 
+    if (apiv)
+    {
+      cbor_map_add (cevent, (struct cbor_pair)
+        { .key = cbor_move (cbor_build_string ("apiVersion")), .value = cbor_move (cbor_build_string (apiversion)) });
+    }
     cbor_map_add (cevent, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("device")), .value = cbor_move (cbor_build_string (device_name)) });
     cbor_map_add (cevent, (struct cbor_pair)
@@ -311,6 +334,11 @@ edgex_event_cooked *edgex_data_process_event
       JSON_Value *rval = json_value_init_object ();
       JSON_Object *robj = json_value_get_object (rval);
 
+      if (apiv)
+      {
+        json_object_set_string (robj, "apiVersion", apiversion);
+      }
+      json_object_set_string (robj, "deviceName", device_name);
       json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
       json_object_set_string (robj, "value", reading);
       json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
@@ -333,6 +361,10 @@ edgex_event_cooked *edgex_data_process_event
       free (reading);
     }
 
+    if (apiv)
+    {
+      json_object_set_string (jobj, "apiVersion", apiversion);
+    }
     json_object_set_string (jobj, "device", device_name);
     json_object_set_uint (jobj, "origin", timenow);
     json_object_set_value (jobj, "readings", arrval);

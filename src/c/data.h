@@ -61,7 +61,8 @@ edgex_event_cooked *edgex_data_process_event
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
-  bool doTransforms
+  bool doTransforms,
+  const char *apiversion
 );
 
 void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *eventval);

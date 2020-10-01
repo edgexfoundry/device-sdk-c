@@ -10,6 +10,7 @@
 #include "cmdinfo.h"
 #include "autoevent.h"
 #include "watchers.h"
+#include "correlation.h"
 #include "parson.h"
 #include <microhttpd.h>
 #include <string.h>
@@ -1827,10 +1828,10 @@ void edgex_baserequest_free (edgex_baserequest *e)
 }
 
 
-void edgex_baseresponse_populate (edgex_baseresponse *e, const char *version, const char *reqId, int code, const char *msg)
+void edgex_baseresponse_populate (edgex_baseresponse *e, const char *version, int code, const char *msg)
 {
   e->apiVersion = version;
-  e->requestId = reqId;
+  e->requestId = edgex_device_get_crlid ();
   e->statusCode = code;
   e->message = msg;
 }

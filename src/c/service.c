@@ -13,7 +13,6 @@
 #include "discovery.h"
 #include "callback.h"
 #include "metrics.h"
-#include "correlation.h"
 #include "errorlist.h"
 #include "rest-server.h"
 #include "profiles.h"
@@ -275,7 +274,7 @@ static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_htt
 {
   edgex_pingresponse pr;
 
-  edgex_baseresponse_populate ((edgex_baseresponse *)&pr, "v2", edgex_device_get_crlid (), MHD_HTTP_OK, NULL);
+  edgex_baseresponse_populate ((edgex_baseresponse *)&pr, "v2", MHD_HTTP_OK, NULL);
   pr.timestamp = iot_time_secs ();
   edgex_pingresponse_write (&pr, reply);
 }
@@ -552,6 +551,8 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     edgex_device_handler_discovery
   );
 
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
+
   edgex_rest_server_register_handler
   (
     svc->daemon, EDGEX_DEV_API_METRICS, DevSDK_Get, svc, edgex_device_handler_metrics
@@ -820,7 +821,7 @@ void devsdk_post_readings
   if (command)
   {
     edgex_event_cooked *event = edgex_data_process_event
-      (devname, command, values, svc->config.device.datatransform);
+      (devname, command, values, svc->config.device.datatransform, "");
 
     if (event)
     {

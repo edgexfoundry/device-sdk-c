@@ -20,7 +20,7 @@
 #include <netdb.h>
 #include <microhttpd.h>
 
-#define STR_BLK_SIZE 512
+#define EDGEX_ERRBUFSZ 1024
 
 typedef struct handler_list
 {
@@ -381,6 +381,20 @@ bool edgex_rest_server_register_handler
   *tail = entry;
   pthread_mutex_unlock (&svr->lock);
   return result;
+}
+
+void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, int code, char *msg, ...)
+{
+  char *buf = malloc (EDGEX_ERRBUFSZ);
+  va_list args;
+  va_start (args, msg);
+  vsnprintf (buf, EDGEX_ERRBUFSZ, msg, args);
+  va_end (args);
+
+  iot_log_error (lc, buf);
+  edgex_errorresponse *err = edgex_errorresponse_create (code, buf);
+  edgex_errorresponse_write (err, reply);
+  edgex_errorresponse_free (err);
 }
 
 void edgex_rest_server_destroy (edgex_rest_server *svr)

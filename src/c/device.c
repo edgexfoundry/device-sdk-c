@@ -39,8 +39,6 @@
  * the device implementation.
  */
 
-#define DEVICE_ERRBUFSZ 1024
-
 static const char *methStr (devsdk_http_method method)
 {
   switch (method)
@@ -665,7 +663,7 @@ static int edgex_device_runget
   )
   {
     devsdk_error err = EDGEX_OK;
-    *reply = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+    *reply = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform, "");
 
     if (*reply)
     {
@@ -989,20 +987,6 @@ void edgex_device_handler_device (void *ctx, const devsdk_http_request *req, dev
     (svc, id, false, cmd, req->method, req->params, req->data.bytes, req->data.size, &reply->data.bytes, &reply->data.size, &reply->content_type);
 }
 
-static void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, int code, char *msg, ...)
-{
-  char *buf = malloc (DEVICE_ERRBUFSZ);
-  va_list args;
-  va_start (args, msg);
-  vsnprintf (buf, DEVICE_ERRBUFSZ, msg, args);
-  va_end (args);
-
-  iot_log_error (lc, buf);
-  edgex_errorresponse *err = edgex_errorresponse_create (code, buf);
-  edgex_errorresponse_write (err, reply);
-  edgex_errorresponse_free (err);
-}
-
 static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const edgex_reqdata_t *rdata, devsdk_http_reply *reply)
 {
   reply->code = MHD_HTTP_OK;
@@ -1063,7 +1047,7 @@ static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, cons
     if (svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, (const iot_data_t **)results, &e))
     {
       edgex_baseresponse br;
-      edgex_baseresponse_populate (&br, "v2", "", MHD_HTTP_OK, "Data written successfully");
+      edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Data written successfully");
       edgex_baseresponse_write (&br, reply);
       if (svc->config.device.updatelastconnected)
       {
@@ -1105,7 +1089,7 @@ static edgex_event_cooked *edgex_device_runget2
   if (svc->userfns.gethandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
   {
     devsdk_error err = EDGEX_OK;
-    result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+    result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform, "v2");
 
     if (result)
     {
@@ -1186,7 +1170,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
           else
           {
             edgex_data_client_add_event (svc, event);
-            edgex_baseresponse_populate (&br, "v2", "", MHD_HTTP_OK, "Event generated successfully");
+            edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Event generated successfully");
             edgex_baseresponse_write (&br, reply);
           }
         }
@@ -1199,7 +1183,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
           else
           {
             edgex_event_cooked_free (event);
-            edgex_baseresponse_populate (&br, "v2", "", MHD_HTTP_OK, "Reading performed successfully");
+            edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Reading performed successfully");
             edgex_baseresponse_write (&br, reply);
           }
         }

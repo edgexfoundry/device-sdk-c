@@ -98,7 +98,7 @@ static void *ae_runner (void *p)
           resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
         }
         edgex_event_cooked *event =
-          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
+          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform, "");
         if (event)
         {
           edgex_data_client_add_event (ai->svc, event);
