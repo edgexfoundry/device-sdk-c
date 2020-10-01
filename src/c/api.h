@@ -23,6 +23,7 @@
 
 #define EDGEX_DEV_API2_PING "/api/v2/ping"
 #define EDGEX_DEV_API2_CONFIG "/api/v2/config"
+#define EDGEX_DEV_API2_METRICS "/api/v2/metrics"
 #define EDGEX_DEV_API2_DEVICE "/api/v2/device/{id}/{cmd}"
 #define EDGEX_DEV_API2_DEVICE_NAME "/api/v2/device/name/{name}/{cmd}"
 

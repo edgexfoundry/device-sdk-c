@@ -10,6 +10,7 @@
 #define _EDGEX_EDGEX2_H_
 
 #include "edgex/edgex-base.h"
+#include "parson.h"
 
 /* Definitions of Data Transfer Objects for v2 REST API */
 
@@ -20,6 +21,7 @@ typedef struct
 
 typedef struct
 {
+  const char *apiVersion;
   const char *requestId;
   uint64_t statusCode;
   const char *message;
@@ -36,7 +38,17 @@ typedef struct
 typedef struct
 {
   edgex_baseresponse base;
-  char *config;
+  JSON_Value *config;
 } edgex_configresponse;
+
+typedef struct
+{
+  edgex_baseresponse base;
+  int alloc;
+  int totalloc;
+  double loadavg;
+  double cputime;
+  double cpuavg;
+} edgex_metricsresponse;
 
 #endif
