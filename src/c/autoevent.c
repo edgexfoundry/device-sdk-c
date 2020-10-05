@@ -231,3 +231,15 @@ void edgex_device_autoevent_stop (edgex_device *dev)
     }
   }
 }
+
+void edgex_device_autoevent_stop_now (edgex_device *dev)
+{
+  for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
+  {
+    if (ae->impl)
+    {
+      stopper (ae->impl);
+      ae->impl = NULL;
+    }
+  }
+}

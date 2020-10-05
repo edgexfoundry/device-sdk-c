@@ -12,6 +12,7 @@
 #include "device.h"
 #include "discovery.h"
 #include "callback.h"
+#include "callback2.h"
 #include "metrics.h"
 #include "errorlist.h"
 #include "rest-server.h"
@@ -474,6 +475,8 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     edgex_device_handler_callback
   );
 
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
+
   /* Add Devices from configuration */
 
   if (config)
@@ -514,6 +517,16 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   iot_scheduler_start (svc->scheduler);
 
   /* Register REST handlers */
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_ID, DevSDK_Delete, svc, edgex_device_handler_callback_device_id);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_profile);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE_ID, DevSDK_Delete, svc, edgex_device_handler_callback_profile_id);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_watcher);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_ID, DevSDK_Delete, svc, edgex_device_handler_callback_watcher_id);
 
   edgex_rest_server_register_handler
   (

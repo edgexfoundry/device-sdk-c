@@ -87,7 +87,7 @@ extern void edgex_device_release (edgex_device *dev);
  * Device removal.
  */
 
-extern void edgex_devmap_removedevice_byid
+extern bool edgex_devmap_removedevice_byid
   (edgex_devmap_t *map, const char *id);
 extern void edgex_devmap_removedevice_byname
   (edgex_devmap_t *map, const char *name);
@@ -100,6 +100,7 @@ extern void edgex_devmap_removedevice_byname
 
 extern void edgex_devmap_add_profile
   (edgex_devmap_t *map, edgex_deviceprofile *dp);
+extern void edgex_devmap_update_profile (devsdk_service_t *svc, edgex_deviceprofile *dp);
 extern const edgex_deviceprofile *edgex_devmap_profile
   (edgex_devmap_t *map, const char *name);
 
