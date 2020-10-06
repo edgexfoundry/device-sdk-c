@@ -15,6 +15,8 @@
 
 extern void edgex_device_handler_discovery (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
+extern void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
+
 extern void *edgex_device_periodic_discovery (void *svc);
 
 #endif

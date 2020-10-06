@@ -22,10 +22,17 @@
 #define EDGEX_DEV_API_METRICS "/api/v1/metrics"
 
 #define EDGEX_DEV_API2_PING "/api/v2/ping"
+#define EDGEX_DEV_API2_DISCOVERY "/api/v2/discovery"
 #define EDGEX_DEV_API2_CONFIG "/api/v2/config"
 #define EDGEX_DEV_API2_METRICS "/api/v2/metrics"
 #define EDGEX_DEV_API2_DEVICE "/api/v2/device/{id}/{cmd}"
 #define EDGEX_DEV_API2_DEVICE_NAME "/api/v2/device/name/{name}/{cmd}"
+#define EDGEX_DEV_API2_CALLBACK_DEVICE "/api/v2/callback/device"
+#define EDGEX_DEV_API2_CALLBACK_DEVICE_ID "/api/v2/callback/device/id/{id}"
+#define EDGEX_DEV_API2_CALLBACK_PROFILE "/api/v2/callback/profile"
+#define EDGEX_DEV_API2_CALLBACK_PROFILE_ID "/api/v2/callback/profile/id/{id}"
+#define EDGEX_DEV_API2_CALLBACK_WATCHER "/api/v2/callback/watcher"
+#define EDGEX_DEV_API2_CALLBACK_WATCHER_ID "/api/v2/callback/watcher/id/{id}"
 
 /* Query parameters */
 

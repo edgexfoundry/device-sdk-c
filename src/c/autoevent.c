@@ -98,7 +98,7 @@ static void *ae_runner (void *p)
           resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
         }
         edgex_event_cooked *event =
-          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
+          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform, "");
         if (event)
         {
           edgex_data_client_add_event (ai->svc, event);
@@ -228,6 +228,18 @@ void edgex_device_autoevent_stop (edgex_device *dev)
     {
       edgex_autoimpl *ai = ae->impl;
       iot_threadpool_add_work (ai->svc->thpool, stopper, ai, -1);
+    }
+  }
+}
+
+void edgex_device_autoevent_stop_now (edgex_device *dev)
+{
+  for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
+  {
+    if (ae->impl)
+    {
+      stopper (ae->impl);
+      ae->impl = NULL;
     }
   }
 }

@@ -12,7 +12,6 @@
 #include "parson.h"
 #include "service.h"
 #include "iot/time.h"
-#include "correlation.h"
 
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -97,7 +96,7 @@ void edgex_device_handler_metricsv2 (void *ctx, const devsdk_http_request *req, 
   edgex_metricsresponse mr;
   memset (&mr, 0, sizeof (mr));
 
-  edgex_baseresponse_populate ((edgex_baseresponse *)&mr, "v2", edgex_device_get_crlid (), MHD_HTTP_OK, NULL);
+  edgex_baseresponse_populate ((edgex_baseresponse *)&mr, "v2", MHD_HTTP_OK, NULL);
   edgex_metrics_populate (&mr, svc->starttime);
 
   edgex_metricsresponse_write (&mr, reply);
