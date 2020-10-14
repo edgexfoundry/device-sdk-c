@@ -188,6 +188,7 @@ typedef struct edgex_device
   edgex_deviceprofile *profile;
   struct edgex_device *next;
   atomic_uint_fast32_t refs;
+  bool ownprofile;
 } edgex_device;
 
 #endif
