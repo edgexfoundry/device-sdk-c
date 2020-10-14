@@ -92,6 +92,7 @@ static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
 {
   edgex_device *dup = edgex_device_dup (newdev);
   atomic_store (&dup->refs, 1);
+  dup->ownprofile = false;
   edgex_deviceprofile **pp = edgex_map_get (&map->profiles, dup->profile->name);
   if (pp)
   {
@@ -216,8 +217,24 @@ const edgex_deviceprofile *edgex_devmap_profile
 
 static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
 {
+  const char *key;
+  bool last = true;
   edgex_map_remove (&map->name_to_id, olddev->name);
   edgex_map_remove (&map->devices, olddev->id);
+  edgex_map_iter iter = edgex_map_iter (map->devices);
+  while ((key = edgex_map_next (&map->devices, &iter)))
+  {
+    if ((*edgex_map_get (&map->devices, key))->profile == olddev->profile)
+    {
+      last = false;
+      break;
+    }
+  }
+  if (last)
+  {
+    edgex_map_remove (&map->profiles, olddev->profile->name);
+    olddev->ownprofile = true;
+  }
   edgex_device_release (olddev);
 }
 
@@ -420,7 +437,10 @@ void edgex_device_release (edgex_device *dev)
   if (atomic_fetch_add (&dev->refs, -1) == 1)
   {
     edgex_device_autoevent_stop (dev);
-    dev->profile = NULL;
+    if (!dev->ownprofile)
+    {
+      dev->profile = NULL;
+    }
     edgex_device_free (dev);
   }
 }
