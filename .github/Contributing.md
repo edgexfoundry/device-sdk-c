@@ -49,16 +49,6 @@ Must be one of the following:
 * **ci**: Changes provided by DevOps for CI purposes.
 * **revert**: Reverts a previous commit.
 
-### Scope
-Should be one of the following:
-Modules:
-* **app**: A change or addition to application services examples
-* **deploy**: A change or addition to deployment / orchestration examples and templates
-* **device**: A change or addition to device service examples
-* **security**: A change or addition to security proof of concepts, examples, how-to-guides, etc.
-* **all**: A change that affects all examples
-* *no scope*:  If no scope is provided, it is assumed the PR does not apply to the above scopes
-
 ### Subject
 The subject contains a succinct description of the change:
 

@@ -25,6 +25,8 @@ Please check if your PR fulfills the following requirements:
 ## New Imports
 <!-- Are there any new imports or modules? If so, what are they used for and why? -->
 
+- [ ] Yes
+- [ ] No
 
 ## Specific Instructions
 <!-- Are there any specific instructions or things that should be known prior to reviewing? -->

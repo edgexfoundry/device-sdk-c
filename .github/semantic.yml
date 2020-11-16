@@ -5,7 +5,6 @@ types:
     - feat
     - fix
     - docs
-    - examples
     - style
     - refactor
     - perf
