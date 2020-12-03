@@ -55,8 +55,6 @@ iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
   iot_data_string_map_add (result, "Logging/LogLevel", iot_data_alloc_string ("WARNING", IOT_DATA_REF));
-  iot_data_string_map_add (result, "Logging/EnableRemote", iot_data_alloc_bool (false));
-  iot_data_string_map_add (result, "Logging/File", iot_data_alloc_string ("", IOT_DATA_REF));
 
   if (driverconf)
   {
@@ -333,7 +331,6 @@ void edgex_device_parseTomlClients
   {
     parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
     parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
-    parseClient (lc, toml_table_in (clients, "Logging"), &endpoints->logging, err);
   }
 }
 
@@ -508,9 +505,6 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
   config->service.checkinterval = iot_data_string_map_get_string (map, "Service/CheckInterval");
   config->service.bindaddr = iot_data_string_map_get_string (map, "Service/ServerBindAddr");
 
-  config->logging.useremote = iot_data_bool (iot_data_string_map_get (map, "Logging/EnableRemote"));
-  config->logging.file = iot_data_string_map_get_string (map, "Logging/File");
-
   if (config->service.labels)
   {
     for (int i = 0; config->service.labels[i]; i++)
@@ -649,7 +643,6 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
 
   free (svc->config.endpoints.data.host);
   free (svc->config.endpoints.metadata.host);
-  free (svc->config.endpoints.logging.host);
 
   iot_data_free (svc->config.sdkconf);
   iot_data_free (svc->config.driverconf);
@@ -690,19 +683,12 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_uint (dobj, "Port", svc->config.endpoints.data.port);
   json_object_set_value (cobj, "Data", dval);
 
-  JSON_Value *lsval = json_value_init_object ();
-  JSON_Object *lsobj = json_value_get_object (lsval);
-  json_object_set_string (lsobj, "Host", svc->config.endpoints.logging.host);
-  json_object_set_uint (lsobj, "Port", svc->config.endpoints.logging.port);
-  json_object_set_value (cobj, "Logging", lsval);
-
   json_object_set_value (obj, "Clients", cval);
 
   JSON_Value *lval = json_value_init_object ();
   JSON_Object *lobj = json_value_get_object (lval);
-  json_object_set_string (lobj, "File", svc->config.logging.file);
-  json_object_set_boolean (lobj, "EnableRemote", svc->config.logging.useremote);
   json_object_set_string (lobj, "LogLevel", edgex_logger_levelname (svc->config.logging.level));
+
   json_object_set_value (obj, "Logging", lval);
 
   JSON_Value *sval = json_value_init_object ();

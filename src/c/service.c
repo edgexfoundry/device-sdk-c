@@ -255,7 +255,7 @@ devsdk_service_t *devsdk_service_new
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
-  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "", edgex_log_tofile, NULL, true);
+  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "", edgex_log_tostdout, NULL, true);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
   result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns.discover, impldata);
@@ -732,46 +732,10 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     devsdk_error e;
     devsdk_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
     devsdk_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
-    if (svc->config.logging.useremote)
-    {
-      devsdk_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
-    }
   }
   else
   {
     edgex_device_parseTomlClients (svc->logger, toml_table_in (configtoml, "Clients"), &svc->config.endpoints, err);
-  }
-
-  if (svc->config.logging.useremote)
-  {
-    if (ping_client (svc->logger, "support-logging", &svc->config.endpoints.logging, svc->config.service.connectretries, svc->config.service.timeout, err))
-    {
-      char url[URL_BUF_SIZE];
-      snprintf
-      (
-        url, URL_BUF_SIZE - 1,
-        "http://%s:%u/api/v1/logs",
-        svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
-      );
-      iot_log_info (svc->logger, "Logging to support-logging service");
-      svc->logger->impl = edgex_log_torest;
-      free (svc->logger->to);
-      svc->logger->to = strdup (url);
-    }
-    else
-    {
-      toml_free (configtoml);
-      return;
-    }
-  }
-  else
-  {
-    if (strcmp (svc->logger->to, svc->config.logging.file))
-    {
-      iot_log_info (svc->logger, "Logging to file %s", svc->config.logging.file);
-      free (svc->logger->to);
-      svc->logger->to = strdup (svc->config.logging.file);
-    }
   }
 
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);

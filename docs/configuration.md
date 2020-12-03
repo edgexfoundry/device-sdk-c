@@ -48,13 +48,6 @@ Option | Type | Notes
 Host | String | Hostname on which to contact the core-metadata service.
 Port | Int | Port on which to contact the core-metadata service.
 
-### Logging
-
-Option | Type | Notes
-:--- | :--- | :---
-Host | String | Hostname on which to contact the support-logging service.
-Port | Int | Port on which to contact the support-logging service.
-
 ## Device section
 
 Option | Type | Notes
@@ -73,8 +66,6 @@ EventQLength | Int | Sets the maximum number of events to be queued for transmis
 Option | Type | Notes
 :--- | :--- | :---
 LogLevel | String | Sets the logging level. Available settings in order of increasing severity are: TRACE, DEBUG, INFO, WARNING, ERROR.
-EnableRemote | Boolean | If this option is set, logs will be submitted to the EdgeX logging service rather than written to a local file / stdout.
-File | String | If this option is set, local logs will be written to the named file rather than standard output.
 
 ## Driver section
 
