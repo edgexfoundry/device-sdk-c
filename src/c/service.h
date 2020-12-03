@@ -14,6 +14,7 @@
 #include "config.h"
 #include "devmap.h"
 #include "watchers.h"
+#include "discovery.h"
 #include "rest-server.h"
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
@@ -32,6 +33,7 @@ struct devsdk_service_t
   edgex_device_config config;
   atomic_bool *stopconfig;
   edgex_rest_server *daemon;
+  edgex_device_periodic_discovery_t *discovery;
   devsdk_registry *registry;
   edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;
@@ -43,8 +45,6 @@ struct devsdk_service_t
   iot_threadpool_t *thpool;
   iot_threadpool_t *eventq;
   iot_scheduler_t *scheduler;
-  iot_schedule_t *discosched;
-  pthread_mutex_t discolock;
 };
 
 #endif

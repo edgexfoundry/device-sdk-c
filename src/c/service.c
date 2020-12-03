@@ -258,7 +258,7 @@ devsdk_service_t *devsdk_service_new
   result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "", edgex_log_tofile, NULL, true);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
-  pthread_mutex_init (&result->discolock, NULL);
+  result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns.discover, impldata);
   return result;
 }
 
@@ -615,12 +615,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     }
   }
 
-  if (svc->config.device.discovery_enabled && svc->config.device.discovery_interval && svc->userfns.discover)
-  {
-    svc->discosched = iot_schedule_create
-      (svc->scheduler, edgex_device_periodic_discovery, NULL, svc, IOT_SEC_TO_NS(svc->config.device.discovery_interval), 0, 0, svc->thpool, -1);
-    iot_schedule_add (svc->scheduler, svc->discosched);
-  }
+  edgex_device_periodic_discovery_configure (svc->discovery, svc->config.device.discovery_enabled, svc->config.device.discovery_interval);
 
   if (svc->config.service.startupmsg)
   {
@@ -867,21 +862,21 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
 {
   *err = EDGEX_OK;
   iot_log_debug (svc->logger, "Stop device service");
-  if (svc->discosched)
-  {
-    iot_schedule_delete (svc->scheduler, svc->discosched);
-  }
   if (svc->stopconfig)
   {
     *svc->stopconfig = true;
   }
-  if (svc->scheduler)
-  {
-    iot_scheduler_stop (svc->scheduler);
-  }
   if (svc->daemon)
   {
     edgex_rest_server_destroy (svc->daemon);
+  }
+  if (svc->discovery)
+  {
+    edgex_device_periodic_discovery_free (svc->discovery);
+  }
+  if (svc->scheduler)
+  {
+    iot_scheduler_stop (svc->scheduler);
   }
   if (svc->registry)
   {
@@ -909,7 +904,6 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_threadpool_free (svc->eventq);
     devsdk_registry_free (svc->registry);
     devsdk_registry_fini ();
-    pthread_mutex_destroy (&svc->discolock);
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);
