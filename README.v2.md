@@ -1,6 +1,6 @@
 ### SDK API v2
 
-Version 1.2 of the SDK introduces v2 of the API. Both versions will be usable until the release of version 2.0, currently expected to be the EdgeX Hanoi release.
+Version 1.2 of the SDK introduced v2 of the API. In version 2.0 (the EdgeX Ireland release) the v1 API is no longer available.
 
 #### Using the v2 API
 
@@ -108,7 +108,13 @@ devsdk_service_free
 
 The various initialization parameters have been removed from the `service_start` function, all such setup is now handled in the `service_new` function. This takes `argc` and `argv` and processes them in the same way as `service_processparams` did in v1. The default name for the service must be provided.
 
+#### Configuration
+
 The device_service_start function now takes an iot_data_t* which should hold a map of all implementation-specific configuration options with their default values. These will be overridden by values specified in the configuration file or registry, and by environment variables, before being passed back to the implementation in the initialize callback.
+
+The SDK will apply a "Driver" scoping element to the names of the configuration values. Thus "Param1" will relate to an element in the "[Driver]" section of a .toml configuration file, in a "Driver" folder in the registry, or with a "DRIVER_" prefix when considering environment variables.
+
+To specify that a configuration element may be updated dynamically, prefix it with "Writable/". The SDK will then apply scoping as above so that "Writable/Param2" becomes "Writable/Driver/Param2".
 
 #### Device and Profile management
 

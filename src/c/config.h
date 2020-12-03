@@ -52,11 +52,6 @@ typedef struct edgex_device_deviceinfo
   uint32_t eventqlen;
 } edgex_device_deviceinfo;
 
-typedef struct edgex_device_logginginfo
-{
-  iot_loglevel_t level;
-} edgex_device_logginginfo;
-
 typedef struct edgex_device_watcherinfo
 {
   char *profile;
@@ -72,7 +67,7 @@ typedef struct edgex_device_config
   edgex_device_serviceinfo service;
   edgex_service_endpoints endpoints;
   edgex_device_deviceinfo device;
-  edgex_device_logginginfo logging;
+  iot_loglevel_t loglevel;
   iot_data_t *driverconf;
   iot_data_t *sdkconf;
   edgex_map_device_watcherinfo watchers;

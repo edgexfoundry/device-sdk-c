@@ -1,3 +1,13 @@
+[Writable]
+  LogLevel = 'DEBUG'
+  [Writable.Device]
+    DataTransform = true
+    MaxCmdOps = 128
+    MaxCmdResultLen = 256
+  [Writable.Driver]
+    TestParam2 = 'World'
+    TestParam3 = 'Goodbye'
+
 [Service]
   Port = 49999
   Timeout = 5000
@@ -15,18 +25,8 @@
     Host = 'localhost'
     Port = 48081
 
-[Device]
-  DataTransform = true
-  Discovery = false
-  MaxCmdOps = 128
-  MaxCmdResultLen = 256
-
-[Logging]
-  LogLevel = 'DEBUG'
-
 [Driver]
   TestParam1 = 'Hello'
-  TestParam2 = 'World'
 
 [[DeviceList]]
   Name = 'Device1'

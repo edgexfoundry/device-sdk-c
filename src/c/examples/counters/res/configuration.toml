@@ -1,3 +1,10 @@
+[Writable]
+  LogLevel = 'DEBUG'
+  [Writable.Device]
+    DataTransform = true
+    MaxCmdOps = 128
+    MaxCmdResultLen = 256
+
 [Service]
   Port = 49999
   Timeout = 5000
@@ -14,15 +21,6 @@
   [Clients.Metadata]
     Host = 'localhost'
     Port = 48081
-
-[Device]
-  DataTransform = false
-  Discovery = false
-  MaxCmdOps = 128
-  MaxCmdResultLen = 256
-
-[Logging]
-  LogLevel = 'DEBUG'
 
 [[DeviceList]]
   Name = 'Counter1'

@@ -14,7 +14,7 @@
 #include "parson.h"
 #include "iot/base64.h"
 
-#define CONF_PREFIX "edgex/core/1.0/"
+#define CONF_PREFIX "edgex/devices/1.0/"
 
 static devsdk_nvpairs *read_pairs
 (
@@ -176,8 +176,7 @@ devsdk_nvpairs *edgex_consul_client_get_config
     (
       url, URL_BUF_SIZE - 1,
       "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse=true",
-      endpoint->host, endpoint->port,
-      servicename, profile
+      endpoint->host, endpoint->port, servicename, profile
     );
   }
   else
@@ -204,7 +203,24 @@ devsdk_nvpairs *edgex_consul_client_get_config
 
   struct updatejob *job = malloc (sizeof (struct updatejob));
   job->url = malloc (URL_BUF_SIZE);
-  strcpy (job->url, url);
+  if (profile && *profile)
+  {
+    snprintf
+    (
+      job->url, URL_BUF_SIZE - 1,
+      "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s/Writable?recurse=true",
+      endpoint->host, endpoint->port, servicename, profile
+    );
+  }
+  else
+  {
+    snprintf
+    (
+      job->url, URL_BUF_SIZE - 1,
+      "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true",
+      endpoint->host, endpoint->port, servicename
+    );
+  }
   job->lc = lc;
   job->updater = updater;
   job->updatectx = updatectx;
