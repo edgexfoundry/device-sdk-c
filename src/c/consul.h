@@ -24,7 +24,6 @@ devsdk_nvpairs *edgex_consul_client_get_config
   iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
-  const char *profile,
   devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
@@ -36,7 +35,6 @@ void edgex_consul_client_write_config
   iot_logger_t *lc,
   void *location,
   const char *servicename,
-  const char *profile,
   const iot_data_t *config,
   devsdk_error *err
 );

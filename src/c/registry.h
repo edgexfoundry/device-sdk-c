@@ -46,7 +46,6 @@ typedef bool (*devsdk_registry_ping_impl)
  * @param thpool A threadpool to use.
  * @param location The address of the registry service.
  * @param servicename The name of this device service.
- * @param profile The name of the configuration profile (may be NULL).
  * @param updater A function to be called when the configuration in the registry
  *                is updated (may be NULL).
  * @param updatectx A parameter to be passed to the updater function.
@@ -61,7 +60,6 @@ typedef devsdk_nvpairs *(*devsdk_registry_get_config_impl)
   iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
-  const char *profile,
   devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
@@ -73,7 +71,6 @@ typedef devsdk_nvpairs *(*devsdk_registry_get_config_impl)
  * @param lc A logging client to use.
  * @param location The address of the registry service.
  * @param servicename The name of this device service.
- * @param profile The name of the configuration profile (may be NULL).
  * @param config The configuration values to write.
  * @param err Nonzero reason codes may be set here in the event of errors.
  */
@@ -83,7 +80,6 @@ typedef void (*devsdk_registry_put_config_impl)
   iot_logger_t *lc,
   void *location,
   const char *servicename,
-  const char *profile,
   const iot_data_t *config,
   devsdk_error *err
 );
@@ -237,7 +233,6 @@ bool devsdk_registry_waitfor (devsdk_registry *registry);
  * @brief Retrieve configuration values from the registry.
  * @param registry The registry instance.
  * @param servicename The name of this device service.
- * @param profile The name of the configuration profile (may be NULL).
  * @param updater A function to be called when the configuration in the registry
  *                is updated (may be NULL).
  * @param updatectx A parameter to be passed to the updater function.
@@ -250,7 +245,6 @@ devsdk_nvpairs *devsdk_registry_get_config
 (
   devsdk_registry *registry,
   const char *servicename,
-  const char *profile,
   devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
@@ -261,7 +255,6 @@ devsdk_nvpairs *devsdk_registry_get_config
  * @brief Write configuration values to the registry.
  * @param registry The registry instance.
  * @param servicename The name of this device service.
- * @param profile The name of the configuration profile (may be NULL).
  * @param config The configuration values to write.
  * @param err Nonzero reason codes will be set here in the event of errors.
  */
@@ -270,7 +263,6 @@ void devsdk_registry_put_config
 (
   devsdk_registry *registry,
   const char *servicename,
-  const char *profile,
   const iot_data_t *config,
   devsdk_error *err
 );

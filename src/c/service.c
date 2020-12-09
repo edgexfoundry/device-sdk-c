@@ -682,7 +682,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     else
     {
       devsdk_error e;
-      devsdk_nvpairs *regconf = devsdk_registry_get_config (svc->registry, svc->name, svc->profile, edgex_device_updateConf, svc, svc->stopconfig, &e);
+      devsdk_nvpairs *regconf = devsdk_registry_get_config (svc->registry, svc->name, edgex_device_updateConf, svc, svc->stopconfig, &e);
       if (regconf)
       {
         edgex_device_overrideConfig_nvpairs (configmap, regconf);
@@ -717,7 +717,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     if (uploadConfig)
     {
       iot_log_info (svc->logger, "Uploading configuration to registry.");
-      devsdk_registry_put_config (svc->registry, svc->name, svc->profile, configmap, err);
+      devsdk_registry_put_config (svc->registry, svc->name, configmap, err);
       if (err->code)
       {
         iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);

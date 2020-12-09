@@ -190,28 +190,24 @@ devsdk_nvpairs *devsdk_registry_get_config
 (
   devsdk_registry *registry,
   const char *servicename,
-  const char *profile,
   devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
   devsdk_error *err
 )
 {
-  return registry->impl.get_config
-    (registry->logger, registry->thpool, registry->location, servicename, profile, updater, updatectx, updatedone, err);
+  return registry->impl.get_config (registry->logger, registry->thpool, registry->location, servicename, updater, updatectx, updatedone, err);
 }
 
 void devsdk_registry_put_config
 (
   devsdk_registry *registry,
   const char *servicename,
-  const char *profile,
   const iot_data_t *config,
   devsdk_error *err
 )
 {
-  registry->impl.put_config
-    (registry->logger, registry->location, servicename, profile, config, err);
+  registry->impl.put_config (registry->logger, registry->location, servicename, config, err);
 }
 
 void devsdk_registry_register_service
