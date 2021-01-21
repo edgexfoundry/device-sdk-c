@@ -36,7 +36,11 @@ if (NOT CSDK_HAVE_ATOMIC)
   list (APPEND LINK_LIBRARIES atomic)
 endif ()
 
+set (IOT_HAS_XML ON)
+file (STRINGS ${CMAKE_SOURCE_DIR}/c/iot/VERSION IOT_DOT_VERSION)
+
 configure_file ("defs.h.in" "${CMAKE_SOURCE_DIR}/../include/edgex/csdk-defs.h")
+configure_file ("iot/defs.h.in" "${CMAKE_SOURCE_DIR}/../include/iot/defs.h")
 
 # Main sdk library
 

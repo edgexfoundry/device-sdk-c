@@ -788,6 +788,12 @@ static int allCommand
   iot_log_debug
     (svc->logger, "Incoming %s command %s for all", methStr (method), cmd);
 
+  if (svc->adminstate == LOCKED)
+  {
+    iot_log_error (svc->logger, "device endpoint: service is locked");
+    return MHD_HTTP_LOCKED;
+  }
+
   enc = JSON;
   bsize = 3; // start-array byte + end-array byte + NUL character
   buff = malloc (bsize);
@@ -888,6 +894,12 @@ static int oneCommand
   const edgex_cmdinfo *command = NULL;
 
   iot_log_debug (svc->logger, "Incoming command for device %s: %s (%s)", id, cmd, methStr (method));
+
+  if (svc->adminstate == LOCKED)
+  {
+    iot_log_error (svc->logger, "device endpoint: service is locked");
+    return MHD_HTTP_LOCKED;
+  }
 
   if (byName)
   {
@@ -1242,6 +1254,12 @@ void edgex_device_handler_device_namev2 (void *ctx, const devsdk_http_request *r
   const char *name = devsdk_nvpairs_value (req->params, "name");
 
   iot_log_debug (svc->logger, "Incoming %s command for device name %s", methStr (req->method), name);
+  if (svc->adminstate == LOCKED)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "device endpoint: service is locked");
+    return;
+  }
+
   dev = edgex_devmap_device_byname (svc->devices, name);
   if (dev)
   {
