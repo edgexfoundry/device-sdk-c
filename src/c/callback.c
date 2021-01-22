@@ -17,6 +17,32 @@
 
 #include <microhttpd.h>
 
+static int updateService (devsdk_service_t *svc, devsdk_http_method method)
+{
+  if (method == DevSDK_Put)
+  {
+    devsdk_error err = EDGEX_OK;
+    edgex_deviceservice *ds;
+    ds = edgex_metadata_client_get_deviceservice (svc->logger, &svc->config.endpoints, svc->name, &err);
+    if (err.code || ds == NULL)
+    {
+      iot_log_error (svc->logger, "callback: update service: get_deviceservice failed");
+      return MHD_HTTP_BAD_REQUEST;
+    }
+    if (svc->adminstate != ds->adminState)
+    {
+      svc->adminstate = ds->adminState;
+      iot_log_info (svc->logger, "Service AdminState now %s", svc->adminstate == LOCKED ? "LOCKED" : "UNLOCKED");
+    }
+    edgex_deviceservice_free (ds);
+    return MHD_HTTP_OK;
+  }
+  else
+  {
+    return MHD_HTTP_BAD_REQUEST;
+  }
+}
+
 static int updateProfile
 (
   devsdk_service_t *svc,
@@ -216,6 +242,10 @@ void edgex_device_handler_callback (void *ctx, const devsdk_http_request *req, d
   else if (strcmp (action, "PROFILE") == 0)
   {
     reply->code = updateProfile (svc, req->method, id);
+  }
+  else if (strcmp (action, "SERVICE") == 0)
+  {
+    reply->code = updateService (svc, req->method);
   }
   else
   {

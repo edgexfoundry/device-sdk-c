@@ -5,7 +5,7 @@ CPPCHECK=false
 DOCGEN=false
 
 TOMLVER=SDK-0.2
-CUTILVER=1.1.1
+CUTILVER=1.1.4
 
 # Process arguments
 
@@ -47,6 +47,9 @@ then
   wget -O - https://github.com/IOTechSystems/iotech-c-utils/archive/v$CUTILVER.tar.gz | tar -C deps -z -x -f -
   mkdir -p src/c/iot
   cp deps/iotech-c-utils-$CUTILVER/src/c/*.c src/c/iot
+  cp deps/iotech-c-utils-$CUTILVER/src/c/defs.h.in src/c/iot
+  cp deps/iotech-c-utils-$CUTILVER/src/c/yxml.h src/c/iot
+  cp deps/iotech-c-utils-$CUTILVER/VERSION src/c/iot
   mkdir -p include/iot
   cp deps/iotech-c-utils-$CUTILVER/include/iot/*.h include/iot
   mkdir -p include/iot/os

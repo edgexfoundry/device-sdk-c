@@ -73,7 +73,7 @@ static void *ae_runner (void *p)
   edgex_device *dev = edgex_devmap_device_byname (ai->svc->devices, ai->device);
   if (dev)
   {
-    if (dev->adminState == LOCKED || dev->operatingState == DISABLED)
+    if (ai->svc->adminstate == LOCKED || dev->adminState == LOCKED || dev->operatingState == DISABLED)
     {
       edgex_device_release (dev);
       edgex_autoimpl_release (ai);

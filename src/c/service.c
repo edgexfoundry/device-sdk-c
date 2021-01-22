@@ -422,6 +422,11 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   }
   else
   {
+    svc->adminstate = ds->adminState;
+    if (svc->adminstate == LOCKED)
+    {
+      iot_log_warn (svc->logger, "Starting service in LOCKED state");
+    }
     if (ds->addressable->port != svc->config.service.port || strcmp (ds->addressable->address, svc->config.service.host))
     {
       iot_log_info (svc->logger, "Updating service endpoint in metadata");
@@ -820,6 +825,12 @@ void devsdk_post_readings
   devsdk_commandresult *values
 )
 {
+  if (svc->adminstate == LOCKED)
+  {
+    iot_log_debug (svc->logger, "Post readings: dropping event as service is locked");
+    return;
+  }
+
   edgex_device *dev = edgex_devmap_device_byname (svc->devices, devname);
   if (dev == NULL)
   {
