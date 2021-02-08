@@ -38,7 +38,6 @@ typedef struct edgex_service_endpoints
 {
   edgex_device_service_endpoint data;
   edgex_device_service_endpoint metadata;
-  edgex_device_service_endpoint logging;
 } edgex_service_endpoints;
 
 typedef struct edgex_device_deviceinfo
@@ -52,13 +51,6 @@ typedef struct edgex_device_deviceinfo
   atomic_bool updatelastconnected;
   uint32_t eventqlen;
 } edgex_device_deviceinfo;
-
-typedef struct edgex_device_logginginfo
-{
-  const char *file;
-  bool useremote;
-  iot_loglevel_t level;
-} edgex_device_logginginfo;
 
 typedef struct edgex_device_watcherinfo
 {
@@ -75,7 +67,7 @@ typedef struct edgex_device_config
   edgex_device_serviceinfo service;
   edgex_service_endpoints endpoints;
   edgex_device_deviceinfo device;
-  edgex_device_logginginfo logging;
+  iot_loglevel_t loglevel;
   iot_data_t *driverconf;
   iot_data_t *sdkconf;
   edgex_map_device_watcherinfo watchers;

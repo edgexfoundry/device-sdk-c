@@ -90,7 +90,13 @@ static void template_reconfigure
  * device service's discovery REST endpoint. New devices should be added using
  * the devsdk_add_device() method
  */
-static void template_discover (void *impl) {}
+static void template_discover (void *impl)
+{
+  template_driver *driver = (template_driver *) impl;
+  iot_log_debug (driver->lc, "Discovery starting");
+  sleep (2);
+  iot_log_debug (driver->lc, "Discovery finished");
+}
 
 /* ---- Get ---- */
 /* Get triggers an asynchronous protocol specific GET operation.
@@ -237,7 +243,8 @@ int main (int argc, char *argv[])
   /* Set default config */
   iot_data_t *confparams = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (confparams, "TestParam1", iot_data_alloc_string ("X", IOT_DATA_REF));
-  iot_data_string_map_add (confparams, "TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
+  iot_data_string_map_add (confparams, "Writable/TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
+  iot_data_string_map_add (confparams, "Writable/TestParam3", iot_data_alloc_string ("Z", IOT_DATA_REF));
 
   /* Start the device service*/
   devsdk_service_start (service, confparams, &e);

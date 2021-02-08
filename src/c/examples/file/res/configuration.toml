@@ -1,3 +1,6 @@
+[Writable]
+  LogLevel = 'DEBUG'
+
 [Clients]
   [Clients.Data]
     Host = 'localhost'
@@ -6,9 +9,6 @@
   [Clients.Metadata]
     Host = 'localhost'
     Port = 48081
-
-[Logging]
-  LogLevel = 'DEBUG'
 
 [[DeviceList]]
   Name = 'File1'

@@ -1,5 +1,12 @@
 This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
+Changes for 2.0.0 "Ireland":
+
+- Configuration elements which may be updated without restarting the service are found in the "Writable" section of the configuration. The following elements are moved:
+  - Logging/LogLevel -> Writable/LogLevel
+  - Device section -> Writable/Device except for EventQLength and ProfilesDir
+- Support for logging to file and/or the support-logging service has been removed.
+
 Changes for 1.3.1:
 
 - The device service's AdminState can be used to disable/re-enable a running service.

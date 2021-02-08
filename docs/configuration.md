@@ -48,14 +48,15 @@ Option | Type | Notes
 Host | String | Hostname on which to contact the core-metadata service.
 Port | Int | Port on which to contact the core-metadata service.
 
-### Logging
+## Writable section
+
+This contains configuration which, if the registry is in use, can be altered without restarting the service
 
 Option | Type | Notes
 :--- | :--- | :---
-Host | String | Hostname on which to contact the support-logging service.
-Port | Int | Port on which to contact the support-logging service.
+LogLevel | String | Sets the logging level. Available settings in order of increasing severity are: TRACE, DEBUG, INFO, WARNING, ERROR.
 
-## Device section
+### Writable/Device section
 
 Option | Type | Notes
 :--- | :--- | :---
@@ -64,17 +65,14 @@ Discovery/Enabled | Bool | For enabling/disabling device discovery. Defaults to 
 Discovery/Interval | Int | Time between automatic discovery runs, in seconds. Defaults to zero (do not run discovery automatically).
 MaxCmdOps | Int | Defines the maximum number of resource operations that can be sent to the driver in a single command.
 MaxCmdResultLen | Int | Not implemented. Maximum string length for command results returned from the driver.
-ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
 UpdateLastConnected | Bool | If true, update the LastConnected attribute of a device whenever it is successfully accessed. Defaults to false.
-EventQLength | Int | Sets the maximum number of events to be queued for transmission to core-data before blocking. Zero (default) results in no limit.
 
-## Logging section
+## Device section
 
 Option | Type | Notes
 :--- | :--- | :---
-LogLevel | String | Sets the logging level. Available settings in order of increasing severity are: TRACE, DEBUG, INFO, WARNING, ERROR.
-EnableRemote | Boolean | If this option is set, logs will be submitted to the EdgeX logging service rather than written to a local file / stdout.
-File | String | If this option is set, local logs will be written to the named file rather than standard output.
+ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
+EventQLength | Int | Sets the maximum number of events to be queued for transmission to core-data before blocking. Zero (default) results in no limit.
 
 ## Driver section
 

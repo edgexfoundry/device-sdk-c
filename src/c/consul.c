@@ -14,7 +14,7 @@
 #include "parson.h"
 #include "iot/base64.h"
 
-#define CONF_PREFIX "edgex/core/1.0/"
+#define CONF_PREFIX "edgex/devices/1.0/"
 
 static devsdk_nvpairs *read_pairs
 (
@@ -157,7 +157,6 @@ devsdk_nvpairs *edgex_consul_client_get_config
   iot_threadpool_t *thpool,
   void *location,
   const char *servicename,
-  const char *profile,
   devsdk_registry_updatefn updater,
   void *updatectx,
   atomic_bool *updatedone,
@@ -170,25 +169,7 @@ devsdk_nvpairs *edgex_consul_client_get_config
   devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  if (profile && *profile)
-  {
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1,
-      "http://%s:%u/v1/kv/" CONF_PREFIX "%s;%s?recurse=true",
-      endpoint->host, endpoint->port,
-      servicename, profile
-    );
-  }
-  else
-  {
-    snprintf
-    (
-      url, URL_BUF_SIZE - 1,
-      "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true",
-      endpoint->host, endpoint->port, servicename
-    );
-  }
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", endpoint->host, endpoint->port, servicename);
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
   if (err->code == 0)
   {
@@ -204,7 +185,7 @@ devsdk_nvpairs *edgex_consul_client_get_config
 
   struct updatejob *job = malloc (sizeof (struct updatejob));
   job->url = malloc (URL_BUF_SIZE);
-  strcpy (job->url, url);
+  snprintf (job->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", endpoint->host, endpoint->port, servicename);
   job->lc = lc;
   job->updater = updater;
   job->updatectx = updatectx;
@@ -229,7 +210,6 @@ void edgex_consul_client_write_config
   iot_logger_t *lc,
   void *location,
   const char *servicename,
-  const char *profile,
   const iot_data_t *config,
   devsdk_error *err
 )
@@ -265,22 +245,9 @@ void edgex_consul_client_write_config
       free (json);
     }
 
-    size_t keysz =
-      strlen (CONF_PREFIX) + strlen (servicename) + strlen (iot_data_map_iter_string_key (&iter)) + 2;
-    if (profile && *profile)
-    {
-      keysz += (strlen (profile) + 1);
-    }
-    char *keystr = malloc (keysz);
-    if (profile && *profile)
-    {
-      sprintf
-        (keystr, "%s%s;%s/%s", CONF_PREFIX, servicename, profile, iot_data_map_iter_string_key (&iter));
-    }
-    else
-    {
-      sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, iot_data_map_iter_string_key (&iter));
-    }
+    const char *k = iot_data_map_iter_string_key (&iter);
+    char *keystr = malloc (strlen (CONF_PREFIX) + strlen (servicename) + strlen (k) + 2);
+    sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, k);
 
     JSON_Value *kvfields = json_value_init_object ();
     JSON_Object *obj = json_value_get_object (kvfields);

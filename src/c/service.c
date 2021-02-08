@@ -255,10 +255,10 @@ devsdk_service_t *devsdk_service_new
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
-  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "", edgex_log_tofile, NULL, true);
+  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "", edgex_log_tostdout, NULL, true);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
-  pthread_mutex_init (&result->discolock, NULL);
+  result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns.discover, impldata);
   return result;
 }
 
@@ -615,12 +615,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     }
   }
 
-  if (svc->config.device.discovery_enabled && svc->config.device.discovery_interval && svc->userfns.discover)
-  {
-    svc->discosched = iot_schedule_create
-      (svc->scheduler, edgex_device_periodic_discovery, NULL, svc, IOT_SEC_TO_NS(svc->config.device.discovery_interval), 0, 0, svc->thpool, -1);
-    iot_schedule_add (svc->scheduler, svc->discosched);
-  }
+  edgex_device_periodic_discovery_configure (svc->discovery, svc->config.device.discovery_enabled, svc->config.device.discovery_interval);
 
   if (svc->config.service.startupmsg)
   {
@@ -687,7 +682,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     else
     {
       devsdk_error e;
-      devsdk_nvpairs *regconf = devsdk_registry_get_config (svc->registry, svc->name, svc->profile, edgex_device_updateConf, svc, svc->stopconfig, &e);
+      devsdk_nvpairs *regconf = devsdk_registry_get_config (svc->registry, svc->name, edgex_device_updateConf, svc, svc->stopconfig, &e);
       if (regconf)
       {
         edgex_device_overrideConfig_nvpairs (configmap, regconf);
@@ -722,7 +717,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     if (uploadConfig)
     {
       iot_log_info (svc->logger, "Uploading configuration to registry.");
-      devsdk_registry_put_config (svc->registry, svc->name, svc->profile, configmap, err);
+      devsdk_registry_put_config (svc->registry, svc->name, configmap, err);
       if (err->code)
       {
         iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
@@ -737,46 +732,10 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     devsdk_error e;
     devsdk_registry_query_service (svc->registry, "edgex-core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
     devsdk_registry_query_service (svc->registry, "edgex-core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
-    if (svc->config.logging.useremote)
-    {
-      devsdk_registry_query_service (svc->registry, "edgex-support-logging", &svc->config.endpoints.logging.host, &svc->config.endpoints.logging.port, &e);
-    }
   }
   else
   {
     edgex_device_parseTomlClients (svc->logger, toml_table_in (configtoml, "Clients"), &svc->config.endpoints, err);
-  }
-
-  if (svc->config.logging.useremote)
-  {
-    if (ping_client (svc->logger, "support-logging", &svc->config.endpoints.logging, svc->config.service.connectretries, svc->config.service.timeout, err))
-    {
-      char url[URL_BUF_SIZE];
-      snprintf
-      (
-        url, URL_BUF_SIZE - 1,
-        "http://%s:%u/api/v1/logs",
-        svc->config.endpoints.logging.host, svc->config.endpoints.logging.port
-      );
-      iot_log_info (svc->logger, "Logging to support-logging service");
-      svc->logger->impl = edgex_log_torest;
-      free (svc->logger->to);
-      svc->logger->to = strdup (url);
-    }
-    else
-    {
-      toml_free (configtoml);
-      return;
-    }
-  }
-  else
-  {
-    if (strcmp (svc->logger->to, svc->config.logging.file))
-    {
-      iot_log_info (svc->logger, "Logging to file %s", svc->config.logging.file);
-      free (svc->logger->to);
-      svc->logger->to = strdup (svc->config.logging.file);
-    }
   }
 
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
@@ -867,21 +826,21 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
 {
   *err = EDGEX_OK;
   iot_log_debug (svc->logger, "Stop device service");
-  if (svc->discosched)
-  {
-    iot_schedule_delete (svc->scheduler, svc->discosched);
-  }
   if (svc->stopconfig)
   {
     *svc->stopconfig = true;
   }
-  if (svc->scheduler)
-  {
-    iot_scheduler_stop (svc->scheduler);
-  }
   if (svc->daemon)
   {
     edgex_rest_server_destroy (svc->daemon);
+  }
+  if (svc->discovery)
+  {
+    edgex_device_periodic_discovery_free (svc->discovery);
+  }
+  if (svc->scheduler)
+  {
+    iot_scheduler_stop (svc->scheduler);
   }
   if (svc->registry)
   {
@@ -909,7 +868,6 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_threadpool_free (svc->eventq);
     devsdk_registry_free (svc->registry);
     devsdk_registry_fini ();
-    pthread_mutex_destroy (&svc->discolock);
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);
