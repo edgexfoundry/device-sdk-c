@@ -313,7 +313,6 @@ static bool ping_client
 static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk_error *err)
 {
   svc->adminstate = UNLOCKED;
-  svc->opstate = ENABLED;
 
   svc->eventq = iot_threadpool_alloc (1, svc->config.device.eventqlen, IOT_THREAD_NO_PRIORITY, IOT_THREAD_NO_AFFINITY, svc->logger);
   iot_threadpool_start (svc->eventq);
@@ -377,7 +376,6 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     memset (ds, 0, sizeof (edgex_deviceservice));
     ds->addressable = addr;
     ds->name = strdup (svc->name);
-    ds->operatingState = ENABLED;
     ds->adminState = UNLOCKED;
     ds->created = millis;
     for (int n = 0; svc->config.service.labels[n]; n++)

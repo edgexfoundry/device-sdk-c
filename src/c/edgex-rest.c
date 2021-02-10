@@ -1135,8 +1135,6 @@ static edgex_deviceservice *deviceservice_read (const JSON_Object *obj)
   result->lastReported = json_object_get_uint (obj, "lastReported");
   result->modified = json_object_get_uint (obj, "modified");
   result->name = get_string (obj, "name");
-  result->operatingState = edgex_operatingstate_fromstring
-    (json_object_get_string (obj, "operatingState"));
   result->origin = json_object_get_uint (obj, "origin");
 
   return result;
@@ -1164,8 +1162,6 @@ deviceservice_write (const edgex_deviceservice *e, bool create)
   json_object_set_uint (obj, "lastConnected", e->lastConnected);
   json_object_set_uint (obj, "lastReported", e->lastReported);
   json_object_set_string (obj, "name", e->name);
-  json_object_set_string
-    (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
   json_object_set_uint (obj, "origin", e->origin);
 
   return result;
