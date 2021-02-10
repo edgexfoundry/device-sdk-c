@@ -169,7 +169,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   {
     if (svc->regURL)
     {
-      iot_log_warn (iot_logger_default (), "Configuration provider was specified but registry not enabled");
+      iot_log_warn (svc->logger, "Configuration provider was specified but registry not enabled");
       svc->regURL = NULL;
     }
   }
@@ -179,24 +179,22 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
 devsdk_service_t *devsdk_service_new
   (const char *defaultname, const char *version, void *impldata, devsdk_callbacks implfns, int *argc, char **argv, devsdk_error *err)
 {
+  iot_logger_t *logger = iot_logger_alloc_custom (defaultname, IOT_LOG_TRACE, "", edgex_log_tostdout, NULL, true);
   if (impldata == NULL)
   {
-    iot_log_error
-      (iot_logger_default (), "devsdk_service_new: no implementation object");
+    iot_log_error (logger, "devsdk_service_new: no implementation object");
     *err = EDGEX_NO_DEVICE_IMPL;
     return NULL;
   }
   if (defaultname == NULL || strlen (defaultname) == 0)
   {
-    iot_log_error
-      (iot_logger_default (), "devsdk_service_new: no default name specified");
+    iot_log_error (logger, "devsdk_service_new: no default name specified");
     *err = EDGEX_NO_DEVICE_NAME;
     return NULL;
   }
   if (version == NULL || strlen (version) == 0)
   {
-    iot_log_error
-      (iot_logger_default (), "devsdk_service_new: no version specified");
+    iot_log_error (logger, "devsdk_service_new: no version specified");
     *err = EDGEX_NO_DEVICE_VERSION;
     return NULL;
   }
@@ -204,6 +202,7 @@ devsdk_service_t *devsdk_service_new
   *err = EDGEX_OK;
   devsdk_service_t *result = malloc (sizeof (devsdk_service_t));
   memset (result, 0, sizeof (devsdk_service_t));
+  result->logger = logger;
 
   if (!processCmdLine (argc, argv, result))
   {
@@ -220,6 +219,7 @@ devsdk_service_t *devsdk_service_new
     strcpy (result->name, defaultname);
     strcat (result->name, "_");
     strcat (result->name, n);
+    result->logger->name = result->name;
   }
   else
   {
@@ -234,7 +234,6 @@ devsdk_service_t *devsdk_service_new
   result->userfns = implfns;
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
-  result->logger = iot_logger_alloc_custom (result->name, IOT_LOG_TRACE, "", edgex_log_tostdout, NULL, true);
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
   result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns.discover, impldata);
@@ -747,7 +746,7 @@ void devsdk_register_http_handler
   if (svc == NULL || svc->daemon == NULL)
   {
     *e = EDGEX_HTTP_SERVER_FAIL;
-    iot_log_error (iot_logger_default (), "devsdk_register_http_handler called before service is running");
+    iot_log_error (svc ? svc->logger : iot_logger_default (), "devsdk_register_http_handler called before service is running");
   }
   else
   {
@@ -815,7 +814,7 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
   }
   if (svc->discovery)
   {
-    edgex_device_periodic_discovery_free (svc->discovery);
+    edgex_device_periodic_discovery_stop (svc->discovery);
   }
   if (svc->scheduler)
   {
@@ -843,6 +842,7 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_scheduler_free (svc->scheduler);
     edgex_devmap_free (svc->devices);
     edgex_watchlist_free (svc->watchlist);
+    edgex_device_periodic_discovery_free (svc->discovery);
     iot_threadpool_free (svc->thpool);
     iot_threadpool_free (svc->eventq);
     devsdk_registry_free (svc->registry);

@@ -107,14 +107,23 @@ void edgex_device_periodic_discovery_configure (edgex_device_periodic_discovery_
   }
 }
 
-void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *disc)
+void edgex_device_periodic_discovery_stop (edgex_device_periodic_discovery_t *disc)
 {
   if (disc->schedule)
   {
     iot_schedule_delete (disc->scheduler, disc->schedule);
+    disc->schedule = NULL;
   }
-  pthread_mutex_destroy (&disc->lock);
-  free (disc);
+}
+
+void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *disc)
+{
+  if (disc)
+  {
+    edgex_device_periodic_discovery_stop (disc);
+    pthread_mutex_destroy (&disc->lock);
+    free (disc);
+  }
 }
 
 void edgex_device_handler_discovery (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)

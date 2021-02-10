@@ -231,11 +231,15 @@ int main (int argc, char *argv[])
       printf ("Options:\n");
       printf ("  -h, --help\t\t\tShow this text\n");
       devsdk_usage ();
+      devsdk_service_free (service);
+      free (impl);
       return 0;
     }
     else
     {
       printf ("%s: Unrecognized option %s\n", argv[0], argv[n]);
+      devsdk_service_free (service);
+      free (impl);
       return 0;
     }
   }
