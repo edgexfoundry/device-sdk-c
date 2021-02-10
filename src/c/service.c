@@ -49,30 +49,6 @@ void devsdk_usage ()
   printf ("  -i, --instance=<name>      \tSpecify device service instance name (if specified this is appended to the device service name).\n");
 }
 
-static bool testArgOpt (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
-{
-  if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
-  {
-    if (val && *val && *val != '-')
-    {
-      *var = val;
-    }
-    else
-    {
-      if (*var == NULL)
-      {
-        *var = "";
-      }
-      *result = false;
-    }
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
 static bool testArg (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
 {
   if (strcmp (arg, pshort) == 0 || strcmp (arg, plong) == 0)
@@ -113,13 +89,9 @@ static void consumeArgs (int *argc_p, char **argv, int start, int nargs)
   *argc_p -= nargs;
 }
 
-static void checkEnv (const char **setting, const char *varname, const char *altvar)
+static void checkEnv (const char **setting, const char *varname)
 {
   const char *val = getenv (varname);
-  if (val == NULL && altvar)
-  {
-    val = getenv (altvar);
-  }
   if (val)
   {
     *setting = val;
@@ -133,7 +105,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   const char *arg;
   const char *val;
   int argc = *argc_p;
-  bool cpset = false;
+  bool usereg = false;
 
   int n = 1;
   while (result && n < argc)
@@ -150,21 +122,9 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     {
       val = argv[n + 1];
     }
-    if (testArgOpt (arg, val, "-r", "--registry", &svc->regURL, &result) || testArgOpt (arg, val, "-cp", "--configProvider", &svc->regURL, &result))
-    {
-      consumeArgs (&argc, argv, n, result ? 2 : 1);
-      if (cpset)
-      {
-        printf ("Only one of -r/--registry and -cp/--configProvider may be set\n");
-        result = false;
-      }
-      else
-      {
-        cpset = true;
-        result = true;
-      }
-    } else if
+    if
     (
+      testArg (arg, val, "-cp", "--configProvider", &svc->regURL, &result) ||
       testArg (arg, val, "-i", "--instance", (const char **)&svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
       testArg (arg, val, "-c", "--confdir", &svc->confdir, &result) ||
@@ -173,7 +133,11 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
     }
-    else if (testBool (arg, val, "-o", "--overwrite", &svc->overwriteconfig, &result))
+    else if
+    (
+      testBool (arg, val, "-o", "--overwrite", &svc->overwriteconfig, &result) ||
+      testBool (arg, val, "-r", "--registry", &usereg, &result)
+    )
     {
       consumeArgs (&argc, argv, n, 1);
     }
@@ -188,12 +152,27 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   }
   *argc_p = argc;
 
-  checkEnv (&svc->regURL, "EDGEX_CONFIGURATION_PROVIDER", "edgex_registry");
-  checkEnv (&svc->profile, "EDGEX_PROFILE", "edgex_profile");
-  checkEnv (&svc->confdir, "EDGEX_CONF_DIR", NULL);
-  checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE", NULL);
-  checkEnv ((const char **)&svc->name, "EDGEX_INSTANCE_NAME", NULL);
+  checkEnv (&svc->regURL, "EDGEX_CONFIGURATION_PROVIDER");
+  checkEnv (&svc->profile, "EDGEX_PROFILE");
+  checkEnv (&svc->confdir, "EDGEX_CONF_DIR");
+  checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE");
+  checkEnv ((const char **)&svc->name, "EDGEX_INSTANCE_NAME");
 
+  if (usereg)
+  {
+    if (svc->regURL == NULL)
+    {
+      svc->regURL = "";
+    }
+  }
+  else
+  {
+    if (svc->regURL)
+    {
+      iot_log_warn (iot_logger_default (), "Configuration provider was specified but registry not enabled");
+      svc->regURL = NULL;
+    }
+  }
   return result;
 }
 
@@ -686,7 +665,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       if (regconf)
       {
         edgex_device_overrideConfig_nvpairs (configmap, regconf);
-        edgex_device_overrideConfig_env (svc->logger, svc->name, configmap);
+        edgex_device_overrideConfig_env (svc->logger, configmap);
         edgex_device_populateConfig (svc, configmap);
         devsdk_nvpairs_free (regconf);
       }
@@ -711,7 +690,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
 
     edgex_device_overrideConfig_toml (configmap, configtoml, svc->userfns.init == compat_init);
-    edgex_device_overrideConfig_env (svc->logger, svc->name, configmap);
+    edgex_device_overrideConfig_env (svc->logger, configmap);
     edgex_device_populateConfig (svc, configmap);
 
     if (uploadConfig)

@@ -342,6 +342,42 @@ static void parseClient
   }
 }
 
+static void checkClientOverride (iot_logger_t *lc, char *name, edgex_device_service_endpoint *endpoint)
+{
+  bool log = false;
+  const char *host;
+  const char *portstr;
+  uint16_t port = 0;
+  char *qstr = malloc (strlen (name) + sizeof ("CLIENTS/x/HOST"));
+  strcpy (qstr, "CLIENTS_");
+  strcat (qstr, name);
+  strcat (qstr, "_HOST");
+  host = getenv (qstr);
+  strcpy (qstr + strlen (qstr) - 4, "PORT");
+  portstr = getenv (qstr);
+  if (portstr)
+  {
+    port = atoi (portstr);
+  }
+
+  if (host)
+  {
+    free (endpoint->host);
+    endpoint->host = strdup (host);
+    log = true;
+  }
+  if (port)
+  {
+    endpoint->port = port;
+    log = true;
+  }
+  if (log)
+  {
+    iot_log_info (lc, "Override %s service location = %s:%u", name, endpoint->host, endpoint->port);
+  }
+  free (qstr);
+}
+
 void edgex_device_parseTomlClients
   (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err)
 {
@@ -350,30 +386,25 @@ void edgex_device_parseTomlClients
     parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
     parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
   }
+  checkClientOverride (lc, "DATA", &endpoints->data);
+  checkClientOverride (lc, "METADATA", &endpoints->metadata);
 }
 
 static char *checkOverride (char *qstr)
 {
-  char *env;
-  char *slash = qstr;
-
-  while ((slash = strchr (slash, '/')))
+  for (char *c = qstr; *c; c++)
   {
-    *slash = '_';
-  }
-  env = getenv (qstr);
-  if (env == NULL)
-  {
-    for (char *c = qstr; *c; c++)
+    if (*c == '/')
     {
-      if (islower (*c))
-      {
-        *c = toupper (*c);
-      }
+      *c = '_';
     }
-    env = getenv (qstr);
+    else if (islower (*c))
+    {
+      *c = toupper (*c);
+    }
   }
-  return env;
+
+  return getenv (qstr);
 }
 
 static const char *findEntry (char *key, toml_table_t *table)
@@ -443,41 +474,25 @@ void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, b
   }
 }
 
-void edgex_device_overrideConfig_env (iot_logger_t *lc, const char *sname, iot_data_t *config)
+void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
 {
   char *query = NULL;
   size_t qsize = 0;
   const char *key;
   iot_data_map_iter_t iter;
-  size_t extra = strlen (sname) + 2;
 
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
   {
     key = iot_data_map_iter_string_key (&iter);
-    size_t req = strlen (key) + extra;
+    size_t req = strlen (key) + 1;
     if (qsize < req)
     {
       query = realloc (query, req);
       qsize = req;
     }
-    strcpy (query, sname);
-    strcat (query, "_");
-    strcat (query, key);
+    strcpy (query, key);
     char *newtxt = checkOverride (query);
-    if (newtxt == NULL)
-    {
-      for (int i = 0; i < strlen (sname); i++)
-      {
-        query[i] = (sname[i] == '-') ? '_' : sname[i];
-      }
-      newtxt = checkOverride (query);
-    }
-    if (newtxt == NULL)
-    {
-      strcpy (query, key);
-      newtxt = checkOverride (query);
-    }
     if (newtxt)
     {
       iot_data_t *newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), newtxt);
