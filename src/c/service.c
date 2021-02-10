@@ -24,7 +24,6 @@
 #include "iot/time.h"
 #include "iot/iot.h"
 #include "edgex/csdk-defs.h"
-#include "v1compat.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -688,7 +687,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       }
     }
 
-    edgex_device_overrideConfig_toml (configmap, configtoml, svc->userfns.init == compat_init);
+    edgex_device_overrideConfig_toml (configmap, configtoml);
     edgex_device_overrideConfig_env (svc->logger, configmap);
     edgex_device_populateConfig (svc, configmap);
 

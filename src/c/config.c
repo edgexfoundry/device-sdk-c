@@ -227,75 +227,6 @@ static void toml_rtoui16
   }
 }
 
-/* Recursively parse a toml table into name-value pairs. Note that the toml parser does various string manipulations,
-   so reading a raw value into an int or double, then sprintf-ing it back to a string is not necessarily redundant. */
-
-static devsdk_nvpairs *processTable (toml_table_t *config, devsdk_nvpairs *result, const char *prefix)
-{
-  unsigned i = 0;
-  const char *key;
-  const char *raw;
-  toml_table_t *tab;
-  int64_t dummyi;
-  double dummyd;
-  char *fullname;
-
-  if (strcmp (prefix, "Clients") == 0)
-  {
-    return result;   // clients table is handled in parseTomlClients()
-  }
-
-  while ((key = toml_key_in (config, i++)))
-  {
-    if (strlen (prefix))
-    {
-      fullname = malloc (strlen (prefix) + strlen (key) + 2);
-      strcpy (fullname, prefix);
-      strcat (fullname, "/");
-      strcat (fullname, key);
-    }
-    else
-    {
-      fullname = strdup (key);
-    }
-    if ((raw = toml_raw_in (config, key)))
-    {
-      if (strcmp (raw, "true") == 0 || strcmp (raw, "false") == 0)
-      {
-        result = devsdk_nvpairs_new (fullname, raw, result);
-      }
-      else if (toml_rtoi (raw, &dummyi) == 0)
-      {
-        char val[32];
-        sprintf (val, "%" PRIi64, dummyi);
-        result = devsdk_nvpairs_new (fullname, val, result);
-      }
-      else if (toml_rtod (raw, &dummyd) == 0)
-      {
-        char val[32];
-        sprintf (val, "%f", dummyd);
-        result = devsdk_nvpairs_new (fullname, val, result);
-      }
-      else
-      {
-        char *val = NULL;
-        toml_rtos (raw, &val);
-        if (val && *val)
-        {
-          result = devsdk_nvpairs_new (fullname, val, result);
-        }
-        free (val);
-      }
-    }
-    else if ((tab = toml_table_in (config, key)))
-    {
-      result = processTable (tab, result, fullname);
-    }
-    free (fullname);
-  }
-  return result;
-}
-
 char *edgex_device_getRegURL (toml_table_t *config)
 {
   toml_table_t *table = NULL;
@@ -427,25 +358,11 @@ static const char *findEntry (char *key, toml_table_t *table)
   return result;
 }
 
-void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, bool v1compat)
+void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
 {
   char *key;
   const char *raw;
   iot_data_map_iter_t iter;
-
-  if (v1compat)
-  {
-    // Add placeholder defaults for [Driver] configuration
-    devsdk_nvpairs *allconf = processTable (toml, NULL, "");
-    for (const devsdk_nvpairs *iter = allconf; iter; iter = iter->next)
-    {
-      if (strncmp (iter->name, DRV_PREFIX, DRV_PREFIXLEN) == 0)
-      {
-        iot_data_map_add (config, iot_data_alloc_string (iter->name, IOT_DATA_COPY), iot_data_alloc_string ("", IOT_DATA_REF));
-      }
-    }
-    devsdk_nvpairs_free (allconf);
-  }
 
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))

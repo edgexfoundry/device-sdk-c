@@ -37,33 +37,3 @@ edgex_propertytype edgex_propertytype_typecode (const iot_typecode_t *tc)
   }
   return res;
 }
-
-edgex_nvpairs *edgex_nvpairs_new (const char *name, const char *value, edgex_nvpairs *list)
-{
-  return devsdk_nvpairs_new (name, value, list);
-}
-
-const char *edgex_nvpairs_value (const edgex_nvpairs *nvp, const char *name)
-{
-  return devsdk_nvpairs_value (nvp, name);
-}
-
-bool edgex_nvpairs_long_value (const edgex_nvpairs *nvp, const char *name, long *val)
-{
-  return devsdk_nvpairs_long_value (nvp, name, val);
-}
-
-bool edgex_nvpairs_ulong_value (const edgex_nvpairs *nvp, const char *name, unsigned long *val)
-{
-  return devsdk_nvpairs_ulong_value (nvp, name, val);
-}
-
-bool edgex_nvpairs_float_value (const edgex_nvpairs *nvp, const char *name, float *val)
-{
-  return devsdk_nvpairs_float_value (nvp, name, val);
-}
-
-const edgex_nvpairs *edgex_protocols_properties (const devsdk_protocols *prots, const char *name)
-{
-  return devsdk_protocols_properties (prots, name);
-}
