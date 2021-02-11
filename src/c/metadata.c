@@ -427,8 +427,8 @@ void edgex_metadata_client_add_or_modify_device
   dev->description = (char *)description;
   dev->adminState = adminstate;
   dev->operatingState = ENABLED;
-  dev->labels = (edgex_strings *)labels;
-  dev->protocols = (edgex_protocols *)protocols;
+  dev->labels = (devsdk_strings *)labels;
+  dev->protocols = protocols;
   dev->service = calloc (1, sizeof (edgex_deviceservice));
   dev->service->name = (char *)service_name;
   dev->profile = calloc (1, sizeof (edgex_deviceprofile));

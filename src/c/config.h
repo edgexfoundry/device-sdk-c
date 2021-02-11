@@ -90,9 +90,9 @@ void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edg
 
 void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config);
 
-void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, bool v1compat);
+void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml);
 
-void edgex_device_overrideConfig_env (iot_logger_t *lc, const char *sname, iot_data_t *config);
+void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config);
 
 void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpairs *pairs);
 

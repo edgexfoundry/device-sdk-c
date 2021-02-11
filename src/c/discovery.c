@@ -107,14 +107,23 @@ void edgex_device_periodic_discovery_configure (edgex_device_periodic_discovery_
   }
 }
 
-void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *disc)
+void edgex_device_periodic_discovery_stop (edgex_device_periodic_discovery_t *disc)
 {
   if (disc->schedule)
   {
     iot_schedule_delete (disc->scheduler, disc->schedule);
+    disc->schedule = NULL;
   }
-  pthread_mutex_destroy (&disc->lock);
-  free (disc);
+}
+
+void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *disc)
+{
+  if (disc)
+  {
+    edgex_device_periodic_discovery_stop (disc);
+    pthread_mutex_destroy (&disc->lock);
+    free (disc);
+  }
 }
 
 void edgex_device_handler_discovery (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
@@ -130,11 +139,6 @@ void edgex_device_handler_discovery (void *ctx, const devsdk_http_request *req, 
   else if (svc->adminstate == LOCKED)
   {
     ret = strdup ("Device service is administratively locked\n");
-    reply->code = MHD_HTTP_LOCKED;
-  }
-  else if (svc->opstate == DISABLED)
-  {
-    ret = strdup ("Device service is disabled\n");
     reply->code = MHD_HTTP_LOCKED;
   }
   else if (!svc->config.device.discovery_enabled)
@@ -171,10 +175,6 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
   else if (svc->adminstate == LOCKED)
   {
     edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device service is administratively locked");
-  }
-  else if (svc->opstate == DISABLED)
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device service is disabled");
   }
   else if (!svc->config.device.discovery_enabled)
   {

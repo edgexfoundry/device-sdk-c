@@ -9,11 +9,6 @@
 #ifndef _DEVSDK_DEVSDK_H_
 #define _DEVSDK_DEVSDK_H_ 1
 
-#define DEVSDKV2
-#ifdef DEVSDKV1
-#error Only one of edgex/devsdk.h and devsdk/devsdk.h may be included
-#endif
-
 /**
  * @file
  * @brief This file defines the functions and callbacks relating to the SDK.

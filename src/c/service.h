@@ -35,7 +35,6 @@ struct devsdk_service_t
   edgex_rest_server *daemon;
   edgex_device_periodic_discovery_t *discovery;
   devsdk_registry *registry;
-  edgex_device_operatingstate opstate;
   edgex_device_adminstate adminstate;
   uint64_t starttime;
   bool overwriteconfig;

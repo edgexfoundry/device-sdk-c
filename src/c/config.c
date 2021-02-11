@@ -227,75 +227,6 @@ static void toml_rtoui16
   }
 }
 
-/* Recursively parse a toml table into name-value pairs. Note that the toml parser does various string manipulations,
-   so reading a raw value into an int or double, then sprintf-ing it back to a string is not necessarily redundant. */
-
-static devsdk_nvpairs *processTable (toml_table_t *config, devsdk_nvpairs *result, const char *prefix)
-{
-  unsigned i = 0;
-  const char *key;
-  const char *raw;
-  toml_table_t *tab;
-  int64_t dummyi;
-  double dummyd;
-  char *fullname;
-
-  if (strcmp (prefix, "Clients") == 0)
-  {
-    return result;   // clients table is handled in parseTomlClients()
-  }
-
-  while ((key = toml_key_in (config, i++)))
-  {
-    if (strlen (prefix))
-    {
-      fullname = malloc (strlen (prefix) + strlen (key) + 2);
-      strcpy (fullname, prefix);
-      strcat (fullname, "/");
-      strcat (fullname, key);
-    }
-    else
-    {
-      fullname = strdup (key);
-    }
-    if ((raw = toml_raw_in (config, key)))
-    {
-      if (strcmp (raw, "true") == 0 || strcmp (raw, "false") == 0)
-      {
-        result = devsdk_nvpairs_new (fullname, raw, result);
-      }
-      else if (toml_rtoi (raw, &dummyi) == 0)
-      {
-        char val[32];
-        sprintf (val, "%" PRIi64, dummyi);
-        result = devsdk_nvpairs_new (fullname, val, result);
-      }
-      else if (toml_rtod (raw, &dummyd) == 0)
-      {
-        char val[32];
-        sprintf (val, "%f", dummyd);
-        result = devsdk_nvpairs_new (fullname, val, result);
-      }
-      else
-      {
-        char *val = NULL;
-        toml_rtos (raw, &val);
-        if (val && *val)
-        {
-          result = devsdk_nvpairs_new (fullname, val, result);
-        }
-        free (val);
-      }
-    }
-    else if ((tab = toml_table_in (config, key)))
-    {
-      result = processTable (tab, result, fullname);
-    }
-    free (fullname);
-  }
-  return result;
-}
-
 char *edgex_device_getRegURL (toml_table_t *config)
 {
   toml_table_t *table = NULL;
@@ -342,6 +273,42 @@ static void parseClient
   }
 }
 
+static void checkClientOverride (iot_logger_t *lc, char *name, edgex_device_service_endpoint *endpoint)
+{
+  bool log = false;
+  const char *host;
+  const char *portstr;
+  uint16_t port = 0;
+  char *qstr = malloc (strlen (name) + sizeof ("CLIENTS/x/HOST"));
+  strcpy (qstr, "CLIENTS_");
+  strcat (qstr, name);
+  strcat (qstr, "_HOST");
+  host = getenv (qstr);
+  strcpy (qstr + strlen (qstr) - 4, "PORT");
+  portstr = getenv (qstr);
+  if (portstr)
+  {
+    port = atoi (portstr);
+  }
+
+  if (host)
+  {
+    free (endpoint->host);
+    endpoint->host = strdup (host);
+    log = true;
+  }
+  if (port)
+  {
+    endpoint->port = port;
+    log = true;
+  }
+  if (log)
+  {
+    iot_log_info (lc, "Override %s service location = %s:%u", name, endpoint->host, endpoint->port);
+  }
+  free (qstr);
+}
+
 void edgex_device_parseTomlClients
   (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err)
 {
@@ -350,30 +317,25 @@ void edgex_device_parseTomlClients
     parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
     parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
   }
+  checkClientOverride (lc, "DATA", &endpoints->data);
+  checkClientOverride (lc, "METADATA", &endpoints->metadata);
 }
 
 static char *checkOverride (char *qstr)
 {
-  char *env;
-  char *slash = qstr;
-
-  while ((slash = strchr (slash, '/')))
+  for (char *c = qstr; *c; c++)
   {
-    *slash = '_';
-  }
-  env = getenv (qstr);
-  if (env == NULL)
-  {
-    for (char *c = qstr; *c; c++)
+    if (*c == '/')
     {
-      if (islower (*c))
-      {
-        *c = toupper (*c);
-      }
+      *c = '_';
     }
-    env = getenv (qstr);
+    else if (islower (*c))
+    {
+      *c = toupper (*c);
+    }
   }
-  return env;
+
+  return getenv (qstr);
 }
 
 static const char *findEntry (char *key, toml_table_t *table)
@@ -396,25 +358,11 @@ static const char *findEntry (char *key, toml_table_t *table)
   return result;
 }
 
-void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, bool v1compat)
+void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
 {
   char *key;
   const char *raw;
   iot_data_map_iter_t iter;
-
-  if (v1compat)
-  {
-    // Add placeholder defaults for [Driver] configuration
-    devsdk_nvpairs *allconf = processTable (toml, NULL, "");
-    for (const devsdk_nvpairs *iter = allconf; iter; iter = iter->next)
-    {
-      if (strncmp (iter->name, DRV_PREFIX, DRV_PREFIXLEN) == 0)
-      {
-        iot_data_map_add (config, iot_data_alloc_string (iter->name, IOT_DATA_COPY), iot_data_alloc_string ("", IOT_DATA_REF));
-      }
-    }
-    devsdk_nvpairs_free (allconf);
-  }
 
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
@@ -443,41 +391,25 @@ void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml, b
   }
 }
 
-void edgex_device_overrideConfig_env (iot_logger_t *lc, const char *sname, iot_data_t *config)
+void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
 {
   char *query = NULL;
   size_t qsize = 0;
   const char *key;
   iot_data_map_iter_t iter;
-  size_t extra = strlen (sname) + 2;
 
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
   {
     key = iot_data_map_iter_string_key (&iter);
-    size_t req = strlen (key) + extra;
+    size_t req = strlen (key) + 1;
     if (qsize < req)
     {
       query = realloc (query, req);
       qsize = req;
     }
-    strcpy (query, sname);
-    strcat (query, "_");
-    strcat (query, key);
+    strcpy (query, key);
     char *newtxt = checkOverride (query);
-    if (newtxt == NULL)
-    {
-      for (int i = 0; i < strlen (sname); i++)
-      {
-        query[i] = (sname[i] == '-') ? '_' : sname[i];
-      }
-      newtxt = checkOverride (query);
-    }
-    if (newtxt == NULL)
-    {
-      strcpy (query, key);
-      newtxt = checkOverride (query);
-    }
     if (newtxt)
     {
       iot_data_t *newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), newtxt);
