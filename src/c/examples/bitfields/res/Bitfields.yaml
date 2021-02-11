@@ -11,7 +11,7 @@ deviceResources:
     description: "Byte 0 (LSB)"
     properties:
       value:
-        { type: "uint32", readWrite: "RW", mask: "0xFF" }
+        { type: "Uint32", readWrite: "RW", mask: "0xFF" }
       units:
         { defaultValue: "things" }
   -
@@ -19,7 +19,7 @@ deviceResources:
     description: "Byte 1"
     properties:
       value:
-        { type: "uint32", readWrite: "RW", mask: "0xFF00", shift: "8" }
+        { type: "Uint32", readWrite: "RW", mask: "0xFF00", shift: "8" }
       units:
         { defaultValue: "things" }
   -
@@ -27,7 +27,7 @@ deviceResources:
     description: "Byte 2"
     properties:
       value:
-        { type: "uint32", readWrite: "RW", mask: "0xFF0000", shift: "16" }
+        { type: "Uint32", readWrite: "RW", mask: "0xFF0000", shift: "16" }
       units:
         { defaultValue: "things" }
   -
@@ -35,7 +35,7 @@ deviceResources:
     description: "Byte 3 (MSB)"
     properties:
       value:
-        { type: "uint32", readWrite: "RW", mask: "0xFF000000", shift: "24" }
+        { type: "Uint32", readWrite: "RW", mask: "0xFF000000", shift: "24" }
       units:
         { defaultValue: "things" }
 

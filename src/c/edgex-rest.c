@@ -168,10 +168,10 @@ void devsdk_nvpairs_free (devsdk_nvpairs *p)
 
 static const char *proptypes[] =
 {
-  "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64",
-  "uint64", "float32", "float64", "bool", "string", "binary", "unused1", "unused2",
-  "int8array", "uint8array", "int16array", "uint16array", "int32array", "uint32array", "int64array",
-  "uint64array", "float32array", "float64array", "boolarray"
+  "Int8", "Uint8", "Int16", "Uint16", "Int32", "Uint32", "Int64", "Uint64",
+  "Float32", "Float64", "Bool", "String", "Binary", "unused1", "unused2",
+  "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array", "Uint32Array", "Int64Array", "Uint64Array",
+  "Float32Array", "Float64Array", "BoolArray"
 };
 
 const char *edgex_propertytype_tostring (edgex_propertytype pt)
@@ -185,7 +185,7 @@ bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
   {
     for (edgex_propertytype i = Edgex_Int8; i <= Edgex_BoolArray; i++)
     {
-      if (i != Edgex_Unused1 && i != Edgex_Unused2 && strcasecmp (str, proptypes[i]) == 0)
+      if (i != Edgex_Unused1 && i != Edgex_Unused2 && strcmp (str, proptypes[i]) == 0)
       {
         *res = i;
         return true;

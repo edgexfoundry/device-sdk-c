@@ -13,7 +13,7 @@ deviceResources:
       { parameter: "xrot" }
     properties:
       value:
-        { type: "int32", readWrite: "R" }
+        { type: "Int32", readWrite: "R" }
       units:
         { defaultValue: "degrees/sec" }
   -
@@ -23,7 +23,7 @@ deviceResources:
       { parameter: "yrot" }
     properties:
       value:
-        { type: "int32", readWrite: "R" }
+        { type: "Int32", readWrite: "R" }
       units:
         { defaultValue: "degrees/sec" }
   -
@@ -33,7 +33,7 @@ deviceResources:
       { parameter: "zrot" }
     properties:
       value:
-        { type: "int32", readWrite: "R" }
+        { type: "Int32", readWrite: "R" }
       units:
         { defaultValue: "degrees/sec" }
 

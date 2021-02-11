@@ -13,7 +13,7 @@ deviceResources:
             { SensorID: "Sen1" , SensorType: "1" }
         properties:
             value:
-                { type: "uint64", readWrite: "R" }
+                { type: "Uint64", readWrite: "R" }
             units:
                 { defaultValue: "Random" }
 
@@ -24,7 +24,7 @@ deviceResources:
           { SensorID: "Sen2", SensorType: "2" }
         properties:
           value:
-            { type: "uint64", readWrite: "R" }
+            { type: "Uint64", readWrite: "R" }
           units:
             { defaultValue: "Random" }
 
@@ -34,7 +34,7 @@ deviceResources:
           { SwitchID: "Switch1" }
         properties:
           value:
-            { type: "bool", readWrite: "RW" }
+            { type: "Bool", readWrite: "RW" }
           units:
             { defaultValue: "State" }
 

@@ -78,10 +78,10 @@ The properties section in a deviceResource describes the value. Conventionally
 each logical value is given two properties, named value and units. The
 following fields are available in a property:
 
-* type - Required. The data type of the value. Supported types are bool,
-int8 - int64, uint8 - uint64, float32, float64, binary and string. Note that the
-undifferentiated Integer and Float types are deprecated in EdgeX and not
-supported by the SDK.
+* type - Required. The data type of the value. Supported types are Bool,
+Int8 - Int64, Uint8 - Uint64, Float32, Float64, Binary and String. Arrays of
+all types other than String and Binary are also supported and named by adding
+"Array" to the typename eg Int8Array.
 * readWrite - "R", "RW", or "W" indicating whether the value is readable or
 writable.
 * defaultValue - a value used for PUT requests which do not specify one.

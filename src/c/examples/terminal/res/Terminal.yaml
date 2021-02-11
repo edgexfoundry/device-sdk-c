@@ -13,7 +13,7 @@ deviceResources:
       { parameter: "cmd" }
     properties:
       value:
-        { type: "string", readWrite: "W" }
+        { type: "String", readWrite: "W" }
       units:
         { defaultValue: "text" }
   -
@@ -23,7 +23,7 @@ deviceResources:
       { parameter: "x" }
     properties:
       value:
-        { type: "int32", readWrite: "W" }
+        { type: "Int32", readWrite: "W" }
       units:
         { defaultValue: "characters" }
   -
@@ -33,7 +33,7 @@ deviceResources:
       { parameter: "y" }
     properties:
       value:
-        { type: "int32", readWrite: "W" }
+        { type: "Int32", readWrite: "W" }
       units:
         { defaultValue: "characters" }
   -
@@ -43,7 +43,7 @@ deviceResources:
       { parameter: "msg" }
     properties:
       value:
-        { type: "string", readWrite: "W" }
+        { type: "String", readWrite: "W" }
       units:
         { defaultValue: "text" }
 
