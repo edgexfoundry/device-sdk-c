@@ -26,6 +26,7 @@ typedef struct edgex_device_serviceinfo
   struct timespec timeout;
   const char *checkinterval;
   const char *bindaddr;
+  uint64_t maxreqsz;
 } edgex_device_serviceinfo;
 
 typedef struct edgex_device_service_endpoint

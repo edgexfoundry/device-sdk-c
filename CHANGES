@@ -2,6 +2,7 @@ This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
 Changes for 2.0.0 "Ireland":
 
+- Add MaxRequestSize configuration for limiting inbound http data transfers
 - EdgeX resource type names are now CamelCase as per Go services
 - Configuration elements which may be updated without restarting the service are found in the "Writable" section of the configuration. The following elements are moved:
   - Logging/LogLevel -> Writable/LogLevel

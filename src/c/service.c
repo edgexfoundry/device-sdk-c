@@ -446,7 +446,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   /* Start REST server now so that we get the callbacks on device addition */
 
   const char *bindaddr = strlen (svc->config.service.bindaddr) ? svc->config.service.bindaddr : svc->config.service.host;
-  svc->daemon = edgex_rest_server_create (svc->logger, bindaddr, svc->config.service.port, err);
+  svc->daemon = edgex_rest_server_create (svc->logger, bindaddr, svc->config.service.port, svc->config.service.maxreqsz, err);
   if (err->code)
   {
     return;

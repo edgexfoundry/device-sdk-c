@@ -61,6 +61,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
   iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
 
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
@@ -456,6 +457,7 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
   config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
   config->service.checkinterval = iot_data_string_map_get_string (map, "Service/CheckInterval");
   config->service.bindaddr = iot_data_string_map_get_string (map, "Service/ServerBindAddr");
+  config->service.maxreqsz = iot_data_ui64 (iot_data_string_map_get (map, "Service/MaxRequestSize"));
 
   if (config->service.labels)
   {
@@ -691,6 +693,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_string
     (sobj, "CheckInterval", svc->config.service.checkinterval);
   json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
+  json_object_set_uint (sobj, "MaxRequestSize", svc->config.service.maxreqsz);
 
   JSON_Value *lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);

@@ -37,6 +37,7 @@ struct edgex_rest_server
   struct MHD_Daemon *daemon;
   handler_list *handlers;
   pthread_mutex_t lock;
+  uint64_t maxsize;
 };
 
 typedef struct http_context_s
@@ -168,8 +169,15 @@ static int http_handler
 
   if (*upload_data_size)
   {
-    ctx->m_data = (char *) realloc
-      (ctx->m_data, ctx->m_size + (*upload_data_size) + 1);
+    size_t required = ctx->m_size + (*upload_data_size) + 1;
+    if (svr->maxsize && required > svr->maxsize)
+    {
+      free (ctx->m_data);
+      free (ctx);
+      iot_log_error (svr->lc, "http: request size of %zu exceeds configured maximum", required);
+      return MHD_NO;
+    }
+    ctx->m_data = (char *) realloc (ctx->m_data, required);
     memcpy (ctx->m_data + ctx->m_size, upload_data, (*upload_data_size) + 1);
     ctx->m_size += *upload_data_size;
     *upload_data_size = 0;
@@ -305,7 +313,7 @@ static void edgex_rest_sa_out (char *res, const struct sockaddr *sa)
 }
 
 edgex_rest_server *edgex_rest_server_create
-  (iot_logger_t *lc, const char *bindaddr, uint16_t port, devsdk_error *err)
+  (iot_logger_t *lc, const char *bindaddr, uint16_t port, uint64_t maxsize, devsdk_error *err)
 {
   edgex_rest_server *svr;
   uint16_t flags = MHD_USE_THREAD_PER_CONNECTION;
@@ -313,6 +321,7 @@ edgex_rest_server *edgex_rest_server_create
 
   svr = calloc (1, sizeof (edgex_rest_server));
   svr->lc = lc;
+  svr->maxsize = maxsize;
 
   pthread_mutex_init (&svr->lock, NULL);
 
