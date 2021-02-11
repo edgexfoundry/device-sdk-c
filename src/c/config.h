@@ -82,7 +82,7 @@ toml_table_t *edgex_device_loadConfig
   devsdk_error *err
 );
 
-iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *driverconf);
+iot_data_t *edgex_config_defaults (const iot_data_t *driverconf);
 
 char *edgex_device_getRegURL (toml_table_t *config);
 

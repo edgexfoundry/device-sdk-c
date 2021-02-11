@@ -96,15 +96,18 @@ void edgex_transform_outgoing
     if (transformsOn (props))
     {
       long double result = getLongDouble (cres->value, pt);
-      if (props->base.enabled) result = powl (props->base.value.dval, result);
-      if (props->scale.enabled) result *= props->scale.value.dval;
-      if (props->offset.enabled) result += props->offset.value.dval;
-
-      iot_data_free (cres->value);
-      cres->value = setLongDouble (result, pt);
-      if (cres->value == NULL)
+      if (isfinite (result))
       {
-        cres->value = iot_data_alloc_string ("overflow", IOT_DATA_REF);
+        if (props->base.enabled) result = powl (props->base.value.dval, result);
+        if (props->scale.enabled) result *= props->scale.value.dval;
+        if (props->offset.enabled) result += props->offset.value.dval;
+
+        iot_data_free (cres->value);
+        cres->value = setLongDouble (result, pt);
+        if (cres->value == NULL)
+        {
+          cres->value = iot_data_alloc_string ("overflow", IOT_DATA_REF);
+        }
       }
     }
     break;
@@ -166,11 +169,14 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
     if (transformsOn (props))
     {
       long double result = getLongDouble (*cres, props->type);
-      if (props->offset.enabled) result -= props->offset.value.dval;
-      if (props->scale.enabled) result /= props->scale.value.dval;
-      if (props->base.enabled) result = logl (result) / logl (props->base.value.dval);
-      iot_data_free (*cres);
-      *cres = setLongDouble (result, props->type);
+      if (isfinite (result))
+      {
+        if (props->offset.enabled) result -= props->offset.value.dval;
+        if (props->scale.enabled) result /= props->scale.value.dval;
+        if (props->base.enabled) result = logl (result) / logl (props->base.value.dval);
+        iot_data_free (*cres);
+        *cres = setLongDouble (result, props->type);
+      }
     }
     break;
     case IOT_DATA_INT8:

@@ -299,7 +299,7 @@ void edgex_consul_client_register_service
   json_object_set_string (obj, "Name", servicename);
   json_object_set_string (obj, "Address", host);
   json_object_set_uint (obj, "Port", port);
-  if (checkInterval)
+  if (strlen (checkInterval))
   {
     char myUrl[URL_BUF_SIZE];
     char checkName[URL_BUF_SIZE];

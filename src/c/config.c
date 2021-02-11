@@ -38,7 +38,7 @@
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
 
-iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *driverconf)
+iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
 {
   struct utsname utsbuffer;
   uname (&utsbuffer);
@@ -62,7 +62,7 @@ iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *
   iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
 
-  iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string (dflprofiledir, IOT_DATA_COPY));
+  iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
   if (driverconf)
@@ -371,12 +371,14 @@ void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
     raw = findEntry (key, toml);
     if (raw)
     {
-      iot_data_t *newval;
+      iot_data_t *newval = NULL;
       if (iot_data_type (iot_data_map_iter_value (&iter)) == IOT_DATA_STRING)
       {
         char *newtxt;
-        toml_rtos (raw, &newtxt);
-        newval = iot_data_alloc_string (newtxt, IOT_DATA_TAKE);
+        if (toml_rtos (raw, &newtxt) != -1)
+        {
+          newval = iot_data_alloc_string (newtxt, IOT_DATA_TAKE);
+        }
       }
       else
       {

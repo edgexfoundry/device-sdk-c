@@ -420,10 +420,13 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Load DeviceProfiles from files and register in metadata */
 
-  edgex_device_profiles_upload (svc, err);
-  if (err->code)
+  if (strlen (svc->config.device.profilesdir))
   {
-    return;
+    edgex_device_profiles_upload (svc, err);
+    if (err->code)
+    {
+      return;
+    }
   }
 
   /* Obtain Devices from metadata */
@@ -614,7 +617,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   svc->starttime = iot_time_msecs();
   iot_threadpool_start (svc->thpool);
 
-  configmap = edgex_config_defaults (svc->confdir, driverdfls);
+  configmap = edgex_config_defaults (driverdfls);
 
   if (svc->regURL)
   {
