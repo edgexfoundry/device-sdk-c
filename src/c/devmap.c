@@ -338,7 +338,7 @@ edgex_device *edgex_devmap_device_byname (edgex_devmap_t *map, const char *name)
   return result;
 }
 
-void edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
+bool edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
 {
   edgex_device **olddev;
   char **id;
@@ -351,6 +351,7 @@ void edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
     remove_locked (map, *olddev);
   }
   pthread_rwlock_unlock (&map->lock);
+  return id;
 }
 
 bool edgex_devmap_removedevice_byid (edgex_devmap_t *map, const char *id)

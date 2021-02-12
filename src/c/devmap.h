@@ -89,7 +89,7 @@ extern void edgex_device_release (edgex_device *dev);
 
 extern bool edgex_devmap_removedevice_byid
   (edgex_devmap_t *map, const char *id);
-extern void edgex_devmap_removedevice_byname
+extern bool edgex_devmap_removedevice_byname
   (edgex_devmap_t *map, const char *name);
 
 /*

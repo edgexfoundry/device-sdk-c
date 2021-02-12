@@ -17,6 +17,27 @@
 
 #include <microhttpd.h>
 
+void edgex_device_handler_callback_service (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+
+  edgex_deviceservice *ds = edgex_deviceservice_read (req->data.bytes);
+  if (ds)
+  {
+    if (svc->adminstate != ds->adminState)
+    {
+      svc->adminstate = ds->adminState;
+      iot_log_info (svc->logger, "Service AdminState now %s", svc->adminstate == LOCKED ? "LOCKED" : "UNLOCKED");
+    }
+    edgex_deviceservice_free (ds);
+    reply->code = MHD_HTTP_NO_CONTENT;
+  }
+  else
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "callback: device service: unable to parse %s", req->data.bytes);
+  }
+}
+
 void edgex_device_handler_callback_profile (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
@@ -24,16 +45,8 @@ void edgex_device_handler_callback_profile (void *ctx, const devsdk_http_request
   edgex_deviceprofile *p = edgex_deviceprofile_read (svc->logger, req->data.bytes);
   if (p)
   {
-    if (req->method == DevSDK_Post)
-    {
-      edgex_devmap_add_profile (svc->devices, p);
-      iot_log_info (svc->logger, "callback: New device profile %s", p->name);
-    }
-    else
-    {
-      edgex_devmap_update_profile (svc, p);
-      iot_log_info (svc->logger, "callback: Updated device profile %s", p->name);
-    }
+    edgex_devmap_update_profile (svc, p);
+    iot_log_info (svc->logger, "callback: Updated device profile %s", p->name);
     reply->code = MHD_HTTP_NO_CONTENT;
   }
   else
@@ -58,7 +71,7 @@ void edgex_device_handler_callback_watcher (void *ctx, const devsdk_http_request
       }
       else
       {
-        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "callback: Duplicate watcher %s (%s) not added", w->name, w->id);
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "callback: Duplicate watcher %s not added", w->name);
       }
     }
     else
@@ -123,26 +136,26 @@ void edgex_device_handler_callback_device (void *ctx, const devsdk_http_request 
   }
 }
 
-void edgex_device_handler_callback_device_id (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+void edgex_device_handler_callback_device_name (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   bool found = false;
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  const char *id = devsdk_nvpairs_value (req->params, "id");
-  iot_log_info (svc->logger, "callback: Delete device %s", id);
+  const char *name = devsdk_nvpairs_value (req->params, "name");
+  iot_log_info (svc->logger, "callback: Delete device %s", name);
   if (svc->userfns.device_removed)
   {
-    edgex_device *dev = edgex_devmap_device_byid (svc->devices, id);
+    edgex_device *dev = edgex_devmap_device_byname (svc->devices, name);
     if (dev)
     {
-      found = edgex_devmap_removedevice_byid (svc->devices, id);
+      found = edgex_devmap_removedevice_byid (svc->devices, dev->id);
       svc->userfns.device_removed (svc->userdata, dev->name, (const devsdk_protocols *)dev->protocols);
       edgex_device_release (dev);
     }
   }
   else
   {
-    found = edgex_devmap_removedevice_byid (svc->devices, id);
+    found = edgex_devmap_removedevice_byname (svc->devices, name);
   }
 
   if (found)
@@ -151,40 +164,23 @@ void edgex_device_handler_callback_device_id (void *ctx, const devsdk_http_reque
   }
   else
   {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "callback: delete device: no such device %s", id);
+    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "callback: delete device: no such device %s", name);
   }
 }
 
-void edgex_device_handler_callback_profile_id (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+void edgex_device_handler_callback_watcher_name (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  const char *id = devsdk_nvpairs_value (req->params, "id");
-  iot_log_info (svc->logger, "callback: Delete profile %s", id);
+  const char *name = devsdk_nvpairs_value (req->params, "name");
+  iot_log_info (svc->logger, "callback: Delete provision watcher %s", name);
 
-  if (edgex_devmap_remove_profile (svc->devices, id))
+  if (edgex_watchlist_remove_watcher (svc->watchlist, name))
   {
     reply->code = MHD_HTTP_NO_CONTENT;
   }
   else
   {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "callback: delete profile: profile %s has associated devices. Ignored.", id);
-  }
-}
-
-void edgex_device_handler_callback_watcher_id (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
-{
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
-
-  const char *id = devsdk_nvpairs_value (req->params, "id");
-  iot_log_info (svc->logger, "callback: Delete provision watcher %s", id);
-
-  if (edgex_watchlist_remove_watcher (svc->watchlist, id))
-  {
-    reply->code = MHD_HTTP_NO_CONTENT;
-  }
-  else
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "callback: delete provision watcher: no such watcher %s", id);
+    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "callback: delete provision watcher: no such watcher %s", name);
   }
 }

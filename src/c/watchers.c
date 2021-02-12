@@ -51,9 +51,9 @@ void edgex_watcher_regexes_free (edgex_watcher_regexes_t *regs)
   }
 }
 
-static edgex_watcher **find_locked (edgex_watcher **list, const char *id)
+static edgex_watcher **find_locked (edgex_watcher **list, const char *name)
 {
-  while (*list && strcmp ((*list)->id, id))
+  while (*list && strcmp ((*list)->name, name))
   {
     list = &((*list)->next);
   }
@@ -81,12 +81,12 @@ static void add_locked (edgex_watchlist_t *wl, const edgex_watcher *w)
   wl->list = newelem;
 }
 
-bool edgex_watchlist_remove_watcher (edgex_watchlist_t *wl, const char *id)
+bool edgex_watchlist_remove_watcher (edgex_watchlist_t *wl, const char *name)
 {
   bool result = false;
   pthread_rwlock_wrlock (&wl->lock);
 
-  edgex_watcher **ptr = find_locked (&wl->list, id);
+  edgex_watcher **ptr = find_locked (&wl->list, name);
   edgex_watcher *found = *ptr;
   if (found)
   {
@@ -104,7 +104,7 @@ void edgex_watchlist_update_watcher (edgex_watchlist_t *wl, const edgex_watcher 
 {
   pthread_rwlock_wrlock (&wl->lock);
 
-  edgex_watcher **ptr = find_locked (&wl->list, updated->id);
+  edgex_watcher **ptr = find_locked (&wl->list, updated->name);
   edgex_watcher *found = *ptr;
   if (found)
   {
@@ -128,7 +128,7 @@ unsigned edgex_watchlist_populate (edgex_watchlist_t *wl, const edgex_watcher *n
 
   for (const edgex_watcher *w = newlist; w; w = w->next)
   {
-    if (*find_locked (&wl->list, w->id) == NULL)
+    if (*find_locked (&wl->list, w->name) == NULL)
     {
       count++;
       add_locked (wl, w);

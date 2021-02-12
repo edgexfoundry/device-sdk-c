@@ -88,6 +88,7 @@ typedef bool (*devsdk_handle_get)
  * @param nvalues The number of set operations requested.
  * @param requests An array specifying the resources to which to write.
  * @param values An array specifying the values to be written.
+ * @param qparams Query Parameters which were set for this request.
  * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
  * @return true if the operation was successful, false otherwise.
  */
@@ -100,6 +101,7 @@ typedef bool (*devsdk_handle_put)
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
   const iot_data_t *values[],
+  const devsdk_nvpairs *qparams,
   iot_data_t **exception
 );
 

@@ -87,6 +87,7 @@ static bool gyro_put_handler
   uint32_t nvalues,
   const devsdk_commandrequest * requests,
   const iot_data_t * values[],
+  const devsdk_nvpairs *qparams,
   iot_data_t ** exception
 )
 {
