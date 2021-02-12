@@ -92,7 +92,7 @@ typedef void (*devsdk_registry_put_config_impl)
  * @param hostname The host on which this service is running.
  * @param port The port on which this service may be contacted.
  * @param checkInterval How often the registry should check that this service
- *        is running.
+ *        is running. Specify an empty string to indicate no checking.
  * @param err Nonzero reason codes may be set here in the event of errors.
  */
 

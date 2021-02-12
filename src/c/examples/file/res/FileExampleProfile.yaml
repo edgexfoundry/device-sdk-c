@@ -9,7 +9,7 @@ deviceResources:
         description: "The content of a file"
         properties:
             value:
-                { type: "binary", readWrite: "R", mediaType: "text/plain" }
+                { type: "Binary", readWrite: "R", mediaType: "text/plain" }
             units:
                 { defaultValue: "data" }
 

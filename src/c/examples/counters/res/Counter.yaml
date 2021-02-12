@@ -13,7 +13,7 @@ deviceResources:
       { register: "count01" }
     properties:
       value:
-        { type: "uint32", readWrite: "RW" }
+        { type: "Uint32", readWrite: "RW" }
       units:
         { defaultValue: "things" }
 

@@ -38,7 +38,7 @@
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
 
-iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *driverconf)
+iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
 {
   struct utsname utsbuffer;
   uname (&utsbuffer);
@@ -61,8 +61,9 @@ iot_data_t *edgex_config_defaults (const char *dflprofiledir, const iot_data_t *
   iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
 
-  iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string (dflprofiledir, IOT_DATA_COPY));
+  iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
   if (driverconf)
@@ -371,12 +372,14 @@ void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
     raw = findEntry (key, toml);
     if (raw)
     {
-      iot_data_t *newval;
+      iot_data_t *newval = NULL;
       if (iot_data_type (iot_data_map_iter_value (&iter)) == IOT_DATA_STRING)
       {
         char *newtxt;
-        toml_rtos (raw, &newtxt);
-        newval = iot_data_alloc_string (newtxt, IOT_DATA_TAKE);
+        if (toml_rtos (raw, &newtxt) != -1)
+        {
+          newval = iot_data_alloc_string (newtxt, IOT_DATA_TAKE);
+        }
       }
       else
       {
@@ -454,6 +457,7 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
   config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
   config->service.checkinterval = iot_data_string_map_get_string (map, "Service/CheckInterval");
   config->service.bindaddr = iot_data_string_map_get_string (map, "Service/ServerBindAddr");
+  config->service.maxreqsz = iot_data_ui64 (iot_data_string_map_get (map, "Service/MaxRequestSize"));
 
   if (config->service.labels)
   {
@@ -689,6 +693,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_string
     (sobj, "CheckInterval", svc->config.service.checkinterval);
   json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
+  json_object_set_uint (sobj, "MaxRequestSize", svc->config.service.maxreqsz);
 
   JSON_Value *lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);

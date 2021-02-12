@@ -14,9 +14,7 @@
 struct edgex_rest_server;
 typedef struct edgex_rest_server edgex_rest_server;
 
-extern edgex_rest_server *edgex_rest_server_create
-  (iot_logger_t *lc, const char *bindaddr, uint16_t port, devsdk_error *err);
-
+extern edgex_rest_server *edgex_rest_server_create (iot_logger_t *lc, const char *bindaddr, uint16_t port, uint64_t maxsize, devsdk_error *err);
 
 extern void edgex_rest_server_destroy (edgex_rest_server *svr);
 

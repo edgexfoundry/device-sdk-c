@@ -29,6 +29,7 @@ ConnectRetries | Int | Number of times to attempt to contact core-data and core-
 StartupMsg | String | Message to log on successful startup.
 CheckInterval | String | The checking interval to request if registering with Consul
 ServerBindAddr | String | The interface on which the service's REST server should listen. By default the server listens on all available interfaces.
+MaxRequestSize | Int | Amount of data beyond which the service will reject an incoming HTTP request. Zero (the default) disables checking.
 
 ## Clients section
 
