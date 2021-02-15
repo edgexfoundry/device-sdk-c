@@ -600,7 +600,7 @@ static int edgex_device_runput
     if
     (
       svc->userfns.puthandler
-        (svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, commandinfo->nreqs, commandinfo->reqs, (const iot_data_t **)results, &e)
+        (svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, commandinfo->nreqs, commandinfo->reqs, (const iot_data_t **)results, NULL, &e)
     )
     {
       if (svc->config.device.updatelastconnected)
@@ -999,7 +999,8 @@ void edgex_device_handler_device (void *ctx, const devsdk_http_request *req, dev
     (svc, id, false, cmd, req->method, req->params, req->data.bytes, req->data.size, &reply->data.bytes, &reply->data.size, &reply->content_type);
 }
 
-static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const edgex_reqdata_t *rdata, devsdk_http_reply *reply)
+static void edgex_device_runput2
+  (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const devsdk_nvpairs *params, const edgex_reqdata_t *rdata, devsdk_http_reply *reply)
 {
   reply->code = MHD_HTTP_OK;
   iot_data_t **results = calloc (cmdinfo->nreqs, sizeof (iot_data_t *));
@@ -1056,7 +1057,7 @@ static void edgex_device_runput2 (devsdk_service_t *svc, edgex_device *dev, cons
   if (reply->code == MHD_HTTP_OK)
   {
     iot_data_t *e = NULL;
-    if (svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, (const iot_data_t **)results, &e))
+    if (svc->userfns.puthandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, (const iot_data_t **)results, params, &e))
     {
       edgex_baseresponse br;
       edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Data written successfully");
@@ -1168,10 +1169,10 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
       if (event)
       {
         edgex_baseresponse br;
-        bool postv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_POST, "no"), "yes") == 0;
+        bool pushv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_PUSH, "no"), "yes") == 0;
         bool retv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_RETURN, "yes"), "no") != 0;
 
-        if (postv)
+        if (pushv)
         {
           if (retv)
           {
@@ -1208,7 +1209,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
         edgex_reqdata_t *data = edgex_reqdata_parse (svc->logger, req);
         if (data)
         {
-          edgex_device_runput2 (svc, dev, cmd, data, reply);
+          edgex_device_runput2 (svc, dev, cmd, req->params, data, reply);
           edgex_reqdata_free (data);
         }
         else
@@ -1226,24 +1227,6 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
   else
   {
     edgex_device_release (dev);
-  }
-}
-
-void edgex_device_handler_devicev2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
-{
-  edgex_device *dev;
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  const char *id = devsdk_nvpairs_value (req->params, "id");
-
-  iot_log_debug (svc->logger, "Incoming %s command for device id %s", methStr (req->method), id);
-  dev = edgex_devmap_device_byid (svc->devices, id);
-  if (dev)
-  {
-    edgex_device_v2impl (svc, dev, req, reply);
-  }
-  else
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "No such device id %s", id);
   }
 }
 

@@ -501,15 +501,15 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Register REST handlers */
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_ID, DevSDK_Delete, svc, edgex_device_handler_callback_device_id);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_NAME, DevSDK_Delete, svc, edgex_device_handler_callback_device_name);
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_profile);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE_ID, DevSDK_Delete, svc, edgex_device_handler_callback_profile_id);
-
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_watcher);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_ID, DevSDK_Delete, svc, edgex_device_handler_callback_watcher_id);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_NAME, DevSDK_Delete, svc, edgex_device_handler_callback_watcher_name);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, svc, edgex_device_handler_callback_service);
 
   edgex_rest_server_register_handler
   (
@@ -529,17 +529,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     edgex_device_handler_device
   );
 
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
-    edgex_device_handler_device_namev2
-  );
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API2_DEVICE, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
-    edgex_device_handler_devicev2
-  );
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, svc, edgex_device_handler_device_namev2);
 
   edgex_rest_server_register_handler
   (
