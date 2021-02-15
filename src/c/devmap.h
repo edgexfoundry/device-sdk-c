@@ -64,18 +64,10 @@ extern edgex_devmap_outcome_t edgex_devmap_replace_device
  * They must be released after use by calling edgex_device_release().
  */
 
-extern edgex_device *edgex_devmap_device_byid
-  (edgex_devmap_t *map, const char *id);
 extern edgex_device *edgex_devmap_device_byname
   (edgex_devmap_t *map, const char *name);
 extern edgex_cmdqueue_t *edgex_devmap_device_forcmd
   (edgex_devmap_t *map, const char *cmd, bool forGet);
-
-/*
- * Remove a profile but only if there are no associated devices
- */
-
-extern bool edgex_devmap_remove_profile (edgex_devmap_t *map, const char *id);
 
 /*
  * Release function. The device is freed when its reference count hits zero.
@@ -87,8 +79,6 @@ extern void edgex_device_release (edgex_device *dev);
  * Device removal.
  */
 
-extern bool edgex_devmap_removedevice_byid
-  (edgex_devmap_t *map, const char *id);
 extern bool edgex_devmap_removedevice_byname
   (edgex_devmap_t *map, const char *name);
 

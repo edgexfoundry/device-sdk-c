@@ -10,6 +10,7 @@
 #include "profiles.h"
 #include "errorlist.h"
 #include "parson.h"
+#include "profiles.h"
 #include "service.h"
 #include "metadata.h"
 #include "edgex-rest.h"
@@ -59,27 +60,27 @@ void edgex_device_handler_callback_watcher (void *ctx, const devsdk_http_request
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  edgex_watcher *w = edgex_watcher_read (req->data.bytes);
+  edgex_watcher *w = edgex_createPWreq_read (req->data.bytes);
   if (w)
   {
     if (req->method == DevSDK_Post)
     {
-      iot_log_info (svc->logger, "callback: New provision watcher %s, w->name");
-      if (edgex_watchlist_populate (svc->watchlist, w) == 1)
-      {
-        reply->code = MHD_HTTP_NO_CONTENT;
-      }
-      else
+      iot_log_info (svc->logger, "callback: New provision watcher %s", w->name);
+      if (edgex_watchlist_populate (svc->watchlist, w) != 1)
       {
         edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "callback: Duplicate watcher %s not added", w->name);
+        edgex_watcher_free (w);
+        return;
       }
     }
     else
     {
-      iot_log_info (svc->logger, "callback: Update provision watcher %s, w->name");
+      iot_log_info (svc->logger, "callback: Update provision watcher %s", w->name);
       edgex_watchlist_update_watcher (svc->watchlist, w);
-      reply->code = MHD_HTTP_NO_CONTENT;
     }
+    edgex_baseresponse br;
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Provision watcher update accepted");
+    edgex_baseresponse_write (&br, reply);
     edgex_watcher_free (w);
   }
   else
@@ -92,13 +93,13 @@ void edgex_device_handler_callback_device (void *ctx, const devsdk_http_request 
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  edgex_device *d = edgex_device_read (svc->logger, req->data.bytes);
+  edgex_device *d = edgex_createdevicereq_read (req->data.bytes);
   if (d)
   {
-    if (strcmp (d->service->name, svc->name))
+    if (strcmp (d->servicename, svc->name))
     {
-      iot_log_info (svc->logger, "callback: Device %s moved to %s", d->name, d->service->name);
-      edgex_devmap_removedevice_byid (svc->devices, d->id);
+      iot_log_info (svc->logger, "callback: Device %s moved to %s", d->name, d->servicename);
+      edgex_devmap_removedevice_byname (svc->devices, d->name);
       if (svc->userfns.device_removed)
       {
         svc->userfns.device_removed (svc->userdata, d->name, (const devsdk_protocols *)d->protocols);
@@ -106,7 +107,13 @@ void edgex_device_handler_callback_device (void *ctx, const devsdk_http_request 
     }
     else
     {
+      devsdk_error e;
       iot_log_info (svc->logger, "callback: New or updated device %s", d->name);
+      if (edgex_deviceprofile_get_internal (svc, d->profile->name, &e) == NULL)
+      {
+        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "callback: device: no profile %s available", d->profile->name);
+        return;
+      }
       switch (edgex_devmap_replace_device (svc->devices, d))
       {
         case CREATED:
@@ -127,7 +134,9 @@ void edgex_device_handler_callback_device (void *ctx, const devsdk_http_request 
           break;
       }
     }
-    reply->code = MHD_HTTP_NO_CONTENT;
+    edgex_baseresponse br;
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Data written successfully");
+    edgex_baseresponse_write (&br, reply);
     edgex_device_free (d);
   }
   else
@@ -148,7 +157,7 @@ void edgex_device_handler_callback_device_name (void *ctx, const devsdk_http_req
     edgex_device *dev = edgex_devmap_device_byname (svc->devices, name);
     if (dev)
     {
-      found = edgex_devmap_removedevice_byid (svc->devices, dev->id);
+      found = edgex_devmap_removedevice_byname (svc->devices, dev->name);
       svc->userfns.device_removed (svc->userdata, dev->name, (const devsdk_protocols *)dev->protocols);
       edgex_device_release (dev);
     }

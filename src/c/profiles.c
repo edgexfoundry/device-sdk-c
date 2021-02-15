@@ -26,98 +26,7 @@ static int yamlselect (const struct dirent *d)
   return strcasecmp (d->d_name + strlen (d->d_name) - 5, ".yaml") == 0 ? 1 : 0;
 }
 
-static bool need_vds (devsdk_service_t *svc)
-{
-  bool result = true;
-  devsdk_error err = EDGEX_OK;
-  JSON_Value *metaconf = edgex_metadata_client_get_config (svc->logger, &svc->config.endpoints, &err);
-  if (metaconf)
-  {
-    JSON_Object *obj = json_value_get_object (metaconf);
-    JSON_Object *wr = json_object_get_object (obj, "Writable");
-    if (wr)
-    {
-      int enable = json_object_get_boolean (wr, "EnableValueDescriptorManagement");
-      if (enable != -1)
-      {
-        result = !enable;
-      }
-    }
-    json_value_free (metaconf);
-  }
-  return result;
-}
-
-static void write_limitval (char *s, edgex_transformArg arg, char typ)
-{
-  if (arg.enabled)
-  {
-    if (typ == 'f')
-    {
-      sprintf (s, "%f", arg.value.dval);
-    }
-    else
-    {
-      sprintf (s, "%" PRIi64, arg.value.ival);
-    }
-  }
-  else
-  {
-    s[0] = '\0';
-  }
-}
-
-static void generate_value_descriptors
-(
-  devsdk_service_t *svc,
-  const edgex_deviceprofile *dp
-)
-{
-  uint64_t timenow = iot_time_msecs ();
-
-  for (edgex_deviceresource *res = dp->device_resources; res; res = res->next)
-  {
-    edgex_propertyvalue *pv = res->properties->value;
-    edgex_units *units = res->properties->units;
-    char type[2];
-    char min[32];
-    char max[32];
-    edgex_valuedescriptor *vd;
-    devsdk_error err;
-    iot_logger_t *lc = svc->logger;
-
-    type[0] = edgex_propertytype_tostring (pv->type)[0];
-    type[1] = '\0';
-
-    write_limitval (min, pv->minimum, type[0]);
-    write_limitval (max, pv->maximum, type[0]);
-
-    vd = edgex_data_client_add_valuedescriptor
-    (
-      lc,
-      &svc->config.endpoints,
-      res->name,
-      timenow,
-      min,
-      max,
-      type,
-      units->defaultvalue,
-      pv->defaultvalue,
-      "%s",
-      res->description,
-      pv->mediaType,
-      pv->floatAsBinary ? "base64" : "eNotation",
-      &err
-    );
-    if (err.code)
-    {
-      iot_log_error (lc, "Unable to create ValueDescriptor for %s", res->name);
-    }
-    edgex_valuedescriptor_free (vd);
-  }
-}
-
-static const edgex_deviceprofile *edgex_deviceprofile_get_internal
+const edgex_deviceprofile *edgex_deviceprofile_get_internal
 (
   devsdk_service_t *svc,
   const char *name,
@@ -283,15 +192,7 @@ void edgex_add_profile (devsdk_service_t *svc, const char *fname, devsdk_error *
       {
         iot_log_debug (lc, "Device profile upload successful, will now retrieve it");
         dp = edgex_deviceprofile_get_internal (svc, profname, err);
-        if (dp)
-        {
-          if (need_vds (svc))
-          {
-            iot_log_info (lc, "Generating value descriptors for DeviceProfile %s", profname);
-            generate_value_descriptors (svc, dp);
-          }
-        }
-        else
+        if (!dp)
         {
           iot_log_error (lc, "Failed to retrieve DeviceProfile %s", profname);
         }

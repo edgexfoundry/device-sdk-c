@@ -47,6 +47,6 @@ edgex_propertytype edgex_propertytype_typecode (const iot_typecode_t *tc);
 
 typedef enum { LOCKED, UNLOCKED } edgex_device_adminstate;
 
-typedef enum { ENABLED, DISABLED } edgex_device_operatingstate;
+typedef enum { UP, DOWN } edgex_device_operatingstate;
 
 #endif

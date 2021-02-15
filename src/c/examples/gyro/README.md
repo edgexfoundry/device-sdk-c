@@ -39,7 +39,7 @@ An EdgeX system containing at least a database and the core-data and core-metada
 To take a set of readings from the gyro:
 
 ```
-curl 0:49999/api/v1/device/name/Gyro/rotation
+curl 0:49999/api/v2/device/name/Gyro/rotation
 ```
 
 This returns an Event containing three Readings representing the three axes of measurement.

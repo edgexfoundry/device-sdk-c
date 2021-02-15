@@ -229,6 +229,7 @@ static int http_handler
     devsdk_nvpairs *params = NULL;
     devsdk_strings *elems = processUrl (url);
     status = MHD_HTTP_NOT_FOUND;
+    iot_log_trace (svr->lc, "Incoming %s request to %s%s%s", methodname, url, ctx->m_size ? ", data " : " (no data)", ctx->m_size ? ctx->m_data : "");
     pthread_mutex_lock (&svr->lock);
     for (h = svr->handlers; h; h = h->next)
     {

@@ -52,7 +52,7 @@ An EdgeX system containing at least a database and the core-data and core-metada
 Once the service is running it will begin to send a sequence of Events every ten seconds. It will also respond to the REST API for device services. To obtain a reading manually,
 
 ```
-curl 0:49999/api/v1/device/name/Device1/SensorOne
+curl 0:49999/api/v2/device/name/Device1/SensorOne
 ```
 
 Note that the template device service returns a constant String reading regardless of the requested operation.

@@ -15,6 +15,7 @@
 #include "devutil.h"
 #include "correlation.h"
 #include "metadata.h"
+#include "data.h"
 
 #include <microhttpd.h>
 
@@ -73,7 +74,7 @@ static void *ae_runner (void *p)
   edgex_device *dev = edgex_devmap_device_byname (ai->svc->devices, ai->device);
   if (dev)
   {
-    if (ai->svc->adminstate == LOCKED || dev->adminState == LOCKED || dev->operatingState == DISABLED)
+    if (ai->svc->adminstate == LOCKED || dev->adminState == LOCKED || dev->operatingState == DOWN)
     {
       edgex_device_release (dev);
       edgex_autoimpl_release (ai);
@@ -98,7 +99,7 @@ static void *ae_runner (void *p)
           resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
         }
         edgex_event_cooked *event =
-          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform, "");
+          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
         if (event)
         {
           edgex_data_client_add_event (ai->svc, event);
@@ -117,7 +118,7 @@ static void *ae_runner (void *p)
         {
           iot_log_error (ai->svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
           edgex_metadata_client_set_device_opstate
-            (ai->svc->logger, &ai->svc->config.endpoints, dev->id, DISABLED, &err);
+            (ai->svc->logger, &ai->svc->config.endpoints, dev->name, DOWN, &err);
         }
       }
       devsdk_commandresult_free (resdup, ai->resource->nreqs);

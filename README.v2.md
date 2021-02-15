@@ -120,11 +120,9 @@ To specify that a configuration element may be updated dynamically, prefix it wi
 
 ```
 edgex_add_device
-edgex_remove_device
 edgex_remove_device_byname
 edgex_update_device
 edgex_devices
-edgex_get_device
 edgex_get_device_byname
 edgex_free_device
 edgex_profiles

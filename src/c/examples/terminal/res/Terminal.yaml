@@ -4,48 +4,37 @@ model: "IoT3"
 description: "Virtual Terminal Device for CSDK Example"
 labels:
   - "sensor"
+apiVersion: "v2"
 
 deviceResources:
   -
     name: Cmd
     description: "The name of an activation command"
     attributes:
-      { parameter: "cmd" }
+        { parameter: "cmd" }
     properties:
-      value:
-        { type: "String", readWrite: "W" }
-      units:
-        { defaultValue: "text" }
+        { valueType: "String", readWrite: "W", units: "text" }
   -
     name: Xposition
     description: "The X position at which to write new text"
     attributes:
-      { parameter: "x" }
+        { parameter: "x" }
     properties:
-      value:
-        { type: "Int32", readWrite: "W" }
-      units:
-        { defaultValue: "characters" }
+        { valueType: "Int32", readWrite: "W", units: "characters" }
   -
     name: Yposition
     description: "The Y position at which to write new text"
     attributes:
-      { parameter: "y" }
+        { parameter: "y" }
     properties:
-      value:
-        { type: "Int32", readWrite: "W" }
-      units:
-        { defaultValue: "characters" }
+        { valueType: "Int32", readWrite: "W", units: "characters" }
   -
     name: Message
     description: "A message to write on the terminal"
     attributes:
-      { parameter: "msg" }
+        { parameter: "msg" }
     properties:
-      value:
-        { type: "String", readWrite: "W" }
-      units:
-        { defaultValue: "text" }
+        { valueType: "String", readWrite: "W", units: "text" }
 
 deviceCommands:
   -
@@ -57,16 +46,4 @@ deviceCommands:
       - { deviceResource: "Message" }
 
 coreCommands:
-  -
-    name: WriteMsg
-    put:
-      path: "/api/v1/device/{deviceId}/WriteMsg"
-      parameterNames: ["Xposition", "Yposition", "Message"]
-      responses:
-      - code: "200"
-        description: "Successfully displayed the message."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-
+  - { name: "WriteMsg", set: true }

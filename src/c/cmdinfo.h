@@ -15,6 +15,7 @@
 typedef struct edgex_cmdinfo
 {
   char *name;
+  edgex_deviceprofile *profile;
   bool isget;
   unsigned nreqs;
   devsdk_commandrequest *reqs;

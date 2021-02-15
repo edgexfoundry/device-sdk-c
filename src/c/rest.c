@@ -289,21 +289,29 @@ static long edgex_run_curl
 
 long edgex_http_get (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, devsdk_error *err)
 {
+  long res;
   CURL *hnd = curl_easy_init ();
-  return edgex_run_curl (lc, ctx, hnd, url, writefunc, NULL, err);
+
+  res = edgex_run_curl (lc, ctx, hnd, url, writefunc, NULL, err);
+  iot_log_trace (lc, "GET to %s returns %ld%s%s", url, res, ctx->buff ? ", data " : " (no data)", ctx->buff ? ctx->buff : "");
+  return res;
 }
 
 long edgex_http_delete (iot_logger_t *lc, edgex_ctx *ctx, const char *url, void *writefunc, devsdk_error *err)
 {
+  long res;
   CURL *hnd = curl_easy_init ();
   curl_easy_setopt (hnd, CURLOPT_CUSTOMREQUEST, "DELETE");
 
-  return edgex_run_curl (lc, ctx, hnd, url, writefunc, NULL, err);
+  res = edgex_run_curl (lc, ctx, hnd, url, writefunc, NULL, err);
+  iot_log_trace (lc, "DELETE to %s returns %ld", url, res);
+  return res;
 }
 
 long edgex_http_post
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err)
 {
+  long res;
   struct curl_slist *slist;
   CURL *hnd = curl_easy_init ();
 
@@ -312,7 +320,9 @@ long edgex_http_post
   curl_easy_setopt (hnd, CURLOPT_POSTFIELDS, data);
 
   slist = edgex_add_hdr (NULL, "Content-Type", CONTENT_JSON);
-  return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
+  res = edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
+  iot_log_trace (lc, "POST %s to %s returns %ld", data ? data : "(no data)", url, res);
+  return res;
 }
 
 long edgex_http_postbin
@@ -419,4 +429,31 @@ long edgex_http_put
 
   slist = edgex_add_hdr (NULL, "Content-Type", CONTENT_JSON);
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
+}
+
+long edgex_http_patch
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err)
+{
+  long res;
+  struct curl_slist *slist;
+  struct put_data cb_data;
+  CURL *hnd = curl_easy_init ();
+
+  curl_easy_setopt (hnd, CURLOPT_CUSTOMREQUEST, "PATCH");
+  curl_easy_setopt (hnd, CURLOPT_UPLOAD, 1L);
+
+  if (data)
+  {
+    cb_data.data = data;
+    cb_data.offset = 0;
+    cb_data.remaining = strlen (data);
+    curl_easy_setopt (hnd, CURLOPT_READFUNCTION, read_callback);
+    curl_easy_setopt (hnd, CURLOPT_READDATA, &cb_data);
+    curl_easy_setopt (hnd, CURLOPT_INFILESIZE, (long)cb_data.remaining);
+  }
+
+  slist = edgex_add_hdr (NULL, "Content-Type", CONTENT_JSON);
+  res = edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
+  iot_log_trace (lc, "PATCH %s to %s returns %ld", data ? data : "(no data)", url, res);
+  return res;
 }

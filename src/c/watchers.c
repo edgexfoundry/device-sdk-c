@@ -199,7 +199,7 @@ void edgex_watchlist_dump (const edgex_watchlist_t *wl, iot_logger_t *logger)
 
   for (const edgex_watcher *w = wl->list; w; w = w->next)
   {
-    iot_log_debug (logger, "PW: Id=%s Name=%s Profile=%s", w->id, w->name, w->profile);
+    iot_log_debug (logger, "PW: Name=%s Profile=%s", w->name, w->profile);
     for (const devsdk_nvpairs *match = (const devsdk_nvpairs *)w->identifiers; match; match = match->next)
     {
       iot_log_debug (logger, "PW: Match %s = %s", match->name, match->value);

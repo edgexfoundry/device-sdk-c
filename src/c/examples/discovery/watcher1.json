@@ -1,1 +1,1 @@
-{"name":"watcher1", "identifiers":{"MAC":"00-05-1B-A1-99-[0-9A-Fa-f][0-9A-Fa-f]"}, "blockingIdentifiers":{"MAC":["00-05-1B-A1-99-99"]},"profile":{"name":"TemplateSensor"},"service":{"name":"device-template"},"adminstate":"UNLOCKED"}
+[{"apiVersion":"v2","provisionWatcher":{"apiVersion":"v2", "name":"watcher1", "identifiers":{"MAC":"00-05-1B-A1-99-[0-9A-Fa-f][0-9A-Fa-f]"}, "blockingIdentifiers":{"MAC":["00-05-1B-A1-99-99"]},"profileName":"TemplateSensor","serviceName":"device-template","adminState":"UNLOCKED"}}]

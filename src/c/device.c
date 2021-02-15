@@ -403,6 +403,7 @@ static edgex_cmdinfo *infoForRes
 {
   edgex_cmdinfo *result = malloc (sizeof (edgex_cmdinfo));
   result->name = cmd->name;
+  result->profile = prof;
   result->isget = forGet;
   unsigned n = 0;
   edgex_resourceoperation *ro;
@@ -421,30 +422,31 @@ static edgex_cmdinfo *infoForRes
       findDevResource (prof->device_resources, ro->deviceResource);
     result->reqs[n].resname = devres->name;
     result->reqs[n].attributes = devres->attributes;
-    result->reqs[n].type = typecodeFromType (devres->properties->value->type);
-    if (devres->properties->value->mask.enabled)
+    result->reqs[n].type = typecodeFromType (devres->properties->type);
+    if (devres->properties->mask.enabled)
     {
-      result->reqs[n].mask = ~devres->properties->value->mask.value.ival;
+      result->reqs[n].mask = ~devres->properties->mask.value.ival;
     }
-    result->pvals[n] = devres->properties->value;
+    result->pvals[n] = devres->properties;
     result->maps[n] = ro->mappings;
     if (ro->parameter && *ro->parameter)
     {
       result->dfls[n] = ro->parameter;
     }
-    else if (devres->properties->value->defaultvalue && *devres->properties->value->defaultvalue)
+    else if (devres->properties->defaultvalue && *devres->properties->defaultvalue)
     {
-      result->dfls[n] = devres->properties->value->defaultvalue;
+      result->dfls[n] = devres->properties->defaultvalue;
     }
   }
   result->next = NULL;
   return result;
 }
 
-static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
+static edgex_cmdinfo *infoForDevRes (edgex_deviceprofile *prof, edgex_deviceresource *devres, bool forGet)
 {
   edgex_cmdinfo *result = malloc (sizeof (edgex_cmdinfo));
   result->name = devres->name;
+  result->profile = prof;
   result->isget = forGet;
   result->nreqs = 1;
   result->reqs = malloc (sizeof (devsdk_commandrequest));
@@ -453,16 +455,16 @@ static edgex_cmdinfo *infoForDevRes (edgex_deviceresource *devres, bool forGet)
   result->dfls = malloc (sizeof (char *));
   result->reqs[0].resname = devres->name;
   result->reqs[0].attributes = devres->attributes;
-  result->reqs[0].type = typecodeFromType (devres->properties->value->type);
-  if (devres->properties->value->mask.enabled)
+  result->reqs[0].type = typecodeFromType (devres->properties->type);
+  if (devres->properties->mask.enabled)
   {
-    result->reqs[0].mask = ~devres->properties->value->mask.value.ival;
+    result->reqs[0].mask = ~devres->properties->mask.value.ival;
   }
-  result->pvals[0] = devres->properties->value;
+  result->pvals[0] = devres->properties;
   result->maps[0] = NULL;
-  if (devres->properties->value->defaultvalue && *devres->properties->value->defaultvalue)
+  if (devres->properties->defaultvalue && *devres->properties->defaultvalue)
   {
-    result->dfls[0] = devres->properties->value->defaultvalue;
+    result->dfls[0] = devres->properties->defaultvalue;
   }
   else
   {
@@ -503,14 +505,14 @@ static void populateCmdInfo (edgex_deviceprofile *prof)
     }
     if (dc == NULL)
     {
-      if (devres->properties->value->readable)
+      if (devres->properties->readable)
       {
-        *head = infoForDevRes (devres, true);
+        *head = infoForDevRes (prof, devres, true);
         head = &((*head)->next);
       }
-      if (devres->properties->value->writable)
+      if (devres->properties->writable)
       {
-        *head = infoForDevRes (devres, false);
+        *head = infoForDevRes (prof, devres, false);
         head = &((*head)->next);
       }
     }
@@ -663,7 +665,7 @@ static int edgex_device_runget
   )
   {
     devsdk_error err = EDGEX_OK;
-    *reply = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform, "");
+    *reply = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
 
     if (*reply)
     {
@@ -677,8 +679,8 @@ static int edgex_device_runget
     }
     else
     {
-      iot_log_error (svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
-      edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
+      iot_log_error (svc->logger, "Assertion failed for device %s. Marking as down.", dev->name);
+      edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->name, DOWN, &err);
     }
   }
   else
@@ -719,12 +721,12 @@ static int runOne
     return MHD_HTTP_LOCKED;
   }
 
-  if (dev->operatingState == DISABLED)
+  if (dev->operatingState == DOWN)
   {
     iot_log_error
     (
       svc->logger,
-      "Can't run command %s on device %s as it is disabled",
+      "Can't run command %s on device %s as it is down",
       command->name, dev->name
     );
     return MHD_HTTP_LOCKED;
@@ -904,10 +906,6 @@ static int oneCommand
   if (byName)
   {
     dev = edgex_devmap_device_byname (svc->devices, id);
-  }
-  else
-  {
-    dev = edgex_devmap_device_byid (svc->devices, id);
   }
 
   if (dev)
@@ -1102,7 +1100,7 @@ static edgex_event_cooked *edgex_device_runget2
   if (svc->userfns.gethandler (svc->userdata, dev->name, dev->protocols, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
   {
     devsdk_error err = EDGEX_OK;
-    result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform, "v2");
+    result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
 
     if (result)
     {
@@ -1113,8 +1111,8 @@ static edgex_event_cooked *edgex_device_runget2
     }
     else
     {
-      edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Assertion failed for device %s. Disabling.", dev->name);
-      edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->id, DISABLED, &err);
+      edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Assertion failed for device %s. Marking as down.", dev->name);
+      edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->name, DOWN, &err);
     }
   }
   else
@@ -1150,9 +1148,9 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
   {
     edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device %s is locked", dev->name);
   }
-  else if (dev->operatingState == DISABLED)
+  else if (dev->operatingState == DOWN)
   {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device %s is disabled", dev->name);
+    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device %s is down", dev->name);
   }
   else if (cmd->nreqs > svc->config.device.maxcmdops)
   {

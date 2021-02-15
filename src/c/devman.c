@@ -47,7 +47,7 @@ void devsdk_free_devices (devsdk_devices *d)
   }
 }
 
-char * edgex_add_device
+void edgex_add_device
 (
   devsdk_service_t *svc,
   const char *name,
@@ -61,8 +61,7 @@ char * edgex_add_device
 )
 {
   edgex_device *existing;
-  char *result = NULL;
-
+  char *result;
   *err = EDGEX_OK;
 
   existing = edgex_devmap_device_byname (svc->devices, name);
@@ -70,9 +69,8 @@ char * edgex_add_device
   if (existing)
   {
     iot_log_info (svc->logger, "Device %s already present", name);
-    result = strdup (existing->id);
     edgex_device_release (existing);
-    return result;
+    return;
   }
 
   result = edgex_metadata_client_add_device
@@ -93,13 +91,13 @@ char * edgex_add_device
   if (result)
   {
     iot_log_info (svc->logger, "Device %s added with id %s", name, result);
+    free (result);
   }
   else
   {
     iot_log_error
       (svc->logger, "Failed to add Device in core-metadata: %s", err->reason);
   }
-  return result;
 }
 
 devsdk_devices *devsdk_get_devices (devsdk_service_t *svc)
@@ -126,20 +124,6 @@ edgex_device * edgex_devices (devsdk_service_t *svc)
   return edgex_devmap_copydevices (svc->devices);
 }
 
-edgex_device * edgex_get_device (devsdk_service_t *svc, const char *id)
-{
-  edgex_device *internal;
-  edgex_device *result = NULL;
-
-  internal = edgex_devmap_device_byid (svc->devices, id);
-  if (internal)
-  {
-    result = edgex_device_dup (internal);
-    edgex_device_release (internal);
-  }
-  return result;
-}
-
 edgex_device * edgex_get_device_byname (devsdk_service_t *svc, const char *name)
 {
   edgex_device *internal;
@@ -152,17 +136,6 @@ edgex_device * edgex_get_device_byname (devsdk_service_t *svc, const char *name)
     edgex_device_release (internal);
   }
   return result;
-}
-
-void edgex_remove_device (devsdk_service_t *svc, const char *id, devsdk_error *err)
-{
-  *err = EDGEX_OK;
-  edgex_metadata_client_delete_device
-    (svc->logger, &svc->config.endpoints, id, err);
-  if (err->code != 0)
-  {
-    iot_log_error (svc->logger, "Unable to remove device %s from metadata", id);
-  }
 }
 
 void edgex_remove_device_byname (devsdk_service_t *svc, const char *name, devsdk_error *err)
@@ -180,7 +153,6 @@ void edgex_remove_device_byname (devsdk_service_t *svc, const char *name, devsdk
 void edgex_update_device
 (
   devsdk_service_t *svc,
-  const char *id,
   const char *name,
   const char *description,
   const devsdk_strings *labels,
@@ -194,7 +166,6 @@ void edgex_update_device
     svc->logger,
     &svc->config.endpoints,
     name,
-    id,
     description,
     labels,
     profile_name,
@@ -202,7 +173,7 @@ void edgex_update_device
   );
   if (err->code)
   {
-    iot_log_error (svc->logger, "Unable to update device %s", id ? id : name);
+    iot_log_error (svc->logger, "Unable to update device %s", name);
   }
 }
 
@@ -250,12 +221,12 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
 void devsdk_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err)
 {
   *err = EDGEX_OK;
-  edgex_metadata_client_set_device_opstate_byname
+  edgex_metadata_client_set_device_opstate
   (
     svc->logger,
     &svc->config.endpoints,
     devname,
-    operational ? ENABLED : DISABLED,
+    operational ? UP : DOWN,
     err
   );
   if (err->code)

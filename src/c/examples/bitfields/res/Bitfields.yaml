@@ -4,124 +4,32 @@ model: "IoT4"
 description: "Virtual Bitfields Device for CSDK Example"
 labels:
   - "sensor"
+apiVersion: "v2"
 
 deviceResources:
   -
     name: A
     description: "Byte 0 (LSB)"
     properties:
-      value:
-        { type: "Uint32", readWrite: "RW", mask: "0xFF" }
-      units:
-        { defaultValue: "things" }
+        { valueType: "Uint32", readWrite: "RW", mask: "0xFF", units: "things" }
   -
     name: B
     description: "Byte 1"
     properties:
-      value:
-        { type: "Uint32", readWrite: "RW", mask: "0xFF00", shift: "8" }
-      units:
-        { defaultValue: "things" }
+        { valueType: "Uint32", readWrite: "RW", mask: "0xFF00", shift: "8", units: "things" }
   -
     name: C
     description: "Byte 2"
     properties:
-      value:
-        { type: "Uint32", readWrite: "RW", mask: "0xFF0000", shift: "16" }
-      units:
-        { defaultValue: "things" }
+        { valueType: "Uint32", readWrite: "RW", mask: "0xFF0000", shift: "16", units: "things" }
   -
     name: D
     description: "Byte 3 (MSB)"
     properties:
-      value:
-        { type: "Uint32", readWrite: "RW", mask: "0xFF000000", shift: "24" }
-      units:
-        { defaultValue: "things" }
+        { valueType: "Uint32", readWrite: "RW", mask: "0xFF000000", shift: "24", units: "things" }
 
 coreCommands:
-  -
-    name: A
-    get:
-      path: "/api/v1/device/{deviceId}/A"
-      responses:
-      - code: "200"
-        description: "Successfully read the bitfield."
-        expectedValues: [ "A" ]
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-    put:
-      path: "/api/v1/device/{deviceId}/A"
-      parameterNames: ["A"]
-      responses:
-      - code: "200"
-        description: "Successfully wrote to the bitfield."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-  -
-    name: B
-    get:
-      path: "/api/v1/device/{deviceId}/B"
-      responses:
-      - code: "200"
-        description: "Successfully read the bitfield."
-        expectedValues: [ "B" ]
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-    put:
-      path: "/api/v1/device/{deviceId}/B"
-      parameterNames: ["B"]
-      responses:
-      - code: "200"
-        description: "Successfully wrote to the bitfield."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-  -
-    name: C
-    get:
-      path: "/api/v1/device/{deviceId}/C"
-      responses:
-      - code: "200"
-        description: "Successfully read the bitfield."
-        expectedValues: [ "C" ]
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-    put:
-      path: "/api/v1/device/{deviceId}/C"
-      parameterNames: ["C"]
-      responses:
-      - code: "200"
-        description: "Successfully wrote to the bitfield."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-  -
-    name: D
-    get:
-      path: "/api/v1/device/{deviceId}/D"
-      responses:
-      - code: "200"
-        description: "Successfully read the bitfield."
-        expectedValues: [ "D" ]
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-    put:
-      path: "/api/v1/device/{deviceId}/D"
-      parameterNames: ["D"]
-      responses:
-      - code: "200"
-        description: "Successfully wrote to the bitfield."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-
+  - { name: "A", get: true, set: true }
+  - { name: "B", get: true, set: true }
+  - { name: "C", get: true, set: true }
+  - { name: "D", get: true, set: true }

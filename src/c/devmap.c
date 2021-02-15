@@ -6,9 +6,8 @@
  *
  */
 
-/* Device / profile map implementation. We maintain 3 maps: device by id,
- * device id by name and profile by name. The devices in the device map
- * reference profiles in the profile map by pointer.
+/* Device / profile map implementation. We maintain 2 maps: device by name and profile by name.
+ * The devices in the device map reference profiles in the profile map by pointer.
  */
 
 #include "devmap.h"
@@ -25,7 +24,6 @@ struct edgex_devmap_t
 {
   pthread_rwlock_t lock;
   edgex_map_device devices;
-  edgex_map_string name_to_id;
   edgex_map_profile profiles;
   devsdk_service_t *svc;
 };
@@ -46,7 +44,6 @@ edgex_devmap_t *edgex_devmap_alloc (devsdk_service_t *svc)
   pthread_rwlock_init (&res->lock, &rwatt);
   pthread_rwlockattr_destroy (&rwatt);
   edgex_map_init (&res->devices);
-  edgex_map_init (&res->name_to_id);
   edgex_map_init (&res->profiles);
   res->svc = svc;
   return res;
@@ -63,7 +60,6 @@ void edgex_devmap_clear (edgex_devmap_t *map)
   while (key)
   {
     edgex_device **e = edgex_map_get (&map->devices, key);
-    edgex_map_remove (&map->name_to_id, (*e)->name);
     edgex_device_release (*e);
     next = edgex_map_next (&map->devices, &i);
     edgex_map_remove (&map->devices, key);
@@ -75,7 +71,6 @@ void edgex_devmap_clear (edgex_devmap_t *map)
 void edgex_devmap_free (edgex_devmap_t *map)
 {
   const char *key;
-  edgex_map_deinit (&map->name_to_id);
   edgex_map_deinit (&map->devices);
   edgex_map_iter i = edgex_map_iter (map->profiles);
   while ((key = edgex_map_next (&map->profiles, &i)))
@@ -103,8 +98,7 @@ static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
   {
     edgex_map_set (&map->profiles, dup->profile->name, dup->profile);
   }
-  edgex_map_set (&map->devices, dup->id, dup);
-  edgex_map_set (&map->name_to_id, dup->name, dup->id);
+  edgex_map_set (&map->devices, dup->name, dup);
   edgex_device_autoevent_start (map->svc, dup);
 }
 
@@ -114,7 +108,7 @@ void edgex_devmap_populate_devices
   pthread_rwlock_wrlock (&map->lock);
   for (const edgex_device *d = devs; d; d = d->next)
   {
-    if (edgex_map_get (&map->name_to_id, d->name) == NULL)
+    if (edgex_map_get (&map->devices, d->name) == NULL)
     {
       add_locked (map, d);
     }
@@ -176,35 +170,6 @@ edgex_deviceprofile *edgex_devmap_copyprofiles (edgex_devmap_t *map)
   return result;
 }
 
-bool edgex_devmap_remove_profile (edgex_devmap_t *map, const char *id)
-{
-  const char *key;
-  bool result = true;
-
-  pthread_rwlock_wrlock (&map->lock);
-  edgex_map_iter iter = edgex_map_iter (map->devices);
-  while (result && (key = edgex_map_next (&map->devices, &iter)))
-  {
-    result = (strcmp ((*edgex_map_get (&map->devices, key))->profile->id, id) != 0);
-  }
-  if (result)
-  {
-    edgex_map_iter iter2 = edgex_map_iter (map->profiles);
-    while ((key = edgex_map_next (&map->profiles, &iter2)))
-    {
-      edgex_deviceprofile **dpp = edgex_map_get (&map->profiles, key);
-      if (strcmp ((*dpp)->id, id) == 0)
-      {
-        edgex_deviceprofile_free (*dpp);
-        edgex_map_remove (&map->profiles, key);
-        break;
-      }
-    }
-  }
-  pthread_rwlock_unlock (&map->lock);
-  return result;
-}
-
 const edgex_deviceprofile *edgex_devmap_profile
   (edgex_devmap_t *map, const char *name)
 {
@@ -219,8 +184,7 @@ static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
 {
   const char *key;
   bool last = true;
-  edgex_map_remove (&map->name_to_id, olddev->name);
-  edgex_map_remove (&map->devices, olddev->id);
+  edgex_map_remove (&map->devices, olddev->name);
   edgex_map_iter iter = edgex_map_iter (map->devices);
   while ((key = edgex_map_next (&map->devices, &iter)))
   {
@@ -250,11 +214,6 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_
     *outcome = UPDATED_DRIVER;
     return false;
   }
-  if (strcmp (dest->name, src->name))
-  {
-    *outcome = UPDATED_DRIVER;
-    return false;
-  }
   if (dest->adminState != src->adminState)
   {
     *outcome = UPDATED_DRIVER;
@@ -270,9 +229,6 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_
   }
   dest->operatingState = src->operatingState;
   dest->created = src->created;
-  dest->lastConnected = src->lastConnected;
-  dest->lastReported = src->lastReported;
-  dest->modified = src->modified;
   dest->origin = src->origin;
   free (dest->description);
   dest->description = strdup (src->description);
@@ -288,7 +244,7 @@ edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const e
   edgex_devmap_outcome_t result = UPDATED_SDK;
 
   pthread_rwlock_wrlock (&map->lock);
-  olddev = edgex_map_get (&map->devices, dev->id);
+  olddev = edgex_map_get (&map->devices, dev->name);
   if (olddev == NULL)
   {
     add_locked (map, dev);
@@ -306,13 +262,13 @@ edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const e
   return result;
 }
 
-edgex_device *edgex_devmap_device_byid (edgex_devmap_t *map, const char *id)
+edgex_device *edgex_devmap_device_byname (edgex_devmap_t *map, const char *name)
 {
   edgex_device **dev;
   edgex_device *result = NULL;
 
   pthread_rwlock_rdlock (&map->lock);
-  dev = edgex_map_get (&map->devices, id);
+  dev = edgex_map_get (&map->devices, name);
   if (dev)
   {
     result = *dev;
@@ -322,43 +278,12 @@ edgex_device *edgex_devmap_device_byid (edgex_devmap_t *map, const char *id)
   return result;
 }
 
-edgex_device *edgex_devmap_device_byname (edgex_devmap_t *map, const char *name)
-{
-  char **id;
-  edgex_device *result = NULL;
-
-  pthread_rwlock_rdlock (&map->lock);
-  id = edgex_map_get (&map->name_to_id, name);
-  if (id)
-  {
-    result = *edgex_map_get (&map->devices, *id);
-    atomic_fetch_add (&result->refs, 1);
-  }
-  pthread_rwlock_unlock (&map->lock);
-  return result;
-}
-
 bool edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
 {
   edgex_device **olddev;
-  char **id;
 
   pthread_rwlock_wrlock (&map->lock);
-  id = edgex_map_get (&map->name_to_id, name);
-  if (id)
-  {
-    olddev = edgex_map_get (&map->devices, *id);
-    remove_locked (map, *olddev);
-  }
-  pthread_rwlock_unlock (&map->lock);
-  return (id != NULL);
-}
-
-bool edgex_devmap_removedevice_byid (edgex_devmap_t *map, const char *id)
-{
-  edgex_device **olddev;
-  pthread_rwlock_wrlock (&map->lock);
-  olddev = edgex_map_get (&map->devices, id);
+  olddev = edgex_map_get (&map->devices, name);
   if (olddev)
   {
     remove_locked (map, *olddev);
@@ -415,7 +340,7 @@ edgex_cmdqueue_t *edgex_devmap_device_forcmd
   while ((key = edgex_map_next (&map->devices, &iter)))
   {
     dev = *edgex_map_get (&map->devices, key);
-    if (dev->operatingState == ENABLED && dev->adminState == UNLOCKED)
+    if (dev->operatingState == UP && dev->adminState == UNLOCKED)
     {
       command = edgex_deviceprofile_findcommand (cmd, dev->profile, forGet);
       if (command)
