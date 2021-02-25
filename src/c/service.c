@@ -238,15 +238,6 @@ devsdk_service_t *devsdk_service_new
   return result;
 }
 
-static void ping_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
-{
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  reply->data.bytes = strdup (svc->version);
-  reply->data.size = strlen (svc->version);
-  reply->content_type = CONTENT_PLAINTEXT;
-  reply->code = MHD_HTTP_OK;
-}
-
 static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   edgex_pingresponse pr;
@@ -496,55 +487,16 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, svc, edgex_device_handler_callback_service);
 
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_DEVICE_ALL, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
-    edgex_device_handler_device_all
-  );
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_DEVICE_NAME, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
-    edgex_device_handler_device_name
-  );
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_DEVICE, DevSDK_Get | DevSDK_Put | DevSDK_Post, svc,
-    edgex_device_handler_device
-  );
-
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, svc, edgex_device_handler_device_namev2);
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_DISCOVERY, DevSDK_Post, svc,
-    edgex_device_handler_discovery
-  );
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
 
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_METRICS, DevSDK_Get, svc, edgex_device_handler_metrics
-  );
-
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_METRICS, DevSDK_Get, svc, edgex_device_handler_metricsv2);
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_CONFIG, DevSDK_Get, svc, edgex_device_handler_config
-  );
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 
   edgex_rest_server_register_handler
     (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_PING, DevSDK_Get, svc, ping_handler
-  );
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_PING, DevSDK_Get, svc, ping2_handler);
 

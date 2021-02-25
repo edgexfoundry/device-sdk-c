@@ -21,8 +21,6 @@
 #define SAFE_STR(s) (s ? s : "NULL")
 #define SAFE_STRDUP(s) (s ? strdup(s) : NULL)
 
-static const char *rwstrings[2][2] = { { "", "W" }, { "R", "RW" } };
-
 static char *get_string_dfl (const JSON_Object *obj, const char *name, const char *dfl)
 {
   const char *str = json_object_get_string (obj, name);
@@ -332,50 +330,6 @@ static edgex_propertyvalue *propertyvalue_read
   return result;
 }
 
-static void set_arg
-(
-  JSON_Object *obj,
-  const char *name,
-  edgex_transformArg arg,
-  iot_data_type_t pt
-)
-{
-  if (arg.enabled)
-  {
-    char tmp[32];
-    if (pt == IOT_DATA_FLOAT32 || pt == IOT_DATA_FLOAT64)
-    {
-      sprintf (tmp, "%f", arg.value.dval);
-    }
-    else
-    {
-      sprintf (tmp, PRId64, arg.value.ival);
-    }
-    json_object_set_string (obj, name, tmp);
-  }
-}
-
-static JSON_Value *propertyvalue_write (const edgex_propertyvalue *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  json_object_set_string (obj, "type", edgex_propertytype_tostring (e->type));
-  json_object_set_string
-    (obj, "readWrite", rwstrings[e->readable][e->writable]);
-  set_arg (obj, "minimum", e->minimum, e->type);
-  set_arg (obj, "maximum", e->maximum, e->type);
-  json_object_set_string (obj, "defaultValue", e->defaultvalue);
-  set_arg (obj, "mask", e->mask, e->type);
-  set_arg (obj, "shift", e->shift, e->type);
-  set_arg (obj, "scale", e->scale, e->type);
-  set_arg (obj, "offset", e->offset, e->type);
-  set_arg (obj, "base", e->base, e->type);
-  json_object_set_string (obj, "assertion", e->assertion);
-  json_object_set_string (obj, "units", e->units);
-  json_object_set_string (obj, "mediaType", e->mediaType);
-  return result;
-}
-
 static edgex_propertyvalue *propertyvalue_dup (const edgex_propertyvalue *pv)
 {
   edgex_propertyvalue *result = NULL;
@@ -436,18 +390,6 @@ static edgex_deviceresource *deviceresource_read
   return result;
 }
 
-static JSON_Value *deviceresource_write (const edgex_deviceresource *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  json_object_set_string (obj, "name", e->name);
-  json_object_set_string (obj, "description", e->description);
-  json_object_set_string (obj, "tag", e->tag);
-  json_object_set_value (obj, "properties", propertyvalue_write (e->properties));
-  json_object_set_value (obj, "attributes", nvpairs_write (e->attributes));
-  return result;
-}
-
 static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresource *e)
 {
   edgex_deviceresource *result = NULL;
@@ -489,17 +431,6 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   mappings_obj = json_object_get_object (obj, "mappings");
   result->mappings = nvpairs_read (mappings_obj);
   result->next = NULL;
-  return result;
-}
-
-static JSON_Value *resourceoperation_write (const edgex_resourceoperation *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-
-  json_object_set_string (obj, "deviceResource", e->deviceResource);
-  json_object_set_string (obj, "parameter", e->parameter);
-  json_object_set_value (obj, "mappings", nvpairs_write (e->mappings));
   return result;
 }
 
@@ -562,31 +493,6 @@ static edgex_devicecommand *devicecommand_read (const JSON_Object *obj)
   }
 
   result->next = NULL;
-  return result;
-}
-
-static JSON_Value *devicecommand_write (const edgex_devicecommand *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  JSON_Value *array_val = json_value_init_array ();
-  JSON_Array *array = json_value_get_array (array_val);
-  JSON_Value *array_val2 = json_value_init_array ();
-  JSON_Array *array2 = json_value_get_array (array_val);
-  json_object_set_string (obj, "name", e->name);
-
-  for (edgex_resourceoperation *temp = e->set; temp; temp = temp->next)
-  {
-    json_array_append_value (array, resourceoperation_write (temp));
-  }
-
-  json_object_set_value (obj, "set", array_val);
-  for (edgex_resourceoperation *temp = e->get; temp; temp = temp->next)
-  {
-    json_array_append_value (array2, resourceoperation_write (temp));
-  }
-
-  json_object_set_value (obj, "get", array_val2);
   return result;
 }
 
@@ -698,44 +604,6 @@ static edgex_deviceprofile *deviceprofile_read
       return NULL;
     }
   }
-  return result;
-}
-
-static JSON_Value *
-deviceprofile_write (const edgex_deviceprofile *e, bool create)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-  JSON_Value *array_val = json_value_init_array ();
-  JSON_Array *array = json_value_get_array (array_val);
-  JSON_Value *array_val2 = json_value_init_array ();
-  JSON_Array *array2 = json_value_get_array (array_val2);
-
-  if (!create)
-  {
-    json_object_set_uint (obj, "created", e->created);
-    json_object_set_uint (obj, "modified", e->modified);
-  }
-  json_object_set_string (obj, "name", e->name);
-  json_object_set_string (obj, "description", e->description);
-  json_object_set_uint (obj, "origin", e->origin);
-  json_object_set_string (obj, "manufacturer", e->manufacturer);
-  json_object_set_string (obj, "model", e->model);
-  json_object_set_value (obj, "labels", strings_to_array (e->labels));
-
-  for (edgex_deviceresource *temp = e->device_resources; temp; temp = temp->next)
-  {
-    json_array_append_value (array, deviceresource_write (temp));
-  }
-
-  json_object_set_value (obj, "deviceResources", array_val);
-
-  for (edgex_devicecommand *temp = e->device_commands; temp; temp = temp->next)
-  {
-    json_array_append_value (array2, devicecommand_write (temp));
-  }
-
-  json_object_set_value (obj, "deviceCommands", array_val2);
   return result;
 }
 
@@ -920,17 +788,6 @@ void edgex_deviceservice_free (edgex_deviceservice *e)
     free (e->name);
     free (e);
   }
-}
-
-char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create)
-{
-  char *result;
-  JSON_Value *val;
-
-  val = deviceprofile_write (e, create);
-  result = json_serialize_to_string (val);
-  json_value_free (val);
-  return result;
 }
 
 edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *src)

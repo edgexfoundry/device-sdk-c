@@ -24,12 +24,13 @@
 #ifndef parson_parson_h
 #define parson_parson_h
 
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include "edgex/os.h"
 
 /* Types and enums */
 typedef struct json_object_t JSON_Object;

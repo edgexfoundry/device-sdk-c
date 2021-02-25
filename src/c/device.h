@@ -14,14 +14,6 @@
 #include "rest-server.h"
 #include "cmdinfo.h"
 
-extern void edgex_device_handler_device (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
-
-extern void edgex_device_handler_device_name (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
-
-extern void edgex_device_handler_device_all (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
-
-extern void edgex_device_handler_devicev2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
-
 extern void edgex_device_handler_device_namev2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
 extern const struct edgex_cmdinfo *edgex_deviceprofile_findcommand

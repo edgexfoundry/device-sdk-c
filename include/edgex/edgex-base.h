@@ -9,8 +9,7 @@
 #ifndef _EDGEX_EDGEX_BASE_H_
 #define _EDGEX_EDGEX_BASE_H_
 
-#include "edgex/os.h"
-#include "devsdk/devsdk-base.h"
+#include "iot/data.h"
 
 typedef enum edgex_propertytype
 {

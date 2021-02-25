@@ -23,7 +23,6 @@ iot_typecode_t *edgex_propertytype_totypecode (edgex_propertytype pt);
 devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e);
 void devsdk_protocols_free (devsdk_protocols *e);
 edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *json);
-char *edgex_deviceprofile_write (const edgex_deviceprofile *e, bool create);
 devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p);
 edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *e);
 void edgex_deviceprofile_free (edgex_deviceprofile *e);

@@ -11,15 +11,7 @@
 
 /* Endpoints */
 
-#define EDGEX_DEV_API_PING "/api/v1/ping"
 #define EDGEX_DEV_API_VERSION "/api/version"
-#define EDGEX_DEV_API_DISCOVERY "/api/v1/discovery"
-#define EDGEX_DEV_API_DEVICE "/api/v1/device/{id}/{cmd}"
-#define EDGEX_DEV_API_DEVICE_NAME "/api/v1/device/name/{name}/{cmd}"
-#define EDGEX_DEV_API_DEVICE_ALL "/api/v1/device/all/{cmd}"
-#define EDGEX_DEV_API_CALLBACK "/api/v1/callback"
-#define EDGEX_DEV_API_CONFIG "/api/v1/config"
-#define EDGEX_DEV_API_METRICS "/api/v1/metrics"
 
 #define EDGEX_DEV_API2_PING "/api/v2/ping"
 #define EDGEX_DEV_API2_DISCOVERY "/api/v2/discovery"
