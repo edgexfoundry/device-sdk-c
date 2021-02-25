@@ -4,6 +4,7 @@ model: "IoT2"
 description: "Virtual Counter Device for CSDK Example"
 labels:
   - "sensor"
+apiVersion: "v2"
 
 deviceResources:
   -
@@ -12,31 +13,7 @@ deviceResources:
     attributes:
       { register: "count01" }
     properties:
-      value:
-        { type: "Uint32", readWrite: "RW" }
-      units:
-        { defaultValue: "things" }
+      { valueType: "Uint32", readWrite: "RW", units: "things" }
 
 coreCommands:
-  -
-    name: Counter
-    get:
-      path: "/api/v1/device/{deviceId}/Counter"
-      responses:
-      - code: "200"
-        description: "Get the current count and increment it."
-        expectedValues: ["Counter"]
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-    put:
-      path: "/api/v1/device/{deviceId}/Counter"
-      parameterNames: ["Counter"]
-      responses:
-      - code: "200"
-        description: "Successfully reset the count."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-
+  - { name: "Counter", get: true, set: true }

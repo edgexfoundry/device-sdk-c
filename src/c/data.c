@@ -13,10 +13,13 @@
 #include "iot/time.h"
 #include "service.h"
 #include "transform.h"
+#include "correlation.h"
 #include "iot/base64.h"
 
 #include <cbor.h>
 #include <microhttpd.h>
+
+#define EDGEX_API_VERSION "v2"
 
 typedef struct postparams
 {
@@ -24,7 +27,7 @@ typedef struct postparams
   edgex_event_cooked *event;
 } postparams;
 
-static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
+static char *edgex_value_tostring (const iot_data_t *value)
 {
 #define BUFSIZE 32
   char *res;
@@ -64,31 +67,11 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
           sprintf (vstr, "%" PRIu64, ((uint64_t *)iot_data_address (value))[i]);
           break;
         case Edgex_Float32Array:
-        {
-          float f = ((float *)iot_data_address (value))[i];
-          if (binfloat)
-          {
-            iot_b64_encode (&f, sizeof (float), vstr, BUFSIZE);
-          }
-          else
-          {
-            sprintf (vstr, "%.8e", f);
-          }
+          sprintf (vstr, "%.8e", ((float *)iot_data_address (value))[i]);
           break;
-        }
         case Edgex_Float64Array:
-        {
-          double d = ((double *)iot_data_address (value))[i];
-          if (binfloat)
-          {
-            iot_b64_encode (&d, sizeof (double), vstr, BUFSIZE);
-          }
-          else
-          {
-            sprintf (vstr, "%.16e", d);
-          }
+          sprintf (vstr, "%.16e", ((double *)iot_data_address (value))[i]);
           break;
-        }
         case Edgex_BoolArray:
           strcpy (vstr, ((bool *)iot_data_address (value))[i] ? "true" : "false");
           break;
@@ -105,30 +88,6 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
   {
     switch (edgex_propertytype_data (value))
     {
-      case Edgex_Float32:
-        res = malloc (BUFSIZE);
-        if (binfloat)
-        {
-          float f = iot_data_f32 (value);
-          iot_b64_encode (&f, sizeof (float), res, BUFSIZE);
-        }
-        else
-        {
-          sprintf (res, "%.8e", iot_data_f32 (value));
-        }
-        break;
-      case Edgex_Float64:
-        res = malloc (BUFSIZE);
-        if (binfloat)
-        {
-          double d = iot_data_f64 (value);
-          iot_b64_encode (&d, sizeof (double), res, BUFSIZE);
-        }
-        else
-        {
-          sprintf (res, "%.16e", iot_data_f64 (value));
-        }
-        break;
       case Edgex_String:
         res = strdup (iot_data_string (value));
         break;
@@ -153,21 +112,31 @@ static char *edgex_value_tostring (const iot_data_t *value, bool binfloat)
 /* Event data structure:
 
 Reading:
-  id: String (filled in by core-data)
-  created, modified, pushed: Timestamps (filled in by core-data)
-  name: String (name of the DeviceResource)
+  apiVersion: "v2"
+  id: uuid (sdk to generate)
+  created: Timestamp (filled in downstream)
   origin: Timestamp (filled in by the implementation or the SDK)
+  deviceName: String (name of the Device)
+  resourceName: String (name of the DeviceResource)
+  profileName: String (name of the Device Profile)
   valueType: String
+
+plus
+
   value: String
-  binaryValue: String (one of value or binaryValue is used)
-  mediaType: String (only if binaryValue)
-  floatEncoding: String (only for float types)
+
+or
+
+  binaryValue: String
+  mediaType: String
 
 Event:
-  id: String (filled in by core-data)
-  created, modified, pushed: Timestamps (filled in by core-data)
-  device: String (name of the Device)
+  apiVersion: "v2"
+  id: uuid (sdk to generate one)
+  created: Timestamp (filled in downstream)
   origin: Timestamp (filled in by the SDK)
+  deviceName: String (name of the Device)
+  profileName: String (name of the Profile)
   tags: Array of Strings (may be added to at any stage)
   readings: Array of Readings
 */
@@ -177,13 +146,12 @@ edgex_event_cooked *edgex_data_process_event
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
-  bool doTransforms,
-  const char *apiversion
+  bool doTransforms
 )
 {
+  char *eventId;
   edgex_event_cooked *result = NULL;
   bool useCBOR = false;
-  bool apiv = (strlen (apiversion) > 0);
   uint64_t timenow = iot_time_nsecs ();
 
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
@@ -202,7 +170,7 @@ edgex_event_cooked *edgex_data_process_event
     const char *assertion = commandinfo->pvals[i]->assertion;
     if (assertion && *assertion)
     {
-      char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
+      char *reading = edgex_value_tostring (values[i].value);
       if (strcmp (reading, assertion))
       {
         free (reading);
@@ -215,12 +183,21 @@ edgex_event_cooked *edgex_data_process_event
     }
   }
 
+  eventId = edgex_device_genuuid ();
   result = malloc (sizeof (edgex_event_cooked));
   atomic_store (&result->refs, 1);
+
+  result->path = malloc (strlen (commandinfo->profile->name) + strlen (device_name) + strlen (commandinfo->name) + 3);
+  strcpy (result->path, commandinfo->profile->name);
+  strcat (result->path, "/");
+  strcat (result->path, device_name);
+  strcat (result->path, "/");
+  strcat (result->path, commandinfo->name);
+
   if (useCBOR)
   {
     size_t bsize = 0;
-    cbor_item_t *cevent = cbor_new_definite_map (apiv ? 4 : 3);
+    cbor_item_t *cevent = cbor_new_definite_map (6);
     cbor_item_t *crdgs = cbor_new_definite_array (commandinfo->nreqs);
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
@@ -229,18 +206,12 @@ edgex_event_cooked *edgex_data_process_event
       cbor_item_t *crdg;
 
       edgex_propertytype pt = edgex_propertytype_data (values[i].value);
-      if (pt == Edgex_Binary || pt == Edgex_Float32 || pt == Edgex_Float64 || pt == Edgex_Float32Array || pt == Edgex_Float64Array)
-      {
-        crdg = cbor_new_definite_map (apiv ? 7 : 6);
-      }
-      else
-      {
-        crdg = cbor_new_definite_map (apiv ? 6 : 5);
-      }
+      char *id = edgex_device_genuuid ();
 
       if (pt == Edgex_Binary)
       {
         const uint8_t *data;
+        crdg = cbor_new_definite_map (9);
         uint32_t sz = iot_data_array_size (values[i].value);
         data = iot_data_address (values[i].value);
         cread = cbor_build_bytestring (data, sz);
@@ -251,25 +222,31 @@ edgex_event_cooked *edgex_data_process_event
       }
       else
       {
-        char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
+        char *reading = edgex_value_tostring (values[i].value);
+        crdg = cbor_new_definite_map (8);
         cread = cbor_build_string (reading);
         free (reading);
         cbor_map_add (crdg, (struct cbor_pair)
           { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
       }
 
-      if (apiv)
+      cbor_map_add (crdg, (struct cbor_pair)
       {
-        cbor_map_add (crdg, (struct cbor_pair)
-        {
-          .key = cbor_move (cbor_build_string ("apiVersion")),
-          .value = cbor_move (cbor_build_string (apiversion))
-        });
-      }
+        .key = cbor_move (cbor_build_string ("apiVersion")),
+        .value = cbor_move (cbor_build_string (EDGEX_API_VERSION))
+      });
 
       cbor_map_add (crdg, (struct cbor_pair)
       {
-        .key = cbor_move (cbor_build_string ("name")),
+        .key = cbor_move (cbor_build_string ("id")),
+        .value = cbor_move (cbor_build_string (id))
+      });
+
+      free (id);
+
+      cbor_map_add (crdg, (struct cbor_pair)
+      {
+        .key = cbor_move (cbor_build_string ("resourceName")),
         .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
       });
 
@@ -278,21 +255,17 @@ edgex_event_cooked *edgex_data_process_event
         .key = cbor_move (cbor_build_string ("deviceName")),
         .value = cbor_move (cbor_build_string (device_name))
       });
+      cbor_map_add (crdg, (struct cbor_pair)
+      {
+        .key = cbor_move (cbor_build_string ("profileName")),
+        .value = cbor_move (cbor_build_string (commandinfo->profile->name))
+      });
 
       cbor_map_add (crdg, (struct cbor_pair)
       {
         .key = cbor_move (cbor_build_string ("valueType")),
         .value = cbor_move (cbor_build_string (edgex_propertytype_tostring (pt)))
       });
-
-      if (pt == Edgex_Float32 || pt == Edgex_Float64 || pt == Edgex_Float32Array || pt == Edgex_Float64Array)
-      {
-        cbor_map_add (crdg, (struct cbor_pair)
-        {
-          .key = cbor_move (cbor_build_string ("floatEncoding")),
-          .value = cbor_move (cbor_build_string (commandinfo->pvals[i]->floatAsBinary ? "base64" : "eNotation"))
-        });
-      }
 
       cbor_map_add (crdg, (struct cbor_pair)
       {
@@ -303,13 +276,14 @@ edgex_event_cooked *edgex_data_process_event
       cbor_array_push (crdgs, cbor_move (crdg));
     }
 
-    if (apiv)
-    {
-      cbor_map_add (cevent, (struct cbor_pair)
-        { .key = cbor_move (cbor_build_string ("apiVersion")), .value = cbor_move (cbor_build_string (apiversion)) });
-    }
     cbor_map_add (cevent, (struct cbor_pair)
-      { .key = cbor_move (cbor_build_string ("device")), .value = cbor_move (cbor_build_string (device_name)) });
+      { .key = cbor_move (cbor_build_string ("apiVersion")), .value = cbor_move (cbor_build_string (EDGEX_API_VERSION)) });
+    cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("id")), .value = cbor_move (cbor_build_string (eventId)) });
+    cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("deviceName")), .value = cbor_move (cbor_build_string (device_name)) });
+    cbor_map_add (cevent, (struct cbor_pair)
+      { .key = cbor_move (cbor_build_string ("profileName")), .value = cbor_move (cbor_build_string (commandinfo->profile->name)) });
     cbor_map_add (cevent, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("origin")), .value = cbor_move (cbor_build_uint64 (timenow)) });
     cbor_map_add (cevent, (struct cbor_pair)
@@ -328,50 +302,41 @@ edgex_event_cooked *edgex_data_process_event
 
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
+      char *id = edgex_device_genuuid ();
       edgex_propertytype pt = edgex_propertytype_data (values[i].value);
-      char *reading = edgex_value_tostring (values[i].value, commandinfo->pvals[i]->floatAsBinary);
+      char *reading = edgex_value_tostring (values[i].value);
 
       JSON_Value *rval = json_value_init_object ();
       JSON_Object *robj = json_value_get_object (rval);
 
-      if (apiv)
-      {
-        json_object_set_string (robj, "apiVersion", apiversion);
-      }
+      json_object_set_string (robj, "apiVersion", EDGEX_API_VERSION);
+      json_object_set_string (robj, "id", id);
+      json_object_set_string (robj, "profileName", commandinfo->profile->name);
       json_object_set_string (robj, "deviceName", device_name);
-      json_object_set_string (robj, "name", commandinfo->reqs[i].resname);
-      json_object_set_string (robj, "value", reading);
+      json_object_set_string (robj, "resourceName", commandinfo->reqs[i].resname);
+      json_object_set_string (robj, (pt == Edgex_Binary) ? "binaryValue" : "value", reading);
       json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
       json_object_set_string (robj, "valueType", edgex_propertytype_tostring (pt));
-      switch (pt)
+      if (pt == Edgex_Binary)
       {
-        case Edgex_Float32:
-        case Edgex_Float64:
-        case Edgex_Float32Array:
-        case Edgex_Float64Array:
-          json_object_set_string (robj, "floatEncoding", commandinfo->pvals[i]->floatAsBinary ? "base64" : "eNotation");
-          break;
-        case Edgex_Binary:
-          json_object_set_string (robj, "mediaType", commandinfo->pvals[i]->mediaType);
-          break;
-        default:
-          break;
+        json_object_set_string (robj, "mediaType", commandinfo->pvals[i]->mediaType);
       }
       json_array_append_value (jrdgs, rval);
+      free (id);
       free (reading);
     }
 
-    if (apiv)
-    {
-      json_object_set_string (jobj, "apiVersion", apiversion);
-    }
-    json_object_set_string (jobj, "device", device_name);
+    json_object_set_string (jobj, "apiVersion", EDGEX_API_VERSION);
+    json_object_set_string (jobj, "id", eventId);
+    json_object_set_string (jobj, "deviceName", device_name);
+    json_object_set_string (jobj, "profileName", commandinfo->profile->name);
     json_object_set_uint (jobj, "origin", timenow);
     json_object_set_value (jobj, "readings", arrval);
     result->encoding = JSON;
     result->value.json = json_serialize_to_string (jevent);
     json_value_free (jevent);
   }
+  free (eventId);
   return result;
 }
 
@@ -387,9 +352,10 @@ static void *edgex_data_post (void *p)
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/event",
+    "http://%s:%u/api/v2/event/%s",
     pp->svc->config.endpoints.data.host,
-    pp->svc->config.endpoints.data.port
+    pp->svc->config.endpoints.data.port,
+    pp->event->path
   );
 
   switch (pp->event->encoding)
@@ -448,6 +414,7 @@ void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *reply)
       break;
   }
   reply->code = MHD_HTTP_OK;
+  free (e->path);
   free (e);
 }
 
@@ -464,6 +431,7 @@ void edgex_event_cooked_free (edgex_event_cooked *e)
         free (e->value.cbor.data);
         break;
     }
+    free (e->path);
     free (e);
   }
 }
@@ -502,57 +470,5 @@ bool devsdk_commandresult_equal
       break;
     }
   }
-  return result;
-}
-
-edgex_valuedescriptor *edgex_data_client_add_valuedescriptor
-(
-  iot_logger_t *lc,
-  edgex_service_endpoints *endpoints,
-  const char *name,
-  uint64_t origin,
-  const char *min,
-  const char *max,
-  const char *type,
-  const char *uomLabel,
-  const char *defaultValue,
-  const char *formatting,
-  const char *description,
-  const char *mediaType,
-  const char *floatEncoding,
-  devsdk_error *err
-)
-{
-  edgex_valuedescriptor *result = malloc (sizeof (edgex_valuedescriptor));
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-  char *json;
-
-  memset (result, 0, sizeof (edgex_valuedescriptor));
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v1/valuedescriptor",
-    endpoints->data.host,
-    endpoints->data.port
-  );
-  result->origin = origin;
-  result->name = strdup (name);
-  result->min = strdup (min);
-  result->max = strdup (max);
-  result->type = strdup (type);
-  result->uomLabel = strdup (uomLabel);
-  result->defaultValue = strdup (defaultValue);
-  result->formatting = strdup (formatting);
-  result->description = strdup (description);
-  result->mediaType = strdup (mediaType);
-  result->floatEncoding = strdup (floatEncoding);
-  json = edgex_valuedescriptor_write (result);
-  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  result->id = ctx.buff;
-  json_free_serialized_string (json);
-
   return result;
 }

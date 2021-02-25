@@ -39,13 +39,13 @@ An EdgeX system containing at least a database and the core-data and core-metada
 Once the service is running it will begin to send Events from the Counter1 device every ten seconds. To manually generate an Event,
 
 ```
-curl 0:49999/api/v1/device/name/Counter2/Counter
+curl 0:49999/api/v2/device/name/Counter2/Counter
 ```
 
 To reset one of the counters,
 
 ```
-curl -X PUT -d '{"Counter":"0"}' 0:49999/api/v1/device/name/Counter1/Counter
+curl -X PUT -d '{"Counter":"0"}' 0:49999/api/v2/device/name/Counter1/Counter
 ```
 
 ### Device details

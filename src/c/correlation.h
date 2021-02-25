@@ -11,6 +11,8 @@
 
 #define EDGEX_CRLID_HDR "correlation-id"
 
+char *edgex_device_genuuid (void);
+
 const char *edgex_device_get_crlid (void);
 void edgex_device_alloc_crlid (const char *id);
 void edgex_device_free_crlid (void);

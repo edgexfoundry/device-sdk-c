@@ -10,7 +10,6 @@
 #define _EDGEX_REST_H_ 1
 
 #include "edgex/edgex.h"
-#include "data.h"
 #include "edgex2.h"
 #include "rest-server.h"
 
@@ -29,25 +28,14 @@ devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p
 edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *e);
 void edgex_deviceprofile_free (edgex_deviceprofile *e);
 edgex_deviceservice *edgex_deviceservice_read (const char *json);
-char *edgex_deviceservice_write (const edgex_deviceservice *e, bool create);
-edgex_deviceservice *edgex_deviceservice_dup (const edgex_deviceservice *e);
 void edgex_deviceservice_free (edgex_deviceservice *e);
 void edgex_device_autoevents_free (edgex_device_autoevents *e);
-edgex_device *edgex_device_read (iot_logger_t *lc, const char *json);
 char *edgex_device_write (const edgex_device *e);
-char *edgex_device_write_sparse (const char *name, const char *id, const char *description, const devsdk_strings *labels, const char *profile_name);
+char *edgex_device_write_sparse (const char *name, const char *description, const devsdk_strings *labels, const char *profile_name);
 edgex_device *edgex_device_dup (const edgex_device *e);
 devsdk_devices *edgex_device_todevsdk (const edgex_device *e);
 void edgex_device_free (edgex_device *e);
 edgex_device *edgex_devices_read (iot_logger_t *lc, const char *json);
-edgex_addressable *edgex_addressable_read (const char *json);
-char *edgex_addressable_write (const edgex_addressable *e, bool create);
-edgex_addressable *edgex_addressable_dup (const edgex_addressable *e);
-void edgex_addressable_free (edgex_addressable *e);
-edgex_valuedescriptor *edgex_valuedescriptor_read (const char *json);
-char *edgex_valuedescriptor_write (const edgex_valuedescriptor *e);
-void edgex_valuedescriptor_free (edgex_valuedescriptor *e);
-edgex_watcher *edgex_watcher_read (const char *json);
 edgex_watcher *edgex_watchers_read (const char *json);
 edgex_watcher *edgex_watcher_dup (const edgex_watcher *e);
 void edgex_watcher_free (edgex_watcher *e);
@@ -69,13 +57,19 @@ void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_rep
 void edgex_configresponse_free (edgex_configresponse *cr);
 void edgex_metricsresponse_write (const edgex_metricsresponse *mr, devsdk_http_reply *reply);
 
+char *edgex_id_from_response (const char *response);
 
-#ifdef EDGEX_DEBUG_DUMP
-void edgex_deviceprofile_dump (edgex_deviceprofile * e);
-void edgex_deviceservice_dump (edgex_deviceservice * e);
-void edgex_addressable_dump (edgex_addressable * e);
-void edgex_device_dump (edgex_device * e);
-void edgex_valuedescriptor_dump (edgex_valuedescriptor * e);
-#endif
+char *edgex_createDSreq_write (const edgex_deviceservice *ds);
+char *edgex_updateDSreq_write (const char *name, const char *baseaddr);
+edgex_deviceservice *edgex_getDSresponse_read (const char *json);
+
+edgex_deviceprofile *edgex_getprofileresponse_read (iot_logger_t *lc, const char *json);
+
+char *edgex_createdevicereq_write (const edgex_device *dev);
+edgex_device *edgex_createdevicereq_read (const char *json);
+char *edgex_updateDevOpreq_write (const char *name, edgex_device_operatingstate opstate);
+char *edgex_updateDevLCreq_write (const char *name, uint64_t lastconnected);
+
+edgex_watcher *edgex_createPWreq_read (const char *json);
 
 #endif

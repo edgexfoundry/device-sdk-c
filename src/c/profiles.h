@@ -17,4 +17,6 @@ extern void edgex_device_profiles_upload
   devsdk_error *err
 );
 
+extern const edgex_deviceprofile *edgex_deviceprofile_get_internal (devsdk_service_t *svc, const char *name, devsdk_error *err);
+
 #endif

@@ -14,6 +14,15 @@
 
 static _Thread_local char *localid = NULL;
 
+char *edgex_device_genuuid ()
+{
+  char *result = malloc (37);
+  uuid_t uid;
+  uuid_generate (uid);
+  uuid_unparse (uid, result);
+  return result;
+}
+
 const char *edgex_device_get_crlid ()
 {
   return localid;
@@ -22,17 +31,7 @@ const char *edgex_device_get_crlid ()
 void edgex_device_alloc_crlid (const char *id)
 {
   edgex_device_free_crlid ();
-  if (id)
-  {
-    localid = strdup (id);
-  }
-  else
-  {
-    uuid_t uid;
-    uuid_generate (uid);
-    localid = malloc (37);
-    uuid_unparse (uid, localid);
-  }
+  localid = id ? strdup (id) : edgex_device_genuuid ();
 }
 
 void edgex_device_free_crlid ()

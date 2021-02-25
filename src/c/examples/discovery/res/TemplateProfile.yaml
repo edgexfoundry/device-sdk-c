@@ -4,6 +4,7 @@ model: "IoT0"
 description: "Template Sensor"
 labels:
   - "sensor"
+apiVersion: "v2"
 
 deviceResources:
       -
@@ -12,80 +13,24 @@ deviceResources:
         attributes:
             { SensorID: "Sen1" , SensorType: "UInt64" }
         properties:
-            value:
-                { type: "Uint64", readWrite: "R" }
-            units:
-                { defaultValue: "things" }
+            { valueType: "Uint64", readWrite: "R", units: "things" }
 
       -
         name: SensorTwo
         description: "A Sensor generating unsigned integer values"
         attributes:
-          { SensorID: "Sen2", SensorType: "UInt64" }
+            { SensorID: "Sen2", SensorType: "UInt64" }
         properties:
-          value:
-            { type: "Uint64", readWrite: "R" }
-          units:
-            { defaultValue: "things" }
+            { valueType: "Uint64", readWrite: "R", units: "things" }
 
       - name: Switch
         description: "A generic switch"
         attributes:
-          { SensorID: "Switch1", SensorType: "Switch" }
+            { SensorID: "Switch1", SensorType: "Switch" }
         properties:
-          value:
-            { type: "Bool", readWrite: "RW" }
-          units:
-            { defaultValue: "State" }
-
+            { valueType: "Bool", readWrite: "RW", units: "State" }
 
 coreCommands:
-  -
-    name: SensorOne
-    get:
-        path: "/api/v1/device/{deviceId}/SensorOne"
-        responses:
-          -
-            code: "200"
-            description: "Get the SensorOne reading."
-            expectedValues: ["SensorOne"]
-          -
-            code: "503"
-            description: "service unavailable"
-            expectedValues: []
-
-  -
-    name: SensorTwo
-    get:
-      path: "/api/v1/device/{deviceId}/SensorTwo"
-      responses:
-        -
-          code: "200"
-          description: "Get the SensorTwo reading."
-          expectedValues: ["SensorTwo"]
-        -
-          code: "503"
-          description: "service unavailable"
-          expectedValues: []
-
-  -
-    name: Switch
-    get:
-      path: "/api/v1/device/{deviceId}/Switch"
-      responses:
-      - code: "200"
-        description: "Get the Switch state."
-        expectedValues: ["Switch"]
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
-    put:
-      path: "/api/v1/device/{deviceId}/Switch"
-      parameterNames: ["Switch"]
-      responses:
-      - code: "200"
-        description: "Successfully set the switch state."
-        expectedValues: []
-      - code: "503"
-        description: "service unavailable"
-        expectedValues: []
+  - { name: "SensorOne", get: true }
+  - { name: "SensorTwo", get: true }
+  - { name: "Switch", get: true, set: true }

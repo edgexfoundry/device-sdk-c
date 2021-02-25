@@ -28,14 +28,13 @@
  * @param protocols Location of the device specified by one or more protocols.
  * @param autos Automatic Events which are to be generated from the device.
  * @param err Nonzero reason codes will be set here in the event of errors.
- * @returns The id of the newly created or existing device, or NULL if an error occurred.
  */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-char * edgex_add_device
+void edgex_add_device
 (
   devsdk_service_t *svc,
   const char *name,
@@ -51,15 +50,6 @@ char * edgex_add_device
 /**
  * @brief Remove a device from EdgeX. The device will be deleted from the device service and from core-metadata.
  * @param svc The device service.
- * @param id The id of the device to be removed.
- * @param err Nonzero reason codes will be set here in the event of errors.
- */
-
-void edgex_remove_device (devsdk_service_t *svc, const char *id, devsdk_error *err);
-
-/**
- * @brief Remove a device from EdgeX. The device will be deleted from the device service and from core-metadata.
- * @param svc The device service.
  * @param name The name of the device to be removed.
  * @param err Nonzero reason codes will be set here in the event of errors.
  */
@@ -69,9 +59,7 @@ void edgex_remove_device_byname (devsdk_service_t *svc, const char *name, devsdk
 /**
  * @brief Update a device's details.
  * @param svc The device service.
- * @param id The id of the device to update. If this is unset, the device will be located by name.
- * @param name If id is unset, this parameter must be set to the name of the device to be updated. Otherwise, it is
- *             optional and if set specifies a new name for the device.
+ * @param name The name of the device to be updated.
  * @param description If set, a new description for the device.
  * @param labels If set, a new set of labels for the device.
  * @param profilename If set, a new device profile for the device.
@@ -81,7 +69,6 @@ void edgex_remove_device_byname (devsdk_service_t *svc, const char *name, devsdk
 void edgex_update_device
 (
   devsdk_service_t *svc,
-  const char *id,
   const char *name,
   const char *description,
   const devsdk_strings *labels,
@@ -95,15 +82,6 @@ void edgex_update_device
  */
 
 edgex_device * edgex_devices (devsdk_service_t *svc);
-
-/**
- * @brief Retrieve device information.
- * @param svc The device service.
- * @param id The device id.
- * @returns The requested device metadata or null if the device was not found.
- */
-
-edgex_device * edgex_get_device (devsdk_service_t *svc, const char *id);
 
 /**
  * @brief Retrieve device information.

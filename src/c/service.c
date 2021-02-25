@@ -11,7 +11,6 @@
 #include "edgex-logging.h"
 #include "device.h"
 #include "discovery.h"
-#include "callback.h"
 #include "callback2.h"
 #include "metrics.h"
 #include "errorlist.h"
@@ -292,7 +291,7 @@ static bool ping_client
     return false;
   }
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", ep->host, ep->port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/ping", ep->host, ep->port);
 
   do
   {
@@ -332,6 +331,9 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Register device service in metadata */
 
+  char *base = malloc (URL_BUF_SIZE);
+  snprintf (base, URL_BUF_SIZE - 1, "http://%s:%u", svc->config.service.host, svc->config.service.port);
+
   edgex_deviceservice *ds;
   ds = edgex_metadata_client_get_deviceservice
     (svc->logger, &svc->config.endpoints, svc->name, err);
@@ -344,40 +346,13 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   if (ds == NULL)
   {
     uint64_t millis = iot_time_msecs ();
-    edgex_addressable *addr = edgex_metadata_client_get_addressable
-      (svc->logger, &svc->config.endpoints, svc->name, err);
-    if (err->code)
-    {
-      iot_log_error (svc->logger, "get_addressable failed");
-      return;
-    }
-    if (addr == NULL)
-    {
-      addr = malloc (sizeof (edgex_addressable));
-      memset (addr, 0, sizeof (edgex_addressable));
-      addr->origin = millis;
-      addr->name = strdup (svc->name);
-      addr->method = strdup ("POST");
-      addr->protocol = strdup ("HTTP");
-      addr->address = strdup (svc->config.service.host);
-      addr->port = svc->config.service.port;
-      addr->path = strdup (EDGEX_DEV_API_CALLBACK);
-
-      addr->id = edgex_metadata_client_create_addressable
-        (svc->logger, &svc->config.endpoints, addr, err);
-      if (err->code)
-      {
-        iot_log_error (svc->logger, "create_addressable failed");
-        return;
-      }
-    }
 
     ds = malloc (sizeof (edgex_deviceservice));
     memset (ds, 0, sizeof (edgex_deviceservice));
-    ds->addressable = addr;
+    ds->baseaddress = base;
     ds->name = strdup (svc->name);
     ds->adminState = UNLOCKED;
-    ds->created = millis;
+    ds->origin = millis;
     for (int n = 0; svc->config.service.labels[n]; n++)
     {
       devsdk_strings *newlabel = malloc (sizeof (devsdk_strings));
@@ -386,8 +361,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
       ds->labels = newlabel;
     }
 
-    ds->id = edgex_metadata_client_create_deviceservice
-      (svc->logger, &svc->config.endpoints, ds, err);
+    edgex_metadata_client_create_deviceservice (svc->logger, &svc->config.endpoints, ds, err);
     if (err->code)
     {
       iot_log_error
@@ -402,18 +376,21 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     {
       iot_log_warn (svc->logger, "Starting service in LOCKED state");
     }
-    if (ds->addressable->port != svc->config.service.port || strcmp (ds->addressable->address, svc->config.service.host))
+    if (strcmp (ds->baseaddress, base))
     {
       iot_log_info (svc->logger, "Updating service endpoint in metadata");
-      ds->addressable->port = svc->config.service.port;
-      free (ds->addressable->address);
-      ds->addressable->address = strdup (svc->config.service.host);
-      edgex_metadata_client_update_addressable (svc->logger, &svc->config.endpoints, ds->addressable, err);
+      free (ds->baseaddress);
+      ds->baseaddress = base;
+      edgex_metadata_client_update_deviceservice (svc->logger, &svc->config.endpoints, ds->name, ds->baseaddress, err);
       if (err->code)
       {
-        iot_log_error (svc->logger, "update_addressable failed");
+        iot_log_error (svc->logger, "update_deviceservice failed");
         return;
       }
+    }
+    else
+    {
+      free (base);
     }
   }
   edgex_deviceservice_free (ds);
@@ -440,6 +417,20 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     return;
   }
 
+  for (edgex_device *d = devs; d; d = d->next)
+  {
+    if (edgex_deviceprofile_get_internal (svc, d->profile->name, err) == NULL)
+    {
+      iot_log_error (svc->logger, "No profile %s found for device %s", d->profile->name, d->name);
+    }
+  }
+
+  if (err->code)
+  {
+    iot_log_error (svc->logger, "Error processing device list");
+    return;
+  }
+
   edgex_devmap_populate_devices (svc->devices, devs);
   edgex_device_free (devs);
 
@@ -451,12 +442,6 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   {
     return;
   }
-
-  edgex_rest_server_register_handler
-  (
-    svc->daemon, EDGEX_DEV_API_CALLBACK, DevSDK_Put | DevSDK_Post | DevSDK_Delete, svc,
-    edgex_device_handler_callback
-  );
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
 
@@ -772,7 +757,7 @@ void devsdk_post_readings
   if (command)
   {
     edgex_event_cooked *event = edgex_data_process_event
-      (devname, command, values, svc->config.device.datatransform, "");
+      (devname, command, values, svc->config.device.datatransform);
 
     if (event)
     {
