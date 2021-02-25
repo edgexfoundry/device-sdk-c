@@ -19,5 +19,5 @@ clean:
 	@rm -rf deps build src/c/iot include/iot release
 
 docker:
-	docker build -t device-sdk-c-builder -f scripts/Dockerfile.alpine-3.11 .
+	docker build -t device-sdk-c-builder -f scripts/Dockerfile.alpine .
 	docker run --rm -e UID=$(USER) -e GID=$(GROUP) -v $(PWD)/results:/edgex-c-sdk/results device-sdk-c-builder
