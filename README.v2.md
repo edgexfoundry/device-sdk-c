@@ -64,6 +64,7 @@ This enables more choices for memory management in the device service and the po
 bool (*devsdk_initialize)
 void (*devsdk_reconfigure)
 void (*devsdk_discover)
+devsdk_device_resources * (*devsdk_describe)
 bool (*devsdk_handle_get)
 bool (*devsdk_handle_put)
 void (*devsdk_stop)
@@ -92,7 +93,11 @@ These are mostly identical to their v1 counterparts, with the following changes
 
 - The `disconnect_device` callback is removed (obsoleted by `remove_device`)
 
+- A `describe` callback is added for future extended discovery functionality, subject to change
+
 Note that all callbacks are now specified at `service_new` time. NULL may be given for all except `intialize`, `handle_get`, `handle_put` and `stop`.
+
+A function devsdk_callbacks_init function is supplied for setting up the mandatory callbacks. Other devsdk_callbacks_x functions support setup of the optional callbacks.
 
 #### Device Service Lifecycle
 

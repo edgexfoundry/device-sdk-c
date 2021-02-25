@@ -120,15 +120,8 @@ int main (int argc, char *argv[])
   running = true;
 
   /* Device Callbacks */
-  devsdk_callbacks fileImpls =
-  {
-    file_init,         /* Initialize */
-    NULL,              /* Reconfigure */
-    NULL,              /* Discovery */
-    file_get_handler,  /* Get */
-    file_put_handler,  /* Put */
-    file_stop          /* Stop */
-  };
+  devsdk_callbacks fileImpls;
+  devsdk_callbacks_init (&fileImpls, file_init, NULL, file_get_handler, file_put_handler, file_stop);
 
   /* Initalise a new device service */
   service = devsdk_service_new ("device-file", VERSION, impl, fileImpls, &argc, argv, &e);

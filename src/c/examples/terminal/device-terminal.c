@@ -189,15 +189,8 @@ int main (int argc, char * argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks terminalImpls =
-  {
-    terminal_init,         /* Initialize */
-    NULL,                  /* Reconfigure */
-    NULL,                  /* Discovery */
-    terminal_get_handler,  /* Get */
-    terminal_put_handler,  /* Put */
-    terminal_stop          /* Stop */
-  };
+  devsdk_callbacks terminalImpls;
+  devsdk_callbacks_init (&terminalImpls, terminal_init, NULL, terminal_get_handler, terminal_put_handler, terminal_stop);
 
   devsdk_service_t * service = devsdk_service_new
     ("device-terminal", "1.0", impl, terminalImpls, &argc, argv, &e);

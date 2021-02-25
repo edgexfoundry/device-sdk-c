@@ -52,8 +52,6 @@ static bool random_init
   return true;
 }
 
-static void random_discover (void *impl) {}
-
 static bool random_get_handler
 (
   void *impl,
@@ -151,15 +149,8 @@ int main (int argc, char *argv[])
   e.code = 0;
 
   /* Device Callbacks */
-  devsdk_callbacks randomImpls =
-  {
-    random_init,         /* Initialize */
-    NULL,                /* Reconfigure */
-    random_discover,     /* Discovery */
-    random_get_handler,  /* Get */
-    random_put_handler,  /* Put */
-    random_stop          /* Stop */
-  };
+  devsdk_callbacks randomImpls;
+  devsdk_callbacks_init (&randomImpls, random_init, NULL, random_get_handler, random_put_handler, random_stop);
 
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new

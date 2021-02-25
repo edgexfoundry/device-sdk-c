@@ -113,15 +113,8 @@ int main (int argc, char * argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks bitfieldImpls =
-  {
-    bitfield_init,         /* Initialize */
-    NULL,              /* Reconfigure */
-    NULL,              /* Discovery */
-    bitfield_get_handler,  /* Get */
-    bitfield_put_handler,  /* Put */
-    bitfield_stop          /* Stop */
-  };
+  devsdk_callbacks bitfieldImpls;
+  devsdk_callbacks_init (&bitfieldImpls, bitfield_init, NULL, bitfield_get_handler, bitfield_put_handler, bitfield_stop);
 
   devsdk_service_t * service = devsdk_service_new
     ("device-bitfield", "1.0", impl, bitfieldImpls, &argc, argv, &e);

@@ -49,11 +49,22 @@ typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
 
 /**
  * @brief Optional callback for dynamic discovery of devices. The implementation should detect devices and register them using
- *        the devsdk_add_device API call.
+ *        the devsdk_add_discovered_devices API call.
  * @param impl The context data passed in when the service was created.
  */
 
 typedef void (*devsdk_discover) (void *impl);
+
+/**
+ * @brief Optional callback for dynamic discovery of device resources. The
+ * implementation should return a linked list of resources available on the
+ * specified device.
+ * @param devname The name of the device being queried
+ * @param protocols The location of the device being queried
+ * @returns The discovered resources
+ */
+
+typedef devsdk_device_resources * (*devsdk_describe) (const char *devname, const devsdk_protocols *protocols);
 
 /**
  * @brief Callback issued to handle GET requests for device readings.
@@ -177,21 +188,52 @@ typedef void (*devsdk_update_device_callback) (void *impl, const char *devname, 
 
 typedef void (*devsdk_remove_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols);
 
+/*
+ * Structure containing all callbacks. Recommend not to populate this directly,
+ * instead use devsdk_callbacks_init() and related functions.
+ */
+
 typedef struct devsdk_callbacks
 {
   devsdk_initialize init;
   devsdk_reconfigure reconfigure;
-  devsdk_discover discover;                     /* NULL for no discovery */
+  devsdk_discover discover;
   devsdk_handle_get gethandler;
   devsdk_handle_put puthandler;
   devsdk_stop stop;
-  devsdk_add_device_callback device_added;      /* May be NULL */
-  devsdk_update_device_callback device_updated; /* May be NULL */
-  devsdk_remove_device_callback device_removed; /* May be NULL */
-  devsdk_autoevent_start_handler ae_starter;    /* NULL for SDK-managed autoevents */
-  devsdk_autoevent_stop_handler ae_stopper;     /* NULL for SDK-managed autoevents */
+  devsdk_add_device_callback device_added;
+  devsdk_update_device_callback device_updated;
+  devsdk_remove_device_callback device_removed;
+  devsdk_autoevent_start_handler ae_starter;
+  devsdk_autoevent_stop_handler ae_stopper;
+  devsdk_describe describe;
 } devsdk_callbacks;
 
+/**
+ * @brief Populate required callback functions. Other function pointers are initialized to null
+ */
+
+void devsdk_callbacks_init
+  (devsdk_callbacks *cb, devsdk_initialize init, devsdk_reconfigure reconf, devsdk_handle_get gethandler, devsdk_handle_put puthandler, devsdk_stop stop);
+
+/**
+ * @brief Populate optional discovery functions
+ */
+
+void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover discover, devsdk_describe describe);
+
+/**
+ * @brief Populate optional device notification functions
+ */
+
+void devsdk_callbacks_set_listeners
+  (devsdk_callbacks *cb, devsdk_add_device_callback device_added, devsdk_update_device_callback device_updated, devsdk_remove_device_callback device_removed);
+
+/**
+ * @brief Populate optional autoevent management functions
+ */
+
+void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoevent_start_handler ae_starter, devsdk_autoevent_stop_handler ae_stopper);
 
 /**
  * @brief Create a new device service.

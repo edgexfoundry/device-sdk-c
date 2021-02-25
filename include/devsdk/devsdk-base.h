@@ -83,14 +83,26 @@ typedef struct devsdk_discovered_device
   const char *name;
   devsdk_protocols *protocols;
   const char *description;
-  const devsdk_strings *labels;
+  iot_data_t *properties;
 } devsdk_discovered_device;
+
+/**
+ * @brief Linked-list structure containing information about a device's resources.
+ */
 
 typedef struct devsdk_device_resources
 {
-  const devsdk_commandrequest *request;
+  /** The device resource's name */
+  const char *resname;
+  /** Attributes of the device resource */
+  const devsdk_nvpairs *attributes;
+  /** Type of the data that may be read or written */
+  const iot_typecode_t *type;
+  /** Whether the resource may be read */
   bool readable;
+  /** Whether the resource may be written */
   bool writable;
+  /** Next element in the list of resources */
   struct devsdk_device_resources *next;
 } devsdk_device_resources;
 
@@ -101,6 +113,15 @@ typedef struct devsdk_devices
   devsdk_device_resources *resources;
   struct devsdk_devices *next;
 } devsdk_devices;
+
+/**
+ * @brief Creates a new string list, optionally adding to an existing list
+ * @param str The string to be added
+ * @param list A list that will be extended, or NULL
+ * @returns The new string list
+ */
+
+devsdk_strings *devsdk_strings_new (const char *str, devsdk_strings *list);
 
 /**
  * @brief Free an strings list.

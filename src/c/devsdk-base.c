@@ -7,8 +7,16 @@
  */
 
 #include <errno.h>
-#include "devsdk/devsdk-base.h"
+#include "devsdk/devsdk.h"
 #include "devutil.h"
+
+devsdk_strings *devsdk_strings_new (const char *str, devsdk_strings *list)
+{
+  devsdk_strings *result = malloc (sizeof (devsdk_strings));
+  result->str = strdup (str);
+  result->next = list;
+  return result;
+}
 
 devsdk_nvpairs *devsdk_nvpairs_new (const char *name, const char *value, devsdk_nvpairs *list)
 {
@@ -116,6 +124,37 @@ const devsdk_nvpairs *devsdk_protocols_properties (const devsdk_protocols *prots
     }
   }
   return NULL;
+}
+
+void devsdk_callbacks_init
+  (devsdk_callbacks *cb, devsdk_initialize init, devsdk_reconfigure reconf, devsdk_handle_get gethandler, devsdk_handle_put puthandler, devsdk_stop stop)
+{
+  memset (cb, 0, sizeof (devsdk_callbacks));
+  cb->init = init;
+  cb->reconfigure = reconf;
+  cb->gethandler = gethandler;
+  cb->puthandler = puthandler;
+  cb->stop = stop;
+}
+
+void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover discover, devsdk_describe describe)
+{
+  cb->discover = discover;
+  cb->describe = describe;
+}
+
+void devsdk_callbacks_set_listeners
+  (devsdk_callbacks *cb, devsdk_add_device_callback device_added, devsdk_update_device_callback device_updated, devsdk_remove_device_callback device_removed)
+{
+  cb->device_added = device_added;
+  cb->device_updated = device_updated;
+  cb->device_removed = device_removed;
+}
+
+void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoevent_start_handler ae_starter, devsdk_autoevent_stop_handler ae_stopper)
+{
+  cb->ae_starter = ae_starter;
+  cb->ae_stopper = ae_stopper;
 }
 
 /* Macro for generating single-linked-list comparison functions.

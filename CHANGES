@@ -2,7 +2,9 @@ This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
 Changes for 2.0.0 "Ireland":
 
-- REST API moves to v2
+- Added helper functions for setting up the callback functions structure. This is now the preferred way of doing so.
+- REST API moves to v2. v1 interfaces are no longer available.
+- v1 C API is no longer supported.
 - Add queryparams for PUT operations (Changes signature of put handler function)
 - Add MaxRequestSize configuration for limiting inbound http data transfers
 - EdgeX resource type names are now CamelCase as per Go services

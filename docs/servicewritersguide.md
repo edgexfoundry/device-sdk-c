@@ -2,16 +2,15 @@ Notes on writing a device service
 ---------------------------------
 This document aims to complement the examples provided with the EdgeX C SDK by providing insight into what actions should be performed in the various parts of a Device Service.
 
-Fundamentally a Device Service is composed of a number of callbacks. These callbacks are provided by the SDK to allow the service to respond to different events. These callbacks (devsdk_callbacks) are as follows:
+Fundamentally a Device Service is composed of a number of callbacks. These callbacks are provided by the SDK to allow the service to respond to different events. The required callbacks are as follows:
 
 * init
 * reconfigure
-* discover
 * get
 * put
 * stop
 
-A device service must provide an implementation of each callback, except for `discover` (which may be NULL if dynamic discovery is not implemented) and reconfigure (which may be NULL if the service has no driver-specific configuration). A small amount of setup is required of a device service, this is usually performed in the main. A devsdk_service_t should be created, containing, amongst other fields the devsdk_callbacks and an impldata pointer which is passed back every time a callback is invoked. The service must then call devsdk_service_new to create the device service, devsdk_service_start to start it, and upon exit the service should call devsdk_service_stop, followed by devsdk_service_free to clean up.
+A device service must provide an implementation of each callback, except for reconfigure (which may be NULL if the service has no driver-specific configuration). A small amount of setup is required of a device service, this is usually performed in the main. A devsdk_service_t should be created, containing, amongst other fields the devsdk_callbacks and an impldata pointer which is passed back every time a callback is invoked. The service must then call devsdk_service_new to create the device service, devsdk_service_start to start it, and upon exit the service should call devsdk_service_stop, followed by devsdk_service_free to clean up.
 
 Init
 ----
@@ -20,10 +19,6 @@ Init is called when the device service starts up, its purpose is to perform prot
 Reconfigure
 -----------
 If the Registry is in use, then dynamic updates to configuration are possible. If an element of the driver-specific configuration is changed, this callback will be invoked with the new configuration settings passed through.
-
-Discover
---------
-In Discover, protocols which are able to perform discovery can do so. They must perform their protocol specific discovery and add devices using the edgex_device_add_device() method. Careful consideration should be given to whether this mechanism is required and how dynamically discovered devices can be intelligently and correctly mapped to device profiles.
 
 Get
 ---
@@ -54,3 +49,5 @@ Optional handlers
 An implementation may implement the device_added, device_updated and device_removed handlers, it will then be notified of changes to the extent of devices managed by the service. This may be helpful if special initialization / shutdown operations are required for optimal usage of the device.
 
 An implementation may also implement the ae_starter and ae_stopper callbacks, in which case it will become responsible for the AutoEvents functionality which is normally handled within the SDK. This facility is currently experimental, it may be useful in scenarios where the device can be set to generate readings autonomously.
+
+An implementation may also implement the discover callback. When this is called, the implementation should perform a scan for reachable devices, and register them using the devsdk_add_discovered_devices function.

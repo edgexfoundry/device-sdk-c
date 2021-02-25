@@ -175,15 +175,8 @@ int main (int argc, char *argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks counterImpls =
-  {
-    counter_init,         /* Initialize */
-    NULL,                 /* Reconfigure */
-    NULL,                 /* Discovery */
-    counter_get_handler,  /* Get */
-    counter_put_handler,  /* Put */
-    counter_stop          /* Stop */
-  };
+  devsdk_callbacks counterImpls;
+  devsdk_callbacks_init (&counterImpls, counter_init, NULL, counter_get_handler, counter_put_handler, counter_stop);
 
   devsdk_service_t *service = devsdk_service_new
     ("device-counter", "1.0", impl, counterImpls, &argc, argv, &e);
