@@ -9,7 +9,6 @@
 #ifndef _EDGEX_LOGGING_H_
 #define _EDGEX_LOGGING_H_ 1
 
-#include "edgex/os.h"
 #include "iot/logger.h"
 
 /* Write to stdout */

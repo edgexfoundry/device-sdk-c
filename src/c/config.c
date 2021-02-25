@@ -721,18 +721,6 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   return val;
 }
 
-void edgex_device_handler_config (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
-{
-  JSON_Value *cval = edgex_device_config_toJson ((devsdk_service_t *)ctx);
-
-  char *json = json_serialize_to_string (cval);
-  json_value_free (cval);
-  reply->data.bytes = json;
-  reply->data.size = strlen (json);
-  reply->content_type = CONTENT_JSON;
-  reply->code = MHD_HTTP_OK;
-}
-
 void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));

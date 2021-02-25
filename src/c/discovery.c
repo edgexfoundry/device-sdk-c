@@ -126,44 +126,6 @@ void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *di
   }
 }
 
-void edgex_device_handler_discovery (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
-{
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  char *ret;
-
-  if (svc->userfns.discover == NULL)
-  {
-    ret = strdup ("Dynamic discovery is not implemented in this device service\n");
-    reply->code = MHD_HTTP_NOT_IMPLEMENTED;
-  }
-  else if (svc->adminstate == LOCKED)
-  {
-    ret = strdup ("Device service is administratively locked\n");
-    reply->code = MHD_HTTP_LOCKED;
-  }
-  else if (!svc->config.device.discovery_enabled)
-  {
-    ret = strdup ("Discovery disabled by configuration\n");
-    reply->code = MHD_HTTP_SERVICE_UNAVAILABLE;
-  }
-  else if (pthread_mutex_trylock (&svc->discovery->lock) == 0)
-  {
-    iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc->discovery, -1);
-    pthread_mutex_unlock (&svc->discovery->lock);
-    ret = strdup ("Running discovery\n");
-    reply->code = MHD_HTTP_ACCEPTED;
-  }
-  else
-  {
-    ret = strdup ("Discovery already running; ignoring new request\n");
-    reply->code = MHD_HTTP_ACCEPTED;
-  }
-
-  reply->data.bytes = ret;
-  reply->data.size = strlen (ret);
-  reply->content_type = CONTENT_PLAINTEXT;
-}
-
 void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;

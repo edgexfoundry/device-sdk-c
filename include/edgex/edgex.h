@@ -9,6 +9,7 @@
 #ifndef _EDGEX_EDGEX_H_
 #define _EDGEX_EDGEX_H_
 
+#include "devsdk/devsdk-base.h"
 #include "edgex/edgex-base.h"
 
 typedef struct
