@@ -346,10 +346,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     ds->origin = millis;
     for (int n = 0; svc->config.service.labels[n]; n++)
     {
-      devsdk_strings *newlabel = malloc (sizeof (devsdk_strings));
-      newlabel->str = strdup (svc->config.service.labels[n]);
-      newlabel->next = ds->labels;
-      ds->labels = newlabel;
+      ds->labels = devsdk_strings_new (svc->config.service.labels[n], ds->labels);
     }
 
     edgex_metadata_client_create_deviceservice (svc->logger, &svc->config.endpoints, ds, err);

@@ -24,10 +24,9 @@ void devsdk_free_resources (devsdk_device_resources *r)
 {
   while (r)
   {
-    free ((char *)r->request->resname);
-    devsdk_nvpairs_free ((devsdk_nvpairs *)r->request->attributes);
-    iot_typecode_free ((iot_typecode_t *)r->request->type);
-    free ((devsdk_commandrequest *)r->request);
+    free ((char *)r->resname);
+    devsdk_nvpairs_free ((devsdk_nvpairs *)r->attributes);
+    iot_typecode_free ((iot_typecode_t *)r->type);
     devsdk_device_resources *nextr = r->next;
     free (r);
     r = nextr;
@@ -199,19 +198,31 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
       edgex_watcher *w = edgex_watchlist_match (svc->watchlist, prots->properties);
       if (w)
       {
+        devsdk_strings *labels = NULL;
+        const iot_data_t *ldata = iot_data_string_map_get (devices[i].properties, "Labels");
+        if (ldata)
+        {
+          iot_data_vector_iter_t iter;
+          iot_data_vector_iter (ldata, &iter);
+          while (iot_data_vector_iter_next (&iter))
+          {
+            labels = devsdk_strings_new (iot_data_vector_iter_string (&iter), labels);
+          }
+        }
         edgex_metadata_client_add_or_modify_device
         (
           svc->logger,
           &svc->config.endpoints,
           devices[i].name,
           devices[i].description,
-          devices[i].labels,
+          labels,
           w->adminstate,
           devices[i].protocols,
           svc->name,
           w->profile
         );
         edgex_watcher_free (w);
+        devsdk_strings_free (labels);
         break;
       }
     }

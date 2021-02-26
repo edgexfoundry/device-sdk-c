@@ -745,7 +745,6 @@ void edgex_device_process_configured_devices
     devsdk_protocols *protocols;
     edgex_device_autoevents *autos;
     devsdk_strings *labels;
-    devsdk_strings *newlabel;
     toml_table_t *table;
     toml_table_t *aetable;
     toml_table_t *pptable;
@@ -840,10 +839,9 @@ void edgex_device_process_configured_devices
           {
             for (int n = 0; (raw = toml_raw_at (arr, n)); n++)
             {
-              newlabel = malloc (sizeof (devsdk_strings));
-              newlabel->next = labels;
-              toml_rtos2 (raw, &newlabel->str);
-              labels = newlabel;
+              char *l = NULL;
+              toml_rtos2 (raw, &l);
+              labels = devsdk_strings_new (l, labels);
             }
           }
 

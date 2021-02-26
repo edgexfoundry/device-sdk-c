@@ -114,15 +114,8 @@ int main (int argc, char * argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks gyroImpls =
-  {
-    gyro_init,         /* Initialize */
-    NULL,              /* Reconfigure */
-    NULL,              /* Discovery */
-    gyro_get_handler,  /* Get */
-    gyro_put_handler,  /* Put */
-    gyro_stop          /* Stop */
-  };
+  devsdk_callbacks gyroImpls;
+  devsdk_callbacks_init (&gyroImpls, gyro_init, NULL, gyro_get_handler, gyro_put_handler, gyro_stop);
 
   devsdk_service_t * service = devsdk_service_new
     ("device-gyro", "1.0", impl, gyroImpls, &argc, argv, &e);

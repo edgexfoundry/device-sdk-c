@@ -88,7 +88,7 @@ static void template_reconfigure
 /* Device services which are capable of device discovery should implement it
  * in this callback. It is called in response to a request on the
  * device service's discovery REST endpoint. New devices should be added using
- * the devsdk_add_device() method
+ * the devsdk_add_discovered_devices() method
  */
 static void template_discover (void *impl)
 {
@@ -235,15 +235,9 @@ int main (int argc, char *argv[])
   e.code = 0;
 
   /* Device Callbacks */
-  devsdk_callbacks templateImpls =
-  {
-    template_init,         /* Initialize */
-    template_reconfigure,  /* Reconfigure */
-    template_discover,     /* Discovery */
-    template_get_handler,  /* Get */
-    template_put_handler,  /* Put */
-    template_stop          /* Stop */
-  };
+  devsdk_callbacks templateImpls;
+  devsdk_callbacks_init (&templateImpls, template_init, template_reconfigure, template_get_handler, template_put_handler, template_stop);
+  devsdk_callbacks_set_discovery (&templateImpls, template_discover, NULL);
 
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new

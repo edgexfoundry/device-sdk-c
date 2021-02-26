@@ -32,10 +32,10 @@ static char *get_string (const JSON_Object *obj, const char *name)
   return get_string_dfl (obj, name, "");
 }
 
-static char *get_array_string (const JSON_Array *array, size_t index)
+static const char *get_array_string (const JSON_Array *array, size_t index)
 {
   const char *str = json_array_get_string (array, index);
-  return strdup (str ? str : "");
+  return str ? str : "";
 }
 
 static bool get_boolean (const JSON_Object *obj, const char *name, bool dflt)
@@ -54,9 +54,7 @@ static devsdk_strings *array_to_strings (const JSON_Array *array)
 
   for (i = 0; i < count; i++)
   {
-    temp = (devsdk_strings *) malloc (sizeof (devsdk_strings));
-    temp->str = get_array_string (array, i);
-    temp->next = NULL;
+    temp = devsdk_strings_new (get_array_string (array, i), NULL);
     *last_ptr = temp;
     last_ptr = &(temp->next);
   }
@@ -1048,11 +1046,9 @@ devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p
   for (const edgex_deviceresource *r = p->device_resources; r; r = r->next)
   {
     devsdk_device_resources *entry = malloc (sizeof (devsdk_device_resources));
-    devsdk_commandrequest *req = malloc (sizeof (devsdk_commandrequest));
-    req->resname = strdup (r->name);
-    req->attributes = devsdk_nvpairs_dup ((const devsdk_nvpairs *)r->attributes);
-    req->type = edgex_propertytype_totypecode (r->properties->type);
-    entry->request = req;
+    entry->resname = strdup (r->name);
+    entry->attributes = devsdk_nvpairs_dup ((const devsdk_nvpairs *)r->attributes);
+    entry->type = edgex_propertytype_totypecode (r->properties->type);
     entry->readable = r->properties->readable;
     entry->writable = r->properties->writable;
     entry->next = result;
