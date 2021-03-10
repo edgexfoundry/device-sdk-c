@@ -888,7 +888,7 @@ edgex_deviceprofile *edgex_getprofileresponse_read (iot_logger_t *lc, const char
   return result;
 }
 
-static JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
+JSON_Value *edgex_wrap_request_single (const char *objName, JSON_Value *payload)
 {
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
@@ -896,9 +896,14 @@ static JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
   json_object_set_string (obj, "apiVersion", "v2");
   json_object_set_value (obj, objName, payload);
 
+  return val;
+}
+
+JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
+{
   JSON_Value *arrval = json_value_init_array ();
   JSON_Array *array = json_value_get_array (arrval);
-  json_array_append_value (array, val);
+  json_array_append_value (array, edgex_wrap_request_single (objName, payload));
 
   return arrval;
 }
