@@ -104,8 +104,8 @@ int main (int argc, char *argv[])
   fd_set rfds;
   char buf[EVENT_BUF_LEN];
   devsdk_service_t *service;
-  iot_data_t *dnames = iot_data_alloc_map (IOT_DATA_INT32);
-  iot_data_t *fnames = iot_data_alloc_map (IOT_DATA_INT32);
+  iot_data_t *dnames;
+  iot_data_t *fnames;
   file_driver *impl = calloc (1, sizeof (file_driver));
 
   fd = inotify_init ();
@@ -153,8 +153,8 @@ int main (int argc, char *argv[])
     {
       signal (SIGINT, file_signal_handler);
       signal (SIGTERM, file_signal_handler);
-      sleep (1);
 
+      sleep (1);
       devsdk_devices *devs = devsdk_get_devices (service);
       if (devs == NULL)
       {
@@ -164,6 +164,8 @@ int main (int argc, char *argv[])
 
       /* Set up watchers, map watch ids to device and file names */
 
+      dnames = iot_data_alloc_map (IOT_DATA_INT32);
+      fnames = iot_data_alloc_map (IOT_DATA_INT32);
       for (devsdk_devices *d = devs; d; d = d->next)
       {
         const devsdk_nvpairs *props = devsdk_protocols_properties (d->protocols, "Filename");
@@ -235,6 +237,8 @@ int main (int argc, char *argv[])
         }
       }
       devsdk_service_stop (service, true, &e);
+      iot_data_free (fnames);
+      iot_data_free (dnames);
     }
     else
     {
@@ -249,7 +253,5 @@ int main (int argc, char *argv[])
 
   close (fd);
   free (impl);
-  iot_data_free (fnames);
-  iot_data_free (dnames);
   return retval;
 }

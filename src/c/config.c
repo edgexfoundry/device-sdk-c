@@ -64,6 +64,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
   iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
 
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
   if (driverconf)
@@ -502,6 +503,7 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
   config->device.maxcmdops = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxCmdOps"));
   config->device.maxcmdresultlen = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxCmdResultLen"));
   config->device.profilesdir = iot_data_string_map_get_string (map, "Device/ProfilesDir");
+  config->device.devicesdir = iot_data_string_map_get_string (map, "Device/DevicesDir");
   config->device.updatelastconnected = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Device/UpdateLastConnected"));
   config->device.eventqlen = iot_data_ui32 (iot_data_string_map_get (map, "Device/EventQLength"));
 }
@@ -655,6 +657,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_uint
     (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
   json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
+  json_object_set_string (dobj, "DevicesDir", svc->config.device.devicesdir);
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
@@ -751,7 +754,6 @@ void edgex_device_process_configured_devices
     toml_array_t *arr;
     int n = 0;
 
-    iot_log_info (svc->logger, "Processing DeviceList from configuration");
     while ((table = toml_table_at (devs, n++)))
     {
       raw = toml_raw_in (table, "Name");

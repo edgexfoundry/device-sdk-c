@@ -10,10 +10,6 @@
     Host = 'localhost'
     Port = 48081
 
-[[DeviceList]]
-  Name = 'File1'
-  Profile = 'FileProfile'
-  Description = 'An Example File Device'
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.Filename]
-      Name = './res/lorem.txt'
+[Device]
+  ProfilesDir = 'res/profiles'
+  DevicesDir = 'res/devices'

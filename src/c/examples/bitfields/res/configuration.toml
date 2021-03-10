@@ -22,9 +22,6 @@
     Host = 'localhost'
     Port = 48081
 
-[[DeviceList]]
-  Name = 'Bitfields'
-  Profile = 'Example-Bitfields'
-  Description = 'An Example Bitfields Device'
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.Bitfields]
+[Device]
+  ProfilesDir = 'res/profiles'
+  DevicesDir = 'res/devices'

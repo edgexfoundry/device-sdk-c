@@ -22,6 +22,7 @@
 #include "edgex-rest.h"
 #include "iot/time.h"
 #include "iot/iot.h"
+#include "filesys.h"
 #include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
@@ -32,6 +33,7 @@
 #include <microhttpd.h>
 
 #define POOL_THREADS 8
+#define ERRBUFSZ 1024
 
 void devsdk_usage ()
 {
@@ -300,6 +302,118 @@ static bool ping_client
   return false;
 }
 
+static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *jobj, devsdk_error *err)
+{
+  const char *dname = json_object_get_string (jobj, "Name");
+  if (dname)
+  {
+    if (!edgex_devmap_device_exists (svc->devices, dname))
+    {
+      JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
+      JSON_Object *deviceobj = json_value_get_object (jval);
+      json_object_set_string (deviceobj, "ServiceName", svc->name);
+      edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, deviceobj, err);
+    }
+    else
+    {
+      iot_log_info (svc->logger, "Device %s already exists: skipped", dname);
+    }
+  }
+  else
+  {
+    iot_log_error (svc->logger, "Device upload: Missing device Name definition");
+    *err = EDGEX_CONF_PARSE_ERROR;
+  }
+}
+
+static void edgex_device_device_upload_table (devsdk_service_t *svc, toml_table_t *toml, devsdk_error *err)
+{
+  toml_array_t *devs = toml_array_in (toml, "DeviceList");
+  if (devs)
+  {
+    edgex_device_process_configured_devices (svc, devs, err);
+  }
+  else
+  {
+    iot_log_error (svc->logger, "Device upload: No DeviceList in TOML file");
+    *err = EDGEX_CONF_PARSE_ERROR;
+  }
+}
+
+static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *err)
+{
+  devsdk_strings *filenames = devsdk_scandir (svc->logger, svc->config.device.devicesdir, "json");
+  iot_log_info (svc->logger, "Processing Devices from %s", svc->config.device.devicesdir);
+  for (devsdk_strings *f = filenames; f; f = f->next)
+  {
+    JSON_Value *jval = json_parse_file (f->str);
+    if (jval)
+    {
+      JSON_Array *jarr = json_value_get_array (jval);
+      if (jarr)
+      {
+        size_t count = json_array_get_count (jarr);
+        for (size_t i = 0; i < count; i++)
+        {
+          edgex_device_device_upload_obj (svc, json_array_get_object (jarr, i), err);
+        }
+      }
+      else
+      {
+        JSON_Object *jobj = json_value_get_object (jval);
+        if (jobj)
+        {
+          edgex_device_device_upload_obj (svc, json_value_get_object (jval), err);
+        }
+      }
+      json_value_free (jval);
+    }
+    else
+    {
+      iot_log_error (svc->logger, "File does not parse as JSON");
+      *err = EDGEX_CONF_PARSE_ERROR;
+    }
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Error processing file %s", f->str);
+      break;
+    }
+  }
+  devsdk_strings_free (filenames);
+  filenames = devsdk_scandir (svc->logger, svc->config.device.devicesdir, "toml");
+  for (devsdk_strings *f = filenames; f; f = f->next)
+  {
+    FILE *fp = fopen (f->str, "r");
+    if (fp)
+    {
+      char errbuf[ERRBUFSZ];
+      toml_table_t *toml = toml_parse_file (fp, errbuf, ERRBUFSZ);
+      fclose (fp);
+      if (toml)
+      {
+        edgex_device_device_upload_table (svc, toml, err);
+        toml_free (toml);
+      }
+      else
+      {
+        iot_log_error (svc->logger, "File does not parse as TOML");
+        *err = EDGEX_CONF_PARSE_ERROR;
+      }
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Cant open file: %s", strerror (errno));
+      *err = EDGEX_NO_CONF_FILE;
+    }
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Error processing file %s", f->str);
+      break;
+    }
+  }
+  devsdk_strings_free (filenames);
+}
+
 static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk_error *err)
 {
   svc->adminstate = UNLOCKED;
@@ -433,12 +547,11 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
 
-  /* Add Devices from configuration */
+  /* Load Devices from files and register in metadata */
 
-  if (config)
+  if (strlen (svc->config.device.devicesdir))
   {
-    edgex_device_process_configured_devices
-      (svc, toml_array_in (config, "DeviceList"), err);
+    edgex_device_devices_upload (svc, err);
     if (err->code)
     {
       return;

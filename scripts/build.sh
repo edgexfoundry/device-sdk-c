@@ -62,8 +62,7 @@ fi
 mkdir -p $ROOT/build/release
 cd $ROOT/build/release
 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Release $ROOT/src
-make 2>&1 | tee release.log
-make package>&1 | tee -a release.log
+make all package 2>&1 | tee release.log
 
 # Run cppcheck if configured
 

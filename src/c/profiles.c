@@ -14,17 +14,9 @@
 #include "edgex-rest.h"
 #include "iot/time.h"
 #include "errorlist.h"
+#include "filesys.h"
 
-#include <dirent.h>
-#include <errno.h>
 #include <yaml.h>
-
-#define MAX_PATH_SIZE 256
-
-static int yamlselect (const struct dirent *d)
-{
-  return strcasecmp (d->d_name + strlen (d->d_name) - 5, ".yaml") == 0 ? 1 : 0;
-}
 
 const edgex_deviceprofile *edgex_deviceprofile_get_internal
 (
@@ -51,49 +43,15 @@ const edgex_deviceprofile *edgex_deviceprofile_get_internal
 
 void edgex_device_profiles_upload (devsdk_service_t *svc, devsdk_error *err)
 {
-  struct dirent **filenames = NULL;
-  int n;
-  char *fname;
-  char pathname[MAX_PATH_SIZE];
-  const char *profileDir = svc->config.device.profilesdir;
-  iot_logger_t *lc = svc->logger;
+  devsdk_strings *filenames = devsdk_scandir (svc->logger, svc->config.device.profilesdir, "yaml");
 
-  *err = EDGEX_OK;
-  n = scandir (profileDir, &filenames, yamlselect, NULL);
-  if (n < 0)
+  iot_log_info (svc->logger, "Processing Device Profiles from %s", svc->config.device.profilesdir);
+
+  for (devsdk_strings *f = filenames; f; f = f->next)
   {
-    if (errno == ENOENT || errno == ENOTDIR)
-    {
-       iot_log_error (lc, "No profiles directory found at %s", profileDir);
-    }
-    else
-    {
-      iot_log_error (lc, "Error scanning profiles directory: %s", strerror (errno));
-    }
-    *err = EDGEX_PROFILES_DIRECTORY;
-    return;
+    edgex_add_profile (svc, f->str, err);
   }
-
-  iot_log_info (lc, "Processing Device Profiles from %s", profileDir);
-
-  while (n--)
-  {
-    if (err->code == 0)
-    {
-      fname = filenames[n]->d_name;
-      if (snprintf (pathname, MAX_PATH_SIZE, "%s/%s", profileDir, fname) < MAX_PATH_SIZE)
-      {
-        edgex_add_profile (svc, pathname, err);
-      }
-      else
-      {
-        iot_log_error (lc, "%s: Pathname too long (max %d chars)", fname, MAX_PATH_SIZE - 1);
-        *err = EDGEX_PROFILE_PARSE_ERROR;
-      }
-    }
-    free (filenames[n]);
-  }
-  free (filenames);
+  devsdk_strings_free (filenames);
 }
 
 static char *getProfName (iot_logger_t *lc, const char *fname, devsdk_error *err)

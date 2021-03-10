@@ -22,22 +22,6 @@
     Host = 'localhost'
     Port = 48081
 
-[[DeviceList]]
-  Name = 'Counter1'
-  Profile = 'Example-Counter'
-  Description = 'An Example Counting Device'
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.Counter]
-      Index = '3'
-  [[DeviceList.AutoEvents]]
-    Resource = 'Counter'
-    OnChange = false
-    Frequency = '10s'
-
-[[DeviceList]]
-  Name = 'Counter2'
-  Profile = 'Example-Counter'
-  Description = 'Another Example Counting Device'
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.Counter]
-      Index = '58'
+[Device]
+  ProfilesDir = 'res/profiles'
+  DevicesDir = 'res/devices'

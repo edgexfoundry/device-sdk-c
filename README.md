@@ -53,9 +53,9 @@ This will generate the sdk files in a results directory at the root of this proj
 
 Alternatively, you can build a docker image which can be used to build device services in, with the following command:
 
-`docker build -t edgex-csdk-base:1.2.0 -f scripts/Dockerfile.alpine-3.9-base .`
+`docker build -t edgex-csdk-base:2.0.0 -f scripts/Dockerfile.alpine-base .`
 
-You can then write a Dockerfile for your service that begins `FROM edgex-csdk-base:1.2.0`
+You can then write a Dockerfile for your service that begins `FROM edgex-csdk-base:2.0.0`
 
 ### Versioning
 

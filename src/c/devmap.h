@@ -46,6 +46,7 @@ typedef struct edgex_cmdqueue_t
 extern edgex_devmap_t *edgex_devmap_alloc (devsdk_service_t *svc);
 extern void edgex_devmap_clear (edgex_devmap_t *map);
 extern void edgex_devmap_free (edgex_devmap_t *map);
+extern bool edgex_devmap_device_exists (edgex_devmap_t *map, const char *name);
 
 /*
  * These functions copy devices and profiles in and out.

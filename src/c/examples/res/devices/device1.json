@@ -1,0 +1,13 @@
+{
+  "Name": "Device1",
+  "ProfileName": "TemplateSensor",
+  "Description": "An Example Template Device",
+  "Protocols":
+  {
+     "Other": { "Address": "someSensorEndpoint" }
+  },
+  "AutoEvents":
+  [
+    { "sourceName": "SensorOne", "onChange": false, "frequency": "10s" }
+  ]
+}

@@ -278,6 +278,15 @@ edgex_device *edgex_devmap_device_byname (edgex_devmap_t *map, const char *name)
   return result;
 }
 
+bool edgex_devmap_device_exists (edgex_devmap_t *map, const char *name)
+{
+  bool result;
+  pthread_rwlock_rdlock (&map->lock);
+  result = (edgex_map_get (&map->devices, name) != NULL);
+  pthread_rwlock_unlock (&map->lock);
+  return result;
+}
+
 bool edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
 {
   edgex_device **olddev;

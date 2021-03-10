@@ -1,0 +1,9 @@
+{
+  "Name": "Terminal",
+  "ProfileName": "Example-Terminal",
+  "Description": "An Example Terminal Device",
+  "Protocols":
+  {
+     "Terminal": { }
+  }
+}

@@ -12,6 +12,7 @@
 #include "edgex/edgex.h"
 #include "devsdk/devsdk-base.h"
 #include "iot/logger.h"
+#include "devmap.h"
 #include "parson.h"
 
 typedef struct edgex_service_endpoints edgex_service_endpoints;
@@ -81,6 +82,7 @@ char * edgex_metadata_client_add_device
   const char * profile_name,
   devsdk_error *err
 );
+void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, JSON_Object *jobj, devsdk_error *err);
 void edgex_metadata_client_add_or_modify_device
 (
   iot_logger_t *lc,

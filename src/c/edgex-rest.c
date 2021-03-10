@@ -640,7 +640,7 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
 static edgex_device_autoevents *autoevent_read (const JSON_Object *obj)
 {
   edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
-  result->resource = get_string (obj, "resource");
+  result->resource = get_string (obj, "sourceName");
   result->onChange = get_boolean (obj, "onChange", false);
   result->frequency = get_string  (obj, "frequency");
   result->impl = NULL;
@@ -657,7 +657,7 @@ static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
   {
     JSON_Value *pval = json_value_init_object ();
     JSON_Object *pobj = json_value_get_object (pval);
-    json_object_set_string (pobj, "resource", ae->resource);
+    json_object_set_string (pobj, "sourceName", ae->resource);
     json_object_set_string (pobj, "frequency", ae->frequency);
     json_object_set_boolean (pobj, "onChange", ae->onChange);
     json_array_append_value (arr, pval);
@@ -1405,6 +1405,7 @@ edgex_errorresponse *edgex_errorresponse_create (uint64_t code, char *msg)
   res->statusCode = code;
   res->message = msg;
   res->requestId = "";
+  res->apiVersion = "v2";
   return res;
 }
 
