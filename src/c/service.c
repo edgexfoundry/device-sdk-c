@@ -431,6 +431,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   {
     return;
   }
+  svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
 
   *err = EDGEX_OK;
 
@@ -823,7 +824,7 @@ void devsdk_post_readings
 
     if (event)
     {
-      edgex_data_client_add_event (svc, event);
+      edgex_data_client_add_event (svc->dataclient, event);
       if (svc->config.device.updatelastconnected)
       {
         devsdk_error err = EDGEX_OK;
@@ -878,6 +879,7 @@ void devsdk_service_free (devsdk_service_t *svc)
   {
     iot_scheduler_free (svc->scheduler);
     edgex_devmap_free (svc->devices);
+    edgex_data_client_free (svc->dataclient);
     edgex_watchlist_free (svc->watchlist);
     edgex_device_periodic_discovery_free (svc->discovery);
     iot_threadpool_free (svc->thpool);

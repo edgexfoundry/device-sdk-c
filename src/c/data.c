@@ -21,11 +21,19 @@
 
 #define EDGEX_API_VERSION "v2"
 
-typedef struct postparams
+typedef struct edc_postparams
 {
-  devsdk_service_t *svc;
+  edgex_data_client_t *client;
   edgex_event_cooked *event;
-} postparams;
+} edc_postparams;
+
+static void *edc_postjob (void *p)
+{
+  edc_postparams *pp = (edc_postparams *)p;
+  pp->client->pf (pp->client->lc, pp->client->address, pp->event);
+  free (pp);
+  return NULL;
+}
 
 static char *edgex_value_tostring (const iot_data_t *value)
 {
@@ -351,57 +359,26 @@ edgex_event_cooked *edgex_data_process_event
   return result;
 }
 
-static void *edgex_data_post (void *p)
+void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *ev)
 {
-  edgex_ctx ctx;
-  char url[URL_BUF_SIZE];
-  postparams *pp = (postparams *) p;
-  devsdk_error err = EDGEX_OK;
+  edc_postparams *pp = malloc (sizeof (edc_postparams));
+  pp->client = client;
+  pp->event = ev;
+  iot_threadpool_add_work (client->queue, edc_postjob, pp, -1);
+}
 
-  memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf
-  (
-    url,
-    URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/event/%s",
-    pp->svc->config.endpoints.data.host,
-    pp->svc->config.endpoints.data.port,
-    pp->event->path
-  );
+void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *ev)
+{
+  client->pf (client->lc, client->address, ev);
+}
 
-  switch (pp->event->encoding)
+void edgex_data_client_free (edgex_data_client_t *client)
+{
+  if (client)
   {
-    case JSON:
-    {
-      edgex_http_post (pp->svc->logger, &ctx, url, pp->event->value.json, NULL, &err);
-      break;
-    }
-    case CBOR:
-    {
-      edgex_http_postbin
-        (pp->svc->logger, &ctx, url, pp->event->value.cbor.data, pp->event->value.cbor.length, CONTENT_CBOR, NULL, &err);
-      break;
-    }
+    client->ff (client->lc, client->address);
+    free (client);
   }
-  edgex_event_cooked_free (pp->event);
-  free (pp);
-  return NULL;
-}
-
-void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *ev)
-{
-  postparams *pp = malloc (sizeof (postparams));
-  pp->svc = svc;
-  pp->event = ev;
-  iot_threadpool_add_work (svc->eventq, edgex_data_post, pp, -1);
-}
-
-void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked *ev)
-{
-  postparams *pp = malloc (sizeof (postparams));
-  pp->svc = svc;
-  pp->event = ev;
-  edgex_data_post (pp);
 }
 
 void edgex_event_cooked_add_ref (edgex_event_cooked *e)

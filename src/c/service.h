@@ -12,6 +12,7 @@
 #include "devsdk/devsdk.h"
 #include "registry.h"
 #include "config.h"
+#include "data.h"
 #include "devmap.h"
 #include "watchers.h"
 #include "discovery.h"
@@ -34,6 +35,7 @@ struct devsdk_service_t
   atomic_bool *stopconfig;
   edgex_rest_server *daemon;
   edgex_device_periodic_discovery_t *discovery;
+  edgex_data_client_t *dataclient;
   devsdk_registry *registry;
   edgex_device_adminstate adminstate;
   uint64_t starttime;
