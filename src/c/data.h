@@ -15,6 +15,22 @@
 #include "rest-server.h"
 #include "iot/threadpool.h"
 
+#define EX_MQ_TYPE "MessageQueue/Type"
+
+#define EX_MQ_PROTOCOL "MessageQueue/Protocol"
+#define EX_MQ_HOST "MessageQueue/Host"
+#define EX_MQ_PORT "MessageQueue/Port"
+#define EX_MQ_TOPIC "MessageQueue/Topic"
+#define EX_MQ_USERNAME "MessageQueue/Optional/Username"
+#define EX_MQ_PASSWORD "MessageQueue/Optional/Password"
+#define EX_MQ_CLIENTID "MessageQueue/Optional/ClientId"
+#define EX_MQ_QOS "MessageQueue/Optional/Qos"
+#define EX_MQ_KEEPALIVE "MessageQueue/Optional/KeepAlive"
+#define EX_MQ_RETAINED "MessageQueue/Optional/Retained"
+#define EX_MQ_CERTFILE "MessageQueue/Optional/CertFile"
+#define EX_MQ_KEYFILE "MessageQueue/Optional/KeyFile"
+#define EX_MQ_SKIPVERIFY "MessageQueue/Optional/SkipCertVerify"
+
 typedef enum { JSON, CBOR} edgex_event_encoding;
 
 typedef struct edgex_event_cooked

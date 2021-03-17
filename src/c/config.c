@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "service.h"
+#include "data-mqtt.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
 #include "edgex-logging.h"
@@ -66,6 +67,9 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
+
+  iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
+  edgex_mqtt_config_defaults (result);
 
   if (driverconf)
   {
@@ -664,6 +668,14 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_value (wobj, "Device", dval);
 
   json_object_set_value (obj, DYN_NAME, wval);
+
+  const char *mqtype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+  if (strcmp (mqtype, "mqtt") == 0)
+  {
+    JSON_Value *mqval = edgex_mqtt_config_json (svc->config.sdkconf);
+    json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
+    json_object_set_value (obj, "MessageQueue", mqval);
+  }
 
   JSON_Value *cval = json_value_init_object ();
   JSON_Object *cobj = json_value_get_object (cval);

@@ -37,6 +37,10 @@ find_package (LIBCBOR REQUIRED)
 if (NOT LIBCBOR_FOUND)
   message (FATAL_ERROR "CBOR library or header not found")
 endif ()
+find_package (LIBPAHO REQUIRED)
+if (NOT LIBPAHO_FOUND)
+  message (FATAL_ERROR "Paho MQTT library or header not found")
+endif ()
 
 message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 

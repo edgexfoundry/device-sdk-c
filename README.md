@@ -16,11 +16,12 @@ The C SDK provides a framework for building EdgeX device services in C.
   * microhttpd (version 0.9)
   * libyaml (version 0.1.6 or later)
   * libcbor (version 0.5)
+  * paho (version 1.3.x)
   * libuuid (from util-linux v2.x)
 
-On Debian 10 "Buster" these libraries can be installed by
+On Debian 11 "Bullseye" these libraries can be installed by
 ```
-apt-get install libcurl4-openssl-dev libmicrohttpd-dev libyaml-dev libcbor-dev 
+apt-get install libcurl4-openssl-dev libmicrohttpd-dev libyaml-dev libcbor-dev libpaho-mqtt-dev
 ```
 
 ### Building

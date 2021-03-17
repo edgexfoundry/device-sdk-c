@@ -18,6 +18,7 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "data.h"
+#include "data-mqtt.h"
 #include "rest.h"
 #include "edgex-rest.h"
 #include "iot/time.h"
@@ -423,15 +424,27 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Wait for metadata and data to be available */
 
-  if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.connectretries, svc->config.service.timeout, err))
+  if (strcmp (iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE), "mqtt") == 0)
   {
-    return;
+    svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, svc->eventq);
+    if (svc->dataclient == NULL)
+    {
+      return;
+    }
   }
+  else
+  {
+    svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
+    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.connectretries, svc->config.service.timeout, err))
+    {
+      return;
+    }
+  }
+
   if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, svc->config.service.connectretries, svc->config.service.timeout, err))
   {
     return;
   }
-  svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
 
   *err = EDGEX_OK;
 
