@@ -39,11 +39,9 @@ deviceResources:
 deviceCommands:
   -
     name: WriteMsg
-    set:
-      - { deviceResource: "Cmd", parameter: "WriteMsg" }
+    readWrite: "W"
+    resourceOperations:
+      - { deviceResource: "Cmd", defaultValue: "WriteMsg" }
       - { deviceResource: "Xposition" }
       - { deviceResource: "Yposition" }
       - { deviceResource: "Message" }
-
-coreCommands:
-  - { name: "WriteMsg", set: true }

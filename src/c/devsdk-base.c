@@ -27,6 +27,21 @@ devsdk_nvpairs *devsdk_nvpairs_new (const char *name, const char *value, devsdk_
   return result;
 }
 
+const char *devsdk_nvpairs_reverse_value (const devsdk_nvpairs *nvp, const char *name)
+{
+  if (name)
+  {
+    for (; nvp; nvp = nvp->next)
+    {
+      if (strcmp (nvp->value, name) == 0)
+      {
+        return nvp->name;
+      }
+    }
+  }
+  return NULL;
+}
+
 const char *devsdk_nvpairs_value (const devsdk_nvpairs *nvp, const char *name)
 {
   if (name)

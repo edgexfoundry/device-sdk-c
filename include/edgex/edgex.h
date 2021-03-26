@@ -37,7 +37,7 @@ typedef struct edgex_deviceservice
 typedef struct edgex_resourceoperation
 {
   char *deviceResource;
-  char *parameter;
+  char *defaultValue;
   devsdk_nvpairs *mappings;
   struct edgex_resourceoperation *next;
 } edgex_resourceoperation;
@@ -73,8 +73,9 @@ typedef struct edgex_deviceresource
 typedef struct edgex_devicecommand
 {
   char *name;
-  edgex_resourceoperation *set;
-  edgex_resourceoperation *get;
+  edgex_resourceoperation *resourceOperations;
+  bool readable;
+  bool writable;
   struct edgex_devicecommand *next;
 } edgex_devicecommand;
 

@@ -51,4 +51,4 @@ curl -X PUT -d '{"Message":"Hello World", "Xposition":"35", "Yposition":"12"}' 0
 
 ### Implementation notes
 
-The service uses the defaulting mechanism in deviceCommands in order to pass the name of the operation being requested to the implementation. The `parameter` field in a resource operation sets a value to be used if one is not supplied in the PUT request.
+The service uses the defaulting mechanism in deviceCommands in order to pass the name of the operation being requested to the implementation. The `defaultValue` field in a resource operation sets a value to be used if one is not supplied in the PUT request.

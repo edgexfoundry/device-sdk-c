@@ -211,7 +211,7 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
     break;
     case IOT_DATA_STRING:
     {
-      const char *remap = devsdk_nvpairs_value (mappings, iot_data_string (*cres));
+      const char *remap = devsdk_nvpairs_reverse_value (mappings, iot_data_string (*cres));
       if (remap)
       {
         iot_data_free (*cres);
