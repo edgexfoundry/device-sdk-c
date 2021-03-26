@@ -2,11 +2,11 @@
   LogLevel = 'DEBUG'
 
 [Clients]
-  [Clients.Data]
+  [Clients.edgex-core-data]
     Host = 'localhost'
     Port = 48080
 
-  [Clients.Metadata]
+  [Clients.edgex-core-metadata]
     Host = 'localhost'
     Port = 48081
 

@@ -35,14 +35,14 @@ MaxRequestSize | Int | Amount of data beyond which the service will reject an in
 
 Defines the endpoints for other microservices in an EdgeX system.
 
-### Data
+### edgex-core-data
 
 Option | Type | Notes
 :--- | :--- | :---
 Host | String | Hostname on which to contact the core-data service.
 Port | Int | Port on which to contact the core-data service.
 
-### Metadata
+### edgex-core-metadata
 
 Option | Type | Notes
 :--- | :--- | :---
