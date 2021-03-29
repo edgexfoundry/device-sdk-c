@@ -319,7 +319,6 @@ edgex_rest_server *edgex_rest_server_create
 {
   edgex_rest_server *svr;
   uint16_t flags = MHD_USE_THREAD_PER_CONNECTION;
-  /* config: flags |= MHD_USE_IPv6 ? */
 
   svr = calloc (1, sizeof (edgex_rest_server));
   svr->lc = lc;
@@ -340,6 +339,10 @@ edgex_rest_server *edgex_rest_server_create
       iot_log_info (lc, "Starting HTTP server on interface %s, port %d", bindaddr, port);
       edgex_rest_sa_out (resaddr, res->ai_addr);
       iot_log_debug (lc, "Resolved interface is %s", resaddr);
+      if (res->ai_family == AF_INET6)
+      {
+        flags |= MHD_USE_IPv6;
+      }
       svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_SOCK_ADDR, res->ai_addr, MHD_OPTION_END);
       freeaddrinfo (res);
     }
