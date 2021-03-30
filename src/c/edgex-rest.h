@@ -17,6 +17,8 @@ devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs);
 void devsdk_strings_free (devsdk_strings *strs);
 devsdk_nvpairs *devsdk_nvpairs_dup (const devsdk_nvpairs *p);
 void devsdk_nvpairs_free (devsdk_nvpairs *p);
+JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload);
+JSON_Value *edgex_wrap_request_single (const char *objName, JSON_Value *payload);
 const char *edgex_propertytype_tostring (edgex_propertytype pt);
 bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str);
 iot_typecode_t *edgex_propertytype_totypecode (edgex_propertytype pt);

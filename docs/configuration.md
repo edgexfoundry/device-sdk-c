@@ -8,15 +8,11 @@ If the Registry is in use, configuration is contained in subfolders of `edgex/co
 
 When a device service is run for the first time with Registry enabled, it reads its configuration from a TOML file and uploads it to the Registry.
 
-The value of any configuration element can be over-ridden with a value from a corresponding environment variable. The service first looks for an environment variable whose name is of the form
-
-`<service-name>_<section-name>_<config-element>`
-
-and if that is not present, then tries
+The value of any configuration element can be over-ridden with a value from a corresponding environment variable. The service looks for an environment variable whose name is of the form
 
 `<section-name>_<config-element>`
 
-For example, `device-template_Device_MaxCmdOps` or `Logging_LogLevel`.
+For example, `Service_ServerBindAddr`.
 
 ## Service section
 
