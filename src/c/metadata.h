@@ -82,7 +82,10 @@ char * edgex_metadata_client_add_device
   const char * profile_name,
   devsdk_error *err
 );
+
 void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, JSON_Object *jobj, devsdk_error *err);
+void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, JSON_Object *jobj, devsdk_error *err);
+
 void edgex_metadata_client_add_or_modify_device
 (
   iot_logger_t *lc,

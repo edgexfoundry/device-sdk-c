@@ -1,0 +1,44 @@
+{
+  "name": "Example-Gyro",
+  "manufacturer": "IoTechSystems",
+  "model": "IoT4",
+  "description": "Virtual 3-axis Gyro Device for CSDK Example",
+  "labels": ["sensor"],
+  "apiVersion": "v2",
+
+  "deviceResources":
+  [
+    {
+      "name": "Xrotation",
+      "description": "X axis rotation rate",
+      "attributes": { "parameter": "xrot" },
+      "properties": { "valueType": "Int32", "readWrite": "R", "units": "degrees/sec" }
+    },
+    {
+      "name": "Yrotation",
+      "description": "Y axis rotation rate",
+      "attributes": { "parameter": "yrot" },
+      "properties": { "valueType": "Int32", "readWrite": "R", "units": "degrees/sec" }
+    },
+    {
+      "name": "Zrotation",
+      "description": "Z axis rotation rate",
+      "attributes": { "parameter": "zrot" },
+      "properties": { "valueType": "Int32", "readWrite": "R", "units": "degrees/sec" }
+    }
+  ],
+
+  "deviceCommands":
+  [
+    {
+      "name": "rotation",
+      "readWrite": "R",
+      "resourceOperations":
+      [
+        { "deviceResource": "Xrotation" },
+        { "deviceResource": "Yrotation" },
+        { "deviceResource": "Zrotation" }
+      ]
+    }
+  ]
+}

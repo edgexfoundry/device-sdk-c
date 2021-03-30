@@ -178,6 +178,43 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   return result;
 }
 
+static char *devsdk_service_confpath (const char *dir, const char *fname, const char *profile)
+{
+  int pathlen;
+  char *result;
+
+  if (fname && *fname)
+  {
+    pathlen = strlen (dir) + 1 + strlen (fname) + 1;
+  }
+  else
+  {
+    pathlen = strlen (dir) + 1 + strlen ("configuration.toml") + 1;
+    if (profile && *profile)
+    {
+      pathlen += (strlen (profile) + 1);
+    }
+  }
+  result = malloc (pathlen);
+  strcpy (result, dir);
+  strcat (result, "/");
+  if (fname && *fname)
+  {
+    strcat (result, fname);
+  }
+  else
+  {
+    strcat (result, "configuration");
+    if (profile && *profile)
+    {
+      strcat (result, "-");
+      strcat (result, profile);
+    }
+    strcat (result, ".toml");
+  }
+  return result;
+}
+
 devsdk_service_t *devsdk_service_new
   (const char *defaultname, const char *version, void *impldata, devsdk_callbacks implfns, int *argc, char **argv, devsdk_error *err)
 {
@@ -231,6 +268,7 @@ devsdk_service_t *devsdk_service_new
   {
     result->confdir = "res";
   }
+  result->confpath = devsdk_service_confpath (result->confdir, result->conffile, result->profile);
   result->version = version;
   result->userdata = impldata;
   result->userfns = implfns;
@@ -311,10 +349,17 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
   {
     if (!edgex_devmap_device_exists (svc->devices, dname))
     {
-      JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
-      JSON_Object *deviceobj = json_value_get_object (jval);
-      json_object_set_string (deviceobj, "serviceName", svc->name);
-      edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, deviceobj, err);
+      if (json_object_get_string (jobj, "profileName"))
+      {
+        JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
+        JSON_Object *deviceobj = json_value_get_object (jval);
+        json_object_set_string (deviceobj, "serviceName", svc->name);
+        edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, deviceobj, err);
+      }
+      else
+      {
+        iot_log_warn (svc->logger, "Device upload: Missing device profileName definition");
+      }
     }
     else
     {
@@ -323,8 +368,7 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
   }
   else
   {
-    iot_log_error (svc->logger, "Device upload: Missing device name definition");
-    *err = EDGEX_CONF_PARSE_ERROR;
+    iot_log_warn (svc->logger, "Device upload: Missing device name definition");
   }
 }
 
@@ -337,8 +381,7 @@ static void edgex_device_device_upload_table (devsdk_service_t *svc, toml_table_
   }
   else
   {
-    iot_log_error (svc->logger, "Device upload: No DeviceList in TOML file");
-    *err = EDGEX_CONF_PARSE_ERROR;
+    iot_log_warn (svc->logger, "Device upload: No DeviceList in TOML file");
   }
 }
 
@@ -385,6 +428,10 @@ static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *er
   filenames = devsdk_scandir (svc->logger, svc->config.device.devicesdir, "toml");
   for (devsdk_strings *f = filenames; f; f = f->next)
   {
+    if (strcmp (f->str, svc->confpath) == 0)
+    {
+      continue;
+    }
     FILE *fp = fopen (f->str, "r");
     if (fp)
     {
@@ -689,7 +736,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     if (*svc->regURL == '\0')
     {
       devsdk_error e;
-      configtoml = edgex_device_loadConfig (svc->logger, svc->confdir, svc->conffile, svc->profile, &e);
+      configtoml = edgex_device_loadConfig (svc->logger, svc->confpath, &e);
       svc->regURL = edgex_device_getRegURL (configtoml);
     }
     if (svc->regURL)
@@ -746,7 +793,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   {
     if (configtoml == NULL)
     {
-      configtoml = edgex_device_loadConfig (svc->logger, svc->confdir, svc->conffile, svc->profile, err);
+      configtoml = edgex_device_loadConfig (svc->logger, svc->confpath, err);
       if (err->code)
       {
         return;
@@ -916,6 +963,7 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);
+    free (svc->confpath);
     free (svc->name);
     free (svc);
     iot_fini ();
