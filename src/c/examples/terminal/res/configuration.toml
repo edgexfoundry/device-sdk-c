@@ -22,9 +22,6 @@
     Host = 'localhost'
     Port = 48081
 
-[[DeviceList]]
-  Name = 'Terminal'
-  Profile = 'Example-Terminal'
-  Description = 'An Example Terminal Device'
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.Terminal]
+[Device]
+  ProfilesDir = 'res/profiles'
+  DevicesDir = 'res/devices'

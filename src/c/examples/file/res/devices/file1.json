@@ -1,0 +1,9 @@
+{
+  "name": "File1",
+  "profileName": "FileProfile",
+  "description": "An Example File Device",
+  "protocols":
+  {
+     "Filename": { "Name": "./res/lorem.txt" }
+  }
+}

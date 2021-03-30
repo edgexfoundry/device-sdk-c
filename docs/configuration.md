@@ -69,6 +69,7 @@ UpdateLastConnected | Bool | If true, update the LastConnected attribute of a de
 Option | Type | Notes
 :--- | :--- | :---
 ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
+DevicesDir | String | A directory which the service will scan at startup for Device definitions in `.json` or `/toml` files. Any such devices which do not already exist in EdgeX will be uploaded to core-metadata.
 EventQLength | Int | Sets the maximum number of events to be queued for transmission to core-data before blocking. Zero (default) results in no limit.
 
 ## Driver section

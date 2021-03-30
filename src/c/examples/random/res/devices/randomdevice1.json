@@ -1,0 +1,14 @@
+{
+  "name": "RandomDevice1",
+  "profileName": "ExampleSensor",
+  "description": "An Example Random Device",
+  "protocols":
+  {
+     "Other": { "Address": "someSensorEndpoint" }
+  },
+  "autoEvents":
+  [
+    { "sourceName": "SensorOne", "onChange": false, "frequency": "10s" },
+    { "sourceName": "SensorTwo", "onChange": true, "frequency": "15000ms" }
+  ]
+}
