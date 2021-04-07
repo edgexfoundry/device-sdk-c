@@ -14,7 +14,7 @@
 #include "parson.h"
 #include "iot/base64.h"
 
-#define CONF_PREFIX "edgex/devices/1.0/"
+#define CONF_PREFIX "edgex/devices/2.0/"
 
 static devsdk_nvpairs *read_pairs
 (
