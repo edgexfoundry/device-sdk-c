@@ -13,9 +13,9 @@
 
 void edgex_mqtt_config_defaults (iot_data_t *allconf)
 {
-  iot_data_string_map_add (allconf, EX_MQ_PROTOCOL, iot_data_alloc_string ("tcp", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_PROTOCOL, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_HOST, iot_data_alloc_string ("localhost", IOT_DATA_REF));
-  iot_data_string_map_add (allconf, EX_MQ_PORT, iot_data_alloc_ui16 (1883));
+  iot_data_string_map_add (allconf, EX_MQ_PORT, iot_data_alloc_ui16 (0));
   iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string ("edgex/events", IOT_DATA_REF));
 
   iot_data_string_map_add (allconf, EX_MQ_USERNAME, iot_data_alloc_string ("", IOT_DATA_REF));
@@ -150,6 +150,22 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   const char *pass = iot_data_string_map_get_string (allconf, EX_MQ_PASSWORD);
   const char *certfile = iot_data_string_map_get_string (allconf, EX_MQ_CERTFILE);
   const char *keyfile = iot_data_string_map_get_string (allconf, EX_MQ_KEYFILE);
+  uint16_t port = iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT));
+  if (*prot == '\0')
+  {
+    prot = "tcp";
+  }
+  if (port == 0)
+  {
+    if (strcmp (prot, "ssl") == 0)
+    {
+      port = 8883;
+    }
+    else
+    {
+      port = 1883;
+    }
+  }
 
   uri = malloc (strlen (host) + strlen (prot) + 10);
   sprintf (uri, "%s://%s:%" PRIu16, prot, host, iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT)));

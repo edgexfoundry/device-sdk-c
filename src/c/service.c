@@ -19,6 +19,7 @@
 #include "metadata.h"
 #include "data.h"
 #include "data-mqtt.h"
+#include "data-redstr.h"
 #include "rest.h"
 #include "edgex-rest.h"
 #include "iot/time.h"
@@ -427,6 +428,14 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   if (strcmp (iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE), "mqtt") == 0)
   {
     svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, svc->eventq);
+    if (svc->dataclient == NULL)
+    {
+      return;
+    }
+  }
+  else if (strcmp (iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE), "redisstream") == 0)
+  {
+    svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger);
     if (svc->dataclient == NULL)
     {
       return;

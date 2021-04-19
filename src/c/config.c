@@ -21,6 +21,7 @@
 #include "config.h"
 #include "service.h"
 #include "data-mqtt.h"
+#include "data-redstr.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
 #include "edgex-logging.h"
@@ -70,6 +71,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
 
   iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
   edgex_mqtt_config_defaults (result);
+  // NB redis-streams uses a subset of the mqtt options
 
   if (driverconf)
   {
@@ -673,6 +675,12 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   if (strcmp (mqtype, "mqtt") == 0)
   {
     JSON_Value *mqval = edgex_mqtt_config_json (svc->config.sdkconf);
+    json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
+    json_object_set_value (obj, "MessageQueue", mqval);
+  }
+  else if (strcmp (mqtype, "redisstream") == 0)
+  {
+    JSON_Value *mqval = edgex_redstr_config_json (svc->config.sdkconf);
     json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
     json_object_set_value (obj, "MessageQueue", mqval);
   }

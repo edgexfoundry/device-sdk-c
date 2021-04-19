@@ -41,6 +41,10 @@ find_package (LIBPAHO REQUIRED)
 if (NOT LIBPAHO_FOUND)
   message (FATAL_ERROR "Paho MQTT library or header not found")
 endif ()
+find_package (LIBHIREDIS REQUIRED)
+if (NOT LIBHIREDIS_FOUND)
+  message (FATAL_ERROR "Hiredis (Redis client) library or header not found")
+endif ()
 
 message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 

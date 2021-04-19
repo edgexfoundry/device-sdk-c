@@ -80,20 +80,20 @@ This section is for driver-specific options. Any configuration specified here wi
 
 Option | Type | Notes
 :--- | :--- | :---
-Type | String | If this option is present and set to `mqtt`, the service will deliver events via the MQTT Message Bus rather than by making REST calls to the core-data service.
+Type | String | If this option is present and set to `mqtt` or `redisstream`, the service will deliver events via the specified Message Bus implementation rather than by making REST calls to the core-data service.
 
-The following basic options may be configured for MQTT connections:
+The following basic options may be configured for Message Bus connections:
 
 Option | Type | Notes
 :--- | :--- | :---
-Protocol | String | The MQTT protocol to use, `tcp` or `ssl`. Defaults to `tcp`.
-Host | String | The host on which the MQTT server is running. Defaults to `localhost`.
-Port | Unsigned Int | The port on which the MQTT server is running. Defaults to `1883`.
-Topic | String | The topic under which events are to be published. Defaults to `edgex/events` which results in events being published to `edgex/events/profile-name/device-name/source-name`.
+Protocol | String | The protocol to use. For MQTT this is `tcp` or `ssl`. Defaults to `tcp`. For Redis this should be `redis`.
+Host | String | The host on which the MQTT or Redis server is running. Defaults to `localhost`.
+Port | Unsigned Int | The port on which the MQTT or Redis server is running. Defaults to `1883` for MQTT or `6379` for Redis.
+Topic | String | The topic under which events are to be published. Defaults to `edgex/events` which results in events being published to `edgex/events/profile-name/device-name/source-name`. For Redis the `/` delimeter in topic names is replaced with `.`.
 
 ### MessageQueue/Optional section
 
-The following options are unset by default but may be required in some applications, eg if ssl is to be used:
+The following options are unset by default but may be required in some applications, eg if ssl is to be used. All are recognized for MQTT but for Redis none are implemented.
 
 Option | Type | Notes
 :--- | :--- | :---
