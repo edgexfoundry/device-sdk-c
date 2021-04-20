@@ -315,11 +315,11 @@ void edgex_device_parseTomlClients
 {
   if (clients)
   {
-    parseClient (lc, toml_table_in (clients, "Data"), &endpoints->data, err);
-    parseClient (lc, toml_table_in (clients, "Metadata"), &endpoints->metadata, err);
+    parseClient (lc, toml_table_in (clients, "edgex-core-data"), &endpoints->data, err);
+    parseClient (lc, toml_table_in (clients, "edgex-core-metadata"), &endpoints->metadata, err);
   }
-  checkClientOverride (lc, "DATA", &endpoints->data);
-  checkClientOverride (lc, "METADATA", &endpoints->metadata);
+  checkClientOverride (lc, "EDGEX_CORE_DATA", &endpoints->data);
+  checkClientOverride (lc, "EDGEX_CORE_METADATA", &endpoints->metadata);
 }
 
 static char *checkOverride (char *qstr)
