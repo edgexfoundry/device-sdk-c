@@ -15,7 +15,8 @@
 
 typedef struct edgex_ctx
 {
-  char *cacerts_file;     // Location of CA certificates Curl will use to verify peer
+  char *cacerts_file;     // Location of CA certificates file Curl will use to verify peer       } set one or
+  char *cacerts_path;     // Location of CA certificates directory Curl will use to verify peer  } the other
   int verify_peer;        // enables TLS peer verification via Curl
   char *tls_cert;         // Location of PEM encoded X509 cert to use for TLS client auth
   char *tls_key;          // Location of PEM encoded priv key to use for TLS client auth

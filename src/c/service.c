@@ -26,6 +26,7 @@
 #include "iot/iot.h"
 #include "filesys.h"
 #include "edgex/csdk-defs.h"
+#include "edgex/secrets.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +34,8 @@
 #include <dirent.h>
 
 #include <microhttpd.h>
+
+#define SECUREENV "EDGEX_SECURITY_SECRET_STORE"
 
 #define POOL_THREADS 8
 #define PING_RETRIES 10
@@ -538,6 +541,31 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     return;
   }
 
+  char *secure = getenv (SECUREENV);
+  if (secure && strcmp (secure, "false") == 0)
+  {
+    svc->secretstore = edgex_secrets_get_insecure ();
+  }
+  else
+  {
+    const char *sectype = iot_data_string_map_get_string (svc->config.sdkconf, "SecretStore/Type");
+    if (strcmp (sectype, "vault") == 0)
+    {
+      svc->secretstore = edgex_secrets_get_vault ();
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Unknown Secret Store type %s", sectype);
+      *err = EDGEX_BAD_CONFIG;
+      return;
+    }
+  }
+  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->config.sdkconf))
+  {
+    *err = EDGEX_BAD_CONFIG;
+    return;
+  }
+
   *err = EDGEX_OK;
 
   /* Register device service in metadata */
@@ -711,8 +739,9 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 
-  edgex_rest_server_register_handler
-    (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_SECRET, DevSDK_Post, svc, edgex_device_handler_secret);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_PING, DevSDK_Get, svc, ping2_handler);
 
@@ -760,7 +789,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   svc->starttime = iot_time_msecs();
   iot_threadpool_start (svc->thpool);
 
-  configmap = edgex_config_defaults (driverdfls);
+  configmap = edgex_config_defaults (driverdfls, svc->name);
 
   if (svc->regURL)
   {
@@ -942,6 +971,11 @@ void devsdk_post_readings
   }
 }
 
+devsdk_nvpairs *edgex_get_secrets (devsdk_service_t *svc, const char *path)
+{
+  return edgex_secrets_get (svc->secretstore, path);
+}
+
 void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
 {
   *err = EDGEX_OK;
@@ -974,6 +1008,7 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
   iot_threadpool_wait (svc->thpool);
   svc->userfns.stop (svc->userdata, force);
   edgex_devmap_clear (svc->devices);
+  edgex_secrets_fini (svc->secretstore);
   iot_log_info (svc->logger, "Stopped device service");
 }
 

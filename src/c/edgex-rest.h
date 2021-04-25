@@ -15,6 +15,8 @@
 
 devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs);
 void devsdk_strings_free (devsdk_strings *strs);
+char *devsdk_nvpairs_write (const devsdk_nvpairs *e);
+devsdk_nvpairs *devsdk_nvpairs_read (const JSON_Object *obj);
 devsdk_nvpairs *devsdk_nvpairs_dup (const devsdk_nvpairs *p);
 void devsdk_nvpairs_free (devsdk_nvpairs *p);
 JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload);
