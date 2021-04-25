@@ -105,17 +105,34 @@ void devsdk_strings_free (devsdk_strings *strs)
   }
 }
 
-static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
+static JSON_Value *nvpairs_write (const devsdk_nvpairs *e)
+{
+  JSON_Value *result = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (result);
+
+  for (const devsdk_nvpairs *nv = e; nv; nv = nv->next)
+  {
+    json_object_set_string (obj, nv->name, nv->value);
+  }
+
+  return result;
+}
+
+char *devsdk_nvpairs_write (const devsdk_nvpairs *e)
+{
+  JSON_Value *val = nvpairs_write (e);
+  char *result = json_serialize_to_string (val);
+  json_value_free (val);
+  return result;
+}
+
+devsdk_nvpairs *devsdk_nvpairs_read (const JSON_Object *obj)
 {
   devsdk_nvpairs *result = NULL;
   size_t count = json_object_get_count (obj);
   for (size_t i = 0; i < count; i++)
   {
-    devsdk_nvpairs *nv = malloc (sizeof (devsdk_nvpairs));
-    nv->name = strdup (json_object_get_name (obj, i));
-    nv->value = strdup (json_value_get_string (json_object_get_value_at (obj, i)));
-    nv->next = result;
-    result = nv;
+    result = devsdk_nvpairs_new (json_object_get_name (obj, i), json_string (json_object_get_value_at (obj, i)), result);
   }
   return result;
 }
@@ -456,7 +473,7 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   result->deviceResource = get_string (obj, "deviceResource");
   result->defaultValue = get_string (obj, "defaultValue");
   mappings_obj = json_object_get_object (obj, "mappings");
-  result->mappings = nvpairs_read (mappings_obj);
+  result->mappings = devsdk_nvpairs_read (mappings_obj);
   result->next = NULL;
   return result;
 }
@@ -1272,7 +1289,7 @@ static edgex_watcher *watcher_read (const JSON_Object *obj)
   JSON_Object *idobj = json_object_get_object (obj, "identifiers");
   if (idobj)
   {
-    result->identifiers = nvpairs_read (idobj);
+    result->identifiers = devsdk_nvpairs_read (idobj);
   }
   JSON_Object *blockObj = json_object_get_object (obj, "blockingIdentifiers");
   if (blockObj)

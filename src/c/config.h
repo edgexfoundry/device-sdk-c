@@ -76,7 +76,7 @@ typedef struct edgex_device_config
 
 toml_table_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err);
 
-iot_data_t *edgex_config_defaults (const iot_data_t *driverconf);
+iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svcname);
 
 char *edgex_device_getRegURL (toml_table_t *config);
 
