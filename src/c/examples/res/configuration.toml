@@ -28,14 +28,6 @@
 [Driver]
   TestParam1 = 'Hello'
 
-[[DeviceList]]
-  Name = 'Device1'
-  Profile = 'TemplateSensor'
-  Description = 'An Example Template Device'
-  [DeviceList.Protocols]
-    [DeviceList.Protocols.Other]
-      Address = 'someSensorEndpoint'
-  [[DeviceList.AutoEvents]]
-    Resource = 'SensorOne'
-    OnChange = false
-    Frequency = '10s'
+[Device]
+  ProfilesDir = 'res/profiles'
+  DevicesDir = 'res/devices'

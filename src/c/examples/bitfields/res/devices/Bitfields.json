@@ -1,0 +1,9 @@
+{
+  "name": "Bitfields",
+  "profileName": "Example-Bitfields",
+  "description": "An Example Bitfields Device",
+  "protocols":
+  {
+     "Other": { }
+  }
+}

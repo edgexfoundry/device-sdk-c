@@ -178,8 +178,9 @@ static int http_handler
       return MHD_NO;
     }
     ctx->m_data = (char *) realloc (ctx->m_data, required);
-    memcpy (ctx->m_data + ctx->m_size, upload_data, (*upload_data_size) + 1);
+    memcpy (ctx->m_data + ctx->m_size, upload_data, (*upload_data_size));
     ctx->m_size += *upload_data_size;
+    ctx->m_data[ctx->m_size] = 0;
     *upload_data_size = 0;
     return MHD_YES;
   }

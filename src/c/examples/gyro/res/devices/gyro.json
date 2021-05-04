@@ -1,0 +1,9 @@
+{
+  "name": "Gyro",
+  "profileName": "Example-Gyro",
+  "description": "An Example Gyro Device",
+  "protocols":
+  {
+     "Gyro": { }
+  }
+}

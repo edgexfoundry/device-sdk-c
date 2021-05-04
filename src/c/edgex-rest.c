@@ -640,7 +640,7 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
 static edgex_device_autoevents *autoevent_read (const JSON_Object *obj)
 {
   edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
-  result->resource = get_string (obj, "resource");
+  result->resource = get_string (obj, "sourceName");
   result->onChange = get_boolean (obj, "onChange", false);
   result->frequency = get_string  (obj, "frequency");
   result->impl = NULL;
@@ -657,7 +657,7 @@ static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
   {
     JSON_Value *pval = json_value_init_object ();
     JSON_Object *pobj = json_value_get_object (pval);
-    json_object_set_string (pobj, "resource", ae->resource);
+    json_object_set_string (pobj, "sourceName", ae->resource);
     json_object_set_string (pobj, "frequency", ae->frequency);
     json_object_set_boolean (pobj, "onChange", ae->onChange);
     json_array_append_value (arr, pval);
@@ -888,7 +888,7 @@ edgex_deviceprofile *edgex_getprofileresponse_read (iot_logger_t *lc, const char
   return result;
 }
 
-static JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
+JSON_Value *edgex_wrap_request_single (const char *objName, JSON_Value *payload)
 {
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
@@ -896,9 +896,14 @@ static JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
   json_object_set_string (obj, "apiVersion", "v2");
   json_object_set_value (obj, objName, payload);
 
+  return val;
+}
+
+JSON_Value *edgex_wrap_request (const char *objName, JSON_Value *payload)
+{
   JSON_Value *arrval = json_value_init_array ();
   JSON_Array *array = json_value_get_array (arrval);
-  json_array_append_value (array, val);
+  json_array_append_value (array, edgex_wrap_request_single (objName, payload));
 
   return arrval;
 }
@@ -1400,6 +1405,7 @@ edgex_errorresponse *edgex_errorresponse_create (uint64_t code, char *msg)
   res->statusCode = code;
   res->message = msg;
   res->requestId = "";
+  res->apiVersion = "v2";
   return res;
 }
 

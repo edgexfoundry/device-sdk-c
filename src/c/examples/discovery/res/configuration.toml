@@ -1,10 +1,10 @@
 [Writable]
   LogLevel = 'DEBUG'
-  [Device]
+  [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
     MaxCmdResultLen = 256
-    [Device.Discovery]
+    [Writable.Device.Discovery]
       Enabled = true
       Interval = 10
 
@@ -29,3 +29,5 @@
   TestParam1 = 'Hello'
   TestParam2 = 'World'
 
+[Device]
+  ProfilesDir = 'res/profiles'

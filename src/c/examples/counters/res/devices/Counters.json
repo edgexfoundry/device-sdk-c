@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Counter1",
+    "profileName": "Example-Counter",
+    "description": "An Example Counting Device",
+    "protocols":
+    {
+       "Counter": { "Index": "3" }
+    },
+    "autoEvents":
+    [
+      { "sourceName": "Counter", "onChange": false, "frequency": "10s" }
+    ]
+  },
+  {
+    "name": "Counter2",
+    "profileName": "Example-Counter",
+    "description": "Another Example Counting Device",
+    "protocols":
+    {
+       "Counter": { "Index": "58" }
+    }
+  }
+]
