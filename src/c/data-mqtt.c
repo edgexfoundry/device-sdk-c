@@ -9,7 +9,8 @@
 #include "data-mqtt.h"
 #include "correlation.h"
 #include "iot/base64.h"
-#include <MQTTClient.h>
+#include "iot/time.h"
+#include <MQTTAsync.h>
 
 void edgex_mqtt_config_defaults (iot_data_t *allconf)
 {
@@ -56,8 +57,11 @@ JSON_Value *edgex_mqtt_config_json (const iot_data_t *allconf)
 
 typedef struct edc_mqtt_conninfo
 {
-  MQTTClient client;
+  MQTTAsync client;
   char *uri;
+  iot_logger_t *lc;
+  pthread_mutex_t mtx;
+  pthread_cond_t cond;
   uint16_t qos;
   bool retained;
   const char *topicbase;
@@ -66,10 +70,26 @@ typedef struct edc_mqtt_conninfo
 static void edc_mqtt_freefn (iot_logger_t *lc, void *address)
 {
   edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)address;
-  MQTTClient_disconnect (cinfo->client, 10000);
-  MQTTClient_destroy (&cinfo->client);
+  MQTTAsync_disconnectOptions opts = MQTTAsync_disconnectOptions_initializer;
+  opts.context = cinfo->client;
+  MQTTAsync_disconnect (cinfo->client, &opts);
+  MQTTAsync_destroy (&cinfo->client);
   free (cinfo->uri);
+  pthread_cond_destroy (&cinfo->cond);
+  pthread_mutex_destroy (&cinfo->mtx);
   free (address);
+}
+
+static void edc_mqtt_onsend (void *context, MQTTAsync_successData *response)
+{
+  edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
+  iot_log_debug (cinfo->lc, "mqtt: published event");
+}
+
+static void edc_mqtt_onsendfail (void *context, MQTTAsync_failureData *response)
+{
+  edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
+  iot_log_error (cinfo->lc, "mqtt: publish failed, error code %d", response->code);
 }
 
 static void edc_mqtt_postfn (iot_logger_t *lc, void *address, edgex_event_cooked *event)
@@ -83,7 +103,8 @@ static void edc_mqtt_postfn (iot_logger_t *lc, void *address, edgex_event_cooked
   char *json;
   char *topic;
   edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)address;
-  MQTTClient_message pubmsg = MQTTClient_message_initializer;
+  MQTTAsync_message pubmsg = MQTTAsync_message_initializer;
+  MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
 
   topic = malloc (strlen (cinfo->topicbase) + strlen (event->path) + 2);
   strcpy (topic, cinfo->topicbase);
@@ -116,11 +137,14 @@ static void edc_mqtt_postfn (iot_logger_t *lc, void *address, edgex_event_cooked
   pubmsg.payloadlen = strlen (json) + 1;
   pubmsg.qos = cinfo->qos;
   pubmsg.retained = cinfo->retained;
-
-  result = MQTTClient_publishMessage (cinfo->client, topic, &pubmsg, NULL);
-  if (result != MQTTCLIENT_SUCCESS)
+  opts.context = cinfo;
+  opts.onSuccess = edc_mqtt_onsend;
+  opts.onFailure = edc_mqtt_onsendfail;
+  iot_log_trace (lc, "mqtt: publish event to topic %s", topic);
+  result = MQTTAsync_sendMessage (cinfo->client, topic, &pubmsg, &opts);
+  if (result != MQTTASYNC_SUCCESS)
   {
-    iot_log_error (lc, "Failed to post event to mqtt, error %d", result);
+    iot_log_error (lc, "mqtt: failed to post event, error %d", result);
   }
 
   free (h.data.bytes);
@@ -134,12 +158,31 @@ static void edc_mqtt_postfn (iot_logger_t *lc, void *address, edgex_event_cooked
   }
 }
 
+static void edc_mqtt_onconnect (void *context, MQTTAsync_successData *response)
+{
+  edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
+  iot_log_info (cinfo->lc, "mqtt: connected");
+  pthread_mutex_lock (&cinfo->mtx);
+  pthread_cond_signal (&cinfo->cond);
+  pthread_mutex_unlock (&cinfo->mtx);
+}
+
+static void edc_mqtt_onconnectfail (void *context, MQTTAsync_failureData *response)
+{
+  edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
+  iot_log_error (cinfo->lc, "mqtt: connect failed, error code %d", response->code);
+}
+
 edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_logger_t *lc, iot_threadpool_t *queue)
 {
   int rc;
   char *uri;
-  MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-  MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
+  uint64_t tm;
+  struct timespec max_wait;
+  int timedout;
+  MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
+  MQTTAsync_SSLOptions ssl_opts = MQTTAsync_SSLOptions_initializer;
+  MQTTAsync_createOptions create_opts = MQTTAsync_createOptions_initializer;
 
   edgex_data_client_t *result = malloc (sizeof (edgex_data_client_t));
   edc_mqtt_conninfo *cinfo = malloc (sizeof (edc_mqtt_conninfo));
@@ -168,9 +211,10 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   }
 
   uri = malloc (strlen (host) + strlen (prot) + 10);
-  sprintf (uri, "%s://%s:%" PRIu16, prot, host, iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT)));
+  sprintf (uri, "%s://%s:%" PRIu16, prot, host, port);
   iot_log_info (lc, "Event data will be sent through MQTT at %s", uri);
 
+  cinfo->lc = lc;
   result->lc = lc;
   result->queue = queue;
   result->pf = edc_mqtt_postfn;
@@ -182,9 +226,12 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   cinfo->topicbase = iot_data_string_map_get_string (allconf, EX_MQ_TOPIC);
   cinfo->uri = uri;
 
-  if ((rc = MQTTClient_create (&cinfo->client, uri, iot_data_string_map_get_string (allconf, EX_MQ_CLIENTID), MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
+  create_opts.sendWhileDisconnected = 1;
+  rc = MQTTAsync_createWithOptions
+    (&cinfo->client, uri, iot_data_string_map_get_string (allconf, EX_MQ_CLIENTID), MQTTCLIENT_PERSISTENCE_NONE, NULL, &create_opts);
+  if (rc != MQTTASYNC_SUCCESS)
   {
-    iot_log_error (lc, "Failed to create MQTT client, return code %d", rc);
+    iot_log_error (lc, "mqtt: failed to create client, return code %d", rc);
     free (cinfo);
     free (result);
     free (uri);
@@ -192,6 +239,10 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   }
   conn_opts.keepAliveInterval = iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_KEEPALIVE));
   conn_opts.cleansession = 1;
+  conn_opts.automaticReconnect = 1;
+  conn_opts.onSuccess = edc_mqtt_onconnect;
+  conn_opts.onFailure = edc_mqtt_onconnectfail;
+  conn_opts.context = cinfo;
   if (strlen (user))
   {
     conn_opts.username = user;
@@ -211,9 +262,33 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   }
   ssl_opts.verify = iot_data_string_map_get_bool (allconf, EX_MQ_SKIPVERIFY, false) ? 0 : 1;
 
-  if ((rc = MQTTClient_connect (cinfo->client, &conn_opts)) != MQTTCLIENT_SUCCESS)
+  tm = iot_data_ui32 (iot_data_string_map_get (allconf, "Service/Timeout"));
+  tm *= iot_data_ui32 (iot_data_string_map_get (allconf, "Service/ConnectRetries"));
+  tm += iot_time_msecs ();
+  max_wait.tv_sec = tm / 1000;
+  max_wait.tv_nsec = 1000000 * (tm % 1000);
+
+  pthread_mutex_init (&cinfo->mtx, NULL);
+  pthread_cond_init (&cinfo->cond, NULL);
+
+  pthread_mutex_lock (&cinfo->mtx);
+  if ((rc = MQTTAsync_connect (cinfo->client, &conn_opts)) == MQTTASYNC_SUCCESS)
   {
-    iot_log_error (lc, "Failed to connect MQTT, return code %d", rc);
+    timedout = pthread_cond_timedwait (&cinfo->cond, &cinfo->mtx, &max_wait);
+  }
+  pthread_mutex_unlock (&cinfo->mtx);
+  if (rc != MQTTASYNC_SUCCESS || timedout == ETIMEDOUT)
+  {
+    if (rc == MQTTASYNC_SUCCESS)
+    {
+      iot_log_error (lc, "mqtt: failed to connect, timed out");
+    }
+    else
+    {
+      iot_log_error (lc, "mqtt: failed to connect, return code %d", rc);
+    }
+    pthread_cond_destroy (&cinfo->cond);
+    pthread_mutex_destroy (&cinfo->mtx);
     free (cinfo);
     free (result);
     free (uri);

@@ -425,19 +425,24 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Wait for metadata and data to be available */
 
-  if (strcmp (iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE), "mqtt") == 0)
+  if (iot_data_string_map_get_bool (svc->config.sdkconf, "Service/UseMessageBus", false))
   {
-    svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, svc->eventq);
-    if (svc->dataclient == NULL)
+    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+    if (strcmp (bustype, "mqtt") == 0)
     {
-      return;
+      svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, svc->eventq);
     }
-  }
-  else if (strcmp (iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE), "redisstream") == 0)
-  {
-    svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger);
+    else if (strcmp (bustype, "redis") == 0)
+    {
+      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger);
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Unknown Message Bus type %s", bustype);
+    }
     if (svc->dataclient == NULL)
     {
+      *err = EDGEX_REMOTE_SERVER_DOWN;
       return;
     }
   }
