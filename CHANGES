@@ -2,6 +2,7 @@ This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
 Changes for 2.0.0 "Ireland":
 
+- Support event transmission by mqtt or redis streams rather than rest
 - Device definitions for upload no longer supported in configuration. Instead files may be read from a specified directory (as for profiles)
   - These may be in .json files or the previous .toml format
 - Added helper functions for setting up the callback functions structure. This is now the preferred way of doing so.

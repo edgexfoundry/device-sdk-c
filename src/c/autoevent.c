@@ -102,7 +102,7 @@ static void *ae_runner (void *p)
           edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
         if (event)
         {
-          edgex_data_client_add_event (ai->svc, event);
+          edgex_data_client_add_event (ai->svc->dataclient, event);
           if (ai->onChange)
           {
             devsdk_commandresult_free (ai->last, ai->resource->nreqs);

@@ -20,6 +20,8 @@
 
 #include "config.h"
 #include "service.h"
+#include "data-mqtt.h"
+#include "data-redstr.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
 #include "edgex-logging.h"
@@ -55,17 +57,22 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
 
   iot_data_string_map_add (result, "Service/Host", iot_data_alloc_string (utsbuffer.nodename, IOT_DATA_COPY));
   iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (49999));
-  iot_data_string_map_add (result, "Service/Timeout", iot_data_alloc_ui32 (0));
-  iot_data_string_map_add (result, "Service/ConnectRetries", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Service/Timeout", iot_data_alloc_ui32 (1000));
+  iot_data_string_map_add (result, "Service/ConnectRetries", iot_data_alloc_ui32 (20));
   iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
+  iot_data_string_map_add (result, "Service/UseMessageBus", iot_data_alloc_bool (false));
 
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
+
+  iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
+  edgex_mqtt_config_defaults (result);
+  // NB redis-streams uses a subset of the mqtt options
 
   if (driverconf)
   {
@@ -665,6 +672,20 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
 
   json_object_set_value (obj, DYN_NAME, wval);
 
+  const char *mqtype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+  if (strcmp (mqtype, "mqtt") == 0)
+  {
+    JSON_Value *mqval = edgex_mqtt_config_json (svc->config.sdkconf);
+    json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
+    json_object_set_value (obj, "MessageQueue", mqval);
+  }
+  else if (strcmp (mqtype, "redis") == 0)
+  {
+    JSON_Value *mqval = edgex_redstr_config_json (svc->config.sdkconf);
+    json_object_set_string (json_value_get_object (mqval), "Type", mqtype);
+    json_object_set_value (obj, "MessageQueue", mqval);
+  }
+
   JSON_Value *cval = json_value_init_object ();
   JSON_Object *cobj = json_value_get_object (cval);
 
@@ -697,6 +718,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
     (sobj, "CheckInterval", svc->config.service.checkinterval);
   json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
   json_object_set_uint (sobj, "MaxRequestSize", svc->config.service.maxreqsz);
+  json_object_set_boolean (sobj, "UseMessageBus", iot_data_string_map_get_bool (svc->config.sdkconf, "Service/UseMessageBus", false));
 
   JSON_Value *lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);

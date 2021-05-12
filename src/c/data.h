@@ -13,6 +13,23 @@
 #include "parson.h"
 #include "cmdinfo.h"
 #include "rest-server.h"
+#include "iot/threadpool.h"
+
+#define EX_MQ_TYPE "MessageQueue/Type"
+
+#define EX_MQ_PROTOCOL "MessageQueue/Protocol"
+#define EX_MQ_HOST "MessageQueue/Host"
+#define EX_MQ_PORT "MessageQueue/Port"
+#define EX_MQ_TOPIC "MessageQueue/Topic"
+#define EX_MQ_USERNAME "MessageQueue/Optional/Username"
+#define EX_MQ_PASSWORD "MessageQueue/Optional/Password"
+#define EX_MQ_CLIENTID "MessageQueue/Optional/ClientId"
+#define EX_MQ_QOS "MessageQueue/Optional/Qos"
+#define EX_MQ_KEEPALIVE "MessageQueue/Optional/KeepAlive"
+#define EX_MQ_RETAINED "MessageQueue/Optional/Retained"
+#define EX_MQ_CERTFILE "MessageQueue/Optional/CertFile"
+#define EX_MQ_KEYFILE "MessageQueue/Optional/KeyFile"
+#define EX_MQ_SKIPVERIFY "MessageQueue/Optional/SkipCertVerify"
 
 typedef enum { JSON, CBOR} edgex_event_encoding;
 
@@ -44,9 +61,27 @@ edgex_event_cooked *edgex_data_process_event
   bool doTransforms
 );
 
-void edgex_data_client_add_event (devsdk_service_t *svc, edgex_event_cooked *eventval);
+typedef void (*edc_freefn) (iot_logger_t *lc, void *address);
+typedef void (*edc_postfn) (iot_logger_t *lc, void *address, edgex_event_cooked *event);
 
-void edgex_data_client_add_event_now (devsdk_service_t *svc, edgex_event_cooked *eventval);
+typedef struct edgex_data_client_t
+{
+  void *address;
+  iot_logger_t *lc;
+  iot_threadpool_t *queue;
+  edc_postfn pf;
+  edc_freefn ff;
+} edgex_data_client_t;
+
+typedef struct edgex_device_service_endpoint edgex_device_service_endpoint;
+
+edgex_data_client_t *edgex_data_client_new_rest (const edgex_device_service_endpoint *e, iot_logger_t *lc, iot_threadpool_t *queue);
+
+void edgex_data_client_free (edgex_data_client_t *client);
+
+void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *eventval);
+
+void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *eventval);
 
 void devsdk_commandresult_free (devsdk_commandresult *res, int n);
 

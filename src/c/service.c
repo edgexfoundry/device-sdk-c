@@ -18,6 +18,8 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "data.h"
+#include "data-mqtt.h"
+#include "data-redstr.h"
 #include "rest.h"
 #include "edgex-rest.h"
 #include "iot/time.h"
@@ -423,10 +425,36 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Wait for metadata and data to be available */
 
-  if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.connectretries, svc->config.service.timeout, err))
+  if (iot_data_string_map_get_bool (svc->config.sdkconf, "Service/UseMessageBus", false))
   {
-    return;
+    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+    if (strcmp (bustype, "mqtt") == 0)
+    {
+      svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, svc->eventq);
+    }
+    else if (strcmp (bustype, "redis") == 0)
+    {
+      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger);
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Unknown Message Bus type %s", bustype);
+    }
+    if (svc->dataclient == NULL)
+    {
+      *err = EDGEX_REMOTE_SERVER_DOWN;
+      return;
+    }
   }
+  else
+  {
+    svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
+    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.connectretries, svc->config.service.timeout, err))
+    {
+      return;
+    }
+  }
+
   if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, svc->config.service.connectretries, svc->config.service.timeout, err))
   {
     return;
@@ -823,7 +851,7 @@ void devsdk_post_readings
 
     if (event)
     {
-      edgex_data_client_add_event (svc, event);
+      edgex_data_client_add_event (svc->dataclient, event);
       if (svc->config.device.updatelastconnected)
       {
         devsdk_error err = EDGEX_OK;
@@ -878,6 +906,7 @@ void devsdk_service_free (devsdk_service_t *svc)
   {
     iot_scheduler_free (svc->scheduler);
     edgex_devmap_free (svc->devices);
+    edgex_data_client_free (svc->dataclient);
     edgex_watchlist_free (svc->watchlist);
     edgex_device_periodic_discovery_free (svc->discovery);
     iot_threadpool_free (svc->thpool);
