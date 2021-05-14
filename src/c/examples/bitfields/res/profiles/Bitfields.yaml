@@ -27,9 +27,3 @@ deviceResources:
     description: "Byte 3 (MSB)"
     properties:
         { valueType: "Uint32", readWrite: "RW", mask: "0xFF000000", shift: "24", units: "things" }
-
-coreCommands:
-  - { name: "A", get: true, set: true }
-  - { name: "B", get: true, set: true }
-  - { name: "C", get: true, set: true }
-  - { name: "D", get: true, set: true }

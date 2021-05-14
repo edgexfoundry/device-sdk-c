@@ -29,8 +29,3 @@ deviceResources:
             { SensorID: "Switch1", SensorType: "Switch" }
         properties:
             { valueType: "Bool", readWrite: "RW", units: "State" }
-
-coreCommands:
-  - { name: "SensorOne", get: true }
-  - { name: "SensorTwo", get: true }
-  - { name: "Switch", get: true, set: true }

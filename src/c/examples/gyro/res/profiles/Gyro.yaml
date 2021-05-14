@@ -32,10 +32,8 @@ deviceResources:
 deviceCommands:
   -
     name: rotation
-    get:
+    readWrite: "R"
+    resourceOperations:
       - { deviceResource: "Xrotation" }
       - { deviceResource: "Yrotation" }
       - { deviceResource: "Zrotation" }
-
-coreCommands:
-  - { name: "rotation", get: true }

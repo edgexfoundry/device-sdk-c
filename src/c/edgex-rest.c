@@ -217,6 +217,21 @@ static edgex_device_operatingstate edgex_operatingstate_fromstring
   return (str && strcmp (str, opstatetypes[DOWN]) == 0) ? DOWN : UP;
 }
 
+static void edgex_get_readwrite (const JSON_Object *object, bool *read, bool *write)
+{
+  const char *rwstring = json_object_get_string (object, "readWrite");
+  if (rwstring && *rwstring)
+  {
+    *read = strchr (rwstring, 'R');
+    *write = strchr (rwstring, 'W');
+  }
+  else
+  {
+    *read = true;
+    *write = true;
+  }
+}
+
 static bool get_transformArg
 (
   iot_logger_t *lc,
@@ -305,17 +320,7 @@ static edgex_propertyvalue *propertyvalue_read
       return NULL;
     }
     result->type = pt;
-    const char *rwstring = json_object_get_string (obj, "readWrite");
-    if (rwstring && *rwstring)
-    {
-      result->readable = strchr (rwstring, 'R');
-      result->writable = strchr (rwstring, 'W');
-    }
-    else
-    {
-      result->readable = true;
-      result->writable = true;
-    }
+    edgex_get_readwrite (obj, &result->readable, &result->writable);
     result->defaultvalue = get_string (obj, "defaultValue");
     result->assertion = get_string (obj, "assertion");
     result->units = get_string (obj, "units");
@@ -425,7 +430,7 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   JSON_Object *mappings_obj;
 
   result->deviceResource = get_string (obj, "deviceResource");
-  result->parameter = get_string (obj, "parameter");
+  result->defaultValue = get_string (obj, "defaultValue");
   mappings_obj = json_object_get_object (obj, "mappings");
   result->mappings = nvpairs_read (mappings_obj);
   result->next = NULL;
@@ -440,7 +445,7 @@ static edgex_resourceoperation *resourceoperation_dup
   {
     result = malloc (sizeof (edgex_resourceoperation));
     result->deviceResource = strdup (ro->deviceResource);
-    result->parameter = strdup (ro->parameter);
+    result->defaultValue = strdup (ro->defaultValue);
     result->mappings = devsdk_nvpairs_dup (ro->mappings);
     result->next = resourceoperation_dup (ro->next);
   }
@@ -453,7 +458,7 @@ static void resourceoperation_free (edgex_resourceoperation *e)
   {
     edgex_resourceoperation *current = e;
     free (e->deviceResource);
-    free (e->parameter);
+    free (e->defaultValue);
     devsdk_nvpairs_free (e->mappings);
     e = e->next;
     free (current);
@@ -465,12 +470,12 @@ static edgex_devicecommand *devicecommand_read (const JSON_Object *obj)
   edgex_devicecommand *result = malloc (sizeof (edgex_devicecommand));
   size_t count;
   JSON_Array *array;
-  edgex_resourceoperation **last_ptr = &result->set;
-  edgex_resourceoperation **last_ptr2 = &result->get;
+  edgex_resourceoperation **last_ptr = &result->resourceOperations;
 
   result->name = get_string (obj, "name");
-  array = json_object_get_array (obj, "set");
-  result->set = NULL;
+  edgex_get_readwrite (obj, &result->readable, &result->writable);
+  array = json_object_get_array (obj, "resourceOperations");
+  result->resourceOperations = NULL;
   count = json_array_get_count (array);
   for (size_t i = 0; i < count; i++)
   {
@@ -478,16 +483,6 @@ static edgex_devicecommand *devicecommand_read (const JSON_Object *obj)
       (json_array_get_object (array, i));
     *last_ptr = temp;
     last_ptr = &(temp->next);
-  }
-  array = json_object_get_array (obj, "get");
-  result->get = NULL;
-  count = json_array_get_count (array);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_resourceoperation *temp = resourceoperation_read
-      (json_array_get_object (array, i));
-    *last_ptr2 = temp;
-    last_ptr2 = &(temp->next);
   }
 
   result->next = NULL;
@@ -501,8 +496,9 @@ static edgex_devicecommand *devicecommand_dup (const edgex_devicecommand *pr)
   {
     result = malloc (sizeof (edgex_devicecommand));
     result->name = strdup (pr->name);
-    result->set = resourceoperation_dup (pr->set);
-    result->get = resourceoperation_dup (pr->get);
+    result->readable = pr->readable;
+    result->writable = pr->writable;
+    result->resourceOperations = resourceoperation_dup (pr->resourceOperations);
     result->next = devicecommand_dup (pr->next);
   }
   return result;
@@ -514,8 +510,7 @@ static void devicecommand_free (edgex_devicecommand *e)
   {
     edgex_devicecommand *current = e;
     free (e->name);
-    resourceoperation_free (e->set);
-    resourceoperation_free (e->get);
+    resourceoperation_free (e->resourceOperations);
     e = e->next;
     free (current);
   }
@@ -585,11 +580,7 @@ static edgex_deviceprofile *deviceprofile_read
   {
     edgex_devicecommand *temp = devicecommand_read
       (json_array_get_object (array, i));
-    if
-    (
-      resourceop_validate (lc, temp->set, result->device_resources) &&
-      resourceop_validate (lc, temp->get, result->device_resources)
-    )
+    if (resourceop_validate (lc, temp->resourceOperations, result->device_resources))
     {
       *last_ptr2 = temp;
       last_ptr2 = &(temp->next);

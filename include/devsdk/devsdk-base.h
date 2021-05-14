@@ -191,6 +191,15 @@ bool devsdk_nvpairs_ulong_value (const devsdk_nvpairs *nvp, const char *name, un
 bool devsdk_nvpairs_float_value (const devsdk_nvpairs *nvp, const char *name, float *val);
 
 /**
+ * @brief Finds a name for a value in an n-v pair list.
+ * @param nvp A list of name-value pairs.
+ * @param name The value to search for.
+ * @returns The name corresponding to the given value, or NULL if not found.
+ */
+
+const char *devsdk_nvpairs_reverse_value (const devsdk_nvpairs *nvp, const char *name);
+
+/**
  * @brief Duplicates a n-v pair list
  * @param e The list to duplicate
  * @returns The new list

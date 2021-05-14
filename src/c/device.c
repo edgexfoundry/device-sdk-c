@@ -383,8 +383,7 @@ static iot_typecode_t *typecodeFromType (edgex_propertytype pt)
   }
 }
 
-static edgex_cmdinfo *infoForRes
-  (edgex_deviceprofile *prof, edgex_devicecommand *cmd, bool forGet)
+static edgex_cmdinfo *infoForRes (edgex_deviceprofile *prof, edgex_devicecommand *cmd, bool forGet)
 {
   edgex_cmdinfo *result = malloc (sizeof (edgex_cmdinfo));
   result->name = cmd->name;
@@ -392,7 +391,7 @@ static edgex_cmdinfo *infoForRes
   result->isget = forGet;
   unsigned n = 0;
   edgex_resourceoperation *ro;
-  for (ro = forGet ? cmd->get : cmd->set; ro; ro = ro->next)
+  for (ro = cmd->resourceOperations; ro; ro = ro->next)
   {
     n++;
   }
@@ -401,7 +400,7 @@ static edgex_cmdinfo *infoForRes
   result->pvals = calloc (n, sizeof (edgex_propertyvalue *));
   result->maps = calloc (n, sizeof (devsdk_nvpairs *));
   result->dfls = calloc (n, sizeof (char *));
-  for (n = 0, ro = forGet ? cmd->get : cmd->set; ro; n++, ro = ro->next)
+  for (n = 0, ro = cmd->resourceOperations; ro; n++, ro = ro->next)
   {
     edgex_deviceresource *devres =
       findDevResource (prof->device_resources, ro->deviceResource);
@@ -414,9 +413,9 @@ static edgex_cmdinfo *infoForRes
     }
     result->pvals[n] = devres->properties;
     result->maps[n] = ro->mappings;
-    if (ro->parameter && *ro->parameter)
+    if (ro->defaultValue && *ro->defaultValue)
     {
-      result->dfls[n] = ro->parameter;
+      result->dfls[n] = ro->defaultValue;
     }
     else if (devres->properties->defaultvalue && *devres->properties->defaultvalue)
     {
@@ -465,12 +464,12 @@ static void populateCmdInfo (edgex_deviceprofile *prof)
   edgex_devicecommand *cmd = prof->device_commands;
   while (cmd)
   {
-    if (cmd->get)
+    if (cmd->readable)
     {
       *head = infoForRes (prof, cmd, true);
       head = &((*head)->next);
     }
-    if (cmd->set)
+    if (cmd->writable)
     {
       *head = infoForRes (prof, cmd, false);
       head = &((*head)->next);

@@ -16,49 +16,36 @@ The profile contains some identification information - it has a name and
 a description, and a set of labels. It also indicates the brand name of the
 device to which it applies, and the manufacturer of that device.
 
-This information is followed by three sections, "deviceResources",
-"deviceCommands" and "coreCommands".
-
-coreCommands
-------------
-
-This section specifies the commands which are available via the core-command
-microservice, for reading and writing to the device.
-
-Commands may allow get or put methods (or both). For a get type, the returned
-values are specified in the "expectedValues" field, for a put type, the
-parameters to be given are specified in "parameterNames". In either case, the
-different http response codes that the service may generate are shown.
+This information is followed by two sections, "deviceResources" and "deviceCommands"
 
 deviceCommands
 --------------
 
 These are presented at the "device" endpoint,
 ```
-http://<device-service>:<port>/api/v1/device/<device id>/<command name>
+http://<device-service>:<port>/api/v2/device/name/<device name>/<command name>
 ```
 
 This section defines access to reads and writes for multiple simultaneous
-values. Each deviceCommand should contain a get and/or a set section, describing
-the read or write operation respectively.
+values. Each deviceCommand contains a resourceOperations section which
+defines which values comprise the command.
 
-Each line of a get section indicates a deviceResource which is to be read, and
-the lines in a set section indicate deviceResources to be written. The values
-in these lines are as follows:
+Each line of a resourceOperations section has the following elements:
 
-* index - a number, used to define an order in which the resource is processed.
-* operation - get or set. Ignored in this implementation, mixing of get and set
-operations is not supported.
-* deviceResource - the name of the deviceResource to access.
-* parameter - optional, a value that will be used if a PUT request does not
-specify one.
+* deviceResource - required - the name of the deviceResource to access.
+* defaultValue - optional - a value that will be used if a PUT request does not specify one.
+* mappings - optional - a one-to-one transformation for string data
+
+Mappings are specified as "X": "Y" indicating that if the string "X" is read, the string "Y"
+will be the reading value. If a value is read which does not have a mapping specified, it is
+passed through unchanged. Mappings are applied in reverse for data to be written.
 
 deviceResources
 ---------------
 
 These are also presented at the "device" endpoint,
 ```
-http://<device-service>:<port>/api/v1/device/<device id>/<deviceResource name>
+http://<device-service>:<port>/api/v2/device/name/<device name>/<resource name>
 ```
 
 however if a profile contains a deviceCommand with the same name as a
@@ -74,14 +61,14 @@ will have its own set of named values that are required here, for example a
 BACnet device service may need an Object Identifier and a Property Identifier
 whereas a Bluetooth device service could use a UUID to identify a value.
 
-The properties section in a deviceResource describes the value. Conventionally
-each logical value is given two properties, named value and units. The
+The properties section in a deviceResource describes the value. The
 following fields are available in a property:
 
 * type - Required. The data type of the value. Supported types are Bool,
 Int8 - Int64, Uint8 - Uint64, Float32, Float64, Binary and String. Arrays of
 all types other than String and Binary are also supported and named by adding
 "Array" to the typename eg Int8Array.
+* units - indicates the units of the value, eg Amperes, degrees C, etc.
 * readWrite - "R", "RW", or "W" indicating whether the value is readable or
 writable.
 * defaultValue - a value used for PUT requests which do not specify one.
@@ -101,8 +88,6 @@ implemented in the driver)
 The minimum and maximum values may be used to enforce a range limit on values
 provided in write requests. They are only valid for numeric data, ie ints and floats.
 
-The units property is used to indicate the units of the value, eg Amperes,
-degrees C, etc. It should have only one field, a defaultValue that specifies the units.
 
 The Device Profile in the C SDK
 -------------------------------

@@ -14,6 +14,3 @@ deviceResources:
       { register: "count01" }
     properties:
       { valueType: "Uint32", readWrite: "RW", units: "things" }
-
-coreCommands:
-  - { name: "Counter", get: true, set: true }
