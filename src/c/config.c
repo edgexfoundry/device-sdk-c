@@ -800,7 +800,7 @@ void edgex_device_process_configured_devices
               toml_rtos2
                 (toml_raw_in (aetable, "Resource"), &newauto->resource);
               toml_rtos2
-                (toml_raw_in (aetable, "Frequency"), &newauto->frequency);
+                (toml_raw_in (aetable, "Interval"), &newauto->interval);
               toml_rtob2
                 (toml_raw_in (aetable, "OnChange"), &newauto->onChange);
               newauto->next = autos;

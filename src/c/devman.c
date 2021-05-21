@@ -218,6 +218,7 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
           labels,
           w->adminstate,
           devices[i].protocols,
+          w->autoevents,
           svc->name,
           w->profile
         );

@@ -171,14 +171,14 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
         );
         continue;
       }
-      uint64_t interval = parseTime (ae->frequency);
+      uint64_t interval = parseTime (ae->interval);
       if (interval == 0)
       {
         iot_log_error
         (
           svc->logger,
-          "AutoEvents: device %s: unable to parse %s for frequency.",
-          dev->name, ae->frequency
+          "AutoEvents: device %s: unable to parse %s for interval.",
+          dev->name, ae->interval
         );
         continue;
       }

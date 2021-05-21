@@ -401,6 +401,7 @@ void edgex_metadata_client_add_or_modify_device
   const devsdk_strings * labels,
   edgex_device_adminstate adminstate,
   devsdk_protocols * protocols,
+  edgex_device_autoevents *autos,
   const char * service_name,
   const char * profile_name
 )
@@ -422,6 +423,7 @@ void edgex_metadata_client_add_or_modify_device
   dev->operatingState = UP;
   dev->labels = (devsdk_strings *)labels;
   dev->protocols = protocols;
+  dev->autos = autos;
   dev->servicename = (char *)service_name;
   dev->profile = calloc (1, sizeof (edgex_deviceprofile));
   dev->profile->name = (char *)profile_name;
