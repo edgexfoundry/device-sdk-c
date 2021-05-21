@@ -60,11 +60,11 @@ An EdgeX system containing at least a database and the core-data and core-metada
 To read value "B" (bits 8-15):
 
 ```
-curl 0:49999/api/v2/device/name/Bitfields/B
+curl 0:59999/api/v2/device/name/Bitfields/B
 ```
 
 To write a value into "B":
 
 ```
-curl -X PUT -d '{"B":"221"}' 0:49999/api/v2/device/name/Bitfields/B
+curl -X PUT -d '{"B":"221"}' 0:59999/api/v2/device/name/Bitfields/B
 ```

@@ -1129,7 +1129,7 @@ char *edgex_updateDevOpreq_write (const char *name, edgex_device_operatingstate 
   JSON_Object *obj = json_value_get_object (jval);
 
   json_object_set_string (obj, "name", name);
-  json_object_set_string (obj, "opstate", edgex_operatingstate_tostring (opstate));
+  json_object_set_string (obj, "operatingstate", edgex_operatingstate_tostring (opstate));
   val = edgex_wrap_request ("Device", jval);
   json = json_serialize_to_string (val);
   json_value_free (val);

@@ -199,14 +199,17 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
       if (w)
       {
         devsdk_strings *labels = NULL;
-        const iot_data_t *ldata = iot_data_string_map_get (devices[i].properties, "Labels");
-        if (ldata)
+        if (devices[i].properties)
         {
-          iot_data_vector_iter_t iter;
-          iot_data_vector_iter (ldata, &iter);
-          while (iot_data_vector_iter_next (&iter))
+          const iot_data_t *ldata = iot_data_string_map_get (devices[i].properties, "Labels");
+          if (ldata)
           {
-            labels = devsdk_strings_new (iot_data_vector_iter_string (&iter), labels);
+            iot_data_vector_iter_t iter;
+            iot_data_vector_iter (ldata, &iter);
+            while (iot_data_vector_iter_next (&iter))
+            {
+              labels = devsdk_strings_new (iot_data_vector_iter_string (&iter), labels);
+            }
           }
         }
         edgex_metadata_client_add_or_modify_device
