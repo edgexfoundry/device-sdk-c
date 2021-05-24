@@ -213,7 +213,7 @@ LIST_EQUAL_FUNCTION(devsdk_protocols, name, protocol_equal)
 
 static bool autoevent_equal (const edgex_device_autoevents *e1, const edgex_device_autoevents *e2)
 {
-  return strcmp (e1->frequency, e2->frequency) == 0 && e1->onChange == e2->onChange;
+  return strcmp (e1->interval, e2->interval) == 0 && e1->onChange == e2->onChange;
 }
 
 LIST_EQUAL_FUNCTION(edgex_device_autoevents, resource, autoevent_equal)

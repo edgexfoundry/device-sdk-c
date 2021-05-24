@@ -19,7 +19,7 @@ For example, `Service_ServerBindAddr`.
 Option | Type | Notes
 :--- | :--- | :---
 Host | String | This is the hostname to use when the service generates URLs pointing to itself. It must be resolvable by other services in the EdgeX deployment.
-Port | Int | Port on which to accept the device service's REST API. The assigned port for experimental / in-development device services is 49999.
+Port | Int | Port on which to accept the device service's REST API. The assigned port for experimental / in-development device services is 59999.
 Timeout | Int | Time (in milliseconds) to wait between attempts to contact core-data and core-metadata when starting up.
 ConnectRetries | Int | Number of times to attempt to contact core-data and core-metadata when starting up.
 StartupMsg | String | Message to log on successful startup.
@@ -31,14 +31,14 @@ MaxRequestSize | Int | Amount of data beyond which the service will reject an in
 
 Defines the endpoints for other microservices in an EdgeX system.
 
-### edgex-core-data
+### core-data
 
 Option | Type | Notes
 :--- | :--- | :---
 Host | String | Hostname on which to contact the core-data service.
 Port | Int | Port on which to contact the core-data service.
 
-### edgex-core-metadata
+### core-metadata
 
 Option | Type | Notes
 :--- | :--- | :---

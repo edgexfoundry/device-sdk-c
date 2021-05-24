@@ -633,7 +633,7 @@ static edgex_device_autoevents *autoevent_read (const JSON_Object *obj)
   edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
   result->resource = get_string (obj, "sourceName");
   result->onChange = get_boolean (obj, "onChange", false);
-  result->frequency = get_string  (obj, "frequency");
+  result->interval = get_string  (obj, "interval");
   result->impl = NULL;
   result->next = NULL;
   return result;
@@ -649,7 +649,7 @@ static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
     JSON_Value *pval = json_value_init_object ();
     JSON_Object *pobj = json_value_get_object (pval);
     json_object_set_string (pobj, "sourceName", ae->resource);
-    json_object_set_string (pobj, "frequency", ae->frequency);
+    json_object_set_string (pobj, "interval", ae->interval);
     json_object_set_boolean (pobj, "onChange", ae->onChange);
     json_array_append_value (arr, pval);
   }
@@ -664,7 +664,7 @@ static edgex_device_autoevents *autoevents_dup
   {
     result = malloc (sizeof (edgex_device_autoevents));
     result->resource = strdup (e->resource);
-    result->frequency = strdup (e->frequency);
+    result->interval = strdup (e->interval);
     result->onChange = e->onChange;
     result->impl = NULL;
     result->next = autoevents_dup (e->next);
@@ -677,7 +677,7 @@ void edgex_device_autoevents_free (edgex_device_autoevents *e)
   if (e)
   {
     free (e->resource);
-    free (e->frequency);
+    free (e->interval);
     edgex_device_autoevents_free (e->next);
     free (e);
   }
@@ -1129,7 +1129,7 @@ char *edgex_updateDevOpreq_write (const char *name, edgex_device_operatingstate 
   JSON_Object *obj = json_value_get_object (jval);
 
   json_object_set_string (obj, "name", name);
-  json_object_set_string (obj, "opstate", edgex_operatingstate_tostring (opstate));
+  json_object_set_string (obj, "operatingstate", edgex_operatingstate_tostring (opstate));
   val = edgex_wrap_request ("Device", jval);
   json = json_serialize_to_string (val);
   json_value_free (val);
@@ -1239,6 +1239,14 @@ static edgex_watcher *watcher_read (const JSON_Object *obj)
   {
     result->blocking_identifiers = blocklist_read (blockObj);
   }
+  JSON_Array *aearray = json_object_get_array (obj, "autoEvents");
+  size_t count = json_array_get_count (aearray);
+  for (size_t i = 0; i < count; i++)
+  {
+    edgex_device_autoevents *temp = autoevent_read (json_array_get_object (aearray, i));
+    temp->next = result->autoevents;
+    result->autoevents = temp;
+  }
   result->adminstate = edgex_adminstate_fromstring
     (json_object_get_string (obj, "adminState"));
 
@@ -1302,6 +1310,7 @@ edgex_watcher *edgex_watcher_dup (const edgex_watcher *e)
   res->name = strdup (e->name);
   res->identifiers = devsdk_nvpairs_dup (e->identifiers);
   res->blocking_identifiers = edgex_blocklist_dup (e->blocking_identifiers);
+  res->autoevents = autoevents_dup (e->autoevents);
   res->profile = strdup (e->profile);
   res->adminstate = e->adminstate;
   res->next = NULL;
@@ -1318,6 +1327,7 @@ void edgex_watcher_free (edgex_watcher *e)
     devsdk_nvpairs_free (ew->identifiers);
     edgex_watcher_regexes_free (ew->regs);
     edgex_blocklist_free (ew->blocking_identifiers);
+    edgex_device_autoevents_free (ew->autoevents);
     free (ew->profile);
     free (ew);
     ew = next;

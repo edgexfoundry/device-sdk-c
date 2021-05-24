@@ -2,13 +2,13 @@
   LogLevel = 'DEBUG'
 
 [Clients]
-  [Clients.edgex-core-data]
+  [Clients.core-data]
     Host = 'localhost'
-    Port = 48080
+    Port = 59880
 
-  [Clients.edgex-core-metadata]
+  [Clients.core-metadata]
     Host = 'localhost'
-    Port = 48081
+    Port = 59881
 
 [Device]
   ProfilesDir = 'res/profiles'

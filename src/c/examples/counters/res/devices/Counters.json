@@ -9,7 +9,7 @@
     },
     "autoEvents":
     [
-      { "sourceName": "Counter", "onChange": false, "frequency": "10s" }
+      { "sourceName": "Counter", "onChange": false, "interval": "10s" }
     ]
   },
   {

@@ -56,7 +56,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
   iot_data_string_map_add (result, DYN_PREFIX "Device/MaxCmdResultLen", iot_data_alloc_ui32 (0));
 
   iot_data_string_map_add (result, "Service/Host", iot_data_alloc_string (utsbuffer.nodename, IOT_DATA_COPY));
-  iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (49999));
+  iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (59999));
   iot_data_string_map_add (result, "Service/Timeout", iot_data_alloc_ui32 (1000));
   iot_data_string_map_add (result, "Service/ConnectRetries", iot_data_alloc_ui32 (20));
   iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
@@ -282,11 +282,11 @@ void edgex_device_parseTomlClients
 {
   if (clients)
   {
-    parseClient (lc, toml_table_in (clients, "edgex-core-data"), &endpoints->data, err);
-    parseClient (lc, toml_table_in (clients, "edgex-core-metadata"), &endpoints->metadata, err);
+    parseClient (lc, toml_table_in (clients, "core-data"), &endpoints->data, err);
+    parseClient (lc, toml_table_in (clients, "core-metadata"), &endpoints->metadata, err);
   }
-  checkClientOverride (lc, "EDGEX_CORE_DATA", &endpoints->data);
-  checkClientOverride (lc, "EDGEX_CORE_METADATA", &endpoints->metadata);
+  checkClientOverride (lc, "CORE_DATA", &endpoints->data);
+  checkClientOverride (lc, "CORE_METADATA", &endpoints->metadata);
 }
 
 static char *checkOverride (char *qstr)
@@ -800,7 +800,7 @@ void edgex_device_process_configured_devices
               toml_rtos2
                 (toml_raw_in (aetable, "Resource"), &newauto->resource);
               toml_rtos2
-                (toml_raw_in (aetable, "Frequency"), &newauto->frequency);
+                (toml_raw_in (aetable, "Interval"), &newauto->interval);
               toml_rtob2
                 (toml_raw_in (aetable, "OnChange"), &newauto->onChange);
               newauto->next = autos;

@@ -8,7 +8,7 @@
   },
   "autoEvents":
   [
-    { "sourceName": "SensorOne", "onChange": false, "frequency": "10s" },
-    { "sourceName": "SensorTwo", "onChange": true, "frequency": "15000ms" }
+    { "sourceName": "SensorOne", "onChange": false, "interval": "10s" },
+    { "sourceName": "SensorTwo", "onChange": true, "interval": "15000ms" }
   ]
 }

@@ -9,7 +9,7 @@
     TestParam3 = 'Goodbye'
 
 [Service]
-  Port = 49999
+  Port = 59999
   Timeout = 5000
   ConnectRetries = 10
   Labels = [ 'Template' ]
@@ -17,13 +17,13 @@
   CheckInterval = '10s'
 
 [Clients]
-  [Clients.edgex-core-data]
+  [Clients.core-data]
     Host = 'localhost'
-    Port = 48080
+    Port = 59880
 
-  [Clients.edgex-core-metadata]
+  [Clients.core-metadata]
     Host = 'localhost'
-    Port = 48081
+    Port = 59881
 
 [Driver]
   TestParam1 = 'Hello'
