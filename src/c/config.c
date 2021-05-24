@@ -99,52 +99,13 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
   return result;
 }
 
-toml_table_t *edgex_device_loadConfig
-(
-  iot_logger_t *lc,
-  const char *dir,
-  const char *fname,
-  const char *profile,
-  devsdk_error *err
-)
+toml_table_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err)
 {
   toml_table_t *result = NULL;
   FILE *fp;
   char errbuf[ERRBUFSZ];
-  char *filename;
-  int pathlen;
 
-  if (fname && *fname)
-  {
-    pathlen = strlen (dir) + 1 + strlen (fname) + 1;
-  }
-  else
-  {
-    pathlen = strlen (dir) + 1 + strlen ("configuration.toml") + 1;
-    if (profile && *profile)
-    {
-      pathlen += (strlen (profile) + 1);
-    }
-  }
-  filename = malloc (pathlen);
-  strcpy (filename, dir);
-  strcat (filename, "/");
-  if (fname && *fname)
-  {
-    strcat (filename, fname);
-  }
-  else
-  {
-    strcat (filename, "configuration");
-    if (profile && *profile)
-    {
-      strcat (filename, "-");
-      strcat (filename, profile);
-    }
-    strcat (filename, ".toml");
-  }
-
-  fp = fopen (filename, "r");
+  fp = fopen (path, "r");
   if (fp)
   {
     result = toml_parse_file (fp, errbuf, ERRBUFSZ);
@@ -157,12 +118,10 @@ toml_table_t *edgex_device_loadConfig
   }
   else
   {
-    iot_log_error
-      (lc, "Cant open file %s : %s", filename, strerror (errno));
+    iot_log_error (lc, "Cant open file %s : %s", path, strerror (errno));
     *err = EDGEX_NO_CONF_FILE;
   }
 
-  free (filename);
   return result;
 }
 

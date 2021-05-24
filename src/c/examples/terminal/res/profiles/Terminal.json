@@ -1,0 +1,55 @@
+{
+  "name": "Example-Terminal",
+  "manufacturer": "IoTechSystems",
+  "model": "IoT3",
+  "description": "Virtual Terminal Device for CSDK Example",
+  "labels": ["sensor"],
+  "apiVersion": "v2",
+
+  "deviceResources":
+  [
+    {
+      "name": "Cmd",
+      "description": "The name of an activation command",
+      "isHidden": true,
+      "attributes": { "parameter": "cmd" },
+      "properties": { "valueType": "String", "readWrite": "W", "units": "text" }
+    },
+    {
+      "name": "Xposition",
+      "description": "The X position at which to write new text",
+      "isHidden": true,
+      "attributes": { "parameter": "x" },
+      "properties": { "valueType": "Int32", "readWrite": "W", "units": "characters" }
+    },
+    {
+      "name": "Yposition",
+      "description": "The Y position at which to write new text",
+      "isHidden": true,
+      "attributes": { "parameter": "y" },
+      "properties": { "valueType": "Int32", "readWrite": "W", "units": "characters" }
+    },
+    {
+      "name": "Message",
+      "description": "A message to write on the terminal",
+      "isHidden": true,
+      "attributes": { "parameter": "msg" },
+      "properties": { "valueType": "String", "readWrite": "W", "units": "text" }
+    }
+  ],
+
+  "deviceCommands":
+  [
+    {
+      "name": "WriteMsg",
+      "readWrite": "W",
+      "resourceOperations":
+      [
+        { "deviceResource": "Cmd", "defaultValue": "WriteMsg" },
+        { "deviceResource": "Xposition" },
+        { "deviceResource": "Yposition" },
+        { "deviceResource": "Message" }
+      ]
+    }
+  ]
+}

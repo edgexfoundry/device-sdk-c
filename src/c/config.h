@@ -75,14 +75,7 @@ typedef struct edgex_device_config
   edgex_map_device_watcherinfo watchers;
 } edgex_device_config;
 
-toml_table_t *edgex_device_loadConfig
-(
-  iot_logger_t *lc,
-  const char *dir,
-  const char *fname,
-  const char *profile,
-  devsdk_error *err
-);
+toml_table_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err);
 
 iot_data_t *edgex_config_defaults (const iot_data_t *driverconf);
 

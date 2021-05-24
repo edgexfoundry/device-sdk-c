@@ -1,0 +1,32 @@
+{
+  "name": "Example-Bitfields",
+  "manufacturer": "IoTechSystems",
+  "model": "IoT4",
+  "description": "Virtual Bitfields Device for CSDK Example",
+  "labels": ["sensor"],
+  "apiVersion": "v2",
+
+  "deviceResources":
+  [
+    {
+      "name": "A",
+      "description": "Byte 0 (LSB)",
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF", "units": "things" }
+    },
+    {
+      "name": "B",
+      "description": "Byte 1",
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF00", "shift": "8", "units": "things" }
+    },
+    {
+      "name": "C",
+      "description": "Byte 2",
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF0000", "shift": "16", "units": "things" }
+    },
+    {
+      "name": "D",
+      "description": "Byte 3 (MSB)",
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF000000", "shift": "24", "units": "things" }
+    }
+  ]
+}
