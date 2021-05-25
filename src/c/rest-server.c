@@ -101,8 +101,8 @@ static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, con
     }
   }
 
-  devsdk_nvpairs **list = (devsdk_nvpairs **)p;
-  *list = devsdk_nvpairs_new (key, value ? value : "", *list);
+  iot_data_t *map = (iot_data_t *)p;
+  iot_data_map_add (map, iot_data_alloc_string (key, IOT_DATA_COPY), iot_data_alloc_string (value ? value : "", IOT_DATA_COPY));
 
   return MHD_YES;
 }
@@ -246,7 +246,8 @@ static int http_handler
       {
         devsdk_http_request req;
         devsdk_http_reply rep;
-        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, &params);
+        req.qparams = iot_data_alloc_map (IOT_DATA_STRING);
+        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, req.qparams);
         req.params = params;
         req.method = method;
         req.data.bytes = ctx->m_data;
@@ -258,6 +259,7 @@ static int http_handler
         reply = rep.data.bytes;
         reply_size = rep.data.size;
         reply_type = rep.content_type;
+        iot_data_free (req.qparams);
       }
       else
       {

@@ -76,7 +76,7 @@ static void *ae_runner (void *p)
   {
     if (ai->svc->adminstate == LOCKED || dev->adminState == LOCKED || dev->operatingState == DOWN)
     {
-      edgex_device_release (dev);
+      edgex_device_release (ai->svc, dev);
       edgex_autoimpl_release (ai);
       return NULL;
     }
@@ -84,53 +84,64 @@ static void *ae_runner (void *p)
     iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
     devsdk_commandresult *results = calloc (ai->resource->nreqs, sizeof (devsdk_commandresult));
     iot_data_t *exc = NULL;
-    if
-    (
-      ai->svc->userfns.gethandler
-        (ai->svc->userdata, dev->name, (devsdk_protocols *)dev->protocols, ai->resource->nreqs, ai->resource->reqs, results, NULL, &exc)
-    )
+    if (dev->devimpl->address == NULL)
     {
-      devsdk_commandresult *resdup = NULL;
-      if (!(ai->onChange && ai->last && devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs)))
+      dev->devimpl->address = ai->svc->userfns.create_addr (ai->svc->userdata, dev->protocols, &exc);
+    }
+    if (dev->devimpl->address)
+    {
+      if (ai->svc->userfns.gethandler (ai->svc->userdata, dev->devimpl, ai->resource->nreqs, ai->resource->reqs, results, NULL, &exc))
       {
-        devsdk_error err = EDGEX_OK;
-        if (ai->onChange)
+        devsdk_commandresult *resdup = NULL;
+        if (!(ai->onChange && ai->last && devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs)))
         {
-          resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
-        }
-        edgex_event_cooked *event =
-          edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
-        if (event)
-        {
-          edgex_data_client_add_event (ai->svc->dataclient, event);
+          devsdk_error err = EDGEX_OK;
           if (ai->onChange)
           {
-            devsdk_commandresult_free (ai->last, ai->resource->nreqs);
-            ai->last = resdup;
-            resdup = NULL;
+            resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
           }
-          if (ai->svc->config.device.updatelastconnected)
+          edgex_event_cooked *event =
+            edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
+          if (event)
           {
-            edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);
+            edgex_data_client_add_event (ai->svc->dataclient, event);
+            if (ai->onChange)
+            {
+              devsdk_commandresult_free (ai->last, ai->resource->nreqs);
+              ai->last = resdup;
+              resdup = NULL;
+            }
+            if (ai->svc->config.device.updatelastconnected)
+            {
+              edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);
+            }
+          }
+          else
+          {
+            iot_log_error (ai->svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
+            edgex_metadata_client_set_device_opstate
+              (ai->svc->logger, &ai->svc->config.endpoints, dev->name, DOWN, &err);
           }
         }
-        else
-        {
-          iot_log_error (ai->svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
-          edgex_metadata_client_set_device_opstate
-            (ai->svc->logger, &ai->svc->config.endpoints, dev->name, DOWN, &err);
-        }
+        devsdk_commandresult_free (resdup, ai->resource->nreqs);
       }
-      devsdk_commandresult_free (resdup, ai->resource->nreqs);
+      else
+      {
+        iot_log_error (ai->svc->logger, "AutoEvent: Driver for %s failed on GET", dev->name);
+      }
     }
     else
     {
-      iot_log_error (ai->svc->logger, "AutoEvent: Driver for %s failed on GET", dev->name);
+      iot_log_error (ai->svc->logger, "AutoEvent: Address parsing for %s failed", dev->name);
     }
-    iot_data_free (exc);
+    if (exc)
+    {
+      iot_log_error (ai->svc->logger, iot_data_to_json (exc));
+      iot_data_free (exc);
+    }
     devsdk_commandresult_free (results, ai->resource->nreqs);
     edgex_device_free_crlid ();
-    edgex_device_release (dev);
+    edgex_device_release (ai->svc, dev);
   }
   else
   {
@@ -159,8 +170,7 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
   {
     if (ae->impl == NULL)
     {
-      const edgex_cmdinfo *cmd = edgex_deviceprofile_findcommand
-        (ae->resource, dev->profile, true);
+      const edgex_cmdinfo *cmd = edgex_deviceprofile_findcommand (svc, ae->resource, dev->profile, true);
       if (cmd == NULL)
       {
         iot_log_error

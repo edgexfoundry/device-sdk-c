@@ -40,10 +40,11 @@ edgex_deviceprofile *edgex_get_deviceprofile_byname (devsdk_service_t *svc, cons
 
 /**
  * @brief Free a device profile or list of device profiles.
+ * @param svc The device service.
  * @param p The device profile or the first device profile in the list.
  */
 
-void edgex_free_deviceprofile (edgex_deviceprofile *p);
+void edgex_free_deviceprofile (devsdk_service_t *svc, edgex_deviceprofile *p);
 
 /**
  * @brief Install a device profile

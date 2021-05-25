@@ -216,7 +216,7 @@ static char *devsdk_service_confpath (const char *dir, const char *fname, const 
 }
 
 devsdk_service_t *devsdk_service_new
-  (const char *defaultname, const char *version, void *impldata, devsdk_callbacks implfns, int *argc, char **argv, devsdk_error *err)
+  (const char *defaultname, const char *version, void *impldata, devsdk_callbacks *implfns, int *argc, char **argv, devsdk_error *err)
 {
   iot_logger_t *logger = iot_logger_alloc_custom (defaultname, IOT_LOG_TRACE, "", edgex_log_tostdout, NULL, true);
   if (impldata == NULL)
@@ -271,12 +271,12 @@ devsdk_service_t *devsdk_service_new
   result->confpath = devsdk_service_confpath (result->confdir, result->conffile, result->profile);
   result->version = version;
   result->userdata = impldata;
-  result->userfns = implfns;
+  result->userfns = *implfns;
   result->devices = edgex_devmap_alloc (result);
   result->watchlist = edgex_watchlist_alloc ();
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
-  result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns.discover, impldata);
+  result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns->discover, impldata);
   return result;
 }
 
@@ -609,7 +609,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   }
 
   edgex_devmap_populate_devices (svc->devices, devs);
-  edgex_device_free (devs);
+  edgex_device_free (svc, devs);
 
   /* Start REST server now so that we get the callbacks on device addition */
 
@@ -887,9 +887,8 @@ void devsdk_post_readings
     return;
   }
 
-  const edgex_cmdinfo *command = edgex_deviceprofile_findcommand
-    (resname, dev->profile, true);
-  edgex_device_release (dev);
+  const edgex_cmdinfo *command = edgex_deviceprofile_findcommand (svc, resname, dev->profile, true);
+  edgex_device_release (svc, dev);
 
   if (command)
   {

@@ -66,7 +66,8 @@ typedef struct edgex_deviceresource
   char *name;
   char *tag;
   edgex_propertyvalue *properties;
-  devsdk_nvpairs *attributes;
+  iot_data_t *attributes;
+  devsdk_resource_attr_t parsed_attrs;
   struct edgex_deviceresource *next;
 } edgex_deviceresource;
 
@@ -129,6 +130,7 @@ typedef struct edgex_device_autoevents
 typedef struct edgex_device
 {
   devsdk_protocols *protocols;
+  devsdk_device_t *devimpl;
   edgex_device_adminstate adminState;
   uint64_t created;
   char *description;

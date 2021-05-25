@@ -25,23 +25,46 @@ Get
 The Get handler deals with incoming requests to get data from a device. The following information is provided to the device service developer:
 
 * void *impl - The impldata pointer given as part of edgex_device_service.
-* char *devname - The name of the device being queried.
-* devsdk_protocols *protocols - This provides information about the device that this get request is seeking to access. A list of protocols is supplied, each consists of a name and a set of name-value pairs representing the attributes required for that protocol. A function devsdk_protocols_properties() is provided which returns the name-value pairs corresponding to a named protocol.
+* devsdk_device_t *device - The device being queried. This structure includes the device name and its parsed protocol properties.
 * uint32_t nreadings - The following requests and reading parameters are arrays of size nreadings.
 * const devsdk_commandrequest *requests - The name, attributes and type of each resource being requested.
 * devsdk_commandresult * readings - Once a reading has been taken from a device, the resulting value is placed into the readings. This is used by the SDK to return the result to EdgeX.
-* const devsdk_nvpairs *qparams - This contains any parameters requested via the query string of the request URL.
+* const iot_data_t *options - This contains any options requested via the query string of the request URL.
 * iot_data_t ** exception - The handler may store a string here containing details in the event of a read failure.
 
 In general the GET handler should implement a translation between a GET request from edgex and a read/get via the protocol-specific mechanism. Multiple sources of metadata are provided to allow the device-service to identify what it should query on receipt of the callback.
 
 Put
 ---
-The Put handler deals with requests to write/transmit data to a specific device. It is provided with the same set of metadata as the GET callback. However, this time the put handler should write the data provided to the device associated with the addressable. The process of using the metadata provided to perform the correct protocol-specific write/put action is similar to that of performing a get.
+The Put handler deals with requests to write/transmit data to a specific device. It is provided with the same set of metadata as the GET callback. However, this time the put handler should write the data provided (in the values[] array) to the device associated with the addressable. The process of using the metadata provided to perform the correct protocol-specific write/put action is similar to that of performing a get.
 
 Stop
 ----
 The stop handler is called when devsdk_service_stop is called. This handler should be used to clean-up all device service specific resources. Typically this would involve freeing any resources allocated during execution of the device service.
+
+Create Address
+--------------
+
+The Create Address handler is supplied with a list of protocols which address the device. Each protocol consists of a name and a string/string map representing the parameters required for that protocol. A function devsdk_protocols_properties() is provided which returns the map corresponding to a named protocol.
+
+The handler should allocate and return an implementation-specific object represemting the address of the device in a parsed form that will be convenient for the get and put handlers to work with.
+
+If the protocols cannot be successfully parsed, the handler should return NULL and indicate the problem by returning a string in the `exception` parameter.
+
+Free Address
+------------
+
+This handler should free an object created by the Create Address handler.
+
+Create Resource Attr
+--------------------
+
+This handler is analagous to Create Address but applies to the attributes specified for a device resource. The attributes are supplied to the function as a string-keyed map.
+
+Free Resource Attr
+------------------
+
+This handler should free an object created by the Create Resource Attr handler.
 
 Optional handlers
 -----------------

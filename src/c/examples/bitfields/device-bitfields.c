@@ -1,7 +1,7 @@
 /* Pseudo-device service illustrating bitfield access using C SDK and mask/shift transforms */
 
 /*
- * Copyright (c) 2020
+ * Copyright (c) 2020-2021
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -34,12 +34,11 @@ static bool bitfield_init
 static bool bitfield_get_handler
 (
   void * impl,
-  const char * devname,
-  const devsdk_protocols * protocols,
+  const devsdk_device_t *device,
   uint32_t nreadings,
   const devsdk_commandrequest * requests,
   devsdk_commandresult * readings,
-  const devsdk_nvpairs * qparams,
+  const iot_data_t *options,
   iot_data_t ** exception
 )
 {
@@ -56,12 +55,11 @@ static bool bitfield_get_handler
 static bool bitfield_put_handler
 (
   void * impl,
-  const char * devname,
-  const devsdk_protocols * protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest * requests,
   const iot_data_t * values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t ** exception
 )
 {
@@ -102,6 +100,24 @@ static void bitfield_stop (void * impl, bool force)
 {
 }
 
+static devsdk_address_t bitfield_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
+{
+  return (devsdk_address_t)protocols;
+}
+
+static void bitfield_free_addr (void *impl, devsdk_address_t address)
+{
+}
+
+static devsdk_resource_attr_t bitfield_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
+{
+  return (devsdk_resource_attr_t)attributes;
+}
+
+static void bitfield_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
+{
+}
+
 int main (int argc, char * argv[])
 {
   sigset_t set;
@@ -113,8 +129,18 @@ int main (int argc, char * argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks bitfieldImpls;
-  devsdk_callbacks_init (&bitfieldImpls, bitfield_init, NULL, bitfield_get_handler, bitfield_put_handler, bitfield_stop);
+  devsdk_callbacks *bitfieldImpls = devsdk_callbacks_init
+  (
+    bitfield_init,
+    NULL,
+    bitfield_get_handler,
+    bitfield_put_handler,
+    bitfield_stop,
+    bitfield_create_addr,
+    bitfield_free_addr,
+    bitfield_create_resource_attr,
+    bitfield_free_resource_attr
+  );
 
   devsdk_service_t * service = devsdk_service_new
     ("device-bitfield", "1.0", impl, bitfieldImpls, &argc, argv, &e);
@@ -150,5 +176,6 @@ int main (int argc, char * argv[])
 
   devsdk_service_free (service);
   free (impl);
+  free (bitfieldImpls);
   return 0;
 }

@@ -218,7 +218,7 @@ edgex_deviceprofile *edgex_profiles (devsdk_service_t *svc)
   return edgex_devmap_copyprofiles (svc->devices);
 }
 
-void edgex_free_deviceprofile (edgex_deviceprofile *dp)
+void edgex_free_deviceprofile (devsdk_service_t *svc, edgex_deviceprofile *dp)
 {
-  edgex_deviceprofile_free (dp);
+  edgex_deviceprofile_free (svc, dp);
 }

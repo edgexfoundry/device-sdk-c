@@ -29,17 +29,6 @@ typedef enum
 } edgex_devmap_outcome_t;
 
 /*
- * A list of devices matching a command.
- */
-
-typedef struct edgex_cmdqueue_t
-{
-   edgex_device *dev;
-   const struct edgex_cmdinfo *cmd;
-   struct edgex_cmdqueue_t *next;
-} edgex_cmdqueue_t;
-
-/*
  * Device[Profile] map lifecycle.
  */
 
@@ -67,14 +56,12 @@ extern edgex_devmap_outcome_t edgex_devmap_replace_device
 
 extern edgex_device *edgex_devmap_device_byname
   (edgex_devmap_t *map, const char *name);
-extern edgex_cmdqueue_t *edgex_devmap_device_forcmd
-  (edgex_devmap_t *map, const char *cmd, bool forGet);
 
 /*
  * Release function. The device is freed when its reference count hits zero.
  */
 
-extern void edgex_device_release (edgex_device *dev);
+extern void edgex_device_release (devsdk_service_t *svc, edgex_device *dev);
 
 /*
  * Device removal.

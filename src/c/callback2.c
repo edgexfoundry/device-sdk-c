@@ -137,7 +137,7 @@ void edgex_device_handler_callback_device (void *ctx, const devsdk_http_request 
     edgex_baseresponse br;
     edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Data written successfully");
     edgex_baseresponse_write (&br, reply);
-    edgex_device_free (d);
+    edgex_device_free (svc, d);
   }
   else
   {
@@ -159,7 +159,7 @@ void edgex_device_handler_callback_device_name (void *ctx, const devsdk_http_req
     {
       found = edgex_devmap_removedevice_byname (svc->devices, dev->name);
       svc->userfns.device_removed (svc->userdata, dev->name, (const devsdk_protocols *)dev->protocols);
-      edgex_device_release (dev);
+      edgex_device_release (svc, dev);
     }
   }
   else
