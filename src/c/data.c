@@ -256,7 +256,7 @@ edgex_event_cooked *edgex_data_process_event
       cbor_map_add (crdg, (struct cbor_pair)
       {
         .key = cbor_move (cbor_build_string ("resourceName")),
-        .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resname))
+        .value = cbor_move (cbor_build_string (commandinfo->reqs[i].resource->name))
       });
 
       cbor_map_add (crdg, (struct cbor_pair)
@@ -330,7 +330,7 @@ edgex_event_cooked *edgex_data_process_event
       json_object_set_string (robj, "id", id);
       json_object_set_string (robj, "profileName", commandinfo->profile->name);
       json_object_set_string (robj, "deviceName", device_name);
-      json_object_set_string (robj, "resourceName", commandinfo->reqs[i].resname);
+      json_object_set_string (robj, "resourceName", commandinfo->reqs[i].resource->name);
       json_object_set_string (robj, (pt == Edgex_Binary) ? "binaryValue" : "value", reading);
       json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
       json_object_set_string (robj, "valueType", edgex_propertytype_tostring (pt));

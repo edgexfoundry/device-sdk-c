@@ -24,22 +24,23 @@ void devsdk_free_resources (devsdk_device_resources *r)
 {
   while (r)
   {
-    free ((char *)r->resname);
-    devsdk_nvpairs_free ((devsdk_nvpairs *)r->attributes);
-    iot_typecode_free ((iot_typecode_t *)r->type);
+    free (r->resname);
+    iot_data_free (r->attributes);
+    iot_typecode_free (r->type);
     devsdk_device_resources *nextr = r->next;
     free (r);
     r = nextr;
   }
 }
 
-void devsdk_free_devices (devsdk_devices *d)
+void devsdk_free_devices (devsdk_service_t *svc, devsdk_devices *d)
 {
   while (d)
   {
-    free ((char *)d->devname);
+    free (d->device->name);
+    svc->userfns.free_addr (svc->userdata, d->device->address);
+    free (d->device);
     devsdk_free_resources (d->resources);
-    devsdk_protocols_free ((devsdk_protocols *)d->protocols);
     devsdk_devices *nextd = d->next;
     free (d);
     d = nextd;
@@ -68,7 +69,7 @@ void edgex_add_device
   if (existing)
   {
     iot_log_info (svc->logger, "Device %s already present", name);
-    edgex_device_release (existing);
+    edgex_device_release (svc, existing);
     return;
   }
 
@@ -112,8 +113,8 @@ devsdk_devices *devsdk_get_device (devsdk_service_t *svc, const char *name)
   internal = edgex_devmap_device_byname (svc->devices, name);
   if (internal)
   {
-    result = edgex_device_todevsdk (internal);
-    edgex_device_release (internal);
+    result = edgex_device_todevsdk (svc, internal);
+    edgex_device_release (svc, internal);
   }
   return result;
 }
@@ -132,7 +133,7 @@ edgex_device * edgex_get_device_byname (devsdk_service_t *svc, const char *name)
   if (internal)
   {
     result = edgex_device_dup (internal);
-    edgex_device_release (internal);
+    edgex_device_release (svc, internal);
   }
   return result;
 }
@@ -176,9 +177,9 @@ void edgex_update_device
   }
 }
 
-void edgex_free_device (edgex_device *e)
+void edgex_free_device (devsdk_service_t *svc, edgex_device *e)
 {
-  edgex_device_free (e);
+  edgex_device_free (svc, e);
 }
 
 void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, devsdk_discovered_device *devices)
@@ -189,7 +190,7 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
     existing = edgex_devmap_device_byname (svc->devices, devices[i].name);
     if (existing)
     {
-      edgex_device_release (existing);
+      edgex_device_release (svc, existing);
       continue;
     }
 

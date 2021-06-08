@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2021
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -742,7 +742,7 @@ void edgex_device_process_configured_devices
       existing = edgex_devmap_device_byname (svc->devices, devname);
       if (existing)
       {
-        edgex_device_release (existing);
+        edgex_device_release (svc, existing);
         iot_log_info (svc->logger, "Device %s already exists: skipped", devname);
       }
       else
@@ -759,7 +759,7 @@ void edgex_device_process_configured_devices
             toml_table_t *pprops = toml_table_in (pptable, key);
             if (pprops)
             {
-              devsdk_nvpairs *props = NULL;
+              iot_data_t *props = iot_data_alloc_map (IOT_DATA_STRING);
               const char *pkey;
               for (int j = 0; 0 != (pkey = toml_key_in (pprops, j)); j++)
               {
@@ -771,12 +771,11 @@ void edgex_device_process_configured_devices
                   {
                     val = strdup (raw);
                   }
-                  props = devsdk_nvpairs_new (pkey, val, props);
-                  free (val);
+                  iot_data_map_add (props, iot_data_alloc_string (pkey, IOT_DATA_COPY), iot_data_alloc_string (val, IOT_DATA_TAKE));
                 }
               }
               protocols = devsdk_protocols_new (key, props, protocols);
-              devsdk_nvpairs_free (props);
+              iot_data_free (props);
             }
             else
             {

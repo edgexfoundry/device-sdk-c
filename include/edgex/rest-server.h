@@ -9,6 +9,7 @@
 #ifndef _EDGEX_REST_SERVER_H_
 #define _EDGEX_REST_SERVER_H_ 1
 
+#include "edgex/edgex-base.h"
 #include "devsdk/devsdk-base.h"
 #include "iot/logger.h"
 
@@ -39,6 +40,7 @@ typedef struct
 typedef struct
 {
   const devsdk_nvpairs *params;
+  iot_data_t *qparams;
   devsdk_http_method method;
   devsdk_http_data data;
   const char *content_type;

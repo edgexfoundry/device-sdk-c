@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2021
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -14,21 +14,7 @@
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
 
-#define ERR_BUFSZ 1024
-
-static bool exceptionAndErrorN (iot_data_t **exception, iot_logger_t *lc, const char *msg, ...)
-{
-  char *buf = malloc (ERR_BUFSZ);
-  va_list args;
-  va_start (args, msg);
-  vsnprintf (buf, ERR_BUFSZ, msg, args);
-  va_end (args);
-
-  iot_log_error (lc, buf);
-  *exception = iot_data_alloc_string (buf, IOT_DATA_TAKE);
-
-  return false;
-}
+typedef enum { RANDOM_R100, RANDOM_R1000, RANDOM_SW } random_resourcetype;
 
 typedef struct random_driver
 {
@@ -55,12 +41,11 @@ static bool random_init
 static bool random_get_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparms,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
@@ -68,35 +53,22 @@ static bool random_get_handler
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    /* Use the attributes to differentiate between requests */
-    unsigned long stype = 0;
-    const char *swid = NULL;
-    if (devsdk_nvpairs_ulong_value (requests[i].attributes, "SensorType", &stype))
+    switch (*(random_resourcetype *)requests[i].resource->attrs)
     {
-      switch (stype)
-      {
-        case 1:
-          /* Set the reading as a random value between 0 and 100 */
-          readings[i].value = iot_data_alloc_ui64 (rand() % 100);
-          break;
-        case 2:
-          /* Set the reading as a random value between 0 and 1000 */
-          readings[i].value = iot_data_alloc_ui64 (rand() % 1000);
-          break;
-        default:
-          return exceptionAndErrorN (exception, driver->lc, "%lu is not a valid SensorType", stype);
-      }
-    }
-    else if ((swid = devsdk_nvpairs_value (requests[i].attributes, "SwitchID")))
-    {
-      pthread_mutex_lock (&driver->mutex);
-      readings[i].value = iot_data_alloc_bool (driver->state_flag);
-      pthread_mutex_unlock (&driver->mutex);
-    }
-    else
-    {
-      return exceptionAndErrorN
-        (exception, driver->lc, "%s: Neither SensorType nor SwitchID were given", requests[i].resname);
+      case RANDOM_R100:
+        /* Set the reading as a random value between 0 and 100 */
+        readings[i].value = iot_data_alloc_ui64 (rand() % 100);
+        break;
+      case RANDOM_R1000:
+        /* Set the reading as a random value between 0 and 1000 */
+        readings[i].value = iot_data_alloc_ui64 (rand() % 1000);
+        break;
+      case RANDOM_SW:
+        /* Get the switch value */
+        pthread_mutex_lock (&driver->mutex);
+        readings[i].value = iot_data_alloc_bool (driver->state_flag);
+        pthread_mutex_unlock (&driver->mutex);
+        break;
     }
   }
   return true;
@@ -105,12 +77,11 @@ static bool random_get_handler
 static bool random_put_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
   const iot_data_t *values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
@@ -118,24 +89,71 @@ static bool random_put_handler
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    /* A Device Service again makes use of the data provided to perform a PUT */
-
-    /* In this case we set a boolean flag */
-    if (devsdk_nvpairs_value (requests[i].attributes, "SwitchID"))
+    if (*(random_resourcetype *)requests[i].resource->attrs == RANDOM_SW)
     {
+      /* set a boolean flag */
       pthread_mutex_lock (&driver->mutex);
       driver->state_flag = iot_data_bool (values[i]);
       pthread_mutex_unlock (&driver->mutex);
     }
     else
     {
-      return exceptionAndErrorN (exception, driver->lc, "PUT not valid for resource %s", requests[i].resname);
+      *exception = iot_data_alloc_string ("PUT not valid for this resource", IOT_DATA_REF);
+      return false;
     }
   }
   return true;
 }
 
 static void random_stop (void *impl, bool force) {}
+
+static devsdk_address_t random_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
+{
+  return (devsdk_address_t)protocols;
+}
+
+static void random_free_addr (void *impl, devsdk_address_t address)
+{
+}
+
+static devsdk_resource_attr_t random_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
+{
+  random_resourcetype *attr;
+  random_resourcetype result;
+
+  switch (iot_data_string_map_get_i64 (attributes, "SensorType", 0))
+  {
+    case 0:
+      if (iot_data_string_map_get (attributes, "SwitchID"))
+      {
+        result = RANDOM_SW;
+      }
+      else
+      {
+        *exception = iot_data_alloc_string ("random: either SensorType or SwitchID attributes are required", IOT_DATA_REF);
+        return NULL;
+      }
+      break;
+    case 1:
+      result = RANDOM_R100;
+      break;
+    case 2:
+      result = RANDOM_R1000;
+      break;
+    default:
+      *exception = iot_data_alloc_string ("random: out-of-range SensorType specified", IOT_DATA_REF);
+      return NULL;
+  }
+  attr = malloc (sizeof (random_resourcetype));
+  *attr = result;
+  return attr;
+}
+
+static void random_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
+{
+  free (resource);
+}
+
 
 int main (int argc, char *argv[])
 {
@@ -149,8 +167,18 @@ int main (int argc, char *argv[])
   e.code = 0;
 
   /* Device Callbacks */
-  devsdk_callbacks randomImpls;
-  devsdk_callbacks_init (&randomImpls, random_init, NULL, random_get_handler, random_put_handler, random_stop);
+  devsdk_callbacks *randomImpls = devsdk_callbacks_init
+  (
+    random_init,
+    NULL,
+    random_get_handler,
+    random_put_handler,
+    random_stop,
+    random_create_addr,
+    random_free_addr,
+    random_create_resource_attr,
+    random_free_resource_attr
+  );
 
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
@@ -190,5 +218,6 @@ int main (int argc, char *argv[])
 
   devsdk_service_free (service);
   free (impl);
+  free (randomImpls);
   return 0;
 }

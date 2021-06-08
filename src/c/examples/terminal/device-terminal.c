@@ -21,10 +21,67 @@
 #define ERR_TERMINAL_NO_CMD "No command specified in PUT request."
 #define ERR_TERMINAL_MSG "WriteMsg request did not specify a message."
 
+typedef enum { TERM_X, TERM_Y, TERM_MSG, TERM_CMD, TERM_INVALID } terminal_resourcetype;
+
 typedef struct terminal_driver
 {
   iot_logger_t * lc;
 } terminal_driver;
+
+static devsdk_address_t terminal_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
+{
+  return (devsdk_address_t)protocols;
+}
+
+static void terminal_free_addr (void *impl, devsdk_address_t address)
+{
+}
+
+static devsdk_resource_attr_t terminal_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
+{
+  terminal_resourcetype *attr = NULL;
+  terminal_resourcetype result = TERM_INVALID;
+
+  const char *param = iot_data_string_map_get_string (attributes, "parameter");
+  if (param)
+  {
+    if (strcmp (param, "x") == 0)
+    {
+      result = TERM_X;
+    }
+    else if (strcmp (param, "y") == 0)
+    {
+      result = TERM_Y;
+    }
+    else if (strcmp (param, "msg") == 0)
+    {
+      result = TERM_MSG;
+    }
+    else if (strcmp (param, "cmd") == 0)
+    {
+      result = TERM_CMD;
+    }
+    else
+    {
+      *exception = iot_data_alloc_string ("terminal: invalid value specified for \"parameter\"", IOT_DATA_REF);
+    }
+  }
+  else
+  {
+    *exception = iot_data_alloc_string ("terminal: \"parameter\" is required", IOT_DATA_REF);
+  }
+  if (result != TERM_INVALID)
+  {
+    attr = malloc (sizeof (terminal_resourcetype));
+    *attr = result;
+  }
+  return attr;
+}
+
+static void terminal_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
+{
+  free (resource);
+}
 
 static bool terminal_writeMsg
 (
@@ -39,34 +96,19 @@ static bool terminal_writeMsg
   const char * msg = NULL;
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char * param = devsdk_nvpairs_value (requests[i].attributes, "parameter");
-
-    if (param)
+    switch (*(terminal_resourcetype *)requests[i].resource->attrs)
     {
-      if (strcmp (param, "x") == 0)
-      {
+      case TERM_X:
         x = (iot_data_i32 (values[i])) % COLS;
-      }
-      else if (strcmp (param, "y") == 0)
-      {
+        break;
+      case TERM_Y:
         y = (iot_data_i32 (values[i])) % LINES;
-      }
-      else if (strcmp (param, "msg") == 0)
-      {
+        break;
+      case TERM_MSG:
         msg = iot_data_string (values[i]);
-      }
-      else if (strcmp (param, "cmd") == 0)
-      {
-        // skip
-      }
-      else
-      {
-        iot_log_warn (driver->lc, "Unknown parameter %s supplied", param);
-      }
-    }
-    else
-    {
-      iot_log_warn (driver->lc, "No parameter in device resource %s", requests[i].resname);
+        break;
+      default:
+        break;
     }
   }
 
@@ -99,30 +141,26 @@ static bool terminal_init
 static bool terminal_get_handler
 (
   void * impl,
-  const char * devname,
-  const devsdk_protocols * protocols,
+  const devsdk_device_t *device,
   uint32_t nreadings,
   const devsdk_commandrequest * requests,
   devsdk_commandresult * readings,
-  const devsdk_nvpairs * q_params,
+  const iot_data_t *options,
   iot_data_t ** exception
 )
 {
-  terminal_driver * driver = (terminal_driver *) impl;
-  iot_log_error (driver->lc, ERR_TERMINAL_READ);
-  * exception = iot_data_alloc_string (ERR_TERMINAL_READ, IOT_DATA_REF);
+  *exception = iot_data_alloc_string (ERR_TERMINAL_READ, IOT_DATA_REF);
   return false;
 }
 
 static bool terminal_put_handler
 (
   void * impl,
-  const char * devname,
-  const devsdk_protocols * protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest * requests,
   const iot_data_t * values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t ** exception
 )
 {
@@ -133,8 +171,7 @@ static bool terminal_put_handler
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char * param = devsdk_nvpairs_value (requests[i].attributes, "parameter");
-    if (param && strcmp (param, "cmd") == 0)
+    if (*(terminal_resourcetype *)requests[i].resource->attrs == TERM_CMD)
     {
       command = iot_data_string (values[i]);
       break;
@@ -143,8 +180,7 @@ static bool terminal_put_handler
 
   if (command == NULL)
   {
-    iot_log_error (driver->lc, ERR_TERMINAL_NO_CMD);
-    * exception = iot_data_alloc_string (ERR_TERMINAL_NO_CMD, IOT_DATA_REF);
+    *exception = iot_data_alloc_string (ERR_TERMINAL_NO_CMD, IOT_DATA_REF);
     return false;
   }
   else if (strcmp (command, "WriteMsg") == 0)
@@ -152,8 +188,7 @@ static bool terminal_put_handler
     terminal_msg_state = terminal_writeMsg (driver, nvalues, requests, values);
     if (!terminal_msg_state)
     {
-      iot_log_error (driver->lc, ERR_TERMINAL_MSG);
-      * exception = iot_data_alloc_string (ERR_TERMINAL_MSG, IOT_DATA_REF);
+      *exception = iot_data_alloc_string (ERR_TERMINAL_MSG, IOT_DATA_REF);
       return false;
     }
     else
@@ -165,8 +200,7 @@ static bool terminal_put_handler
   {
     buff = malloc (ERR_BUFSZ);
     snprintf (buff, ERR_BUFSZ, "Unknown command %s", command);
-    iot_log_error (driver->lc, buff);
-    * exception = iot_data_alloc_string (buff, IOT_DATA_TAKE);
+    *exception = iot_data_alloc_string (buff, IOT_DATA_TAKE);
     return false;
   }
 }
@@ -189,8 +223,18 @@ int main (int argc, char * argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks terminalImpls;
-  devsdk_callbacks_init (&terminalImpls, terminal_init, NULL, terminal_get_handler, terminal_put_handler, terminal_stop);
+  devsdk_callbacks *terminalImpls = devsdk_callbacks_init
+  (
+    terminal_init,
+    NULL,
+    terminal_get_handler,
+    terminal_put_handler,
+    terminal_stop,
+    terminal_create_addr,
+    terminal_free_addr,
+    terminal_create_resource_attr,
+    terminal_free_resource_attr
+  );
 
   devsdk_service_t * service = devsdk_service_new
     ("device-terminal", "1.0", impl, terminalImpls, &argc, argv, &e);
@@ -226,5 +270,6 @@ int main (int argc, char * argv[])
 
   devsdk_service_free (service);
   free (impl);
+  free (terminalImpls);
   return 0;
 }

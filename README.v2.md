@@ -60,14 +60,25 @@ This enables more choices for memory management in the device service and the po
 
 #### Callback functions
 
+Mandatory:
+
 ```
 bool (*devsdk_initialize)
 void (*devsdk_reconfigure)
-void (*devsdk_discover)
-devsdk_device_resources * (*devsdk_describe)
 bool (*devsdk_handle_get)
 bool (*devsdk_handle_put)
 void (*devsdk_stop)
+devsdk_address_t (*devsdk_create_address)
+void (*devsdk_free_address)
+devsdk_resource_attr_t (*devsdk_create_resource_attr)
+void (*devsdk_free_resource_attr)
+```
+
+Optional:
+
+```
+void (*devsdk_discover)
+devsdk_device_resources * (*devsdk_describe)
 void * (*devsdk_autoevent_start_handler)
 void (*devsdk_autoevent_stop_handler)
 void (*devsdk_add_device_callback)
@@ -81,11 +92,13 @@ These are mostly identical to their v1 counterparts, with the following changes
 
 - The new `reconfigure` callback allows the driver to respond to dynamic reconfiguration requests. This is possible when using the Registry.
 
-- In `handle_get`, the incoming query parameters are passed as a name-value pair list instead of being marshalled into a special `Attribute`
+- In `handle_get`, the incoming query options are passed as a string/string map instead of being marshalled into a special `Attribute`. Query options are also available for put requests.
 
 - In `handle_get`, the type of the Reading data being requested is now specified using the structured typecode `iot_typecode_t`. An `edgex_propertytype` may be extracted from this if required using the following function:
 
 `edgex_propertytype edgex_propertytype_typecode (const iot_typecode_t *tc)`
+
+- New callback functions create/free_address and create/free_resource_attr are defined for parsing protocol properties and resource attributes respectively. This allows the parsing procedure to be performed once per device / device profile rather than on every get/put invocation
 
 - In `handle_put` the data to be set is passed as an array of `iot_data_t` rather than an array of `commandresult`
 
@@ -95,9 +108,9 @@ These are mostly identical to their v1 counterparts, with the following changes
 
 - A `describe` callback is added for future extended discovery functionality, subject to change
 
-Note that all callbacks are now specified at `service_new` time. NULL may be given for all except `intialize`, `handle_get`, `handle_put` and `stop`.
+Note that all callbacks are now specified at `service_new` time.
 
-A function devsdk_callbacks_init function is supplied for setting up the mandatory callbacks. Other devsdk_callbacks_x functions support setup of the optional callbacks.
+A function devsdk_callbacks_init function is supplied for setting up the mandatory callbacks. Other devsdk_callbacks_set_x functions support setup of the optional callbacks.
 
 #### Device Service Lifecycle
 

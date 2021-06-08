@@ -19,6 +19,8 @@
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
 
+typedef enum { COUNTER_R0 } counter_register;
+
 typedef struct counter_driver
 {
   iot_logger_t * lc;
@@ -37,85 +39,92 @@ static bool counter_init
   return true;
 }
 
-static bool exceptionAndError0 (iot_data_t **exception, iot_logger_t *lc, const char *msg)
+static devsdk_address_t counter_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
 {
-  iot_log_error (lc, msg);
-  *exception = iot_data_alloc_string (msg, IOT_DATA_REF);
-  return false;
+  const iot_data_t *props = devsdk_protocols_properties (protocols, "Counter");
+  if (props == NULL)
+  {
+    *exception = iot_data_alloc_string ("No Counter protocol in device address", IOT_DATA_REF);
+    return NULL;
+  }
+  const char *index = iot_data_string_map_get_string (props, "Index");
+  if (index == NULL)
+  {
+    *exception = iot_data_alloc_string ("Index in device address missing", IOT_DATA_REF);
+    return NULL;
+  }
+  char *end = NULL;
+  errno = 0;
+  unsigned long val = strtoul (index, &end, 0);
+  if (errno == 0 && *end == 0 && val >= 0 && val < NCOUNTERS)
+  {
+    uint64_t *result = malloc (sizeof (uint64_t));
+    *result = val;
+    return result;
+  }
+  else
+  {
+    *exception = iot_data_alloc_string ("Index in device address out of range", IOT_DATA_REF);
+    return NULL;
+  }
 }
 
-static bool exceptionAndErrorN (iot_data_t **exception, iot_logger_t *lc, const char *msg, ...)
+static void counter_free_addr (void *impl, devsdk_address_t address)
 {
-  char *buf = malloc (ERR_BUFSZ);
-  va_list args;
-  va_start (args, msg);
-  vsnprintf (buf, ERR_BUFSZ, msg, args);
-  va_end (args);
-
-  iot_log_error (lc, buf);
-  *exception = iot_data_alloc_string (buf, IOT_DATA_TAKE);
-
-  return false;
+  free (address);
 }
 
-static bool getDeviceAddress
-  (iot_logger_t *lc, unsigned long *index, const devsdk_protocols *protocols, iot_data_t **exception)
+static devsdk_resource_attr_t counter_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
 {
-  const devsdk_nvpairs *addr = devsdk_protocols_properties (protocols, "Counter");
-  if (addr == NULL)
-  {
-    return exceptionAndError0 (exception, lc, "No Counter protocol in device address");
-  }
+  counter_register *result = NULL;
+  const char *reg = iot_data_string_map_get_string (attributes, "register");
 
-  unsigned long i = 0;
-  if (!devsdk_nvpairs_ulong_value (addr, "Index", &i))
+  if (reg)
   {
-    return exceptionAndError0 (exception, lc, "No Index property in Counter protocol");
+    if (strcmp (reg, "count01") == 0)
+    {
+      result = malloc (sizeof (counter_register));
+      *result = COUNTER_R0;
+    }
+    /* else ifs for other registers... */
+    else
+    {
+      *exception = iot_data_alloc_string ("device resource specifies nonexistent register", IOT_DATA_REF);
+    }
   }
-  if (i >= NCOUNTERS)
+  else
   {
-    return exceptionAndErrorN (exception, lc, "Index %ul out of range", i);
+    *exception = iot_data_alloc_string ("No register attribute in device resource", IOT_DATA_REF);
   }
+  return result;
+}
 
-  *index = i;
-  return true;
+static void counter_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
+{
+  free (resource);
 }
 
 static bool counter_get_handler
 (
  void *impl,
- const char *devname,
- const devsdk_protocols *protocols,
+ const devsdk_device_t *device,
  uint32_t nreadings,
  const devsdk_commandrequest *requests,
  devsdk_commandresult *readings,
- const devsdk_nvpairs *qparms,
+ const iot_data_t *options,
  iot_data_t **exception
 )
 {
   counter_driver *driver = (counter_driver *)impl;
-  unsigned long index;
-
-  if (!getDeviceAddress (driver->lc, &index, protocols, exception))
-  {
-    return false;
-  }
+  uint64_t index = *(uint64_t *)device->address;
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
-    const char *reg = devsdk_nvpairs_value (requests[i].attributes, "register");
-    if (reg == NULL)
+    switch (*(counter_register *)requests[i].resource->attrs)
     {
-      return exceptionAndError0 (exception, driver->lc, "No register attribute in GET request");
-    }
-    if (strcmp (reg, "count01") == 0)
-    {
-      readings[i].value = iot_data_alloc_ui32 (atomic_fetch_add (&driver->counters[index], 1));
-    }
-    /* else ifs for other registers... */
-    else
-    {
-      return exceptionAndErrorN (exception, driver->lc, "Request for nonexistent register %s", reg);
+      case COUNTER_R0:
+        readings[i].value = iot_data_alloc_ui32 (atomic_fetch_add (&driver->counters[index], 1));
+        break;
     }
   }
   return true;
@@ -124,37 +133,24 @@ static bool counter_get_handler
 static bool counter_put_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
   const iot_data_t *values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
   counter_driver *driver = (counter_driver *)impl;
-  unsigned long index;
-
-  if (!getDeviceAddress (driver->lc, &index, protocols, exception))
-  {
-    return false;
-  }
+  uint64_t index = *(uint64_t *)device->address;
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
-    const char *reg = devsdk_nvpairs_value (requests[i].attributes, "register");
-    if (reg == NULL)
+    switch (*(counter_register *)requests[i].resource->attrs)
     {
-      return exceptionAndError0 (exception, driver->lc, "No register attribute in PUT request");
-    }
-    if (strcmp (reg, "count01") == 0)
-    {
-      atomic_store (&driver->counters[index], iot_data_ui32 (values[i]));
-    }
-    else
-    {
-      return exceptionAndErrorN (exception, driver->lc, "Request for nonexistent register %s", reg);
+      case COUNTER_R0:
+        atomic_store (&driver->counters[index], iot_data_ui32 (values[i]));
+        break;
     }
   }
   return true;
@@ -175,8 +171,18 @@ int main (int argc, char *argv[])
   devsdk_error e;
   e.code = 0;
 
-  devsdk_callbacks counterImpls;
-  devsdk_callbacks_init (&counterImpls, counter_init, NULL, counter_get_handler, counter_put_handler, counter_stop);
+  devsdk_callbacks *counterImpls = devsdk_callbacks_init
+  (
+    counter_init,
+    NULL,
+    counter_get_handler,
+    counter_put_handler,
+    counter_stop,
+    counter_create_addr,
+    counter_free_addr,
+    counter_create_resource_attr,
+    counter_free_resource_attr
+  );
 
   devsdk_service_t *service = devsdk_service_new
     ("device-counter", "1.0", impl, counterImpls, &argc, argv, &e);
@@ -212,5 +218,6 @@ int main (int argc, char *argv[])
 
   devsdk_service_free (service);
   free (impl);
+  free (counterImpls);
   return 0;
 }

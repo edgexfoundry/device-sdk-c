@@ -139,14 +139,14 @@ unsigned edgex_watchlist_populate (edgex_watchlist_t *wl, const edgex_watcher *n
   return count;
 }
 
-static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
+static bool matchpw (const edgex_watcher *pw, const iot_data_t *ids)
 {
   const edgex_blocklist *blocked = NULL;
   edgex_watcher_regexes_t *match = NULL;
 
   for (match = pw->regs; match; match = match->next)
   {
-    const char *matchval = devsdk_nvpairs_value (ids, match->name);
+    const char *matchval = iot_data_string_map_get_string (ids, match->name);
     if ((matchval == NULL) || (regexec (&match->preg, matchval, 0, NULL, 0) != 0))
     {
       return false;
@@ -156,7 +156,7 @@ static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
 
   for (blocked = (const edgex_blocklist *)pw->blocking_identifiers; blocked; blocked = blocked->next)
   {
-    const char *checkval = devsdk_nvpairs_value (ids, blocked->name);
+    const char *checkval = iot_data_string_map_get_string (ids, blocked->name);
     if (checkval)
     {
       for (devsdk_strings *bv = blocked->values; bv; bv = bv->next)
@@ -172,7 +172,7 @@ static bool matchpw (const edgex_watcher *pw, const devsdk_nvpairs *ids)
   return true;
 }
 
-edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const devsdk_nvpairs *ids)
+edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const iot_data_t *ids)
 {
   pthread_rwlock_rdlock ((pthread_rwlock_t *)&wl->lock);
 

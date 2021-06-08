@@ -94,10 +94,11 @@ edgex_device * edgex_get_device_byname (devsdk_service_t *svc, const char *name)
 
 /**
  * @brief Free a device structure or list of device structures.
+ * @param svc The device service.
  * @param d The device or the first device in the list.
  */
 
-void edgex_free_device (edgex_device *d);
+void edgex_free_device (devsdk_service_t *svc, edgex_device *d);
 
 #ifdef __cplusplus
 }

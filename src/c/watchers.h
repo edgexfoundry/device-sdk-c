@@ -30,7 +30,7 @@ extern unsigned edgex_watchlist_populate (edgex_watchlist_t *list, const edgex_w
 extern bool edgex_watchlist_remove_watcher (edgex_watchlist_t *list, const char *id);
 extern void edgex_watchlist_update_watcher (edgex_watchlist_t *list, const edgex_watcher *updated);
 
-extern edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *list, const devsdk_nvpairs *ids);
+extern edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *list, const iot_data_t *ids);
 
 extern void edgex_watchlist_dump (const edgex_watchlist_t *list, iot_logger_t *logger);
 

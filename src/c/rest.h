@@ -9,6 +9,7 @@
 #ifndef _EDGEX_DEVICE_REST_H_
 #define _EDGEX_DEVICE_REST_H_ 1
 
+#include "edgex/edgex-base.h"
 #include "devsdk/devsdk-base.h"
 #include "iot/logger.h"
 

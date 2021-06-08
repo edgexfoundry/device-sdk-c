@@ -7,6 +7,7 @@
  */
 
 #include "edgex-rest.h"
+#include "devutil.h"
 #include "cmdinfo.h"
 #include "autoevent.h"
 #include "watchers.h"
@@ -104,19 +105,6 @@ void devsdk_strings_free (devsdk_strings *strs)
   }
 }
 
-static JSON_Value *nvpairs_write (const devsdk_nvpairs *e)
-{
-  JSON_Value *result = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (result);
-
-  for (const devsdk_nvpairs *nv = e; nv; nv = nv->next)
-  {
-    json_object_set_string (obj, nv->name, nv->value);
-  }
-
-  return result;
-}
-
 static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
 {
   devsdk_nvpairs *result = NULL;
@@ -128,6 +116,33 @@ static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
     nv->value = strdup (json_value_get_string (json_object_get_value_at (obj, i)));
     nv->next = result;
     result = nv;
+  }
+  return result;
+}
+
+static iot_data_t *string_map_read (const JSON_Object *obj)
+{
+  iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
+  size_t count = json_object_get_count (obj);
+  for (size_t i = 0; i < count; i++)
+  {
+    iot_data_t *n = iot_data_alloc_string (json_object_get_name (obj, i), IOT_DATA_COPY);
+    iot_data_t *v = iot_data_alloc_string (json_value_get_string (json_object_get_value_at (obj, i)), IOT_DATA_COPY);
+    iot_data_map_add (result, n, v);
+  }
+  return result;
+}
+
+static JSON_Value *string_map_write (const iot_data_t *map)
+{
+  JSON_Value *result = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (result);
+
+  iot_data_map_iter_t iter;
+  iot_data_map_iter (map, &iter);
+  while (iot_data_map_iter_next (&iter))
+  {
+    json_object_set_string (obj, iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
   }
   return result;
 }
@@ -383,7 +398,8 @@ static edgex_deviceresource *deviceresource_read
     result->tag = get_string (obj, "tag");
     result->properties = pv;
     attributes_obj = json_object_get_object (obj, "attributes");
-    result->attributes = nvpairs_read (attributes_obj);
+    result->attributes = string_map_read (attributes_obj);
+    result->parsed_attrs = NULL;
     result->next = NULL;
   }
   else
@@ -403,13 +419,14 @@ static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresourc
     result->description = strdup (e->description);
     result->tag = strdup (e->tag);
     result->properties = propertyvalue_dup (e->properties);
-    result->attributes = devsdk_nvpairs_dup (e->attributes);
+    result->attributes = iot_data_copy (e->attributes);
+    result->parsed_attrs = NULL;
     result->next = edgex_deviceresource_dup (e->next);
   }
   return result;
 }
 
-static void deviceresource_free (edgex_deviceresource *e)
+static void deviceresource_free (devsdk_service_t *svc, edgex_deviceresource *e)
 {
   while (e)
   {
@@ -418,7 +435,11 @@ static void deviceresource_free (edgex_deviceresource *e)
     free (e->description);
     free (e->tag);
     propertyvalue_free (e->properties);
-    devsdk_nvpairs_free (e->attributes);
+    iot_data_free (e->attributes);
+    if (e->parsed_attrs)
+    {
+      svc->userfns.free_res (svc->userdata, e->parsed_attrs);
+    }
     e = e->next;
     free (current);
   }
@@ -539,8 +560,7 @@ static bool resourceop_validate (iot_logger_t *lc, edgex_resourceoperation *ro, 
   return true;
 }
 
-static edgex_deviceprofile *deviceprofile_read
-  (iot_logger_t *lc, const JSON_Object *obj)
+static edgex_deviceprofile *deviceprofile_read (iot_logger_t *lc, const JSON_Object *obj)
 {
   edgex_deviceprofile *result = calloc (1, sizeof (edgex_deviceprofile));
   size_t count;
@@ -570,7 +590,7 @@ static edgex_deviceprofile *deviceprofile_read
     else
     {
       iot_log_error (lc, "Parse error in device profile %s", result->name);
-      edgex_deviceprofile_free (result);
+      edgex_deviceprofile_free (NULL, result);
       return NULL;
     }
   }
@@ -589,15 +609,14 @@ static edgex_deviceprofile *deviceprofile_read
     {
       iot_log_error (lc, "Parse error in deviceCommand %s of device profile %s", temp->name, result->name);
       devicecommand_free (temp);
-      edgex_deviceprofile_free (result);
+      edgex_deviceprofile_free (NULL, result);
       return NULL;
     }
   }
   return result;
 }
 
-edgex_deviceprofile *edgex_deviceprofile_read
-  (iot_logger_t *lc, const char *json)
+edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *json)
 {
   edgex_deviceprofile *result = NULL;
   JSON_Value *val = json_parse_string (json);
@@ -620,6 +639,10 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
   if (inf)
   {
     cmdinfo_free (inf->next);
+    for (unsigned i = 0; i < inf->nreqs; i++)
+    {
+      free (inf->reqs[i].resource);
+    }
     free (inf->reqs);
     free (inf->pvals);
     free (inf->maps);
@@ -692,7 +715,7 @@ static devsdk_protocols *protocols_read (const JSON_Object *obj)
     JSON_Value *pval = json_object_get_value_at (obj, i);
     devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
     prot->name = strdup (json_object_get_name (obj, i));
-    prot->properties = nvpairs_read (json_value_get_object (pval));
+    prot->properties = string_map_read (json_value_get_object (pval));
     prot->next = result;
     result = prot;
   }
@@ -706,7 +729,7 @@ static JSON_Value *protocols_write (const devsdk_protocols *e)
 
   for (const devsdk_protocols *prot = e; prot; prot = prot->next)
   {
-    json_object_set_value (obj, prot->name, nvpairs_write (prot->properties));
+    json_object_set_value (obj, prot->name, string_map_write (prot->properties));
   }
   return result;
 }
@@ -718,7 +741,7 @@ devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e)
   {
     devsdk_protocols *newprot = malloc (sizeof (devsdk_protocols));
     newprot->name = strdup (p->name);
-    newprot->properties = devsdk_nvpairs_dup (p->properties);
+    newprot->properties = iot_data_copy (p->properties);
     newprot->next = result;
     result = newprot;
   }
@@ -730,7 +753,7 @@ void devsdk_protocols_free (devsdk_protocols *e)
   if (e)
   {
     free (e->name);
-    devsdk_nvpairs_free (e->properties);
+    iot_data_free (e->properties);
     devsdk_protocols_free (e->next);
     free (e);
   }
@@ -799,7 +822,7 @@ edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *src)
   return dest;
 }
 
-void edgex_deviceprofile_free (edgex_deviceprofile *e)
+void edgex_deviceprofile_free (devsdk_service_t *svc, edgex_deviceprofile *e)
 {
   while (e)
   {
@@ -809,7 +832,7 @@ void edgex_deviceprofile_free (edgex_deviceprofile *e)
     free (e->manufacturer);
     free (e->model);
     devsdk_strings_free (e->labels);
-    deviceresource_free (e->device_resources);
+    deviceresource_free (svc, e->device_resources);
     devicecommand_free (e->device_commands);
     cmdinfo_free (e->cmdinfo);
     free (e);
@@ -947,6 +970,9 @@ static edgex_device *device_read (const JSON_Object *obj)
     temp->next = result->autos;
     result->autos = temp;
   }
+  result->devimpl = malloc (sizeof (devsdk_device_t));
+  result->devimpl->name = result->name;
+  result->devimpl->address = NULL;
   result->next = NULL;
 
   return result;
@@ -985,6 +1011,9 @@ edgex_device *edgex_device_dup (const edgex_device *e)
   result->origin = e->origin;
   result->servicename = strdup (e->servicename);
   result->profile = edgex_deviceprofile_dup (e->profile);
+  result->devimpl = malloc (sizeof (devsdk_device_t));
+  result->devimpl->name = result->name;
+  result->devimpl->address = NULL;
   result->next = NULL;
   return result;
 }
@@ -1043,7 +1072,7 @@ devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p
   {
     devsdk_device_resources *entry = malloc (sizeof (devsdk_device_resources));
     entry->resname = strdup (r->name);
-    entry->attributes = devsdk_nvpairs_dup ((const devsdk_nvpairs *)r->attributes);
+    entry->attributes = iot_data_copy (r->attributes);
     entry->type = edgex_propertytype_totypecode (r->properties->type);
     entry->readable = r->properties->readable;
     entry->writable = r->properties->writable;
@@ -1053,17 +1082,20 @@ devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p
   return result;
 }
 
-devsdk_devices *edgex_device_todevsdk (const edgex_device *e)
+devsdk_devices *edgex_device_todevsdk (devsdk_service_t *svc, const edgex_device *e)
 {
+  iot_data_t *exc = NULL;
   devsdk_devices *result = malloc (sizeof (devsdk_devices));
-  result->devname = strdup (e->name);
-  result->protocols = devsdk_protocols_dup (e->protocols);
+  result->device = malloc (sizeof (devsdk_device_t));
+  result->device->name = strdup (e->name);
+  result->device->address = svc->userfns.create_addr (svc->userdata, e->protocols, &exc);
   result->resources = edgex_profile_toresources (e->profile);
   result->next = NULL;
+  iot_data_free (exc);
   return result;
 }
 
-void edgex_device_free (edgex_device *e)
+void edgex_device_free (devsdk_service_t *svc, edgex_device *e)
 {
   while (e)
   {
@@ -1075,9 +1107,14 @@ void edgex_device_free (edgex_device *e)
     free (e->name);
     if (e->profile)
     {
-      edgex_deviceprofile_free (e->profile);
+      edgex_deviceprofile_free (svc, e->profile);
     }
     free (e->servicename);
+    if (e->devimpl->address)
+    {
+      svc->userfns.free_addr (svc->userdata, e->devimpl->address);
+    }
+    free (e->devimpl);
     e = e->next;
     free (current);
   }

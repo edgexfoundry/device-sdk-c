@@ -66,12 +66,11 @@ static bool file_init (void *impl, struct iot_logger_t *lc, const iot_data_t *co
 static bool file_get_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
@@ -81,12 +80,11 @@ static bool file_get_handler
 static bool file_put_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
   const iot_data_t *values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
@@ -94,6 +92,30 @@ static bool file_put_handler
 }
 
 static void file_stop (void *impl, bool force)
+{
+}
+
+static devsdk_address_t file_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
+{
+  const char *result = NULL;
+  const iot_data_t *props = devsdk_protocols_properties (protocols, "Filename");
+  if (props)
+  {
+    result = iot_data_string_map_get_string (props, "Name");
+  }
+  return (devsdk_address_t)result;
+}
+
+static void file_free_addr (void *impl, devsdk_address_t address)
+{
+}
+
+static devsdk_resource_attr_t file_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
+{
+  return (devsdk_resource_attr_t)attributes;
+}
+
+static void file_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
 {
 }
 
@@ -120,8 +142,18 @@ int main (int argc, char *argv[])
   running = true;
 
   /* Device Callbacks */
-  devsdk_callbacks fileImpls;
-  devsdk_callbacks_init (&fileImpls, file_init, NULL, file_get_handler, file_put_handler, file_stop);
+  devsdk_callbacks *fileImpls = devsdk_callbacks_init
+  (
+    file_init,
+    NULL,
+    file_get_handler,
+    file_put_handler,
+    file_stop,
+    file_create_addr,
+    file_free_addr,
+    file_create_resource_attr,
+    file_free_resource_attr
+  );
 
   /* Initalise a new device service */
   service = devsdk_service_new ("device-file", VERSION, impl, fileImpls, &argc, argv, &e);
@@ -168,9 +200,8 @@ int main (int argc, char *argv[])
       fnames = iot_data_alloc_map (IOT_DATA_INT32);
       for (devsdk_devices *d = devs; d; d = d->next)
       {
-        const devsdk_nvpairs *props = devsdk_protocols_properties (d->protocols, "Filename");
-        const char *fname = devsdk_nvpairs_value (props, "Name");
-        iot_log_info (impl->lc, "Device %s: watching file %s", d->devname, fname);
+        const char *fname = d->device->address;
+        iot_log_info (impl->lc, "Device %s: watching file %s", d->device->name, fname);
         if ((wd = inotify_add_watch (fd, fname, IN_MODIFY)) < 0)
         {
           iot_log_error (impl->lc, "inotify add watch failure for %s", fname);
@@ -179,9 +210,9 @@ int main (int argc, char *argv[])
           break;
         }
         iot_data_map_add (fnames, iot_data_alloc_i32 (wd), iot_data_alloc_string (fname, IOT_DATA_COPY));
-        iot_data_map_add (dnames, iot_data_alloc_i32 (wd), iot_data_alloc_string (d->devname, IOT_DATA_COPY));
+        iot_data_map_add (dnames, iot_data_alloc_i32 (wd), iot_data_alloc_string (d->device->name, IOT_DATA_COPY));
       }
-      devsdk_free_devices (devs);
+      devsdk_free_devices (service, devs);
 
       /* run until the service is interrupted */
       while (running)
@@ -253,5 +284,6 @@ int main (int argc, char *argv[])
 
   close (fd);
   free (impl);
+  free (fileImpls);
   return retval;
 }

@@ -6,6 +6,7 @@
  *
  */
 
+#include "devsdk/devsdk-base.h"
 #include "consul.h"
 #include "edgex-rest.h"
 #include "rest.h"

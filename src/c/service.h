@@ -20,6 +20,26 @@
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
 
+struct devsdk_callbacks
+{
+  devsdk_initialize init;
+  devsdk_reconfigure reconfigure;
+  devsdk_handle_get gethandler;
+  devsdk_handle_put puthandler;
+  devsdk_stop stop;
+  devsdk_create_address create_addr;
+  devsdk_free_address free_addr;
+  devsdk_create_resource_attr create_res;
+  devsdk_free_resource_attr free_res;
+  devsdk_discover discover;
+  devsdk_describe describe;
+  devsdk_add_device_callback device_added;
+  devsdk_update_device_callback device_updated;
+  devsdk_remove_device_callback device_removed;
+  devsdk_autoevent_start_handler ae_starter;
+  devsdk_autoevent_stop_handler ae_stopper;
+};
+
 struct devsdk_service_t
 {
   char *name;

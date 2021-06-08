@@ -9,6 +9,7 @@
 #include <errno.h>
 #include "devsdk/devsdk.h"
 #include "devutil.h"
+#include "service.h"
 
 devsdk_strings *devsdk_strings_new (const char *str, devsdk_strings *list)
 {
@@ -117,16 +118,16 @@ bool devsdk_nvpairs_float_value (const devsdk_nvpairs *nvp, const char *name, fl
   return result;
 }
 
-devsdk_protocols *devsdk_protocols_new (const char *name, const devsdk_nvpairs *properties, devsdk_protocols *list)
+devsdk_protocols *devsdk_protocols_new (const char *name, const iot_data_t *properties, devsdk_protocols *list)
 {
   devsdk_protocols *result = malloc (sizeof (devsdk_protocols));
   result->name = strdup (name);
-  result->properties = devsdk_nvpairs_dup (properties);
+  result->properties = iot_data_copy (properties);
   result->next = list;
   return result;
 }
 
-const devsdk_nvpairs *devsdk_protocols_properties (const devsdk_protocols *prots, const char *name)
+const iot_data_t *devsdk_protocols_properties (const devsdk_protocols *prots, const char *name)
 {
   if (name)
   {
@@ -141,15 +142,30 @@ const devsdk_nvpairs *devsdk_protocols_properties (const devsdk_protocols *prots
   return NULL;
 }
 
-void devsdk_callbacks_init
-  (devsdk_callbacks *cb, devsdk_initialize init, devsdk_reconfigure reconf, devsdk_handle_get gethandler, devsdk_handle_put puthandler, devsdk_stop stop)
+devsdk_callbacks *devsdk_callbacks_init
+(
+  devsdk_initialize init,
+  devsdk_reconfigure reconf,
+  devsdk_handle_get gethandler,
+  devsdk_handle_put puthandler,
+  devsdk_stop stop,
+  devsdk_create_address create_addr,
+  devsdk_free_address free_addr,
+  devsdk_create_resource_attr create_res,
+  devsdk_free_resource_attr free_res
+)
 {
-  memset (cb, 0, sizeof (devsdk_callbacks));
+  devsdk_callbacks *cb = calloc (1, sizeof (devsdk_callbacks));
   cb->init = init;
   cb->reconfigure = reconf;
   cb->gethandler = gethandler;
   cb->puthandler = puthandler;
   cb->stop = stop;
+  cb->create_addr = create_addr;
+  cb->free_addr = free_addr;
+  cb->create_res = create_res;
+  cb->free_res = free_res;
+  return cb;
 }
 
 void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover discover, devsdk_describe describe)
@@ -197,16 +213,9 @@ bool TYPENAME ## _equal (const TYPENAME *l1, const TYPENAME *l2)  \
   return true;                                                    \
 }
 
-static bool pair_equal (const devsdk_nvpairs *p1, const devsdk_nvpairs *p2)
-{
-  return (strcmp (p1->value, p2->value) == 0);
-}
-
-static LIST_EQUAL_FUNCTION(devsdk_nvpairs, name, pair_equal)
-
 static bool protocol_equal (const devsdk_protocols *p1, const devsdk_protocols *p2)
 {
-  return devsdk_nvpairs_equal (p1->properties, p2->properties);
+  return iot_data_equal (p1->properties, p2->properties);
 }
 
 LIST_EQUAL_FUNCTION(devsdk_protocols, name, protocol_equal)

@@ -64,17 +64,52 @@ typedef void (*devsdk_discover) (void *impl);
  * @returns The discovered resources
  */
 
-typedef devsdk_device_resources * (*devsdk_describe) (const char *devname, const devsdk_protocols *protocols);
+typedef devsdk_device_resources * (*devsdk_describe) (void *impl, const devsdk_device_t *dev);
+
+/**
+ * @brief Callback issued for parsing device addresses.
+ * @param impl The context data passed in when the service was created.
+ * @param protocols The protocol properties for the device.
+ * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
+ * @return A new object representing the device address in parsed form.
+ */
+
+typedef devsdk_address_t (*devsdk_create_address) (void *impl, const devsdk_protocols *protocols, iot_data_t **exception);
+
+/**
+ * @brief Callback for freeing memory allocated by devsdk_create_address.
+ * @param impl The context data passed in when the service was created.
+ * @param address The object to be freed.
+ */
+
+typedef void (*devsdk_free_address) (void *impl, devsdk_address_t address);
+
+/**
+ * @brief Callback issued for parsing device resource attributes. 
+ * @param impl The context data passed in when the service was created.
+ * @param protocols The attributes of the device resource.
+ * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
+ * @return A new object representing the attributes in parsed form.
+ */
+
+typedef devsdk_resource_attr_t (*devsdk_create_resource_attr) (void *impl, const iot_data_t *attributes, iot_data_t **exception);
+
+/** 
+ * @brief Callback for freeing memory allocated by devsdk_create_resource_attr.
+ * @param impl The context data passed in when the service was created.
+ * @param address The object to be freed.
+ */
+
+typedef void (*devsdk_free_resource_attr) (void *impl, devsdk_resource_attr_t resource);
 
 /**
  * @brief Callback issued to handle GET requests for device readings.
  * @param impl The context data passed in when the service was created.
- * @param devname The name of the device to be queried.
- * @param protocols The location of the device to be queried.
+ * @param device The details of the device to be queried.
  * @param nreadings The number of readings requested.
  * @param requests An array specifying the readings that have been requested.
  * @param readings An array in which to return the requested readings.
- * @param qparams Query Parameters which were set for this request.
+ * @param options Options which were set for this request.
  * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
  * @return true if the operation was successful, false otherwise.
  */
@@ -82,24 +117,22 @@ typedef devsdk_device_resources * (*devsdk_describe) (const char *devname, const
 typedef bool (*devsdk_handle_get)
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 );
 
 /**
  * @brief Callback issued to handle PUT requests for setting device values.
  * @param impl The context data passed in when the service was created.
- * @param devname The name of the device to be queried.
- * @param protocols The location of the device to be queried.
+ * @param device The details of the device to be queried.
  * @param nvalues The number of set operations requested.
  * @param requests An array specifying the resources to which to write.
  * @param values An array specifying the values to be written.
- * @param qparams Query Parameters which were set for this request.
+ * @param options Options which were set for this request.
  * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
  * @return true if the operation was successful, false otherwise.
  */
@@ -107,12 +140,11 @@ typedef bool (*devsdk_handle_get)
 typedef bool (*devsdk_handle_put)
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
   const iot_data_t *values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 );
 
@@ -188,33 +220,24 @@ typedef void (*devsdk_update_device_callback) (void *impl, const char *devname, 
 
 typedef void (*devsdk_remove_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols);
 
-/*
- * Structure containing all callbacks. Recommend not to populate this directly,
- * instead use devsdk_callbacks_init() and related functions.
- */
-
-typedef struct devsdk_callbacks
-{
-  devsdk_initialize init;
-  devsdk_reconfigure reconfigure;
-  devsdk_discover discover;
-  devsdk_handle_get gethandler;
-  devsdk_handle_put puthandler;
-  devsdk_stop stop;
-  devsdk_add_device_callback device_added;
-  devsdk_update_device_callback device_updated;
-  devsdk_remove_device_callback device_removed;
-  devsdk_autoevent_start_handler ae_starter;
-  devsdk_autoevent_stop_handler ae_stopper;
-  devsdk_describe describe;
-} devsdk_callbacks;
+typedef struct devsdk_callbacks devsdk_callbacks;
 
 /**
- * @brief Populate required callback functions. Other function pointers are initialized to null
+ * @brief Allocate a callbacks structure with required functions. Other function pointers are initialized to null
  */
 
-void devsdk_callbacks_init
-  (devsdk_callbacks *cb, devsdk_initialize init, devsdk_reconfigure reconf, devsdk_handle_get gethandler, devsdk_handle_put puthandler, devsdk_stop stop);
+devsdk_callbacks *devsdk_callbacks_init
+(
+  devsdk_initialize init,
+  devsdk_reconfigure reconf,
+  devsdk_handle_get gethandler,
+  devsdk_handle_put puthandler,
+  devsdk_stop stop,
+  devsdk_create_address create_addr,
+  devsdk_free_address free_addr,
+  devsdk_create_resource_attr create_res,
+  devsdk_free_resource_attr free_res
+);
 
 /**
  * @brief Populate optional discovery functions
@@ -248,7 +271,7 @@ void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoe
  */
 
 devsdk_service_t *devsdk_service_new
-  (const char *defaultname, const char *version, void *impldata, devsdk_callbacks implfns, int *argc, char **argv, devsdk_error *err);
+  (const char *defaultname, const char *version, void *impldata, devsdk_callbacks *implfns, int *argc, char **argv, devsdk_error *err);
 
 /**
  * @brief Start a device service.
@@ -288,10 +311,11 @@ devsdk_devices *devsdk_get_device (devsdk_service_t *svc, const char *name);
 
 /**
  * @brief Free a device structure or list of device structures.
+ * @param svc The device service.
  * @param d The device list.
  */
 
-void devsdk_free_devices (devsdk_devices *d);
+void devsdk_free_devices (devsdk_service_t *svc, devsdk_devices *d);
 
 /**
  * @brief Set the operational state of a device

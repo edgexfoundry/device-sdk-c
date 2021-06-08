@@ -15,6 +15,7 @@
  */
 
 #include "devsdk/devsdk-base.h"
+#include "edgex/edgex-base.h"
 #include "iot/threadpool.h"
 
 /* Callback for dynamic configuration */

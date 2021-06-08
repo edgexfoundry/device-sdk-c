@@ -9,7 +9,7 @@
 #ifndef _EDGEX_FILESYS_H_
 #define _EDGEX_FILESYS_H_ 1
 
-#include "devsdk/devsdk-base.h"
+#include "edgex/edgex-base.h"
 #include "iot/logger.h"
 
 devsdk_strings * devsdk_scandir (iot_logger_t *lc, const char *dir, const char *ext);

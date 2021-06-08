@@ -23,18 +23,22 @@ typedef struct template_driver
 
 static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
 {
+  iot_data_map_iter_t iter;
   iot_log_debug (lc, " [Other] protocol:");
-  for (const devsdk_nvpairs *nv = devsdk_protocols_properties (prots, "Other"); nv; nv = nv->next)
+  iot_data_map_iter (devsdk_protocols_properties (prots, "Other"), &iter);
+  while (iot_data_map_iter_next (&iter))
   {
-    iot_log_debug (lc, "    %s = %s", nv->name, nv->value);
+    iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
   }
 }
 
-static void dump_attributes (iot_logger_t *lc, const devsdk_nvpairs *attrs)
+static void dump_attributes (iot_logger_t *lc, devsdk_resource_attr_t attrs)
 {
-  for (const devsdk_nvpairs *a = attrs; a; a = a->next)
+  iot_data_map_iter_t iter;
+  iot_data_map_iter ((iot_data_t *)attrs, &iter);
+  while (iot_data_map_iter_next (&iter))
   {
-    iot_log_debug (lc, "    %s = %s", a->name, a->value);
+    iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
   }
 }
 
@@ -113,12 +117,11 @@ static void template_discover (void *impl)
 static bool template_get_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
@@ -126,13 +129,13 @@ static bool template_get_handler
 
   /* Access the location of the device to be accessed and log it */
   iot_log_debug(driver->lc, "GET on device:");
-  dump_protocols (driver->lc, protocols);
+  dump_protocols (driver->lc, (devsdk_protocols *)device->address);
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
     /* Log the attributes for each requested resource */
     iot_log_debug (driver->lc, "  Requested reading %u:", i);
-    dump_attributes (driver->lc, requests[i].attributes);
+    dump_attributes (driver->lc, requests[i].resource->attrs);
     /* Fill in a result regardless */
     readings[i].value = iot_data_alloc_string ("Template result", IOT_DATA_REF);
   }
@@ -154,26 +157,25 @@ static bool template_get_handler
 static bool template_put_handler
 (
   void *impl,
-  const char *devname,
-  const devsdk_protocols *protocols,
+  const devsdk_device_t *device,
   uint32_t nvalues,
   const devsdk_commandrequest *requests,
   const iot_data_t *values[],
-  const devsdk_nvpairs *qparams,
+  const iot_data_t *options,
   iot_data_t **exception
 )
 {
   template_driver *driver = (template_driver *) impl;
   /* Access the location of the device to be accessed and log it */
   iot_log_debug (driver->lc, "PUT on device:");
-  dump_protocols (driver->lc, protocols);
+  dump_protocols (driver->lc, (devsdk_protocols *)device->address);
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
     /* A Device Service again makes use of the data provided to perform a PUT */
     /* Log the attributes */
     iot_log_debug (driver->lc, "  Requested device write %u:", i);
-    dump_attributes (driver->lc, requests[i].attributes);
+    dump_attributes (driver->lc, requests[i].resource->attrs);
     switch (edgex_propertytype_data (values[i]))
     {
       case Edgex_String:
@@ -197,6 +199,28 @@ static bool template_put_handler
 /* Stop performs any final actions before the device service is terminated */
 static void template_stop (void *impl, bool force) {}
 
+/* ---- Attribute and Protocols --- */
+
+static devsdk_address_t template_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
+{
+  return (devsdk_address_t)protocols;
+}
+
+static void template_free_addr (void *impl, devsdk_address_t address)
+{
+}
+
+static devsdk_resource_attr_t template_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
+{
+  return iot_data_copy (attributes);
+}
+
+static void template_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
+{
+  iot_data_free ((iot_data_t *)resource);
+}
+
+
 int main (int argc, char *argv[])
 {
   sigset_t set;
@@ -209,9 +233,19 @@ int main (int argc, char *argv[])
   e.code = 0;
 
   /* Device Callbacks */
-  devsdk_callbacks templateImpls;
-  devsdk_callbacks_init (&templateImpls, template_init, template_reconfigure, template_get_handler, template_put_handler, template_stop);
-  devsdk_callbacks_set_discovery (&templateImpls, template_discover, NULL);
+  devsdk_callbacks *templateImpls = devsdk_callbacks_init
+  (
+    template_init,
+    template_reconfigure,
+    template_get_handler,
+    template_put_handler,
+    template_stop,
+    template_create_addr,
+    template_free_addr,
+    template_create_resource_attr,
+    template_free_resource_attr
+  );
+  devsdk_callbacks_set_discovery (templateImpls, template_discover, NULL);
 
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
@@ -262,6 +296,7 @@ int main (int argc, char *argv[])
 
   devsdk_service_free (service);
   free (impl);
+  free (templateImpls);
   iot_data_free (confparams);
   return 0;
 }
