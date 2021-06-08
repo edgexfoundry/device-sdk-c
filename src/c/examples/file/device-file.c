@@ -145,7 +145,6 @@ int main (int argc, char *argv[])
   devsdk_callbacks *fileImpls = devsdk_callbacks_init
   (
     file_init,
-    NULL,
     file_get_handler,
     file_put_handler,
     file_stop,

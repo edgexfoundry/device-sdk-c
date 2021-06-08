@@ -64,7 +64,6 @@ Mandatory:
 
 ```
 bool (*devsdk_initialize)
-void (*devsdk_reconfigure)
 bool (*devsdk_handle_get)
 bool (*devsdk_handle_put)
 void (*devsdk_stop)
@@ -79,6 +78,7 @@ Optional:
 ```
 void (*devsdk_discover)
 devsdk_device_resources * (*devsdk_describe)
+void (*devsdk_reconfigure)
 void * (*devsdk_autoevent_start_handler)
 void (*devsdk_autoevent_stop_handler)
 void (*devsdk_add_device_callback)

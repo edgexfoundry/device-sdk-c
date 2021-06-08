@@ -148,7 +148,6 @@ int main (int argc, char * argv[])
   devsdk_callbacks *gyroImpls = devsdk_callbacks_init
   (
     gyro_init,
-    NULL,
     gyro_get_handler,
     gyro_put_handler,
     gyro_stop,

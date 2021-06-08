@@ -145,7 +145,6 @@ const iot_data_t *devsdk_protocols_properties (const devsdk_protocols *prots, co
 devsdk_callbacks *devsdk_callbacks_init
 (
   devsdk_initialize init,
-  devsdk_reconfigure reconf,
   devsdk_handle_get gethandler,
   devsdk_handle_put puthandler,
   devsdk_stop stop,
@@ -157,7 +156,6 @@ devsdk_callbacks *devsdk_callbacks_init
 {
   devsdk_callbacks *cb = calloc (1, sizeof (devsdk_callbacks));
   cb->init = init;
-  cb->reconfigure = reconf;
   cb->gethandler = gethandler;
   cb->puthandler = puthandler;
   cb->stop = stop;
@@ -172,6 +170,11 @@ void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover disco
 {
   cb->discover = discover;
   cb->describe = describe;
+}
+
+void devsdk_callbacks_set_reconfiguration (devsdk_callbacks *cb, devsdk_reconfigure reconf)
+{
+  cb->reconfigure = reconf;
 }
 
 void devsdk_callbacks_set_listeners

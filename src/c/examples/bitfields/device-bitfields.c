@@ -132,7 +132,6 @@ int main (int argc, char * argv[])
   devsdk_callbacks *bitfieldImpls = devsdk_callbacks_init
   (
     bitfield_init,
-    NULL,
     bitfield_get_handler,
     bitfield_put_handler,
     bitfield_stop,

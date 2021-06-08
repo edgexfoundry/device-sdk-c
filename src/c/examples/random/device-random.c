@@ -170,7 +170,6 @@ int main (int argc, char *argv[])
   devsdk_callbacks *randomImpls = devsdk_callbacks_init
   (
     random_init,
-    NULL,
     random_get_handler,
     random_put_handler,
     random_stop,

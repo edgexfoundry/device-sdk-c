@@ -226,7 +226,6 @@ int main (int argc, char * argv[])
   devsdk_callbacks *terminalImpls = devsdk_callbacks_init
   (
     terminal_init,
-    NULL,
     terminal_get_handler,
     terminal_put_handler,
     terminal_stop,
