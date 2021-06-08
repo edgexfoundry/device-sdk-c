@@ -20,10 +20,9 @@ Option | Type | Notes
 :--- | :--- | :---
 Host | String | This is the hostname to use when the service generates URLs pointing to itself. It must be resolvable by other services in the EdgeX deployment.
 Port | Int | Port on which to accept the device service's REST API. The assigned port for experimental / in-development device services is 59999.
-Timeout | Int | Time (in milliseconds) to wait between attempts to contact core-data and core-metadata when starting up.
-ConnectRetries | Int | Number of times to attempt to contact core-data and core-metadata when starting up.
+RequestTimeout | String | Time to wait while attempting to connect to other microservices. Use units of ms, s, m or h, eg '30s'.
 StartupMsg | String | Message to log on successful startup.
-CheckInterval | String | The checking interval to request if registering with Consul
+HealthCheckInterval | String | The checking interval to request if registering with Consul
 ServerBindAddr | String | The interface on which the service's REST server should listen. By default the server listens on all available interfaces.
 MaxRequestSize | Int | Amount of data beyond which the service will reject an incoming HTTP request. Zero (the default) disables checking.
 

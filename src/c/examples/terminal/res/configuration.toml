@@ -7,11 +7,9 @@
 
 [Service]
   Port = 59999
-  Timeout = 5000
-  ConnectRetries = 10
-  Labels = [ 'Counter' ]
+  RequestTimeout = '5s'
   StartupMsg = 'Example terminal device service started'
-  CheckInterval = '10s'
+  HealthCheckInterval = '10s'
 
 [Clients]
   [Clients.core-data]
@@ -23,5 +21,6 @@
     Port = 59881
 
 [Device]
+  Labels = [ 'Counter' ]
   ProfilesDir = 'res/profiles'
   DevicesDir = 'res/devices'

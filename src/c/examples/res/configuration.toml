@@ -10,11 +10,9 @@
 
 [Service]
   Port = 59999
-  Timeout = 5000
-  ConnectRetries = 10
-  Labels = [ 'Template' ]
+  RequestTimeout = '5s'
   StartupMsg = 'Template device started'
-  CheckInterval = '10s'
+  HealthCheckInterval = '10s'
 
 [Clients]
   [Clients.core-data]
@@ -29,5 +27,6 @@
   TestParam1 = 'Hello'
 
 [Device]
+  Labels = [ 'Template' ]
   ProfilesDir = 'res/profiles'
   DevicesDir = 'res/devices'

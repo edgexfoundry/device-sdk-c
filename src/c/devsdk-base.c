@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020
+ * Copyright (c) 2020-2021
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -189,6 +189,29 @@ void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoe
 {
   cb->ae_starter = ae_starter;
   cb->ae_stopper = ae_stopper;
+}
+
+struct sfx_struct
+{
+  const char *str;
+  uint64_t factor;
+};
+
+static struct sfx_struct time_suffixes[] =
+  { { "ms", 1 }, { "s", 1000 }, { "m", 60000 }, { "h", 3600000 }, { NULL, 0 } };
+
+uint64_t edgex_parsetime (const char *spec)
+{
+  char *fend;
+  uint64_t fnum = strtoul (spec, &fend, 10);
+  for (int i = 0; time_suffixes[i].str; i++)
+  {
+    if (strcmp (fend, time_suffixes[i].str) == 0)
+    {
+      return fnum * time_suffixes[i].factor;
+    }
+  }
+  return 0;
 }
 
 /* Macro for generating single-linked-list comparison functions.

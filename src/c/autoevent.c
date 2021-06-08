@@ -32,29 +32,6 @@ typedef struct edgex_autoimpl
   bool onChange;
 } edgex_autoimpl;
 
-struct sfxstruct
-{
-  const char *str;
-  uint64_t factor;
-};
-
-static struct sfxstruct suffixes[] =
-  { { "ms", 1 }, { "s", 1000 }, { "m", 60000 }, { "h", 3600000 }, { NULL, 0 } };
-
-static uint64_t parseTime (const char *spec)
-{
-  char *fend;
-  uint64_t fnum = strtoul (spec, &fend, 10);
-  for (int i = 0; suffixes[i].str; i++)
-  {
-    if (strcmp (fend, suffixes[i].str) == 0)
-    {
-      return fnum * suffixes[i].factor;
-    }
-  }
-  return 0;
-}
-
 static void edgex_autoimpl_release (edgex_autoimpl *ai)
 {
   if (atomic_fetch_add (&ai->refs, -1) == 1)
@@ -181,7 +158,7 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
         );
         continue;
       }
-      uint64_t interval = parseTime (ae->interval);
+      uint64_t interval = edgex_parsetime (ae->interval);
       if (interval == 0)
       {
         iot_log_error

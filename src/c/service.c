@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2021
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -35,6 +35,7 @@
 #include <microhttpd.h>
 
 #define POOL_THREADS 8
+#define PING_RETRIES 10
 #define ERRBUFSZ 1024
 
 void devsdk_usage ()
@@ -304,18 +305,30 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
+static void ping_client_wait (uint64_t msecs)
+{
+  struct timespec tm, rem;
+  tm.tv_sec = msecs / 1000;
+  tm.tv_nsec = 1000000 * (msecs % 1000);
+  while (nanosleep (&tm, &rem) == -1 && errno == EINTR)
+  {
+    tm = rem;
+  }
+}
+
 static bool ping_client
 (
   iot_logger_t *lc,
   const char *sname,
   edgex_device_service_endpoint *ep,
-  int retries,
-  struct timespec delay,
+  uint64_t timeout,
   devsdk_error *err
 )
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
+  uint64_t deadline, interval, t1, t2;
+  bool result;
 
   if (ep->host == NULL || ep->port == 0)
   {
@@ -326,20 +339,38 @@ static bool ping_client
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/ping", ep->host, ep->port);
 
-  do
+  deadline = iot_time_msecs () + timeout;
+  interval = timeout / PING_RETRIES;
+
+  while (true)
   {
+    t1 = iot_time_msecs ();
     memset (&ctx, 0, sizeof (edgex_ctx));
     edgex_http_get (lc, &ctx, url, NULL, err);
     if (err->code == 0)
     {
-      iot_log_info (lc, "Found %s service at %s:%d", sname, ep->host, ep->port);
-      return true;
+      result = true;
+      break;
     }
-  } while (retries-- && nanosleep (&delay, NULL) == 0);
+    t2 = iot_time_msecs ();
+    if (t2 > deadline - interval)
+    {
+      result = false;
+      break;
+    }
+    ping_client_wait (interval - (t2 - t1));
+  }
 
-  iot_log_error (lc, "Can't connect to %s service at %s:%d", sname, ep->host, ep->port);
-  *err = EDGEX_REMOTE_SERVER_DOWN;
-  return false;
+  if (result)
+  {
+    iot_log_info (lc, "Found %s service at %s:%d", sname, ep->host, ep->port);
+  }
+  else
+  {
+    iot_log_error (lc, "Can't connect to %s service at %s:%d", sname, ep->host, ep->port);
+    *err = EDGEX_REMOTE_SERVER_DOWN;
+  }
+  return result;
 }
 
 static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *jobj, devsdk_error *err)
@@ -472,7 +503,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
 
   /* Wait for metadata and data to be available */
 
-  if (iot_data_string_map_get_bool (svc->config.sdkconf, "Service/UseMessageBus", false))
+  if (iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false))
   {
     const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
     if (strcmp (bustype, "mqtt") == 0)
@@ -496,13 +527,13 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   else
   {
     svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
-    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.connectretries, svc->config.service.timeout, err))
+    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.timeout, err))
     {
       return;
     }
   }
 
-  if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, svc->config.service.connectretries, svc->config.service.timeout, err))
+  if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, svc->config.service.timeout, err))
   {
     return;
   }
