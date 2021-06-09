@@ -5,20 +5,15 @@ This document aims to complement the examples provided with the EdgeX C SDK by p
 Fundamentally a Device Service is composed of a number of callbacks. These callbacks are provided by the SDK to allow the service to respond to different events. The required callbacks are as follows:
 
 * init
-* reconfigure
 * get
 * put
 * stop
 
-A device service must provide an implementation of each callback, except for reconfigure (which may be NULL if the service has no driver-specific configuration). A small amount of setup is required of a device service, this is usually performed in the main. A devsdk_service_t should be created, containing, amongst other fields the devsdk_callbacks and an impldata pointer which is passed back every time a callback is invoked. The service must then call devsdk_service_new to create the device service, devsdk_service_start to start it, and upon exit the service should call devsdk_service_stop, followed by devsdk_service_free to clean up.
+A device service must provide an implementation of each callback. A small amount of setup is required of a device service, this is usually performed in the main. A devsdk_service_t should be created, containing, amongst other fields the devsdk_callbacks and an impldata pointer which is passed back every time a callback is invoked. The service must then call devsdk_service_new to create the device service, devsdk_service_start to start it, and upon exit the service should call devsdk_service_stop, followed by devsdk_service_free to clean up.
 
 Init
 ----
 Init is called when the device service starts up, its purpose is to perform protocol-specific initialization for the device service. This typically involves allocating memory for driver specific structures, initialising synchronisation mechanisms (mutex etc.) and setting up a logging client. The logging client is being provided to the implementation, most implementations will want to store the pointer in their impldata structure for later use. Any initialization required by the device should be performed here. 
-
-Reconfigure
------------
-If the Registry is in use, then dynamic updates to configuration are possible. If an element of the driver-specific configuration is changed, this callback will be invoked with the new configuration settings passed through.
 
 Get
 ---
@@ -72,5 +67,7 @@ Optional handlers
 An implementation may implement the device_added, device_updated and device_removed handlers, it will then be notified of changes to the extent of devices managed by the service. This may be helpful if special initialization / shutdown operations are required for optimal usage of the device.
 
 An implementation may also implement the ae_starter and ae_stopper callbacks, in which case it will become responsible for the AutoEvents functionality which is normally handled within the SDK. This facility is currently experimental, it may be useful in scenarios where the device can be set to generate readings autonomously.
+
+If the Registry is in use, then dynamic updates to configuration are possible. If the reconfiguration callback is registered, then when an element of the driver-specific configuration is changed, this callback will be invoked with the new configuration settings passed through.
 
 An implementation may also implement the discover callback. When this is called, the implementation should perform a scan for reachable devices, and register them using the devsdk_add_discovered_devices function.

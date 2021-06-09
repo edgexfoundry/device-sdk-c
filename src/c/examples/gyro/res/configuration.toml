@@ -8,11 +8,9 @@
 
 [Service]
   Port = 59999
-  Timeout = 5000
-  ConnectRetries = 10
-  Labels = [ 'Gyro' ]
+  RequestTimeout = '5s'
   StartupMsg = 'Example gyro device service started'
-  CheckInterval = '10s'
+  HealthCheckInterval = '10s'
 
 [Clients]
   [Clients.core-data]
@@ -24,5 +22,6 @@
     Port = 59881
 
 [Device]
+  Labels = [ 'Gyro' ]
   ProfilesDir = 'res/profiles'
   DevicesDir = 'res/devices'

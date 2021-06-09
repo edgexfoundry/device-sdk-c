@@ -57,15 +57,14 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
 
   iot_data_string_map_add (result, "Service/Host", iot_data_alloc_string (utsbuffer.nodename, IOT_DATA_COPY));
   iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (59999));
-  iot_data_string_map_add (result, "Service/Timeout", iot_data_alloc_ui32 (1000));
-  iot_data_string_map_add (result, "Service/ConnectRetries", iot_data_alloc_ui32 (20));
+  iot_data_string_map_add (result, "Service/RequestTimeout", iot_data_alloc_string ("5s", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
-  iot_data_string_map_add (result, "Service/CheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
-  iot_data_string_map_add (result, "Service/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/HealthCheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
-  iot_data_string_map_add (result, "Service/UseMessageBus", iot_data_alloc_bool (false));
 
+  iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Device/UseMessageBus", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
@@ -417,12 +416,9 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
 {
   config->service.host = iot_data_string_map_get_string (map, "Service/Host");
   config->service.port = iot_data_ui16 (iot_data_string_map_get (map, "Service/Port"));
-  uint32_t tm = iot_data_ui32 (iot_data_string_map_get (map, "Service/Timeout"));
-  config->service.timeout.tv_sec = tm / 1000;
-  config->service.timeout.tv_nsec = 1000000 * (tm % 1000);
-  config->service.connectretries = iot_data_ui32 (iot_data_string_map_get (map, "Service/ConnectRetries"));
+  config->service.timeout = edgex_parsetime (iot_data_string_map_get_string (map, "Service/RequestTimeout"));
   config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
-  config->service.checkinterval = iot_data_string_map_get_string (map, "Service/CheckInterval");
+  config->service.checkinterval = iot_data_string_map_get_string (map, "Service/HealthCheckInterval");
   config->service.bindaddr = iot_data_string_map_get_string (map, "Service/ServerBindAddr");
   config->service.maxreqsz = iot_data_ui64 (iot_data_string_map_get (map, "Service/MaxRequestSize"));
 
@@ -435,7 +431,7 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
     free (config->service.labels);
   }
 
-  const char *lstr = iot_data_string_map_get_string (map, "Service/Labels");
+  const char *lstr = iot_data_string_map_get_string (map, "Device/Labels");
   if (lstr && *lstr)
   {
     const char *iter = lstr;
@@ -627,6 +623,15 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
+  json_object_set_boolean (dobj, "UseMessageBus", iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false));
+
+  JSON_Value *lval = json_value_init_array ();
+  JSON_Array *larr = json_value_get_array (lval);
+  for (int i = 0; svc->config.service.labels[i]; i++)
+  {
+    json_array_append_string (larr, svc->config.service.labels[i]);
+  }
+  json_object_set_value (dobj, "Labels", lval);
   json_object_set_value (wobj, "Device", dval);
 
   json_object_set_value (obj, DYN_NAME, wval);
@@ -667,25 +672,13 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_string (sobj, "Host", svc->config.service.host);
   json_object_set_uint (sobj, "Port", svc->config.service.port);
 
-  uint64_t tm = svc->config.service.timeout.tv_nsec / 1000000;
-  tm += svc->config.service.timeout.tv_sec * 1000;
-  json_object_set_uint (sobj, "Timeout", tm);
-  json_object_set_uint
-    (sobj, "ConnectRetries", svc->config.service.connectretries);
+  json_object_set_string (sobj, "RequestTimeout", iot_data_string_map_get_string (svc->config.sdkconf, "Service/RequestTimeout"));
   json_object_set_string (sobj, "StartupMsg", svc->config.service.startupmsg);
   json_object_set_string
-    (sobj, "CheckInterval", svc->config.service.checkinterval);
+    (sobj, "HealthCheckInterval", svc->config.service.checkinterval);
   json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
   json_object_set_uint (sobj, "MaxRequestSize", svc->config.service.maxreqsz);
-  json_object_set_boolean (sobj, "UseMessageBus", iot_data_string_map_get_bool (svc->config.sdkconf, "Service/UseMessageBus", false));
 
-  JSON_Value *lval = json_value_init_array ();
-  JSON_Array *larr = json_value_get_array (lval);
-  for (int i = 0; svc->config.service.labels[i]; i++)
-  {
-    json_array_append_string (larr, svc->config.service.labels[i]);
-  }
-  json_object_set_value (sobj, "Labels", lval);
 
   json_object_set_value (obj, "Service", sval);
 

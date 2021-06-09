@@ -20,10 +20,9 @@ typedef struct edgex_device_serviceinfo
 {
   const char *host;
   uint16_t port;
-  uint32_t connectretries;
   char **labels;
   const char *startupmsg;
-  struct timespec timeout;
+  uint64_t timeout;
   const char *checkinterval;
   const char *bindaddr;
   uint64_t maxreqsz;

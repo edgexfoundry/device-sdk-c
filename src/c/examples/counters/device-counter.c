@@ -174,7 +174,6 @@ int main (int argc, char *argv[])
   devsdk_callbacks *counterImpls = devsdk_callbacks_init
   (
     counter_init,
-    NULL,
     counter_get_handler,
     counter_put_handler,
     counter_stop,

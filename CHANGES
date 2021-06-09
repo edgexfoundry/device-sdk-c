@@ -2,6 +2,7 @@ This is the C SDK for EdgeX. Its API is based largely on the Go SDK.
 
 Changes for 2.0.0 "Ireland":
 
+- v2 API update: reconfigure callback no longer mandatory
 - v2 API update: new callbacks for parsing attributes and protocol properties
 - Ports for EdgeX microservices are re-assigned, eg device services move from 499xx to 599xx.
 - Provision Watchers may include AutoEvents to be added on discovered devices.

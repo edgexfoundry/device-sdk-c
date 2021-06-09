@@ -266,7 +266,6 @@ int main (int argc, char *argv[])
   devsdk_callbacks *templateImpls = devsdk_callbacks_init
   (
     template_init,
-    template_reconfigure,
     template_get_handler,
     template_put_handler,
     template_stop,
@@ -276,6 +275,7 @@ int main (int argc, char *argv[])
     template_free_resource_attr
   );
   devsdk_callbacks_set_discovery (templateImpls, template_discover, NULL);
+  devsdk_callbacks_set_reconfiguration (templateImpls, template_reconfigure);
 
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new

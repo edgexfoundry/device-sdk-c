@@ -40,7 +40,7 @@ void devsdk_usage (void);
 typedef bool (*devsdk_initialize) (void *impl, struct iot_logger_t *lc, const iot_data_t *config);
 
 /**
- * @brief Function called when configuration is updated.
+ * @brief Optional callback function called when configuration is updated.
  * @param impl The context data passed in when the service was created.
  * @param config A string map containing the new configuration.
  */
@@ -229,7 +229,6 @@ typedef struct devsdk_callbacks devsdk_callbacks;
 devsdk_callbacks *devsdk_callbacks_init
 (
   devsdk_initialize init,
-  devsdk_reconfigure reconf,
   devsdk_handle_get gethandler,
   devsdk_handle_put puthandler,
   devsdk_stop stop,
@@ -244,6 +243,12 @@ devsdk_callbacks *devsdk_callbacks_init
  */
 
 void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover discover, devsdk_describe describe);
+
+/**
+ * @brief Populate optional reconfiguration function
+ */
+
+void devsdk_callbacks_set_reconfiguration (devsdk_callbacks *cb, devsdk_reconfigure reconf);
 
 /**
  * @brief Populate optional device notification functions
