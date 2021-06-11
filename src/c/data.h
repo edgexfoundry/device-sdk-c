@@ -20,7 +20,7 @@
 #define EX_MQ_PROTOCOL "MessageQueue/Protocol"
 #define EX_MQ_HOST "MessageQueue/Host"
 #define EX_MQ_PORT "MessageQueue/Port"
-#define EX_MQ_TOPIC "MessageQueue/Topic"
+#define EX_MQ_TOPIC "MessageQueue/PublishTopicPrefix"
 #define EX_MQ_USERNAME "MessageQueue/Optional/Username"
 #define EX_MQ_PASSWORD "MessageQueue/Optional/Password"
 #define EX_MQ_CLIENTID "MessageQueue/Optional/ClientId"

@@ -17,7 +17,7 @@ void edgex_mqtt_config_defaults (iot_data_t *allconf)
   iot_data_string_map_add (allconf, EX_MQ_PROTOCOL, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_HOST, iot_data_alloc_string ("localhost", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_PORT, iot_data_alloc_ui16 (0));
-  iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string ("edgex/events", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string ("edgex/events/device", IOT_DATA_REF));
 
   iot_data_string_map_add (allconf, EX_MQ_USERNAME, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_PASSWORD, iot_data_alloc_string ("", IOT_DATA_REF));
