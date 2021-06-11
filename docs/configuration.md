@@ -88,7 +88,7 @@ Option | Type | Notes
 Protocol | String | The protocol to use. For MQTT this is `tcp` or `ssl`. Defaults to `tcp`. For Redis this should be `redis`.
 Host | String | The host on which the MQTT or Redis server is running. Defaults to `localhost`.
 Port | Unsigned Int | The port on which the MQTT or Redis server is running. Defaults to `1883` for MQTT or `6379` for Redis.
-Topic | String | The topic under which events are to be published. Defaults to `edgex/events` which results in events being published to `edgex/events/profile-name/device-name/source-name`. For Redis the `/` delimeter in topic names is replaced with `.`.
+PublishTopicPrefix | String | The topic under which events are to be published. Defaults to `edgex/events/device` which results in events being published to `edgex/events/device/profile-name/device-name/source-name`. For Redis the `/` delimeter in topic names is replaced with `.`.
 
 ### MessageQueue/Optional section
 

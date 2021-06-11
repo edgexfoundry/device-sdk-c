@@ -739,7 +739,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
   {
     edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device %s is down", dev->name);
   }
-  else if (cmd->nreqs > svc->config.device.maxcmdops)
+  else if (svc->config.device.maxcmdops && (cmd->nreqs > svc->config.device.maxcmdops))
   {
     edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "MaxCmdOps (%d) exceeded (%d) for command %s", svc->config.device.maxcmdops, cmd->nreqs, cmdname);
   }
