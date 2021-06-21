@@ -120,16 +120,11 @@ static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
   return result;
 }
 
-static iot_data_t *string_map_read (const JSON_Object *obj)
+static iot_data_t *string_map_read (const JSON_Value *val)
 {
-  iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
-  size_t count = json_object_get_count (obj);
-  for (size_t i = 0; i < count; i++)
-  {
-    iot_data_t *n = iot_data_alloc_string (json_object_get_name (obj, i), IOT_DATA_COPY);
-    iot_data_t *v = iot_data_alloc_string (json_value_get_string (json_object_get_value_at (obj, i)), IOT_DATA_COPY);
-    iot_data_map_add (result, n, v);
-  }
+  char *str = json_serialize_to_string (val);
+  iot_data_t *result = iot_data_from_json (str);
+  json_free_serialized_string (str);
   return result;
 }
 
@@ -390,15 +385,15 @@ static edgex_deviceresource *deviceresource_read
 
   if (pv)
   {
-    JSON_Object *attributes_obj;
+    JSON_Value *attributes_val;
 
     result = malloc (sizeof (edgex_deviceresource));
     result->name = name;
     result->description = get_string (obj, "description");
     result->tag = get_string (obj, "tag");
     result->properties = pv;
-    attributes_obj = json_object_get_object (obj, "attributes");
-    result->attributes = string_map_read (attributes_obj);
+    attributes_val = json_object_get_value (obj, "attributes");
+    result->attributes = string_map_read (attributes_val);
     result->parsed_attrs = NULL;
     result->next = NULL;
   }
@@ -715,7 +710,7 @@ static devsdk_protocols *protocols_read (const JSON_Object *obj)
     JSON_Value *pval = json_object_get_value_at (obj, i);
     devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
     prot->name = strdup (json_object_get_name (obj, i));
-    prot->properties = string_map_read (json_value_get_object (pval));
+    prot->properties = string_map_read (pval);
     prot->next = result;
     result = prot;
   }
