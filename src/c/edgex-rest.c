@@ -122,9 +122,17 @@ static devsdk_nvpairs *nvpairs_read (const JSON_Object *obj)
 
 static iot_data_t *string_map_read (const JSON_Value *val)
 {
-  char *str = json_serialize_to_string (val);
-  iot_data_t *result = iot_data_from_json (str);
-  json_free_serialized_string (str);
+  iot_data_t *result;
+  if (val)
+  {
+    char *str = json_serialize_to_string (val);
+    result = iot_data_from_json (str);
+    json_free_serialized_string (str);
+  }
+  else
+  {
+    result = iot_data_alloc_map (IOT_DATA_STRING);
+  }
   return result;
 }
 
