@@ -34,11 +34,16 @@ static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
 
 static void dump_attributes (iot_logger_t *lc, devsdk_resource_attr_t attrs)
 {
-  iot_data_map_iter_t iter;
-  iot_data_map_iter ((iot_data_t *)attrs, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (lc && lc->level >= IOT_LOG_DEBUG)
   {
-    iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+    iot_data_map_iter_t iter;
+    iot_data_map_iter ((iot_data_t *)attrs, &iter);
+    while (iot_data_map_iter_next (&iter))
+    {
+      char *json = iot_data_to_json (iot_data_map_iter_value (&iter));
+      iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), json);
+      free (json);
+    }
   }
 }
 
