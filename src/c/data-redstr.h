@@ -14,6 +14,6 @@
 
 JSON_Value *edgex_redstr_config_json (const iot_data_t *allconf);
 
-edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc);
+edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc, iot_threadpool_t *queue);
 
 #endif

@@ -110,7 +110,7 @@ static void edc_redstr_postfn (iot_logger_t *lc, void *address, edgex_event_cook
   }
 }
 
-edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc)
+edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc, iot_threadpool_t *queue)
 {
   edgex_data_client_t *result = malloc (sizeof (edgex_data_client_t));
   edc_redstr_conninfo *cinfo = malloc (sizeof (edc_redstr_conninfo));
@@ -125,6 +125,7 @@ edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, io
   iot_log_info (lc, "Event data will be sent through Redis streams at %s:%u", host, port);
 
   result->lc = lc;
+  result->queue = queue;
   result->pf = edc_redstr_postfn;
   result->ff = edc_redstr_freefn;
   result->address = cinfo;
