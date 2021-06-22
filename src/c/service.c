@@ -512,7 +512,7 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     }
     else if (strcmp (bustype, "redis") == 0)
     {
-      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger);
+      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger, svc->eventq);
     }
     else
     {
