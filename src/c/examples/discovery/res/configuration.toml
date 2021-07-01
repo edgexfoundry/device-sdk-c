@@ -30,3 +30,4 @@
 [Device]
   Labels = [ 'Template' ]
   ProfilesDir = 'res/profiles'
+  DevicesDir = 'res/devices'

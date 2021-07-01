@@ -11,13 +11,13 @@
     {
       "name": "SensorOne",
        "description": "A Sensor generating values between 0 & 100",
-       "attributes": { "SensorID": "Sen1" , "SensorType": "1" },
+       "attributes": { "SensorID": "Sen1" , "SensorType": 1 },
        "properties": { "valueType": "Uint64", "readWrite": "R", "units": "Random" }
     },
     {
        "name": "SensorTwo",
        "description": "A Sensor generating values between 1 & 1000",
-       "attributes": { "SensorID": "Sen2", "SensorType": "2" },
+       "attributes": { "SensorID": "Sen2", "SensorType": 2 },
        "properties": { "valueType": "Uint64", "readWrite": "R", "units": "Random" }
     },
     {
