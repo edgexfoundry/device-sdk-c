@@ -191,6 +191,12 @@ static long edgex_run_curl
     curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
     curl_easy_setopt(hnd, CURLOPT_CERTINFO, 1L);
   }
+  else if (ctx->verify_peer && ctx->cacerts_path)
+  {
+    curl_easy_setopt(hnd, CURLOPT_CAPATH, ctx->cacerts_path);
+    curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(hnd, CURLOPT_CERTINFO, 1L);
+  }
   else
   {
     curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
