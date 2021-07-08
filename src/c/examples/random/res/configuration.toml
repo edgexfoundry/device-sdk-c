@@ -10,6 +10,7 @@
   RequestTimeout = '5s'
   StartupMsg = 'Example random device started'
   HealthCheckInterval = '10s'
+  ServerBindAddr = '0.0.0.0'	# Empty defaults to listen to Host address. In case listen to all put 0.0.0.0 instead
 
 [Clients]
   [Clients.core-data]
