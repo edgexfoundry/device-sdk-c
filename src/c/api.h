@@ -17,6 +17,7 @@
 #define EDGEX_DEV_API2_DISCOVERY "/api/v2/discovery"
 #define EDGEX_DEV_API2_CONFIG "/api/v2/config"
 #define EDGEX_DEV_API2_METRICS "/api/v2/metrics"
+#define EDGEX_DEV_API2_SECRET "/api/v2/secret"
 #define EDGEX_DEV_API2_DEVICE_NAME "/api/v2/device/name/{name}/{cmd}"
 #define EDGEX_DEV_API2_CALLBACK_DEVICE "/api/v2/callback/device"
 #define EDGEX_DEV_API2_CALLBACK_DEVICE_NAME "/api/v2/callback/device/name/{name}"

@@ -13,6 +13,7 @@
 #include "registry.h"
 #include "config.h"
 #include "data.h"
+#include "secrets.h"
 #include "devmap.h"
 #include "watchers.h"
 #include "discovery.h"
@@ -57,6 +58,7 @@ struct devsdk_service_t
   edgex_rest_server *daemon;
   edgex_device_periodic_discovery_t *discovery;
   edgex_data_client_t *dataclient;
+  edgex_secret_provider_t *secretstore;
   devsdk_registry *registry;
   edgex_device_adminstate adminstate;
   uint64_t starttime;

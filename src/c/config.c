@@ -8,6 +8,7 @@
 
 #define DYN_NAME "Writable"
 #define DRV_NAME "Driver"
+#define INSECURE_NAME "InsecureSecrets"
 
 #define DYN_PREFIX DYN_NAME "/"
 #define DYN_PREFIXLEN (sizeof (DYN_PREFIX) - 1)
@@ -39,11 +40,17 @@
 
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
+#define DEFAULTSECPATH "%s/"
+#define DEFAULTSECCAFILE "/tmp/edgex/secrets/%s/secrets-token.json"
 
-iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
+iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svcname)
 {
   struct utsname utsbuffer;
   uname (&utsbuffer);
+  char *secpath = malloc (sizeof (DEFAULTSECPATH) + strlen (svcname));
+  sprintf (secpath, DEFAULTSECPATH, svcname);
+  char *seccafile = malloc (sizeof (DEFAULTSECCAFILE) + strlen (svcname));
+  sprintf (seccafile, DEFAULTSECCAFILE, svcname);
 
   iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
 
@@ -72,6 +79,16 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf)
   iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
   edgex_mqtt_config_defaults (result);
   // NB redis-streams uses a subset of the mqtt options
+
+  iot_data_string_map_add (result, "SecretStore/Type", iot_data_alloc_string ("vault", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/Host", iot_data_alloc_string ("localhost", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/Port", iot_data_alloc_ui16 (8200));
+  iot_data_string_map_add (result, "SecretStore/Protocol", iot_data_alloc_string ("http", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/Path", iot_data_alloc_string (secpath, IOT_DATA_TAKE));
+  iot_data_string_map_add (result, "SecretStore/RootCaCertPath", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/ServerName", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/TokenFile", iot_data_alloc_string (seccafile, IOT_DATA_TAKE));
+  iot_data_string_map_add (result, "SecretStore/Authentication/AuthType", iot_data_alloc_string ("X-Vault-Token", IOT_DATA_REF));
 
   if (driverconf)
   {
@@ -288,6 +305,65 @@ void edgex_device_parseTomlClients
   checkClientOverride (lc, "CORE_METADATA", &endpoints->metadata);
 }
 
+static void addInsecureSecretsToml (iot_data_t *confmap, toml_table_t *config)
+{
+  toml_table_t *sub = toml_table_in (config, DYN_NAME);
+  if (sub)
+  {
+    sub = toml_table_in (sub, INSECURE_NAME);
+  }
+  if (sub)
+  {
+    const char *key;
+    toml_table_t *tab;
+    for (unsigned i = 0; (key = toml_key_in (sub, i)); i++)
+    {
+      if ((tab = toml_table_in (sub, key)))
+      {
+        const char *raw = toml_raw_in (tab, "path");
+        if (raw)
+        {
+          char *path = NULL;
+          toml_rtos2 (raw, &path);
+          if (path)
+          {
+            toml_table_t *secrets = toml_table_in (tab, "Secrets");
+            if (secrets)
+            {
+              const char *name;
+              char *value;
+              char *cpath;
+              for (unsigned j = 0; (name = toml_key_in (secrets, j)); j++)
+              {
+                raw = toml_raw_in (secrets, name);
+                toml_rtos2 (raw, &value);
+                if (value)
+                {
+                  cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/Secrets/") + strlen (name));
+                  strcpy (cpath, DYN_PREFIX);
+                  strcat (cpath, INSECURE_NAME);
+                  strcat (cpath, "/");
+                  strcat (cpath, key);
+                  strcat (cpath, "/Secrets/");
+                  strcat (cpath, name);
+                  iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_alloc_string (value, IOT_DATA_TAKE));
+                }
+              }
+              cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + sizeof ("/path/") + strlen (key));
+              strcpy (cpath, DYN_PREFIX);
+              strcat (cpath, INSECURE_NAME);
+              strcat (cpath, "/");
+              strcat (cpath, key);
+              strcat (cpath, "/path");
+              iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_alloc_string (path, IOT_DATA_TAKE));
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 static char *checkOverride (char *qstr)
 {
   for (char *c = qstr; *c; c++)
@@ -358,6 +434,7 @@ void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
     }
     free (key);
   }
+  addInsecureSecretsToml (config, toml);
 }
 
 void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
@@ -392,6 +469,17 @@ void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
   free (query);
 }
 
+static void addInsecureSecretsPairs (iot_data_t *confmap, const devsdk_nvpairs *config)
+{
+  for (const devsdk_nvpairs *p1 = config; p1; p1 = p1->next)
+  {
+    if (strncmp (p1->name, DYN_PREFIX INSECURE_NAME "/", sizeof (DYN_PREFIX INSECURE_NAME)) == 0)
+    {
+      iot_data_map_add (confmap, iot_data_alloc_string (strdup (p1->name), IOT_DATA_TAKE), iot_data_alloc_string (strdup (p1->value), IOT_DATA_TAKE));
+    }
+  }
+}
+
 void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpairs *pairs)
 {
   const char *raw;
@@ -410,6 +498,7 @@ void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpai
       }
     }
   }
+  addInsecureSecretsPairs (config, pairs);
 }
 
 static void edgex_device_populateConfigFromMap (edgex_device_config *config, const iot_data_t *map)
@@ -517,6 +606,11 @@ void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
   }
 
   edgex_device_periodic_discovery_configure (svc->discovery, svc->config.device.discovery_enabled, svc->config.device.discovery_interval);
+
+  if (svc->secretstore)
+  {
+    edgex_secrets_reconfigure (svc->secretstore, svc->config.sdkconf);
+  }
 
   iot_data_map_iter (svc->config.sdkconf, &iter);
   while (iot_data_map_iter_next (&iter))

@@ -307,6 +307,14 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
 devsdk_devices *devsdk_get_devices (devsdk_service_t *svc);
 
 /**
+ * @brief Obtain secret credentials.
+ * @param svc The device service.
+ * @param name The path to search for secrets.
+ */
+
+iot_data_t *devsdk_get_secrets (devsdk_service_t *svc, const char *path);
+
+/**
  * @brief Obtain a device known to the system, by name.
  * @param svc The device service.
  * @param name The name of the device to retrieve.
