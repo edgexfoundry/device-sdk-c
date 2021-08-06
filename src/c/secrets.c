@@ -30,7 +30,7 @@ void edgex_secrets_reconfigure (edgex_secret_provider_t *sp, iot_data_t *config)
   sp->fns.reconfigure (sp->impl, config);
 }
 
-devsdk_nvpairs *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path)
+iot_data_t *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path)
 {
   return sp->fns.get (sp->impl, path);
 }

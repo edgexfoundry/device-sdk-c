@@ -74,24 +74,16 @@ static void insecure_reconfigure (void *impl, iot_data_t *config)
   pthread_mutex_unlock (&insec->mutex);
 }
 
-static devsdk_nvpairs *insecure_get (void *impl, const char *path)
+static iot_data_t *insecure_get (void *impl, const char *path)
 {
-  devsdk_nvpairs *result = NULL;
+  iot_data_t *result;
   insecure_impl_t *insec = (insecure_impl_t *)impl;
-  pthread_mutex_lock (&insec->mutex);
 
+  pthread_mutex_lock (&insec->mutex);
   const iot_data_t *secrets = iot_data_string_map_get (insec->map, path);
-  if (secrets)
-  {
-    iot_data_map_iter_t iter;
-    iot_data_map_iter (secrets, &iter);
-    while (iot_data_map_iter_next (&iter))
-    {
-      const char *key = iot_data_map_iter_string_key (&iter);
-      result = devsdk_nvpairs_new (key, iot_data_map_iter_string_value (&iter), result);
-    }
-  }
+  result = secrets ? iot_data_copy (secrets) : iot_data_alloc_map (IOT_DATA_STRING);
   pthread_mutex_unlock (&insec->mutex);
+
   return result;
 }
 

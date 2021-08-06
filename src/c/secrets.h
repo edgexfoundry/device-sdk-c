@@ -18,7 +18,7 @@ edgex_secret_provider_t *edgex_secrets_get_vault (void);
 
 bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_data_t *config);
 void edgex_secrets_reconfigure (edgex_secret_provider_t *sp, iot_data_t *config);
-devsdk_nvpairs *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path);
+iot_data_t *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path);
 void edgex_secrets_set (edgex_secret_provider_t *sp, const char *path, const devsdk_nvpairs *secrets);
 void edgex_secrets_fini (edgex_secret_provider_t *sp);
 

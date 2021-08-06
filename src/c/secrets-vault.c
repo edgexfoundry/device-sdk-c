@@ -86,13 +86,13 @@ static void vault_reconfigure (void *impl, iot_data_t *config)
 {
 }
 
-static devsdk_nvpairs *vault_get (void *impl, const char *path)
+static iot_data_t *vault_get (void *impl, const char *path)
 {
-  devsdk_nvpairs *result = NULL;
   edgex_ctx ctx;
   devsdk_error err = EDGEX_OK;
   char url[URL_BUF_SIZE];
   vault_impl_t *vault = (vault_impl_t *)impl;
+  iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf (url, URL_BUF_SIZE - 1, "%s%s", vault->baseurl, path);
@@ -115,7 +115,12 @@ static devsdk_nvpairs *vault_get (void *impl, const char *path)
     JSON_Value *jval = json_parse_string (ctx.buff);
     JSON_Object *jobj = json_value_get_object (jval);
     JSON_Object *data = json_object_get_object (jobj, "data");
-    result = devsdk_nvpairs_read (data);
+    size_t count = json_object_get_count (data);
+    for (size_t i = 0; i < count; i++)
+    {
+      iot_data_map_add (result, iot_data_alloc_string (json_object_get_name (data, i), IOT_DATA_COPY), iot_data_alloc_string (json_string (json_object_get_value_at (data, i)), IOT_DATA_COPY));
+    }
+
     json_value_free (jval);
   }
   else

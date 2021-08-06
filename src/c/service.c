@@ -26,7 +26,6 @@
 #include "iot/iot.h"
 #include "filesys.h"
 #include "edgex/csdk-defs.h"
-#include "edgex/secrets.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -971,7 +970,7 @@ void devsdk_post_readings
   }
 }
 
-devsdk_nvpairs *edgex_get_secrets (devsdk_service_t *svc, const char *path)
+iot_data_t *devsdk_get_secrets (devsdk_service_t *svc, const char *path)
 {
   return edgex_secrets_get (svc->secretstore, path);
 }
