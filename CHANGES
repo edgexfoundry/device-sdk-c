@@ -2,6 +2,7 @@ This is the C SDK for EdgeX device services.
 
 Changes for 2.0.1:
 
+- Support EDGEX_USE_REGISTRY
 - Support credential loading from Hashicorp Vault
 
 Changes for 2.0.0 "Ireland":

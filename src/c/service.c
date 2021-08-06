@@ -103,6 +103,22 @@ static void checkEnv (const char **setting, const char *varname)
   }
 }
 
+static void checkEnvBool (bool *setting, const char *varname)
+{
+  const char *val = getenv (varname);
+  if (val)
+  {
+    if (strcmp (val, "true") == 0)
+    {
+      *setting = true;
+    }
+    else if (strcmp (val, "false") == 0)
+    {
+      *setting = false;
+    }
+  }
+}
+
 static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
 {
   bool result = true;
@@ -162,6 +178,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   checkEnv (&svc->confdir, "EDGEX_CONF_DIR");
   checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE");
   checkEnv ((const char **)&svc->name, "EDGEX_INSTANCE_NAME");
+  checkEnvBool (&usereg, "EDGEX_USE_REGISTRY");
 
   if (usereg)
   {
