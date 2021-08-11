@@ -1,32 +1,32 @@
 [Writable]
-  LogLevel = 'DEBUG'
+  LogLevel = "DEBUG"
   [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
     MaxCmdResultLen = 256
   [Writable.Driver]
-    TestParam2 = 'World'
-    TestParam3 = 'Goodbye'
+    TestParam2 = "World"
+    TestParam3 = "Goodbye"
 
 [Service]
   Port = 59999
-  RequestTimeout = '5s'
-  StartupMsg = 'Template device started'
-  HealthCheckInterval = '10s'
+  RequestTimeout = "5s"
+  StartupMsg = "Template device started"
+  HealthCheckInterval = "10s"
 
 [Clients]
   [Clients.core-data]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59880
 
   [Clients.core-metadata]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59881
 
 [Driver]
-  TestParam1 = 'Hello'
+  TestParam1 = "Hello"
 
 [Device]
-  Labels = [ 'Template' ]
-  ProfilesDir = 'res/profiles'
-  DevicesDir = 'res/devices'
+  Labels = [ "Template" ]
+  ProfilesDir = "res/profiles"
+  DevicesDir = "res/devices"
