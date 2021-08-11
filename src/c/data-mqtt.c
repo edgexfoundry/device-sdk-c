@@ -12,6 +12,8 @@
 #include "iot/time.h"
 #include <MQTTAsync.h>
 
+#define PTHREAD_COND_TIMEOUT 99999
+
 void edgex_mqtt_config_defaults (iot_data_t *allconf)
 {
   iot_data_string_map_add (allconf, EX_MQ_PROTOCOL, iot_data_alloc_string ("", IOT_DATA_REF));
@@ -262,12 +264,17 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   }
   ssl_opts.verify = iot_data_string_map_get_bool (allconf, EX_MQ_SKIPVERIFY, false) ? 0 : 1;
 
+#if 0	// Fix device-service issue #361
   tm = iot_data_ui32 (iot_data_string_map_get (allconf, "Service/Timeout"));
   tm *= iot_data_ui32 (iot_data_string_map_get (allconf, "Service/ConnectRetries"));
   tm += iot_time_msecs ();
   max_wait.tv_sec = tm / 1000;
   max_wait.tv_nsec = 1000000 * (tm % 1000);
-
+#else
+	clock_gettime(CLOCK_REALTIME, &max_wait);
+	max_wait.tv_sec += PTHREAD_COND_TIMEOUT;
+#endif
+  
   pthread_mutex_init (&cinfo->mtx, NULL);
   pthread_cond_init (&cinfo->cond, NULL);
 
