@@ -1,5 +1,5 @@
 [Writable]
-  LogLevel = 'DEBUG'
+  LogLevel = "DEBUG"
   [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
@@ -7,20 +7,20 @@
 
 [Service]
   Port = 59999
-  RequestTimeout = '5s'
-  StartupMsg = 'Example counting device started'
-  HealthCheckInterval = '10s'
+  RequestTimeout = "5s"
+  StartupMsg = "Example counting device started"
+  HealthCheckInterval = "10s"
 
 [Clients]
   [Clients.core-data]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59880
 
   [Clients.core-metadata]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59881
 
 [Device]
-  Labels = [ 'Counter' ]
-  ProfilesDir = 'res/profiles'
-  DevicesDir = 'res/devices'
+  Labels = [ "Counter" ]
+  ProfilesDir = "res/profiles"
+  DevicesDir = "res/devices"
