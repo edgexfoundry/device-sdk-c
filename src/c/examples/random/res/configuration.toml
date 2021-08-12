@@ -1,5 +1,5 @@
 [Writable]
-  LogLevel = 'DEBUG'
+  LogLevel = "DEBUG"
   [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
@@ -7,21 +7,21 @@
 
 [Service]
   Port = 59999
-  RequestTimeout = '5s'
-  StartupMsg = 'Example random device started'
-  HealthCheckInterval = '10s'
-  ServerBindAddr = '0.0.0.0'	# Empty defaults to listen to Host address. In case listen to all put 0.0.0.0 instead
+  RequestTimeout = "5s"
+  StartupMsg = "Example random device started"
+  HealthCheckInterval = "10s"
+  ServerBindAddr = "0.0.0.0"	# Empty defaults to listen to Host address. In case listen to all put 0.0.0.0 instead
 
 [Clients]
   [Clients.core-data]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59880
 
   [Clients.core-metadata]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59881
 
 [Device]
-  Labels = [ 'Random' ]
-  ProfilesDir = 'res/profiles'
-  DevicesDir = 'res/devices'
+  Labels = [ "Random" ]
+  ProfilesDir = "res/profiles"
+  DevicesDir = "res/devices"

@@ -1,15 +1,15 @@
 [Writable]
-  LogLevel = 'DEBUG'
+  LogLevel = "DEBUG"
 
 [Clients]
   [Clients.core-data]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59880
 
   [Clients.core-metadata]
-    Host = 'localhost'
+    Host = "localhost"
     Port = 59881
 
 [Device]
-  ProfilesDir = 'res/profiles'
-  DevicesDir = 'res/devices'
+  ProfilesDir = "res/profiles"
+  DevicesDir = "res/devices"
