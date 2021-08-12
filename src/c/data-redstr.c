@@ -9,6 +9,7 @@
 #include "data-redstr.h"
 #include "correlation.h"
 #include "iot/base64.h"
+#include "iot/time.h"
 #include <hiredis/hiredis.h>
 
 JSON_Value *edgex_redstr_config_json (const iot_data_t *allconf)
@@ -110,8 +111,9 @@ static void edc_redstr_postfn (iot_logger_t *lc, void *address, edgex_event_cook
   }
 }
 
-edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc, iot_threadpool_t *queue)
+edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc, const devsdk_timeout *tm, iot_threadpool_t *queue)
 {
+  struct timeval tv;
   edgex_data_client_t *result = malloc (sizeof (edgex_data_client_t));
   edc_redstr_conninfo *cinfo = malloc (sizeof (edc_redstr_conninfo));
 
@@ -130,18 +132,39 @@ edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, io
   result->ff = edc_redstr_freefn;
   result->address = cinfo;
 
-  cinfo->ctx = redisConnect(host, port);
-  if (cinfo->ctx == NULL || cinfo->ctx->err)
+  tv.tv_sec = tm->interval / 1000;
+  tv.tv_usec = (tm->interval % 1000) * 1000;
+
+  while (true)
   {
+    uint64_t t1, t2;
+    t1 = iot_time_msecs ();
+    cinfo->ctx = redisConnectWithTimeout (host, port, tv);
+    if (cinfo->ctx && (cinfo->ctx->err == 0))
+    {
+      break;
+    }
     if (cinfo->ctx)
     {
       iot_log_error (lc, "Failed to create Redis Streams client: %s", cinfo->ctx->errstr);
+      redisFree (cinfo->ctx);
     }
     else
     {
       iot_log_error (lc, "Can't allocate redis context");
     }
-
+    t2 = iot_time_msecs ();
+    if (t2 > tm->deadline - tm->interval)
+    {
+      return false;
+    }
+    if (tm->interval > t2 - t1)
+    {
+      devsdk_wait_msecs (tm->interval - (t2 - t1));
+    }
+  }
+  if (cinfo->ctx == NULL || cinfo->ctx->err)
+  {
     free (cinfo);
     free (result);
     return NULL;

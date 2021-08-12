@@ -63,8 +63,9 @@ typedef struct edc_mqtt_conninfo
   pthread_mutex_t mtx;
   pthread_cond_t cond;
   uint16_t qos;
-  bool retained;
   const char *topicbase;
+  bool retained;
+  bool connected;
 } edc_mqtt_conninfo;
 
 static void edc_mqtt_freefn (iot_logger_t *lc, void *address)
@@ -162,6 +163,7 @@ static void edc_mqtt_onconnect (void *context, MQTTAsync_successData *response)
 {
   edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
   iot_log_info (cinfo->lc, "mqtt: connected");
+  cinfo->connected = true;
   pthread_mutex_lock (&cinfo->mtx);
   pthread_cond_signal (&cinfo->cond);
   pthread_mutex_unlock (&cinfo->mtx);
@@ -173,19 +175,18 @@ static void edc_mqtt_onconnectfail (void *context, MQTTAsync_failureData *respon
   iot_log_error (cinfo->lc, "mqtt: connect failed, error code %d", response->code);
 }
 
-edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_logger_t *lc, iot_threadpool_t *queue)
+edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_logger_t *lc, const devsdk_timeout *tm, iot_threadpool_t *queue)
 {
   int rc;
   char *uri;
-  uint64_t tm;
   struct timespec max_wait;
-  int timedout;
+  int timedout = 0;
   MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
   MQTTAsync_SSLOptions ssl_opts = MQTTAsync_SSLOptions_initializer;
   MQTTAsync_createOptions create_opts = MQTTAsync_createOptions_initializer;
 
   edgex_data_client_t *result = malloc (sizeof (edgex_data_client_t));
-  edc_mqtt_conninfo *cinfo = malloc (sizeof (edc_mqtt_conninfo));
+  edc_mqtt_conninfo *cinfo = calloc (1, sizeof (edc_mqtt_conninfo));
 
   const char *host = iot_data_string_map_get_string (allconf, EX_MQ_HOST);
   const char *prot = iot_data_string_map_get_string (allconf, EX_MQ_PROTOCOL);
@@ -262,33 +263,56 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   }
   ssl_opts.verify = iot_data_string_map_get_bool (allconf, EX_MQ_SKIPVERIFY, false) ? 0 : 1;
 
-  tm = iot_data_ui32 (iot_data_string_map_get (allconf, "Service/Timeout"));
-  tm *= iot_data_ui32 (iot_data_string_map_get (allconf, "Service/ConnectRetries"));
-  tm += iot_time_msecs ();
-  max_wait.tv_sec = tm / 1000;
-  max_wait.tv_nsec = 1000000 * (tm % 1000);
-
   pthread_mutex_init (&cinfo->mtx, NULL);
   pthread_cond_init (&cinfo->cond, NULL);
+  while (true)
+  {
+    uint64_t t1, t2;
 
-  pthread_mutex_lock (&cinfo->mtx);
-  if ((rc = MQTTAsync_connect (cinfo->client, &conn_opts)) == MQTTASYNC_SUCCESS)
-  {
-    timedout = pthread_cond_timedwait (&cinfo->cond, &cinfo->mtx, &max_wait);
-  }
-  pthread_mutex_unlock (&cinfo->mtx);
-  if (rc != MQTTASYNC_SUCCESS || timedout == ETIMEDOUT)
-  {
-    if (rc == MQTTASYNC_SUCCESS)
+    t1 = iot_time_msecs ();
+
+    if (tm->deadline <= t1)
     {
-      iot_log_error (lc, "mqtt: failed to connect, timed out");
+      break;
+    }
+    max_wait.tv_sec = tm->deadline / 1000;
+    max_wait.tv_nsec = 1000000 * (tm->deadline % 1000);
+
+    pthread_mutex_lock (&cinfo->mtx);
+    if ((rc = MQTTAsync_connect (cinfo->client, &conn_opts)) == MQTTASYNC_SUCCESS)
+    {
+      timedout = pthread_cond_timedwait (&cinfo->cond, &cinfo->mtx, &max_wait);
+    }
+    pthread_mutex_unlock (&cinfo->mtx);
+    if (cinfo->connected)
+    {
+      break;
     }
     else
     {
-      iot_log_error (lc, "mqtt: failed to connect, return code %d", rc);
+      if (timedout == ETIMEDOUT)
+      {
+        iot_log_error (lc, "mqtt: failed to connect, timed out");
+      }
+      else
+      {
+        iot_log_error (lc, "mqtt: failed to connect, return code %d", rc);
+      }
+      t2 = iot_time_msecs ();
+      if (t2 > tm->deadline - tm->interval)
+      {
+        break;
+      }
+      if (tm->interval > t2 - t1)
+      {
+        devsdk_wait_msecs (tm->interval - (t2 - t1));
+      }
     }
-    pthread_cond_destroy (&cinfo->cond);
-    pthread_mutex_destroy (&cinfo->mtx);
+  }
+  pthread_cond_destroy (&cinfo->cond);
+  pthread_mutex_destroy (&cinfo->mtx);
+  if (!cinfo->connected)
+  {
     free (cinfo);
     free (result);
     free (uri);

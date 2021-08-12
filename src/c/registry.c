@@ -10,6 +10,7 @@
 #include "consul.h"
 #include "map.h"
 #include "errorlist.h"
+#include "iot/time.h"
 
 typedef edgex_map(devsdk_registry_impl) devsdk_map_registry;
 
@@ -122,68 +123,28 @@ bool devsdk_registry_ping (devsdk_registry *registry, devsdk_error *err)
   return registry->impl.ping (registry->logger, registry->location, err);
 }
 
-bool devsdk_registry_waitfor (devsdk_registry *registry)
+bool devsdk_registry_waitfor (devsdk_registry *registry, const devsdk_timeout *timeout)
 {
-  devsdk_error err = EDGEX_OK;
-  struct timespec delay;
-  char *val;
-  int retries = 5;
-  time_t secs = 1;
+  while (true)
+  {
+    uint64_t t1, t2;
+    devsdk_error err = EDGEX_OK;
 
-  val = getenv ("EDGEX_STARTUP_INTERVAL");
-  if (val == NULL)
-  {
-    val = getenv ("startup_interval");
-  }
-  if (val == NULL)
-  {
-    val = getenv ("edgex_registry_retry_wait");
-  }
-  if (val)
-  {
-    int rw = atoi (val);
-    if (rw > 0)
+    t1 = iot_time_msecs ();
+    if (devsdk_registry_ping (registry, &err))
     {
-      secs = rw;
+      return true;
+    }
+    t2 = iot_time_msecs ();
+    if (t2 > timeout->deadline - timeout->interval)
+    {
+      return false;
+    }
+    if (timeout->interval > t2 - t1)
+    {
+      devsdk_wait_msecs (timeout->interval - (t2 - t1));
     }
   }
-
-  val = getenv ("EDGEX_STARTUP_DURATION");
-  if (val == NULL)
-  {
-    val = getenv ("startup_duration");
-  }
-  if (val)
-  {
-    int dur = atoi (val);
-    if (dur > 0)
-    {
-      retries = dur / secs;
-    }
-  }
-  else
-  {
-    val = getenv ("edgex_registry_retry_count");
-    if (val)
-    {
-      int rc = atoi (val);
-      if (rc > 0)
-      {
-        retries = rc;
-      }
-    }
-  }
-
-  delay.tv_sec = secs;
-  delay.tv_nsec = 0;
-
-  while (!devsdk_registry_ping (registry, &err) && --retries)
-  {
-    nanosleep (&delay, NULL);
-    err = EDGEX_OK;
-  }
-
-  return (retries > 0);
 }
 
 devsdk_nvpairs *devsdk_registry_get_config

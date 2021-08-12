@@ -25,6 +25,7 @@
 #include "iot/time.h"
 #include "iot/iot.h"
 #include "filesys.h"
+#include "devutil.h"
 #include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
@@ -324,29 +325,19 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
-static void ping_client_wait (uint64_t msecs)
+static void devsdk_get_deadline (devsdk_timeout *result, uint64_t starttime)
 {
-  struct timespec tm, rem;
-  tm.tv_sec = msecs / 1000;
-  tm.tv_nsec = 1000000 * (msecs % 1000);
-  while (nanosleep (&tm, &rem) == -1 && errno == EINTR)
-  {
-    tm = rem;
-  }
+  unsigned long duration = devsdk_strtoul_dfl (getenv ("EDGEX_STARTUP_DURATION"), 60);
+  unsigned long interval = devsdk_strtoul_dfl (getenv ("EDGEX_STARTUP_INTERVAL"), 1);
+  result->deadline = starttime + 1000 * duration;
+  result->interval = 1000 * interval;
 }
 
-static bool ping_client
-(
-  iot_logger_t *lc,
-  const char *sname,
-  edgex_device_service_endpoint *ep,
-  uint64_t timeout,
-  devsdk_error *err
-)
+static bool ping_client (iot_logger_t *lc, const char *sname, edgex_device_service_endpoint *ep, const devsdk_timeout *timeout, devsdk_error *err)
 {
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  uint64_t deadline, interval, t1, t2;
+  uint64_t t1, t2;
   bool result;
 
   if (ep->host == NULL || ep->port == 0)
@@ -357,9 +348,6 @@ static bool ping_client
   }
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/ping", ep->host, ep->port);
-
-  deadline = iot_time_msecs () + timeout;
-  interval = timeout / PING_RETRIES;
 
   while (true)
   {
@@ -372,12 +360,15 @@ static bool ping_client
       break;
     }
     t2 = iot_time_msecs ();
-    if (t2 > deadline - interval)
+    if (t2 > timeout->deadline - timeout->interval)
     {
       result = false;
       break;
     }
-    ping_client_wait (interval - (t2 - t1));
+    if (timeout->interval > t2 - t1)
+    {
+      devsdk_wait_msecs (timeout->interval - (t2 - t1));
+    }
   }
 
   if (result)
@@ -513,7 +504,7 @@ static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *er
   devsdk_strings_free (filenames);
 }
 
-static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk_error *err)
+static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const devsdk_timeout *deadline, devsdk_error *err)
 {
   svc->adminstate = UNLOCKED;
 
@@ -527,11 +518,11 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
     const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
     if (strcmp (bustype, "mqtt") == 0)
     {
-      svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, svc->eventq);
+      svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, deadline, svc->eventq);
     }
     else if (strcmp (bustype, "redis") == 0)
     {
-      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger, svc->eventq);
+      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger, deadline, svc->eventq);
     }
     else
     {
@@ -546,13 +537,13 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, devsdk
   else
   {
     svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
-    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, svc->config.service.timeout, err))
+    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, deadline, err))
     {
       return;
     }
   }
 
-  if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, svc->config.service.timeout, err))
+  if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, deadline, err))
   {
     return;
   }
@@ -803,6 +794,10 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   *err = EDGEX_OK;
   svc->starttime = iot_time_msecs();
+
+  devsdk_timeout deadline;
+  devsdk_get_deadline (&deadline, svc->starttime);
+
   iot_threadpool_start (svc->thpool);
 
   configmap = edgex_config_defaults (driverdfls, svc->name);
@@ -829,7 +824,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   if (svc->registry)
   {
-    if (!devsdk_registry_waitfor (svc->registry))
+    if (!devsdk_registry_waitfor (svc->registry, &deadline))
     {
       iot_log_error (svc->logger, "registry service not running at %s", svc->regURL);
       *err = EDGEX_REMOTE_SERVER_DOWN;
@@ -909,7 +904,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   iot_log_debug (svc->logger, "Service configuration follows:");
   edgex_device_dumpConfig (svc->logger, configmap);
 
-  startConfigured (svc, configtoml, err);
+  startConfigured (svc, configtoml, &deadline, err);
 
   toml_free (configtoml);
 
