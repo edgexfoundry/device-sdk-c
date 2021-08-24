@@ -16,6 +16,7 @@
 
 #include "devsdk/devsdk-base.h"
 #include "edgex/edgex-base.h"
+#include "devutil.h"
 #include "iot/threadpool.h"
 
 /* Callback for dynamic configuration */
@@ -221,14 +222,13 @@ devsdk_registry *devsdk_registry_get_registry
 bool devsdk_registry_ping (devsdk_registry *registry, devsdk_error *err);
 
 /**
- * @brief Wait for the registry service to be running. The time to wait is
- *        controlled by the EDGEX_STARTUP_INTERVAL and EDGEX_STARTUP_DURATION
- *        environment variables.
+ * @brief Wait for the registry service to be running.
  * @param registry The registry instance.
+ * @param deadline How long to wait.
  * @returns true if the registry service is running after waiting.
  */
 
-bool devsdk_registry_waitfor (devsdk_registry *registry);
+bool devsdk_registry_waitfor (devsdk_registry *registry, const devsdk_timeout *deadline);
 
 /**
  * @brief Retrieve configuration values from the registry.

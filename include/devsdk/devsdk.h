@@ -56,15 +56,17 @@ typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
 typedef void (*devsdk_discover) (void *impl);
 
 /**
- * @brief Optional callback for dynamic discovery of device resources. The
- * implementation should return a linked list of resources available on the
- * specified device.
- * @param devname The name of the device being queried
- * @param protocols The location of the device being queried
- * @returns The discovered resources
+ * @brief Optional callback for dynamic discovery of device resources.
+ * @param impl The context data passed in when the service was created.
+ * @param dev The details of the device to be queried.
+ * @param options Service specific discovery options map. May be NULL.
+ * @param resources The operations supported by the device.
+ * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
+ * @return true if the operation was successful, false otherwise.
  */
 
-typedef devsdk_device_resources * (*devsdk_describe) (void *impl, const devsdk_device_t *dev);
+typedef bool (*devsdk_describe)
+  (void *impl, const devsdk_device_t *dev, const iot_data_t *options, devsdk_device_resources **resources, iot_data_t **exception);
 
 /**
  * @brief Callback issued for parsing device addresses.
