@@ -328,7 +328,7 @@ void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_end
 {
   if (!json_object_get_string (jobj, "apiVersion"))
   {
-    json_object_set_string (jobj, "apiVersion", "2");
+    json_object_set_string (jobj, "apiVersion", "v2");
   }
   JSON_Value *reqval = edgex_wrap_request ("Profile", json_object_get_wrapping_value (jobj));
   char *json = json_serialize_to_string (reqval);
@@ -365,7 +365,7 @@ void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endp
   }
   if (!json_object_get_string (jobj, "apiVersion"))
   {
-    json_object_set_string (jobj, "apiVersion", "2");
+    json_object_set_string (jobj, "apiVersion", "v2");
   }
   JSON_Value *reqval = edgex_wrap_request ("Device", json_object_get_wrapping_value (jobj));
   char *json = json_serialize_to_string (reqval);
