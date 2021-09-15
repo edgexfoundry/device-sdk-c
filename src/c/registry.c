@@ -142,7 +142,7 @@ bool devsdk_registry_waitfor (devsdk_registry *registry, const devsdk_timeout *t
     }
     if (timeout->interval > t2 - t1)
     {
-      devsdk_wait_msecs (timeout->interval - (t2 - t1));
+      iot_wait_msecs (timeout->interval - (t2 - t1));
     }
   }
 }

@@ -20,16 +20,18 @@
 
 static const char *edgex_log_levels[] = {"", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"};
 
-void edgex_log_tostdout (struct iot_logger_t * logger, iot_loglevel_t l, time_t timestamp, const char *message)
+void edgex_log_tostdout (struct iot_logger_t * logger, iot_loglevel_t l, uint64_t timestamp, const char *message)
 {
+  time_t ts;
   struct tm tsparts;
   char ts8601[EDGEX_TSIZE];
   const char *crlid;
   const char *lname;
 
+  ts = timestamp / 1000000U;
   crlid = edgex_device_get_crlid ();
   lname = logger->name ? logger->name : "(default)";
-  gmtime_r (&timestamp, &tsparts);
+  gmtime_r (&ts, &tsparts);
   strftime (ts8601, EDGEX_TSIZE, "%FT%TZ", &tsparts);
 
   printf ("level=%s ts=%s app=%s%s%s msg=\"%s\"\n", edgex_logger_levelname (l), ts8601, lname, crlid ? " correlation-id=" : "", crlid ? crlid : "", message);

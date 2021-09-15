@@ -214,17 +214,6 @@ uint64_t edgex_parsetime (const char *spec)
   return 0;
 }
 
-void devsdk_wait_msecs (uint64_t duration)
-{
-  struct timespec tm, rem;
-  tm.tv_sec = duration / 1000;
-  tm.tv_nsec = 1000000 * (duration % 1000);
-  while (nanosleep (&tm, &rem) == -1 && errno == EINTR)
-  {
-    tm = rem;
-  }
-}
-
 unsigned long devsdk_strtoul_dfl (const char *val, unsigned long dfl)
 {
   if (val && *val)

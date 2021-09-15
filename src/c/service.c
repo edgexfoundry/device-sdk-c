@@ -367,7 +367,7 @@ static bool ping_client (iot_logger_t *lc, const char *sname, edgex_device_servi
     }
     if (timeout->interval > t2 - t1)
     {
-      devsdk_wait_msecs (timeout->interval - (t2 - t1));
+      iot_wait_msecs (timeout->interval - (t2 - t1));
     }
   }
 
