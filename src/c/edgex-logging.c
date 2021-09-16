@@ -44,3 +44,17 @@ const char *edgex_logger_levelname (iot_loglevel_t l)
   assert (l >= IOT_LOG_NONE && l <= IOT_LOG_TRACE);
   return edgex_log_levels[l];
 }
+
+bool edgex_logger_nametolevel (const char *lstr, iot_loglevel_t *level)
+{
+  iot_loglevel_t l;
+  for (l = IOT_LOG_ERROR; l <= IOT_LOG_TRACE; l++)
+  {
+    if (strcasecmp (lstr, edgex_log_levels[l]) == 0)
+    {
+      *level = l;
+      return true;
+    }
+  }
+  return false;
+}

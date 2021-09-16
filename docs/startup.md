@@ -50,3 +50,7 @@ Two additional environment variables control the retry behavior when contacting 
 |-|-|
 `EDGEX_STARTUP_DURATION` | sets the amount of time (in seconds) in which to attempt to connect to the registry before abandoning startup
 `EDGEX_STARTUP_INTERVAL` | sets the interval (in seconds) between attempts to connect to the registry
+
+## Logging
+
+The default log level during startup is INFO. The log level is controlled by the `[Writable]/LogLevel` configuration entry. If debugging of the service startup (before the configuration has been read) is required, the override environment variable `WRITABLE_LOGLEVEL` should be set to the desired level name.

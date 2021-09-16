@@ -19,4 +19,8 @@ extern void edgex_log_tostdout (struct iot_logger_t *logger, iot_loglevel_t l, u
 
 extern const char * edgex_logger_levelname (iot_loglevel_t level);
 
+/* Get level for name */
+
+extern bool edgex_logger_nametolevel (const char *lstr, iot_loglevel_t *level);
+
 #endif
