@@ -13,10 +13,14 @@
 
 /* Write to stdout */
 
-extern void edgex_log_tostdout (struct iot_logger_t *logger, iot_loglevel_t l, time_t timestamp, const char *message);
+extern void edgex_log_tostdout (struct iot_logger_t *logger, iot_loglevel_t l, uint64_t timestamp, const char *message);
 
 /* Get name of log level */
 
 extern const char * edgex_logger_levelname (iot_loglevel_t level);
+
+/* Get level for name */
+
+extern bool edgex_logger_nametolevel (const char *lstr, iot_loglevel_t *level);
 
 #endif

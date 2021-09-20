@@ -33,8 +33,6 @@ extern void devsdk_free_resources (devsdk_device_resources *r);
 
 extern uint64_t edgex_parsetime (const char *spec);
 
-extern void devsdk_wait_msecs (uint64_t duration);
-
 extern unsigned long devsdk_strtoul_dfl (const char *val, unsigned long dfl);
 
 #endif

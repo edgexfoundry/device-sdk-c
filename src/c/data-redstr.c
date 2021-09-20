@@ -160,7 +160,7 @@ edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, io
     }
     if (tm->interval > t2 - t1)
     {
-      devsdk_wait_msecs (tm->interval - (t2 - t1));
+      iot_wait_msecs (tm->interval - (t2 - t1));
     }
   }
   if (cinfo->ctx == NULL || cinfo->ctx->err)

@@ -16,10 +16,12 @@
 #include "devsdk/devsdk.h"
 
 #define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
-#define ERR_BUFSZ 1024
 #define ERR_TERMINAL_READ "GET called for terminal device. This is a write-only device."
 #define ERR_TERMINAL_NO_CMD "No command specified in PUT request."
 #define ERR_TERMINAL_MSG "WriteMsg request did not specify a message."
+#define ERR_TERMINAL_UNK_CMD "Unknown command %s."
+#define ERR_TERMINAL_INV_PARAM "terminal: invalid value %s specified for \"parameter\"."
+#define ERR_TERMINAL_PARAM_REQ "terminal: \"parameter\" is required."
 
 typedef enum { TERM_X, TERM_Y, TERM_MSG, TERM_CMD, TERM_INVALID } terminal_resourcetype;
 
@@ -63,12 +65,12 @@ static devsdk_resource_attr_t terminal_create_resource_attr (void *impl, const i
     }
     else
     {
-      *exception = iot_data_alloc_string ("terminal: invalid value specified for \"parameter\"", IOT_DATA_REF);
+      *exception = iot_data_alloc_string_fmt (ERR_TERMINAL_INV_PARAM, param);
     }
   }
   else
   {
-    *exception = iot_data_alloc_string ("terminal: \"parameter\" is required", IOT_DATA_REF);
+    *exception = iot_data_alloc_string (ERR_TERMINAL_PARAM_REQ, IOT_DATA_REF);
   }
   if (result != TERM_INVALID)
   {
@@ -166,7 +168,6 @@ static bool terminal_put_handler
 {
   bool terminal_msg_state = false;
   terminal_driver * driver = (terminal_driver *) impl;
-  char * buff;
   const char * command = NULL;
 
   for (uint32_t i = 0; i < nvalues; i++)
@@ -198,9 +199,7 @@ static bool terminal_put_handler
   }
   else
   {
-    buff = malloc (ERR_BUFSZ);
-    snprintf (buff, ERR_BUFSZ, "Unknown command %s", command);
-    *exception = iot_data_alloc_string (buff, IOT_DATA_TAKE);
+    *exception = iot_data_alloc_string_fmt (ERR_TERMINAL_UNK_CMD, command);
     return false;
   }
 }

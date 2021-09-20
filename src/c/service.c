@@ -239,7 +239,13 @@ static char *devsdk_service_confpath (const char *dir, const char *fname, const 
 devsdk_service_t *devsdk_service_new
   (const char *defaultname, const char *version, void *impldata, devsdk_callbacks *implfns, int *argc, char **argv, devsdk_error *err)
 {
-  iot_logger_t *logger = iot_logger_alloc_custom (defaultname, IOT_LOG_TRACE, "", edgex_log_tostdout, NULL, true);
+  iot_loglevel_t ll = IOT_LOG_INFO;
+  const char *llstr = getenv ("WRITABLE_LOGLEVEL");
+  if (llstr)
+  {
+    edgex_logger_nametolevel (llstr, &ll);
+  }
+  iot_logger_t *logger = iot_logger_alloc_custom (defaultname, ll, "", edgex_log_tostdout, NULL, true);
   if (impldata == NULL)
   {
     iot_log_error (logger, "devsdk_service_new: no implementation object");
@@ -263,6 +269,7 @@ devsdk_service_t *devsdk_service_new
   devsdk_service_t *result = malloc (sizeof (devsdk_service_t));
   memset (result, 0, sizeof (devsdk_service_t));
   result->logger = logger;
+  result->config.loglevel = ll;
 
   if (!processCmdLine (argc, argv, result))
   {
@@ -367,7 +374,7 @@ static bool ping_client (iot_logger_t *lc, const char *sname, edgex_device_servi
     }
     if (timeout->interval > t2 - t1)
     {
-      devsdk_wait_msecs (timeout->interval - (t2 - t1));
+      iot_wait_msecs (timeout->interval - (t2 - t1));
     }
   }
 
