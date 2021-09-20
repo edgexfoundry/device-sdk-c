@@ -236,7 +236,7 @@ edgex_event_cooked *edgex_data_process_event
         cread = cbor_build_string (reading);
         free (reading);
         cbor_map_add (crdg, (struct cbor_pair)
-          { .key = cbor_move (cbor_build_string ("value")), .value = cbor_move (cread) });
+          { .key = cbor_move (cbor_build_string (pt == Edgex_Object ? "objectValue" : "value")), .value = cbor_move (cread) });
       }
 
       cbor_map_add (crdg, (struct cbor_pair)
@@ -312,48 +312,52 @@ edgex_event_cooked *edgex_data_process_event
   }
   else
   {
-    JSON_Value *jevent = json_value_init_object ();
-    JSON_Object *jobj = json_value_get_object (jevent);
-    JSON_Value *arrval = json_value_init_array ();
-    JSON_Array *jrdgs = json_value_get_array (arrval);
-
+    iot_data_t *rvec = iot_data_alloc_vector (commandinfo->nreqs);
     for (uint32_t i = 0; i < commandinfo->nreqs; i++)
     {
+      iot_data_t *rmap = iot_data_alloc_map (IOT_DATA_STRING);
       char *id = edgex_device_genuuid ();
       edgex_propertytype pt = edgex_propertytype_data (values[i].value);
-      char *reading = edgex_value_tostring (values[i].value);
-
-      JSON_Value *rval = json_value_init_object ();
-      JSON_Object *robj = json_value_get_object (rval);
-
-      json_object_set_string (robj, "apiVersion", EDGEX_API_VERSION);
-      json_object_set_string (robj, "id", id);
-      json_object_set_string (robj, "profileName", commandinfo->profile->name);
-      json_object_set_string (robj, "deviceName", device_name);
-      json_object_set_string (robj, "resourceName", commandinfo->reqs[i].resource->name);
-      json_object_set_string (robj, (pt == Edgex_Binary) ? "binaryValue" : "value", reading);
-      json_object_set_uint (robj, "origin", values[i].origin ? values[i].origin : timenow);
-      json_object_set_string (robj, "valueType", edgex_propertytype_tostring (pt));
-      if (pt == Edgex_Binary)
+      iot_data_string_map_add (rmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
+      iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "valueType", iot_data_alloc_string (edgex_propertytype_tostring (pt), IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "origin", iot_data_alloc_ui64 (values[i].origin ? values[i].origin : timenow));
+      switch (pt)
       {
-        json_object_set_string (robj, "mediaType", commandinfo->pvals[i]->mediaType);
+        case Edgex_Binary:
+          iot_data_string_map_add (rmap, "binaryValue", iot_data_copy (values[i].value));
+          iot_data_string_map_add (rmap, "mediaType", iot_data_alloc_string (commandinfo->pvals[i]->mediaType, IOT_DATA_REF));
+          break;
+        case Edgex_Object:
+          iot_data_string_map_add (rmap, "objectValue", iot_data_copy (values[i].value));
+          break;
+        case Edgex_String:
+          iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_string (values[i].value), IOT_DATA_REF));
+          break;
+        default:
+          iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_to_json (values[i].value), IOT_DATA_TAKE));
       }
-      json_array_append_value (jrdgs, rval);
-      free (id);
-      free (reading);
+      iot_data_vector_add (rvec, i, rmap);
     }
 
-    json_object_set_string (jobj, "apiVersion", EDGEX_API_VERSION);
-    json_object_set_string (jobj, "id", eventId);
-    json_object_set_string (jobj, "deviceName", device_name);
-    json_object_set_string (jobj, "profileName", commandinfo->profile->name);
-    json_object_set_string (jobj, "sourceName", commandinfo->name);
-    json_object_set_uint (jobj, "origin", timenow);
-    json_object_set_value (jobj, "readings", arrval);
+    iot_data_t *evmap = iot_data_alloc_map (IOT_DATA_STRING);
+    iot_data_string_map_add (evmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
+    iot_data_string_map_add (evmap, "id", iot_data_alloc_string (eventId, IOT_DATA_REF));
+    iot_data_string_map_add (evmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+    iot_data_string_map_add (evmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
+    iot_data_string_map_add (evmap, "sourceName", iot_data_alloc_string (commandinfo->name, IOT_DATA_REF));
+    iot_data_string_map_add (evmap, "origin", iot_data_alloc_ui64 (timenow));
+    iot_data_string_map_add (evmap, "readings", rvec);
+
+    iot_data_t *reqmap = iot_data_alloc_map (IOT_DATA_STRING);
+    iot_data_string_map_add (reqmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
+    iot_data_string_map_add (reqmap, "Event", evmap);
     result->encoding = JSON;
-    JSON_Value *reqval = edgex_wrap_request_single ("Event", jevent);
-    result->value.json = json_serialize_to_string (reqval);
-    json_value_free (reqval);
+    result->value.json = iot_data_to_json (reqmap);
+    iot_data_free (reqmap);
   }
   free (eventId);
   return result;

@@ -2,6 +2,7 @@ This is the C SDK for EdgeX device services.
 
 Changes for 2.0.1:
 
+- Initial support for Object typed Readings (GET operations only)
 - Fix segfault on startup when using MQTT for MessageQueue
 - Support EDGEX_STARTUP_DURATION, EDGEX_STARTUP_INTERVAL
 - Support EDGEX_USE_REGISTRY
