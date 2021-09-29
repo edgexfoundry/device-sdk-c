@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-ARG BASE=alpine:3.12
+ARG BASE=alpine:3.14
 FROM ${BASE} as builder
-RUN wget https://iotech.jfrog.io/artifactory/alpine/KEY/support@iotechsys.com-5b990dd9.pub -O /etc/apk/keys/support@iotechsys.com-5b990dd9.pub
-RUN echo 'https://iotech.jfrog.io/artifactory/alpine/alpine-3.12' >> /etc/apk/repositories
-RUN apk add --update --no-cache build-base wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev paho-mqtt-c-dev hiredis-dev
+RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
+RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.14/main' >> /etc/apk/repositories
+RUN apk add --update --no-cache build-base wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev paho-mqtt-c-dev-1.3 hiredis-dev
 
 
 ENV CBOR_VERSION=0.5.0
@@ -44,9 +44,9 @@ RUN cd /tmp/sdk \
 FROM ${BASE}
 LABEL maintainer="IOTech <support@iotechsys.com>"
 
-RUN wget https://iotech.jfrog.io/artifactory/alpine/KEY/support@iotechsys.com-5b990dd9.pub -O /etc/apk/keys/support@iotechsys.com-5b990dd9.pub
-RUN echo 'https://iotech.jfrog.io/artifactory/alpine/alpine-3.12' >> /etc/apk/repositories
-RUN apk add --update --no-cache build-base wget git gcc cmake make yaml curl libmicrohttpd libuuid paho-mqtt-c-dev hiredis-dev
+RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
+RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.14/main' >> /etc/apk/repositories
+RUN apk add --update --no-cache build-base wget git gcc cmake make yaml curl libmicrohttpd libuuid paho-mqtt-c-dev-1.3 hiredis-dev
 
 COPY --from=builder /usr/local/include/iot /usr/local/include/iot
 COPY --from=builder /usr/local/include/edgex /usr/local/include/edgex
