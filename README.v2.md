@@ -39,7 +39,14 @@ iot_data_t * iot_data_alloc_f32 (float val)
 iot_data_t * iot_data_alloc_f64 (double val)
 iot_data_t * iot_data_alloc_bool (bool val)
 iot_data_t * iot_data_alloc_string (const char * val, iot_data_ownership_t ownership)
-iot_data_t * iot_data_alloc_blob (uint8_t * data, uint32_t size, iot_data_ownership_t ownership)
+iot_data_t * iot_data_alloc_array (void *data, uint32_t length, iot_data_type_t type, iot_data_ownership_t ownership)
+```
+
+For Binary readings use an array of `uint8_t`. For readings of Object type, populate a string-keyed map:
+```
+value = iot_data_alloc_map (IOT_DATA_STRING);
+iot_data_string_map_add (value, "Attribute1", iot_data_alloc_float (38.7));
+iot_data_string_map_add (value, "Attribute2", iot_data_alloc_bool (true));
 ```
 
 When no longer needed, an `iot_data_t` must be released:
