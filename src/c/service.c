@@ -940,7 +940,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   // Set the active registry for the HTTP handler
   promhttp_set_active_collector_registry(NULL);
   prometheusDaemon = promhttp_start_daemon(MHD_USE_SELECT_INTERNALLY, 9090, NULL, NULL);
-  if (prometheusDaemon == false)
+  if (prometheusDaemon == NULL)
   {
       iot_log_error (svc->logger, "Unable to start prometheus daemon");
       return;
