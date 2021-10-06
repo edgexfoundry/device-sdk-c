@@ -20,6 +20,10 @@
 #include "rest-server.h"
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
+#include <prom.h>
+
+extern prom_counter_t *autoevent_counter;
+extern prom_gauge_t *autoevent_gauge;
 
 struct devsdk_callbacks
 {
