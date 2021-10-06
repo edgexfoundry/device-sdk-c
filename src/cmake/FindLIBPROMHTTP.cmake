@@ -1,0 +1,4 @@
+find_path (LIBPROMHTTP_INCLUDE_DIR promhttp.h)
+find_library (LIBPROMHTTP_LIBRARIES NAMES promhttp libpromhttp)
+include (FindPackageHandleStandardArgs)
+find_package_handle_standard_args (LIBPROMHTTP DEFAULT_MSG LIBPROMHTTP_LIBRARIES LIBPROMHTTP_INCLUDE_DIR)
