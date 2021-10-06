@@ -34,12 +34,26 @@
 #include <dirent.h>
 
 #include <microhttpd.h>
+#include <promhttp.h>
 
 #define SECUREENV "EDGEX_SECURITY_SECRET_STORE"
 
 #define POOL_THREADS 8
 #define PING_RETRIES 10
 #define ERRBUFSZ 1024
+
+struct MHD_Daemon *prometheusDaemon;
+prom_counter_t *autoevent_counter;
+prom_gauge_t *autoevent_gauge;
+
+static void autoevent_pmetric_init(void)
+{
+    // Initialize the Default registry
+    prom_collector_registry_default_init();
+
+    autoevent_counter = prom_collector_registry_must_register_metric(prom_counter_new("resource_read_counts", "How many read resource requests processed, partitioned by device name, resource name.", 3,(const char**) { "service", "device","resource" }));
+    autoevent_gauge   = prom_collector_registry_must_register_metric(prom_gauge_new("resource_read_response_bytes", "How many resource response returned,partitioned by device name, resource name", 3, (const char**) { "service", "device","resource" }));
+}
 
 void devsdk_usage ()
 {
@@ -919,6 +933,17 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   {
     iot_log_info (svc->logger, "Service started in: %dms", iot_time_msecs() - svc->starttime);
     iot_log_info (svc->logger, "Listening on port: %d", svc->config.service.port);
+  }
+  
+   //start prometheus daemon
+  autoevent_pmetric_init();
+  // Set the active registry for the HTTP handler
+  promhttp_set_active_collector_registry(NULL);
+  prometheusDaemon = promhttp_start_daemon(MHD_USE_SELECT_INTERNALLY, 9090, NULL, NULL);
+  if (prometheusDaemon == false)
+  {
+      iot_log_error (svc->logger, "Unable to start prometheus daemon");
+      return;
   }
 }
 
