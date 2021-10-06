@@ -92,6 +92,10 @@ static void *ae_runner (void *p)
             {
               edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);
             }
+            
+             //add prometheus metrics
+              prom_counter_inc(autoevent_counter, (const char *[]) { "",  ai->device, ai->resource->name});
+              prom_gauge_add(autoevent_gauge, sizeof(results), (const char *[]) { "",  ai->device, ai->resource->name});
           }
           else
           {
