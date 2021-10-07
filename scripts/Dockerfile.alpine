@@ -19,7 +19,7 @@ FROM ${BASE}
 LABEL maintainer="IOTech <support@iotechsys.com>"
 RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
 RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.14/main' >> /etc/apk/repositories
-RUN apk add --update --no-cache build-base wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev paho-mqtt-c-dev-1.3 hiredis-dev && mkdir -p /edgex-c-sdk/build
+RUN apk add --update --no-cache build-base bash wget git gcc cmake make yaml-dev libcurl curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev paho-mqtt-c-dev-1.3 hiredis-dev && mkdir -p /edgex-c-sdk/build
 COPY VERSION /edgex-c-sdk/
 COPY src /edgex-c-sdk/src/
 COPY include /edgex-c-sdk/include/
