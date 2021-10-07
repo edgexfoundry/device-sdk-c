@@ -54,6 +54,23 @@ then
   cp deps/iotech-c-utils-$CUTILVER/include/iot/*.h include/iot
   mkdir -p include/iot/os
   cp deps/iotech-c-utils-$CUTILVER/include/iot/os/* include/iot/os
+  
+  wget -O - https://github.com/edgego/prometheus-client-c/archive/refs/tags/v0.1.3.1.tar.gz | tar -C deps -z -x -f -
+  cd ./deps/prometheus-client-c-0.1.3.1
+  bash ./auto build
+  bash ./auto package
+  mkdir temp
+  cp  ./prom/libprom-dev-0.1.3-Linux.tar.gz  ./promhttp/libpromhttp-dev-0.1.3-Linux.tar.gz  temp
+  cd temp
+  tar -xf libprom-dev-0.1.3-Linux.tar.gz
+  cp ./libprom-dev-0.1.3-Linux/include/* /usr/local/include
+  cp ./libprom-dev-0.1.3-Linux/lib/* /usr/local/lib
+  tar -xf libpromhttp-dev-0.1.3-Linux.tar.gz
+  cp ./libpromhttp-dev-0.1.3-Linux/include/* /usr/local/include
+  cp ./libpromhttp-dev-0.1.3-Linux/lib/* /usr/local/lib
+  cd ..
+  rm -rf temp
+
 
 fi
 
