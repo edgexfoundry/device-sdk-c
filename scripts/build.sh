@@ -59,6 +59,11 @@ then
   cd ./deps/prometheus-client-c-0.1.3.1
   /bin/bash ./auto build
   /bin/bash ./auto package
+  ls -l /usr/local/include
+  ls -l /usr/local/lib
+  ls -l /usr/include
+  ls -l /usr/lib
+  
   #mkdir temp
   #cp  ./prom/libprom-dev-0.1.3-Linux.tar.gz  ./promhttp/libpromhttp-dev-0.1.3-Linux.tar.gz  temp
   #cd temp
