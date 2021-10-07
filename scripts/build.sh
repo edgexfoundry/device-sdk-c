@@ -65,11 +65,11 @@ then
   tar -xf libprom-dev-0.1.3-Linux.tar.gz
   ls -l libprom-dev-0.1.3-Linux
   cp ./libprom-dev-0.1.3-Linux/include/* /usr/include
-  cp ./libprom-dev-0.1.3-Linux/lib/* /usr/lib
+  cp ./libprom-dev-0.1.3-Linux/lib64/* /usr/lib64
   tar -xf libpromhttp-dev-0.1.3-Linux.tar.gz
   ls -l libpromhttp-dev-0.1.3-Linux
   cp ./libpromhttp-dev-0.1.3-Linux/include/* /usr/include
-  cp ./libpromhttp-dev-0.1.3-Linux/lib/* /usr/lib
+  cp ./libpromhttp-dev-0.1.3-Linux/lib64/* /usr/lib64
   cd ..
   rm -rf temp
 
