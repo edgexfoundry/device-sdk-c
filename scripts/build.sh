@@ -57,8 +57,8 @@ then
   
   wget -O - https://github.com.cnpmjs.org/edgego/prometheus-client-c/archive/refs/tags/v0.1.3.1.tar.gz | tar -C deps -z -x -f -
   cd ./deps/prometheus-client-c-0.1.3.1
-  /usr/bin/bash ./auto build
-  /usr/bin/bash ./auto package
+  /bin/bash ./auto build
+  /bin/bash ./auto package
   mkdir temp
   cp  ./prom/libprom-dev-0.1.3-Linux.tar.gz  ./promhttp/libpromhttp-dev-0.1.3-Linux.tar.gz  temp
   cd temp
