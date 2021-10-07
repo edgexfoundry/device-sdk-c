@@ -59,23 +59,19 @@ then
   cd ./deps/prometheus-client-c-0.1.3.1
   /bin/bash ./auto build
   /bin/bash ./auto package
-  ls -l /usr/local/include
-  ls -l /usr/local/lib
-  ls -l /usr/include
-  ls -l /usr/lib
-  
-  #mkdir temp
-  #cp  ./prom/libprom-dev-0.1.3-Linux.tar.gz  ./promhttp/libpromhttp-dev-0.1.3-Linux.tar.gz  temp
-  #cd temp
-  #tar -xf libprom-dev-0.1.3-Linux.tar.gz
-  #cp ./libprom-dev-0.1.3-Linux/include/* /usr/include
-  #cp ./libprom-dev-0.1.3-Linux/lib/* /usr/lib
-  #tar -xf libpromhttp-dev-0.1.3-Linux.tar.gz
-  #cp ./libpromhttp-dev-0.1.3-Linux/include/* /usr/include
-  #cp ./libpromhttp-dev-0.1.3-Linux/lib/* /usr/lib
-  #cd ..
-  #rm -rf temp
-
+  mkdir temp
+  cp  ./prom/libprom-dev-0.1.3-Linux.tar.gz  ./promhttp/libpromhttp-dev-0.1.3-Linux.tar.gz  temp
+  cd temp
+  tar -xf libprom-dev-0.1.3-Linux.tar.gz
+  ls -l
+  cp ./libprom-dev-0.1.3-Linux/include/* /usr/include
+  cp ./libprom-dev-0.1.3-Linux/lib/* /usr/lib
+  tar -xf libpromhttp-dev-0.1.3-Linux.tar.gz
+  ls -l
+  cp ./libpromhttp-dev-0.1.3-Linux/include/* /usr/include
+  cp ./libpromhttp-dev-0.1.3-Linux/lib/* /usr/lib
+  cd ..
+  rm -rf temp
 
 fi
 
