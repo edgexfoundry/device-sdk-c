@@ -39,12 +39,12 @@ then
 
   # TOML Parser
 
-  wget -O - https://github.com/IOTechSystems/tomlc99/archive/$TOMLVER.tar.gz | tar -C deps -z -x -f -
+  wget -O - https://github.com.cnpmjs.org/IOTechSystems/tomlc99/archive/$TOMLVER.tar.gz | tar -C deps -z -x -f -
   cp deps/tomlc99-$TOMLVER/toml.* src/c
 
   # C Utils
   
-  wget -O - https://github.com/IOTechSystems/iotech-c-utils/archive/v$CUTILVER.tar.gz | tar -C deps -z -x -f -
+  wget -O - https://github.com.cnpmjs.org/IOTechSystems/iotech-c-utils/archive/v$CUTILVER.tar.gz | tar -C deps -z -x -f -
   mkdir -p src/c/iot
   cp deps/iotech-c-utils-$CUTILVER/src/c/*.c src/c/iot
   cp deps/iotech-c-utils-$CUTILVER/src/c/defs.h.in src/c/iot
@@ -55,7 +55,7 @@ then
   mkdir -p include/iot/os
   cp deps/iotech-c-utils-$CUTILVER/include/iot/os/* include/iot/os
   
-  wget -O - https://github.com/edgego/prometheus-client-c/archive/refs/tags/v0.1.3.1.tar.gz | tar -C deps -z -x -f -
+  wget -O - https://github.com.cnpmjs.org/edgego/prometheus-client-c/archive/refs/tags/v0.1.3.1.tar.gz | tar -C deps -z -x -f -
   cd ./deps/prometheus-client-c-0.1.3.1
   bash ./auto build
   bash ./auto package
