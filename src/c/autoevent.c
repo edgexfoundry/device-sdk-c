@@ -70,6 +70,14 @@ static void *ae_runner (void *p)
       if (ai->svc->userfns.gethandler (ai->svc->userdata, dev->devimpl, ai->resource->nreqs, ai->resource->reqs, results, NULL, &exc))
       {
         devsdk_commandresult *resdup = NULL;
+        
+        //add prometheus metrics for autoevent
+        const char *token={"",  ai->device, ai->resource->name};
+        if(autoevent_counter != NULL)
+            prom_counter_inc(autoevent_counter, &token);
+        if(autoevent_gauge != NULL)
+            prom_gauge_add(autoevent_gauge, strlen(edgex_value_tostring(results->value)), &token);
+        
         if (!(ai->onChange && ai->last && devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs)))
         {
           devsdk_error err = EDGEX_OK;
@@ -92,13 +100,6 @@ static void *ae_runner (void *p)
             {
               edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);
             }
-            
-            //add prometheus metrics
-            const char *token={"",  ai->device, ai->resource->name};
-            if(autoevent_counter != NULL)
-                prom_counter_inc(autoevent_counter, &token);
-            if(autoevent_gauge != NULL)
-                prom_gauge_add(autoevent_gauge, strlen(edgex_value_tostring(results->value)), &token);
           }
           else
           {
