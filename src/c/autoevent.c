@@ -96,9 +96,9 @@ static void *ae_runner (void *p)
             //add prometheus metrics
             const char *token={"",  ai->device, ai->resource->name};
             if(autoevent_counter != NULL)
-                prom_counter_inc(autoevent_counter, token);
+                prom_counter_inc(autoevent_counter, &token);
             if(autoevent_gauge != NULL)
-                prom_gauge_add(autoevent_gauge, sizeof(results), token);
+                prom_gauge_add(autoevent_gauge, sizeof(results), &token);
           }
           else
           {
