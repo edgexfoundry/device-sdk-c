@@ -58,7 +58,7 @@ static void autoevent_pmetric_registry(void)
     }
 
     autoevent_gauge   = prom_collector_registry_must_register_metric(prom_gauge_new("resource_read_response_bytes", "How many resource response returned,partitioned by device name, resource name", 3, token));
-    if autoevent_gauge == NULL )
+    if (autoevent_gauge == NULL )
     {
         return;
     }
