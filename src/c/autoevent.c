@@ -98,7 +98,7 @@ static void *ae_runner (void *p)
             if(autoevent_counter != NULL)
                 prom_counter_inc(autoevent_counter, &token);
             if(autoevent_gauge != NULL)
-                prom_gauge_add(autoevent_gauge, sizeof(results), &token);
+                prom_gauge_add(autoevent_gauge, strlen(edgex_value_tostring(results->value)), &token);
           }
           else
           {
