@@ -35,7 +35,7 @@ static void *edc_postjob (void *p)
   return NULL;
 }
 
-static char *edgex_value_tostring (const iot_data_t *value)
+char *edgex_value_tostring (const iot_data_t *value)
 {
 #define BUFSIZE 32
   char *res;
