@@ -959,7 +959,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
   else
   {
-      iot_log_info (svc->logger, "Prometheus metrics listening on 9090");
+      iot_log_info (svc->logger, "Prometheus daemon listening on 9090");
   }
 }
 
