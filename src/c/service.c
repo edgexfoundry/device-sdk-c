@@ -51,13 +51,13 @@ static void autoevent_pmetric_registry(void)
     // Initialize the Default registry
     prom_collector_registry_default_init();
 
-    autoevent_counter = prom_collector_registry_must_register_metric(prom_counter_new("resource_read_counts", "How many read resource requests processed, partitioned by device name, resource name.", 3,token));
-    if autoevent_counter == NULL )
+    autoevent_counter = prom_collector_registry_must_register_metric(prom_counter_new("resource_read_counts", "How many read resource requests processed, partitioned by device name, resource name.", 3,&token));
+    if (autoevent_counter == NULL )
     {
         return;
     }
 
-    autoevent_gauge   = prom_collector_registry_must_register_metric(prom_gauge_new("resource_read_response_bytes", "How many resource response returned,partitioned by device name, resource name", 3, token));
+    autoevent_gauge   = prom_collector_registry_must_register_metric(prom_gauge_new("resource_read_response_bytes", "How many resource response returned,partitioned by device name, resource name", 3, &token));
     if (autoevent_gauge == NULL )
     {
         return;
