@@ -199,7 +199,6 @@ static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
     edgex_map_remove (&map->profiles, olddev->profile->name);
     olddev->ownprofile = true;
   }
-  edgex_device_release (map->svc, olddev);
 }
 
 /* Update a device, but fail if there could be effects on autoevents or
@@ -240,25 +239,33 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_
 
 edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const edgex_device *dev)
 {
-  edgex_device **olddev;
+  edgex_device **od;
+  edgex_device *olddev;
+  bool release = false;
   edgex_devmap_outcome_t result = UPDATED_SDK;
 
   pthread_rwlock_wrlock (&map->lock);
-  olddev = edgex_map_get (&map->devices, dev->name);
-  if (olddev == NULL)
+  od = edgex_map_get (&map->devices, dev->name);
+  if (od == NULL)
   {
     add_locked (map, dev);
     result = CREATED;
   }
   else
   {
-    if (!update_in_place (*olddev, dev, &result))
+    olddev = *od;
+    if (!update_in_place (olddev, dev, &result))
     {
-      remove_locked (map, *olddev);
+      remove_locked (map, olddev);
       add_locked (map, dev);
+      release = true;
     }
   }
   pthread_rwlock_unlock (&map->lock);
+  if (release)
+  {
+    edgex_device_release (map->svc, olddev);
+  }
   return result;
 }
 
@@ -289,16 +296,26 @@ bool edgex_devmap_device_exists (edgex_devmap_t *map, const char *name)
 
 bool edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
 {
-  edgex_device **olddev;
+  edgex_device **od;
+  edgex_device *olddev = NULL;
 
   pthread_rwlock_wrlock (&map->lock);
-  olddev = edgex_map_get (&map->devices, name);
-  if (olddev)
+  od = edgex_map_get (&map->devices, name);
+  if (od)
   {
-    remove_locked (map, *olddev);
+    olddev = *od;
+    remove_locked (map, olddev);
   }
   pthread_rwlock_unlock (&map->lock);
-  return (olddev != NULL);
+  if (olddev)
+  {
+    edgex_device_release (map->svc, olddev);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 void edgex_devmap_add_profile (edgex_devmap_t *map, edgex_deviceprofile *dp)
@@ -322,7 +339,7 @@ void edgex_devmap_update_profile (devsdk_service_t *svc, edgex_deviceprofile *dp
       edgex_device **dev = edgex_map_get (&svc->devices->devices, key);
       if ((*dev)->profile == old)
       {
-        edgex_device_autoevent_stop_now (*dev);
+        edgex_device_autoevent_stop (*dev);
         (*dev)->profile = dp;
         edgex_device_autoevent_start (svc, *dev);
       }
