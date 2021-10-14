@@ -51,5 +51,4 @@ RUN apk add --update --no-cache build-base wget git gcc cmake make yaml curl lib
 COPY --from=builder /usr/local/include/iot /usr/local/include/iot
 COPY --from=builder /usr/local/include/edgex /usr/local/include/edgex
 COPY --from=builder /usr/local/lib /usr/local/lib
-COPY --from=builder /usr/local/lib64 /usr/local/lib64
 COPY --from=builder /usr/local/share/device-sdk-c /usr/local/share/device-sdk-c

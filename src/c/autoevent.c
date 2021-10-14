@@ -124,7 +124,10 @@ static void *ae_runner (void *p)
   {
     iot_log_error
       (ai->svc->logger, "Autoevent fired for unknown device %s", ai->device);
-    iot_schedule_remove (ai->svc->scheduler, ai->handle);
+    if (ai->handle)
+    {
+      iot_schedule_remove (ai->svc->scheduler, ai->handle);
+    }
   }
   edgex_autoimpl_release (ai);
   return NULL;
@@ -193,34 +196,22 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
   }
 }
 
-static void *stopper (void *p)
+static void stopper (edgex_autoimpl *ai)
 {
-  edgex_autoimpl *ai = (edgex_autoimpl *)p;
+  void *handle = ai->handle;
+  ai->handle = NULL;
   if (ai->svc->userfns.ae_stopper)
   {
-    ai->svc->userfns.ae_stopper (ai->svc->userdata, ai->handle);
+    ai->svc->userfns.ae_stopper (ai->svc->userdata, handle);
   }
   else
   {
-    iot_schedule_delete (ai->svc->scheduler, ai->handle);
+    iot_schedule_delete (ai->svc->scheduler, handle);
   }
   edgex_autoimpl_release (ai);
-  return NULL;
 }
 
 void edgex_device_autoevent_stop (edgex_device *dev)
-{
-  for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
-  {
-    if (ae->impl)
-    {
-      edgex_autoimpl *ai = ae->impl;
-      iot_threadpool_add_work (ai->svc->thpool, stopper, ai, -1);
-    }
-  }
-}
-
-void edgex_device_autoevent_stop_now (edgex_device *dev)
 {
   for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
   {

@@ -432,16 +432,20 @@ static edgex_deviceresource *deviceresource_read
 static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresource *e)
 {
   edgex_deviceresource *result = NULL;
-  if (e)
+  edgex_deviceresource **current = &result;
+  while (e)
   {
-    result = malloc (sizeof (edgex_deviceresource));
-    result->name = strdup (e->name);
-    result->description = strdup (e->description);
-    result->tag = strdup (e->tag);
-    result->properties = propertyvalue_dup (e->properties);
-    result->attributes = iot_data_copy (e->attributes);
-    result->parsed_attrs = NULL;
-    result->next = edgex_deviceresource_dup (e->next);
+    edgex_deviceresource *elem = malloc (sizeof (edgex_deviceresource));
+    elem->name = strdup (e->name);
+    elem->description = strdup (e->description);
+    elem->tag = strdup (e->tag);
+    elem->properties = propertyvalue_dup (e->properties);
+    elem->attributes = iot_data_copy (e->attributes);
+    elem->parsed_attrs = NULL;
+    elem->next = NULL;
+    *current = elem;
+    current = &(elem->next);
+    e = e->next;
   }
   return result;
 }
@@ -478,17 +482,20 @@ static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
   return result;
 }
 
-static edgex_resourceoperation *resourceoperation_dup
-  (const edgex_resourceoperation *ro)
+static edgex_resourceoperation *resourceoperation_dup (const edgex_resourceoperation *ro)
 {
   edgex_resourceoperation *result = NULL;
-  if (ro)
+  edgex_resourceoperation **current = &result;
+  while (ro)
   {
-    result = malloc (sizeof (edgex_resourceoperation));
-    result->deviceResource = strdup (ro->deviceResource);
-    result->defaultValue = strdup (ro->defaultValue);
-    result->mappings = devsdk_nvpairs_dup (ro->mappings);
-    result->next = resourceoperation_dup (ro->next);
+    edgex_resourceoperation *elem = malloc (sizeof (edgex_resourceoperation));
+    elem->deviceResource = strdup (ro->deviceResource);
+    elem->defaultValue = strdup (ro->defaultValue);
+    elem->mappings = devsdk_nvpairs_dup (ro->mappings);
+    elem->next = NULL;
+    *current = elem;
+    current = &(elem->next);
+    ro = ro->next;
   }
   return result;
 }
@@ -533,14 +540,18 @@ static edgex_devicecommand *devicecommand_read (const JSON_Object *obj)
 static edgex_devicecommand *devicecommand_dup (const edgex_devicecommand *pr)
 {
   edgex_devicecommand *result = NULL;
-  if (pr)
+  edgex_devicecommand **current = &result;
+  while (pr)
   {
-    result = malloc (sizeof (edgex_devicecommand));
-    result->name = strdup (pr->name);
-    result->readable = pr->readable;
-    result->writable = pr->writable;
-    result->resourceOperations = resourceoperation_dup (pr->resourceOperations);
-    result->next = devicecommand_dup (pr->next);
+    edgex_devicecommand *elem = malloc (sizeof (edgex_devicecommand));
+    elem->name = strdup (pr->name);
+    elem->readable = pr->readable;
+    elem->writable = pr->writable;
+    elem->resourceOperations = resourceoperation_dup (pr->resourceOperations);
+    elem->next = NULL;
+    *current = elem;
+    current = &(elem->next);
+    pr = pr->next;
   }
   return result;
 }
@@ -656,9 +667,9 @@ edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *jso
 
 static void cmdinfo_free (edgex_cmdinfo *inf)
 {
-  if (inf)
+  while (inf)
   {
-    cmdinfo_free (inf->next);
+    edgex_cmdinfo *next = inf->next;
     for (unsigned i = 0; i < inf->nreqs; i++)
     {
       free (inf->reqs[i].resource);
@@ -668,6 +679,7 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
     free (inf->maps);
     free (inf->dfls);
     free (inf);
+    inf = next;
   }
 }
 
@@ -703,26 +715,31 @@ static edgex_device_autoevents *autoevents_dup
   (const edgex_device_autoevents *e)
 {
   edgex_device_autoevents *result = NULL;
-  if (e)
+  edgex_device_autoevents **current = &result;
+  while (e)
   {
-    result = malloc (sizeof (edgex_device_autoevents));
-    result->resource = strdup (e->resource);
-    result->interval = strdup (e->interval);
-    result->onChange = e->onChange;
-    result->impl = NULL;
-    result->next = autoevents_dup (e->next);
+    edgex_device_autoevents *elem = malloc (sizeof (edgex_device_autoevents));
+    elem->resource = strdup (e->resource);
+    elem->interval = strdup (e->interval);
+    elem->onChange = e->onChange;
+    elem->impl = NULL;
+    elem->next = NULL;
+    *current = elem;
+    current = &(elem->next);
+    e = e->next;
   }
   return result;
 }
 
 void edgex_device_autoevents_free (edgex_device_autoevents *e)
 {
-  if (e)
+  while (e)
   {
+    edgex_device_autoevents *next = e->next;
     free (e->resource);
     free (e->interval);
-    edgex_device_autoevents_free (e->next);
     free (e);
+    e = next;
   }
 }
 
@@ -770,12 +787,13 @@ devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e)
 
 void devsdk_protocols_free (devsdk_protocols *e)
 {
-  if (e)
+  while (e)
   {
+    devsdk_protocols *next = e->next;
     free (e->name);
     iot_data_free (e->properties);
-    devsdk_protocols_free (e->next);
     free (e);
+    e = next;
   }
 }
 
