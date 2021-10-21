@@ -135,7 +135,7 @@ static void edc_mqtt_postfn (iot_logger_t *lc, void *address, edgex_event_cooked
 
   json = json_serialize_to_string (val);
   pubmsg.payload = json;
-  pubmsg.payloadlen = strlen (json) + 1;
+  pubmsg.payloadlen = strlen (json);
   pubmsg.qos = cinfo->qos;
   pubmsg.retained = cinfo->retained;
   opts.context = cinfo;
