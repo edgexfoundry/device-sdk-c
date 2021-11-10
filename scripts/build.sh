@@ -64,10 +64,10 @@ then
   cd temp
   tar -xf libprom-dev-0.1.3-Linux.tar.gz
   cp ./libprom-dev-0.1.3-Linux/include/* /usr/include
-  cp ./libprom-dev-0.1.3-Linux/lib/* /usr/lib
+  cp ./libprom-dev-0.1.3-Linux/lib64/* /usr/lib
   tar -xf libpromhttp-dev-0.1.3-Linux.tar.gz
   cp ./libpromhttp-dev-0.1.3-Linux/include/* /usr/include
-  cp ./libpromhttp-dev-0.1.3-Linux/lib/* /usr/lib
+  cp ./libpromhttp-dev-0.1.3-Linux/lib64/* /usr/lib
   cd ..
   rm -rf temp
 
