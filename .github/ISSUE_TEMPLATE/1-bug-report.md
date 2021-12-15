@@ -10,12 +10,16 @@ Hello there! 😄
 To expedite issue processing please search open and closed issues before submitting a new one.
 Existing issues often contain information about workarounds, resolution, or progress updates.
 
+Please do not remove sections of this template when submitting your issue.  If the section is not relevant to your issue, leave the section but enter "n/a" for not applicable.
+
+Note some sections are marked "REQUIRED" and must be provided.  Never mark required sections "n/a".
+
 🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅🔅-->
 
 
 # 🐞 Bug Report
 
-### Description and Minimal Reproduction
+### Description and Minimal Reproduction [**REQUIRED**]
 
 
 ## 🔥 Exception or Error
@@ -27,7 +31,9 @@ Existing issues often contain information about workarounds, resolution, or prog
 
 
 ## 🌍  Your Environment
-**EdgeX Version:**
+**Deployment Environment:**
+
+**EdgeX Version [**REQUIRED**]:**
 
 
 **Anything else relevant?**
