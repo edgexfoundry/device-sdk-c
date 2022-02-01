@@ -790,10 +790,12 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
 
 void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
+  devsdk_service_t *svc = (devsdk_service_t *)ctx;
   edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));
 
   edgex_baseresponse_populate ((edgex_baseresponse *)cr, "v2", MHD_HTTP_OK, NULL);
   cr->config = edgex_device_config_toJson ((devsdk_service_t *)ctx);
+  cr->svcname = svc->name;
 
   edgex_configresponse_write (cr, reply);
   edgex_configresponse_free (cr);
