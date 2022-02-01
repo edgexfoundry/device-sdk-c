@@ -33,17 +33,20 @@ typedef struct
 {
   edgex_baseresponse base;
   long timestamp;
+  const char *svcname;
 } edgex_pingresponse;
 
 typedef struct
 {
   edgex_baseresponse base;
+  const char *svcname;
   JSON_Value *config;
 } edgex_configresponse;
 
 typedef struct
 {
   edgex_baseresponse base;
+  const char *svcname;
   int alloc;
   int totalloc;
   double loadavg;

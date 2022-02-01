@@ -23,7 +23,7 @@
 
 #include <microhttpd.h>
 
-static void edgex_metrics_populate (edgex_metricsresponse *m, uint64_t starttime)
+static void edgex_metrics_populate (edgex_metricsresponse *m, uint64_t starttime, const char *name)
 {
   struct rusage rstats;
 #ifdef __GNU_LIBRARY__
@@ -44,6 +44,7 @@ static void edgex_metrics_populate (edgex_metricsresponse *m, uint64_t starttime
     m->cputime = cputime;
     m->cpuavg = cputime / walltime;
   }
+  m->svcname = name;
 }
 
 void edgex_device_handler_metricsv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
@@ -53,7 +54,7 @@ void edgex_device_handler_metricsv2 (void *ctx, const devsdk_http_request *req, 
   memset (&mr, 0, sizeof (mr));
 
   edgex_baseresponse_populate ((edgex_baseresponse *)&mr, "v2", MHD_HTTP_OK, NULL);
-  edgex_metrics_populate (&mr, svc->starttime);
+  edgex_metrics_populate (&mr, svc->starttime, svc->name);
 
   edgex_metricsresponse_write (&mr, reply);
 }

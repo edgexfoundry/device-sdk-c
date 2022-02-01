@@ -1531,6 +1531,7 @@ static JSON_Value *pingresponse_write (const edgex_pingresponse *pr)
   JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)pr);
   JSON_Object *obj = json_value_get_object (result);
   json_object_set_string (obj, "timestamp", buff);
+  json_object_set_string (obj, "serviceName", pr->svcname);
   return result;
 }
 
@@ -1545,6 +1546,7 @@ static JSON_Value *configresponse_write (const edgex_configresponse *cr)
   JSON_Value *result = baseresponse_write ((const edgex_baseresponse *)cr);
   JSON_Object *obj = json_value_get_object (result);
   json_object_set_value (obj, "config", cr->config);
+  json_object_set_string (obj, "serviceName", cr->svcname);
   return result;
 }
 
@@ -1570,7 +1572,7 @@ static JSON_Value *metricsesponse_write (const edgex_metricsresponse *mr)
 #endif
   json_object_set_number (obj, "CpuTime", mr->cputime);
   json_object_set_number (obj, "CpuAvgUsage", mr->cpuavg);
-
+  json_object_set_string (obj, "serviceName", mr->svcname);
   return result;
 }
 

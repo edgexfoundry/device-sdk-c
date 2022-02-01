@@ -310,10 +310,12 @@ devsdk_service_t *devsdk_service_new
 
 static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
   edgex_pingresponse pr;
 
   edgex_baseresponse_populate ((edgex_baseresponse *)&pr, "v2", MHD_HTTP_OK, NULL);
   pr.timestamp = iot_time_secs ();
+  pr.svcname = svc->name;
   edgex_pingresponse_write (&pr, reply);
 }
 
@@ -324,6 +326,7 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   JSON_Object *obj = json_value_get_object (val);
   json_object_set_string (obj, "version", svc->version);
   json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
+  json_object_set_string (obj, "serviceName", svc->name);
   char *json = json_serialize_to_string (val);
   json_value_free (val);
   reply->data.bytes = json;
