@@ -204,18 +204,32 @@ void devsdk_registry_query_service
   const char *servicename,
   char **hostname,
   uint16_t *port,
+  const devsdk_timeout *timeout,
   devsdk_error *err
 )
 {
-  registry->impl.query_service
-  (
-    registry->logger,
-    registry->location,
-    servicename,
-    hostname,
-    port,
-    err
-  );
+  uint64_t t1, t2;
+  while (true)
+  {
+    t1 = iot_time_msecs ();
+    *err = EDGEX_OK;
+    registry->impl.query_service (registry->logger, registry->location, servicename, hostname, port, err);
+    if (err->code == 0)
+    {
+      break;
+    }
+    t2 = iot_time_msecs ();
+    if (t2 > timeout->deadline - timeout->interval)
+    {
+      *err = EDGEX_REMOTE_SERVER_DOWN;
+      iot_log_error (registry->logger, "Service startup timeout reached");
+      break;
+    }
+    if (timeout->interval > t2 - t1)
+    {
+      iot_wait_msecs (timeout->interval - (t2 - t1));
+    }
+  }
 }
 
 void *devsdk_registry_parse_simple_url

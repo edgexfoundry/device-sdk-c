@@ -546,11 +546,15 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const 
   }
   else
   {
-    svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
-    if (!ping_client (svc->logger, "core-data", &svc->config.endpoints.data, deadline, err))
+    if (svc->registry)
+    {
+      devsdk_registry_query_service (svc->registry, "core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, deadline, err);
+    }
+    if (err->code || !ping_client (svc->logger, "core-data", &svc->config.endpoints.data, deadline, err))
     {
       return;
     }
+    svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
   }
 
   if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, deadline, err))
@@ -900,9 +904,13 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   if (svc->registry)
   {
-    devsdk_error e;
-    devsdk_registry_query_service (svc->registry, "core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &e);
-    devsdk_registry_query_service (svc->registry, "core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, &e);
+    devsdk_registry_query_service (svc->registry, "core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &deadline, err);
+    if (err->code)
+    {
+      toml_free (configtoml);
+      *svc->stopconfig = true;
+      return;
+    }
   }
   else
   {
