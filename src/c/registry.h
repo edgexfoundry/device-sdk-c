@@ -315,6 +315,7 @@ void devsdk_registry_query_service
   const char *servicename,
   char **hostname,
   uint16_t *port,
+  const devsdk_timeout *timeout,
   devsdk_error *err
 );
 
