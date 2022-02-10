@@ -51,6 +51,7 @@ message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 # Configuration variables
 
 set (CSDK_BUILD_LCOV OFF CACHE BOOL "Build LCov")
+set (CSDK_LEGACY_ARRAYS OFF CACHE BOOL "Stringify array elements in readings")
 
 # Configure for different target systems
 
