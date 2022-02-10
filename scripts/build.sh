@@ -3,6 +3,7 @@ set -e -x
 
 CPPCHECK=false
 DOCGEN=false
+CMAKEOPTS=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 TOMLVER=SDK-0.2
 CUTILVER=1.2.2
@@ -18,6 +19,10 @@ do
     ;;
     -doxygen)
       DOCGEN=true
+      shift 1
+    ;;
+    -legacyv2)
+      CMAKEOPTS="$CMAKEOPTS -DCSDK_LEGACY_ARRAYS=ON"
       shift 1
     ;;
     *)
@@ -61,7 +66,7 @@ fi
 
 mkdir -p $ROOT/build/release
 cd $ROOT/build/release
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Release $ROOT/src
+cmake $CMAKEOPTS -DCMAKE_BUILD_TYPE=Release $ROOT/src
 make all package 2>&1 | tee release.log
 
 # Run cppcheck if configured
@@ -83,5 +88,5 @@ fi
 
 mkdir -p $ROOT/build/debug
 cd $ROOT/build/debug
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug $ROOT/src
+cmake $CMAKEOPTS -DCMAKE_BUILD_TYPE=Debug $ROOT/src
 make 2>&1 | tee debug.log

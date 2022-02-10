@@ -1,5 +1,13 @@
 This is the C SDK for EdgeX device services.
 
+Changes for 2.2.0 "Kamakura":
+
+- Array elements in readings are no longer stringified
+  - to re-enable stringification, add the '-legacyv2' flag when
+    running scripts/build.sh
+- Retry attempts to retrieve client endpoints from registry
+- Add serviceName field to version, ping, config, metrics APIs
+
 Changes for 2.1.0 "Jakarta":
 
 - Fix event push via MQTT
