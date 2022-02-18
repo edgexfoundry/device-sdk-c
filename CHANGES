@@ -2,6 +2,7 @@ This is the C SDK for EdgeX device services.
 
 Changes for 2.2.0 "Kamakura":
 
+- Use Alpine 3.15 for container builds
 - Array elements in readings are no longer stringified
   - to re-enable stringification, add the '-legacyv2' flag when
     running scripts/build.sh

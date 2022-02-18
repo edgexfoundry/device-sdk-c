@@ -1,16 +1,6 @@
 #!/bin/sh
 set -x -e
 
-CBOR_VERSION=0.5.0
-
-mkdir /deps
-cd /deps
-wget -O - https://github.com/PJK/libcbor/archive/v${CBOR_VERSION}.tar.gz | tar -z -x -f -
-sed -e 's/-flto//' -i libcbor-${CBOR_VERSION}/CMakeLists.txt
-cmake -DCMAKE_BUILD_TYPE=Release -DCBOR_CUSTOM_ALLOC=ON libcbor-${CBOR_VERSION}
-make
-make install
-
 # Build distribution
 
 /edgex-c-sdk/scripts/build.sh $*
