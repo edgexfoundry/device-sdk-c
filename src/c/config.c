@@ -89,6 +89,8 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "SecretStore/ServerName", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "SecretStore/TokenFile", iot_data_alloc_string (seccafile, IOT_DATA_TAKE));
   iot_data_string_map_add (result, "SecretStore/Authentication/AuthType", iot_data_alloc_string ("X-Vault-Token", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/SecretsFile", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "SecretStore/DisableScrubSecretsFile", iot_data_alloc_bool (false));
 
   if (driverconf)
   {

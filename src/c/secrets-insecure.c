@@ -87,7 +87,7 @@ static iot_data_t *insecure_get (void *impl, const char *path)
   return result;
 }
 
-static void insecure_set (void *impl, const char *path, const devsdk_nvpairs *secrets)
+static void insecure_set (void *impl, const char *path, const iot_data_t *secrets)
 {
   insecure_impl_t *insec = (insecure_impl_t *)impl;
   iot_log_error (insec->lc, "Storing secrets is not supported when running in insecure mode");
