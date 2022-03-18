@@ -15,7 +15,7 @@
 typedef bool (*edgex_secret_init_fn) (void *impl, iot_logger_t *lc, iot_data_t *config);
 typedef void (*edgex_secret_reconfigure_fn) (void *impl, iot_data_t *config);
 typedef iot_data_t * (*edgex_secret_get_fn) (void *impl, const char *path);
-typedef void (*edgex_secret_set_fn) (void *impl, const char *path, const devsdk_nvpairs *secrets);
+typedef void (*edgex_secret_set_fn) (void *impl, const char *path, const iot_data_t *secrets);
 typedef void (*edgex_secret_fini_fn) (void *impl);
 
 typedef struct

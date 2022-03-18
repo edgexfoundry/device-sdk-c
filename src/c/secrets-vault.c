@@ -133,7 +133,7 @@ static iot_data_t *vault_get (void *impl, const char *path)
   return result;
 }
 
-static void vault_set (void *impl, const char *path, const devsdk_nvpairs *secrets)
+static void vault_set (void *impl, const char *path, const iot_data_t *secrets)
 {
   edgex_ctx ctx;
   devsdk_error err = EDGEX_OK;
@@ -144,10 +144,10 @@ static void vault_set (void *impl, const char *path, const devsdk_nvpairs *secre
   snprintf (url, URL_BUF_SIZE - 1, "%s%s", vault->baseurl, path);
   ctx.jwt_token = vault->token;
 
-  char *json = devsdk_nvpairs_write (secrets);
+  char *json = iot_data_to_json (secrets);
 
   edgex_http_put (vault->lc, &ctx, url, json, edgex_http_write_cb, &err);
-  json_free_serialized_string (json);
+  free (json);
 
   if (err.code)
   {
