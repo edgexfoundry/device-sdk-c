@@ -521,6 +521,33 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const 
   svc->eventq = iot_threadpool_alloc (1, svc->config.device.eventqlen, IOT_THREAD_NO_PRIORITY, IOT_THREAD_NO_AFFINITY, svc->logger);
   iot_threadpool_start (svc->eventq);
 
+  /* Set up SecretStore */
+
+  char *secure = getenv (SECUREENV);
+  if (secure && strcmp (secure, "false") == 0)
+  {
+    svc->secretstore = edgex_secrets_get_insecure ();
+  }
+  else
+  {
+    const char *sectype = iot_data_string_map_get_string (svc->config.sdkconf, "SecretStore/Type");
+    if (strcmp (sectype, "vault") == 0)
+    {
+      svc->secretstore = edgex_secrets_get_vault ();
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Unknown Secret Store type %s", sectype);
+      *err = EDGEX_BAD_CONFIG;
+      return;
+    }
+  }
+  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->config.sdkconf))
+  {
+    *err = EDGEX_BAD_CONFIG;
+    return;
+  }
+
   /* Wait for metadata and data to be available */
 
   if (iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false))
@@ -528,11 +555,11 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const 
     const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
     if (strcmp (bustype, "mqtt") == 0)
     {
-      svc->dataclient = edgex_data_client_new_mqtt (svc->config.sdkconf, svc->logger, deadline, svc->eventq);
+      svc->dataclient = edgex_data_client_new_mqtt (svc, deadline, svc->eventq);
     }
     else if (strcmp (bustype, "redis") == 0)
     {
-      svc->dataclient = edgex_data_client_new_redstr (svc->config.sdkconf, svc->logger, deadline, svc->eventq);
+      svc->dataclient = edgex_data_client_new_redstr (svc, deadline, svc->eventq);
     }
     else
     {
@@ -559,31 +586,6 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const 
 
   if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, deadline, err))
   {
-    return;
-  }
-
-  char *secure = getenv (SECUREENV);
-  if (secure && strcmp (secure, "false") == 0)
-  {
-    svc->secretstore = edgex_secrets_get_insecure ();
-  }
-  else
-  {
-    const char *sectype = iot_data_string_map_get_string (svc->config.sdkconf, "SecretStore/Type");
-    if (strcmp (sectype, "vault") == 0)
-    {
-      svc->secretstore = edgex_secrets_get_vault ();
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unknown Secret Store type %s", sectype);
-      *err = EDGEX_BAD_CONFIG;
-      return;
-    }
-  }
-  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->config.sdkconf))
-  {
-    *err = EDGEX_BAD_CONFIG;
     return;
   }
 
@@ -1037,7 +1039,6 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
   iot_threadpool_wait (svc->thpool);
   svc->userfns.stop (svc->userdata, force);
   edgex_devmap_clear (svc->devices);
-  edgex_secrets_fini (svc->secretstore);
   iot_log_info (svc->logger, "Stopped device service");
 }
 
@@ -1054,6 +1055,7 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_threadpool_free (svc->eventq);
     devsdk_registry_free (svc->registry);
     devsdk_registry_fini ();
+    edgex_secrets_fini (svc->secretstore);
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
     free (svc->stopconfig);

@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); return x.code; }
+#define ERR_CHECK(x) if (x.code) { fprintf (stderr, "Error: %d: %s\n", x.code, x.reason); devsdk_service_free (service); free (impl); iot_data_free (confparams); free (templateImpls); return x.code; }
 
 typedef struct template_driver
 {
@@ -231,6 +231,7 @@ int main (int argc, char *argv[])
   sigset_t set;
   int sigret;
 
+  iot_data_t *confparams = NULL;
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
 
@@ -279,7 +280,7 @@ int main (int argc, char *argv[])
   }
 
   /* Set default config */
-  iot_data_t *confparams = iot_data_alloc_map (IOT_DATA_STRING);
+  confparams = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (confparams, "TestParam1", iot_data_alloc_string ("X", IOT_DATA_REF));
   iot_data_string_map_add (confparams, "Writable/TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
   iot_data_string_map_add (confparams, "Writable/TestParam3", iot_data_alloc_string ("Z", IOT_DATA_REF));

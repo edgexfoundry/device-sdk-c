@@ -8,6 +8,7 @@
 
 #include "data-redstr.h"
 #include "correlation.h"
+#include "service.h"
 #include "iot/base64.h"
 #include "iot/time.h"
 #include <hiredis/hiredis.h>
@@ -111,9 +112,11 @@ static void edc_redstr_postfn (iot_logger_t *lc, void *address, edgex_event_cook
   }
 }
 
-edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, iot_logger_t *lc, const devsdk_timeout *tm, iot_threadpool_t *queue)
+edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const devsdk_timeout *tm, iot_threadpool_t *queue)
 {
   struct timeval tv;
+  iot_logger_t *lc = svc->logger;
+  const iot_data_t *allconf = svc->config.sdkconf;
   edgex_data_client_t *result = malloc (sizeof (edgex_data_client_t));
   edc_redstr_conninfo *cinfo = malloc (sizeof (edc_redstr_conninfo));
 
@@ -168,6 +171,29 @@ edgex_data_client_t *edgex_data_client_new_redstr (const iot_data_t *allconf, io
     free (cinfo);
     free (result);
     return NULL;
+  }
+
+  if (strcmp (iot_data_string_map_get_string (allconf, EX_MQ_AUTHMODE), "usernamepassword") == 0)
+  {
+    iot_data_t *secrets = devsdk_get_secrets (svc, iot_data_string_map_get_string (allconf, EX_MQ_SECRETNAME));
+    const char *user = iot_data_string_map_get_string (secrets, "username");
+    const char *pass = iot_data_string_map_get_string (secrets, "password");
+    if (pass)
+    {
+      redisReply *reply = (redisReply *)redisCommand (cinfo->ctx, "AUTH %s %s", user ? user : "", pass);
+      if (reply == NULL || reply->type == REDIS_REPLY_ERROR)
+      {
+        iot_log_error (lc, "Error authenticating with Redis: %s", reply ? reply->str : cinfo->ctx->errstr);
+        redisFree (cinfo->ctx);
+        freeReplyObject (reply);
+        free (cinfo);
+        free (result);
+        iot_data_free (secrets);
+        return NULL;
+      }
+      freeReplyObject (reply);
+    }
+    iot_data_free (secrets);
   }
 
   cinfo->topicbase = strdup (iot_data_string_map_get_string (allconf, EX_MQ_TOPIC));
