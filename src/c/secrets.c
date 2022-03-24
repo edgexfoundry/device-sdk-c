@@ -54,8 +54,11 @@ static void edgex_secrets_set (edgex_secret_provider_t *sp, const char *path, co
 
 void edgex_secrets_fini (edgex_secret_provider_t *sp)
 {
-  sp->fns.fini (sp->impl);
-  free (sp);
+  if (sp)
+  {
+    sp->fns.fini (sp->impl);
+    free (sp);
+  }
 }
 
 edgex_secret_provider_t *edgex_secrets_get_insecure ()

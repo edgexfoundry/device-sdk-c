@@ -8,6 +8,7 @@
 
 #include "data-mqtt.h"
 #include "correlation.h"
+#include "service.h"
 #include "iot/base64.h"
 #include "iot/time.h"
 #include <MQTTAsync.h>
@@ -18,9 +19,9 @@ void edgex_mqtt_config_defaults (iot_data_t *allconf)
   iot_data_string_map_add (allconf, EX_MQ_HOST, iot_data_alloc_string ("localhost", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_PORT, iot_data_alloc_ui16 (0));
   iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string ("edgex/events/device", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_AUTHMODE, iot_data_alloc_string ("none", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_SECRETNAME, iot_data_alloc_string ("", IOT_DATA_REF));
 
-  iot_data_string_map_add (allconf, EX_MQ_USERNAME, iot_data_alloc_string ("", IOT_DATA_REF));
-  iot_data_string_map_add (allconf, EX_MQ_PASSWORD, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_CLIENTID, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_QOS, iot_data_alloc_ui16 (0));
   iot_data_string_map_add (allconf, EX_MQ_KEEPALIVE, iot_data_alloc_ui16 (60));
@@ -38,11 +39,11 @@ JSON_Value *edgex_mqtt_config_json (const iot_data_t *allconf)
   json_object_set_string (mqobj, "Host", iot_data_string_map_get_string (allconf, EX_MQ_HOST));
   json_object_set_uint (mqobj, "Port", iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT)));
   json_object_set_string (mqobj, "Topic", iot_data_string_map_get_string (allconf, EX_MQ_TOPIC));
+  json_object_set_string (mqobj, "AuthMode", iot_data_string_map_get_string (allconf, EX_MQ_AUTHMODE));
+  json_object_set_string (mqobj, "SecretName", iot_data_string_map_get_string (allconf, EX_MQ_SECRETNAME));
 
   JSON_Value *optval = json_value_init_object ();
   JSON_Object *optobj = json_value_get_object (optval);
-  json_object_set_string (optobj, "Username", iot_data_string_map_get_string (allconf, EX_MQ_USERNAME));
-  json_object_set_string (optobj, "Password", iot_data_string_map_get_string (allconf, EX_MQ_PASSWORD));
   json_object_set_string (optobj, "ClientId", iot_data_string_map_get_string (allconf, EX_MQ_CLIENTID));
   json_object_set_number (optobj, "Qos", iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_QOS)));
   json_object_set_number (optobj, "KeepAlive", iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_KEEPALIVE)));
@@ -90,7 +91,14 @@ static void edc_mqtt_onsend (void *context, MQTTAsync_successData *response)
 static void edc_mqtt_onsendfail (void *context, MQTTAsync_failureData *response)
 {
   edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
-  iot_log_error (cinfo->lc, "mqtt: publish failed, error code %d", response->code);
+  if (response->message)
+  {
+    iot_log_error (cinfo->lc, "mqtt: publish failed: %s (code %d)", response->message, response->code);
+  }
+  else
+  {
+    iot_log_error (cinfo->lc, "mqtt: publish failed, error code %d", response->code);
+  }
 }
 
 static void edc_mqtt_postfn (iot_logger_t *lc, void *address, edgex_event_cooked *event)
@@ -172,15 +180,25 @@ static void edc_mqtt_onconnect (void *context, MQTTAsync_successData *response)
 static void edc_mqtt_onconnectfail (void *context, MQTTAsync_failureData *response)
 {
   edc_mqtt_conninfo *cinfo = (edc_mqtt_conninfo *)context;
-  iot_log_error (cinfo->lc, "mqtt: connect failed, error code %d", response->code);
+  if (response->message)
+  {
+    iot_log_error (cinfo->lc, "mqtt: connect failed: %s (code %d)", response->message, response->code);
+  }
+  else
+  {
+    iot_log_error (cinfo->lc, "mqtt: connect failed, error code %d", response->code);
+  }
 }
 
-edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_logger_t *lc, const devsdk_timeout *tm, iot_threadpool_t *queue)
+edgex_data_client_t *edgex_data_client_new_mqtt (devsdk_service_t *svc, const devsdk_timeout *tm, iot_threadpool_t *queue)
 {
   int rc;
   char *uri;
   struct timespec max_wait;
   int timedout = 0;
+  iot_data_t *secrets = NULL;
+  iot_logger_t *lc = svc->logger;
+  const iot_data_t *allconf = svc->config.sdkconf;
   MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
   MQTTAsync_SSLOptions ssl_opts = MQTTAsync_SSLOptions_initializer;
   MQTTAsync_createOptions create_opts = MQTTAsync_createOptions_initializer;
@@ -190,8 +208,6 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
 
   const char *host = iot_data_string_map_get_string (allconf, EX_MQ_HOST);
   const char *prot = iot_data_string_map_get_string (allconf, EX_MQ_PROTOCOL);
-  const char *user = iot_data_string_map_get_string (allconf, EX_MQ_USERNAME);
-  const char *pass = iot_data_string_map_get_string (allconf, EX_MQ_PASSWORD);
   const char *certfile = iot_data_string_map_get_string (allconf, EX_MQ_CERTFILE);
   const char *keyfile = iot_data_string_map_get_string (allconf, EX_MQ_KEYFILE);
   uint16_t port = iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT));
@@ -244,13 +260,11 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
   conn_opts.onSuccess = edc_mqtt_onconnect;
   conn_opts.onFailure = edc_mqtt_onconnectfail;
   conn_opts.context = cinfo;
-  if (strlen (user))
+  if (strcmp (iot_data_string_map_get_string (allconf, EX_MQ_AUTHMODE), "usernamepassword") == 0)
   {
-    conn_opts.username = user;
-  }
-  if (strlen (pass))
-  {
-    conn_opts.password = pass;
+    secrets = devsdk_get_secrets (svc, iot_data_string_map_get_string (allconf, EX_MQ_SECRETNAME));
+    conn_opts.username = iot_data_string_map_get_string (secrets, "username");
+    conn_opts.password = iot_data_string_map_get_string (secrets, "password");
   }
   conn_opts.ssl = &ssl_opts;
   if (strlen (certfile))
@@ -309,6 +323,7 @@ edgex_data_client_t *edgex_data_client_new_mqtt (const iot_data_t *allconf, iot_
       }
     }
   }
+  iot_data_free (secrets);
   pthread_cond_destroy (&cinfo->cond);
   pthread_mutex_destroy (&cinfo->mtx);
   if (!cinfo->connected)
