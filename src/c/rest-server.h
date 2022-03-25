@@ -16,6 +16,9 @@ typedef struct edgex_rest_server edgex_rest_server;
 
 extern edgex_rest_server *edgex_rest_server_create (iot_logger_t *lc, const char *bindaddr, uint16_t port, uint64_t maxsize, devsdk_error *err);
 
+extern void edgex_rest_server_enable_cors
+  (edgex_rest_server *svr, const char *origin, const char *methods, const char *headers, const char *expose, bool creds, int64_t maxage);
+
 extern void edgex_rest_server_destroy (edgex_rest_server *svr);
 
 extern bool edgex_rest_server_register_handler

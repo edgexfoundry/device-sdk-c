@@ -28,6 +28,7 @@ typedef enum
   DevSDK_Put = 4,
   DevSDK_Patch = 8,
   DevSDK_Delete = 16,
+  DevSDK_Options = 32,
   DevSDK_Unknown = 1024
 } devsdk_http_method;
 

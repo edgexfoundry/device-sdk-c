@@ -701,6 +701,16 @@ static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const 
   {
     return;
   }
+  if (iot_data_string_map_get_bool (svc->config.sdkconf, "Service/CORSConfiguration/EnableCORS", false))
+  {
+    const char *origin = iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowedOrigin");
+    bool creds = iot_data_string_map_get_bool (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowCredentials", false);
+    const char *methods = iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowedMethods");
+    const char *headers = iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowedHeaders");
+    const char *expose = iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSExposeHeaders");
+    int64_t maxage = iot_data_ui32 (iot_data_string_map_get (svc->config.sdkconf, "Service/CORSConfiguration/CORSMaxAge"));
+    edgex_rest_server_enable_cors (svc->daemon, origin, methods, headers, expose, creds, maxage);
+  }
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
 
