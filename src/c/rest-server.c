@@ -31,6 +31,19 @@ typedef struct handler_list
   struct handler_list *next;
 } handler_list;
 
+typedef struct cors_config
+{
+  const char *allowedorigin;
+  const char *allowcreds;
+  const char *allowmethods;
+  const char *allowheaders;
+  const char *exposeheaders;
+  char *maxage;
+  char **allowmethods_parsed;
+  char **allowheaders_parsed;
+  bool enabled;
+} cors_config;
+
 struct edgex_rest_server
 {
   iot_logger_t *lc;
@@ -38,6 +51,7 @@ struct edgex_rest_server
   handler_list *handlers;
   pthread_mutex_t lock;
   uint64_t maxsize;
+  cors_config cors;
 };
 
 typedef struct http_context_s
@@ -60,6 +74,8 @@ static devsdk_http_method method_from_string (const char *str)
   { return DevSDK_Patch; }
   if (strcmp (str, "DELETE") == 0)
   { return DevSDK_Delete; }
+  if (strcmp (str, "OPTIONS") == 0)
+  { return DevSDK_Options; }
   return DevSDK_Unknown;
 }
 
@@ -133,6 +149,105 @@ static bool match_url_pattern (const devsdk_strings *pattern, const devsdk_strin
   return result && !(pattern || url);
 }
 
+static bool cors_string_in_list (const char *s, char ** l)
+{
+  while (*l)
+  {
+    if (strcmp (*l++, s) == 0)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+static char **cors_string_to_list (const char *str)
+{
+  char **result;
+  unsigned n = 0;
+  char *s = strdup (str);
+  char *sptr = NULL;
+  char *elem = strtok_r (s, ", ", &sptr);
+  while (elem)
+  {
+    n++;
+    elem = strtok_r (NULL, ", ", &sptr);
+  }
+  result = malloc (sizeof (char *) * (n + 1));
+  strcpy (s, str);
+  sptr = NULL;
+  elem = strtok_r (s, ", ", &sptr);
+  for (unsigned i = 0; i < n; i++)
+  {
+    result[i] = strdup (elem);
+    elem = strtok_r (NULL, ", ", &sptr);
+  }
+  result[n] = NULL;
+  free (s);
+  return result;
+}
+
+void edgex_rest_server_enable_cors
+  (edgex_rest_server *svr, const char *origin, const char *methods, const char *headers, const char *expose, bool creds, int64_t maxage)
+{
+  svr->cors.enabled = true;
+  svr->cors.allowedorigin = origin;
+  svr->cors.allowmethods = methods;
+  svr->cors.allowheaders = headers;
+  svr->cors.exposeheaders = expose;
+  svr->cors.allowcreds = creds ? "true" : "false";
+  svr->cors.maxage = malloc (21);
+  sprintf (svr->cors.maxage, "%" PRId64, maxage);
+  svr->cors.allowmethods_parsed = cors_string_to_list (methods);
+  svr->cors.allowheaders_parsed = cors_string_to_list (headers);
+}
+
+static bool cors_request_ok (struct MHD_Connection *conn, const char *method, const cors_config *cors)
+{
+  if (strcmp (cors->allowedorigin, "*"))
+  {
+    const char *origin = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, MHD_HTTP_HEADER_ORIGIN);
+    if (origin && strcmp (cors->allowedorigin, origin))
+    {
+      return false;
+    }
+  }
+  const char *req_method = method ? method : MHD_lookup_connection_value (conn, MHD_HEADER_KIND, "Access-Control-Request-Method");
+  if (req_method)
+  {
+    if (!cors_string_in_list (req_method, cors->allowmethods_parsed))
+    {
+      return false;
+    }
+  }
+  const char *req_hdrs = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, "Access-Control-Request-Headers");
+  if (req_hdrs)
+  {
+    char *list = strdup (req_hdrs);
+    char *sptr = NULL;
+    char *elem = strtok_r (list, ", ", &sptr);
+    while (elem)
+    {
+      if (!cors_string_in_list (elem, cors->allowheaders_parsed))
+      {
+        free (list);
+        return false;
+      }
+      elem = strtok_r (NULL, ", ", &sptr);
+    }
+    free (list);
+  }
+  return true;
+}
+
+static void set_header_if_nonempty (struct MHD_Response *response, const char *header, const char *value)
+{
+  if (strlen (value))
+  {
+    MHD_add_response_header (response, header, value);
+  }
+}
+
 static int http_handler
 (
   void *this,
@@ -153,6 +268,7 @@ static int http_handler
   size_t reply_size = 0;
   const char *reply_type = NULL;
   handler_list *h;
+  bool cors_passed = false;
 
   /* First call used to create call context */
 
@@ -193,7 +309,29 @@ static int http_handler
 
   devsdk_http_method method = method_from_string (methodname);
 
-  if (strlen (url) == 0 || strcmp (url, "/") == 0)
+  if (method == DevSDK_Options && svr->cors.enabled)
+  {
+    if (cors_request_ok (conn, NULL, &svr->cors))
+    {
+      response = MHD_create_response_from_buffer (0, "", MHD_RESPMEM_PERSISTENT);
+      set_header_if_nonempty (response, MHD_HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, svr->cors.allowedorigin);
+      MHD_add_response_header (response, "Access-Control-Allow-Credentials", svr->cors.allowcreds);
+      set_header_if_nonempty (response, "Access-Control-Allow-Methods", svr->cors.allowmethods);
+      set_header_if_nonempty (response, "Access-Control-Allow-Headers", svr->cors.allowheaders);
+      MHD_add_response_header (response, "Access-Control-Max-Age", svr->cors.maxage);
+      MHD_queue_response (conn, MHD_HTTP_NO_CONTENT, response);
+      MHD_destroy_response (response);
+      free (ctx->m_data);
+      free (ctx);
+      edgex_device_free_crlid ();
+      return MHD_YES;
+    }
+    else
+    {
+      status = MHD_HTTP_METHOD_NOT_ALLOWED;
+    }
+  }
+  else if (strlen (url) == 0 || strcmp (url, "/") == 0)
   {
     if (method == DevSDK_Get)
     {
@@ -244,22 +382,30 @@ static int http_handler
     {
       if (method & h->methods)
       {
-        devsdk_http_request req;
-        devsdk_http_reply rep;
-        req.qparams = iot_data_alloc_map (IOT_DATA_STRING);
-        MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, req.qparams);
-        req.params = params;
-        req.method = method;
-        req.data.bytes = ctx->m_data;
-        req.data.size = ctx->m_size;
-        req.content_type = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
-        memset (&rep, 0, sizeof (devsdk_http_reply));
-        h->handler (h->ctx, &req, &rep);
-        status = rep.code;
-        reply = rep.data.bytes;
-        reply_size = rep.data.size;
-        reply_type = rep.content_type;
-        iot_data_free (req.qparams);
+        if (svr->cors.enabled && !cors_request_ok (conn, methodname, &svr->cors))
+        {
+          status = MHD_HTTP_FORBIDDEN;
+        }
+        else
+        {
+          devsdk_http_request req;
+          devsdk_http_reply rep;
+          req.qparams = iot_data_alloc_map (IOT_DATA_STRING);
+          MHD_get_connection_values (conn, MHD_GET_ARGUMENT_KIND, queryIterator, req.qparams);
+          req.params = params;
+          req.method = method;
+          req.data.bytes = ctx->m_data;
+          req.data.size = ctx->m_size;
+          req.content_type = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
+          memset (&rep, 0, sizeof (devsdk_http_reply));
+          h->handler (h->ctx, &req, &rep);
+          status = rep.code;
+          reply = rep.data.bytes;
+          reply_size = rep.data.size;
+          reply_type = rep.content_type;
+          cors_passed = svr->cors.enabled;
+          iot_data_free (req.qparams);
+        }
       }
       else
       {
@@ -284,6 +430,13 @@ static int http_handler
   response = MHD_create_response_from_buffer (reply_size, reply, MHD_RESPMEM_MUST_FREE);
   MHD_add_response_header (response, "Content-Type", reply_type);
   MHD_add_response_header (response, "X-Correlation-ID", edgex_device_get_crlid ());
+  if (cors_passed)
+  {
+    set_header_if_nonempty (response, MHD_HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, svr->cors.allowedorigin);
+    MHD_add_response_header (response, "Access-Control-Allow-Credentials", svr->cors.allowcreds);
+    set_header_if_nonempty (response, "Access-Control-Expose-Headers", svr->cors.exposeheaders);
+    MHD_add_response_header (response, MHD_HTTP_HEADER_VARY, MHD_HTTP_HEADER_ORIGIN);
+  }
   MHD_queue_response (conn, status, response);
   MHD_destroy_response (response);
 
@@ -428,5 +581,19 @@ void edgex_rest_server_destroy (edgex_rest_server *svr)
     svr->handlers = tmp;
   }
   pthread_mutex_destroy (&svr->lock);
+  if (svr->cors.enabled)
+  {
+    for (char **c = svr->cors.allowmethods_parsed; *c; c++)
+    {
+      free (*c);
+    }
+    for (char **c = svr->cors.allowheaders_parsed; *c; c++)
+    {
+      free (*c);
+    }
+    free (svr->cors.allowmethods_parsed);
+    free (svr->cors.allowheaders_parsed);
+    free (svr->cors.maxage);
+  }
   free (svr);
 }

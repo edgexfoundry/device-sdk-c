@@ -69,6 +69,13 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Service/HealthCheckInterval", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/ServerBindAddr", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/MaxRequestSize", iot_data_alloc_ui64 (0));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/EnableCORS", iot_data_alloc_bool (false));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowCredentials", iot_data_alloc_bool (false));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowedOrigin", iot_data_alloc_string ("https://localhost", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowedMethods", iot_data_alloc_string ("GET, POST, PUT, PATCH, DELETE", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSAllowedHeaders", iot_data_alloc_string ("Authorization, Accept, Accept-Language, Content-Language, Content-Type, X-Correlation-ID", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSExposeHeaders", iot_data_alloc_string ("Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified, Pragma, X-Correlation-ID", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Service/CORSConfiguration/CORSMaxAge", iot_data_alloc_ui32 (3600));
 
   iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/UseMessageBus", iot_data_alloc_bool (false));
@@ -771,6 +778,17 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_string (sobj, "ServerBindAddr", svc->config.service.bindaddr);
   json_object_set_uint (sobj, "MaxRequestSize", svc->config.service.maxreqsz);
 
+  JSON_Value *scval = json_value_init_object ();
+  JSON_Object *scobj = json_value_get_object (scval);
+  json_object_set_boolean (scobj, "EnableCORS", iot_data_bool (iot_data_string_map_get (svc->config.sdkconf, "Service/CORSConfiguration/EnableCORS")));
+  json_object_set_boolean
+    (scobj, "CORSAllowCredentials", iot_data_bool (iot_data_string_map_get (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowCredentials")));
+  json_object_set_string (scobj, "CORSAllowedOrigin", iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowedOrigin"));
+  json_object_set_string (scobj, "CORSAllowedMethods", iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowedMethods"));
+  json_object_set_string (scobj, "CORSAllowedHeaders", iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSAllowedHeaders"));
+  json_object_set_string (scobj, "CORSExposeHeaders", iot_data_string_map_get_string (svc->config.sdkconf, "Service/CORSConfiguration/CORSExposeHeaders"));
+  json_object_set_uint (scobj, "CORSMaxAge", iot_data_ui32 (iot_data_string_map_get (svc->config.sdkconf, "Service/CORSConfiguration/CORSMaxAge")));
+  json_object_set_value (sobj, "CORSConfiguration", scval);
 
   json_object_set_value (obj, "Service", sval);
 
