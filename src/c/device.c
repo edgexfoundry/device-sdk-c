@@ -754,8 +754,18 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
       if (event)
       {
         edgex_baseresponse br;
-        bool pushv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_PUSH, "no"), "yes") == 0;
-        bool retv = strcmp (devsdk_nvpairs_value_dfl (req->params, DS_RETURN, "yes"), "no") != 0;
+        bool pushv = false;
+	bool retv = true;
+	if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_PUSH) &&
+	    (strcmp(iot_data_string_map_get_string(req->qparams, DS_PUSH), "yes") == 0))
+	  {
+	    pushv = true;
+	  }
+	if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_RETURN) &&
+	    (strcmp(iot_data_string_map_get_string(req->qparams, DS_RETURN), "no") == 0))
+	  {
+	    retv = false;
+	  }
 
         if (pushv)
         {
