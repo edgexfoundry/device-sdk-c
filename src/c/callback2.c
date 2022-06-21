@@ -22,7 +22,7 @@ void edgex_device_handler_callback_service (void *ctx, const devsdk_http_request
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  edgex_deviceservice *ds = edgex_deviceservice_read (req->data.bytes);
+  edgex_deviceservice *ds = edgex_getDSresponse_read (req->data.bytes);
   if (ds)
   {
     if (svc->adminstate != ds->adminState)
@@ -31,7 +31,9 @@ void edgex_device_handler_callback_service (void *ctx, const devsdk_http_request
       iot_log_info (svc->logger, "Service AdminState now %s", svc->adminstate == LOCKED ? "LOCKED" : "UNLOCKED");
     }
     edgex_deviceservice_free (ds);
-    reply->code = MHD_HTTP_NO_CONTENT;
+    edgex_baseresponse br;
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "");
+    edgex_baseresponse_write (&br, reply);
   }
   else
   {
@@ -43,12 +45,14 @@ void edgex_device_handler_callback_profile (void *ctx, const devsdk_http_request
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  edgex_deviceprofile *p = edgex_deviceprofile_read (svc->logger, req->data.bytes);
+  edgex_deviceprofile *p = edgex_getprofileresponse_read (svc->logger, req->data.bytes);
   if (p)
   {
     edgex_devmap_update_profile (svc, p);
     iot_log_info (svc->logger, "callback: Updated device profile %s", p->name);
-    reply->code = MHD_HTTP_NO_CONTENT;
+    edgex_baseresponse br;
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "");
+    edgex_baseresponse_write (&br, reply);
   }
   else
   {
@@ -169,7 +173,9 @@ void edgex_device_handler_callback_device_name (void *ctx, const devsdk_http_req
 
   if (found)
   {
-    reply->code = MHD_HTTP_NO_CONTENT;
+    edgex_baseresponse br;
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "");
+    edgex_baseresponse_write (&br, reply);
   }
   else
   {
@@ -186,7 +192,9 @@ void edgex_device_handler_callback_watcher_name (void *ctx, const devsdk_http_re
 
   if (edgex_watchlist_remove_watcher (svc->watchlist, name))
   {
-    reply->code = MHD_HTTP_NO_CONTENT;
+    edgex_baseresponse br;
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "");
+    edgex_baseresponse_write (&br, reply);
   }
   else
   {
