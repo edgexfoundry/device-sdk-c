@@ -10,9 +10,9 @@
 #define _DEVSDK_REGISTRY_H_ 1
 
 #include "devsdk/devsdk-base.h"
-#include "edgex/edgex-base.h"
 #include "devutil.h"
 #include "iot/threadpool.h"
+#include "secrets.h"
 
 /* Callback for dynamic configuration */
 
@@ -28,7 +28,7 @@ typedef struct devsdk_registry_t devsdk_registry_t;
 
 devsdk_registry_t *devsdk_registry_get_consul (void);
 
-bool devsdk_registry_init (devsdk_registry_t *registry, iot_logger_t *lc, iot_threadpool_t *thpool, const char *url);
+bool devsdk_registry_init (devsdk_registry_t *registry, iot_logger_t *lc, iot_threadpool_t *thpool, edgex_secret_provider_t *sp, const char *url);
 
 bool devsdk_registry_waitfor (devsdk_registry_t *registry, const devsdk_timeout *deadline);
 

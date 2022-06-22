@@ -13,7 +13,7 @@
 
 /* Registry implementation functions */
 
-typedef bool (*devsdk_registry_init_impl) (void *impl, iot_logger_t *logger, iot_threadpool_t *pool, const char *url);
+typedef bool (*devsdk_registry_init_impl) (void *impl, iot_logger_t *logger, iot_threadpool_t *pool, edgex_secret_provider_t *sp, const char *url);
 
 typedef bool (*devsdk_registry_ping_impl) (void *impl);
 

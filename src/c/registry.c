@@ -25,9 +25,9 @@ devsdk_registry_t *devsdk_registry_get_consul ()
   return result;
 }
 
-bool devsdk_registry_init (devsdk_registry_t *reg, iot_logger_t *lc, iot_threadpool_t *thpool, const char *url)
+bool devsdk_registry_init (devsdk_registry_t *reg, iot_logger_t *lc, iot_threadpool_t *thpool, edgex_secret_provider_t *sp, const char *url)
 {
-  return reg->fns.init (reg->state, lc, thpool, url);
+  return reg->fns.init (reg->state, lc, thpool, sp, url);
 }
 
 void devsdk_registry_free (devsdk_registry_t *reg)

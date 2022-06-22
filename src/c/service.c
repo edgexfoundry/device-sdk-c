@@ -514,39 +514,12 @@ static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *er
   devsdk_strings_free (filenames);
 }
 
-static void startConfigured (devsdk_service_t *svc, toml_table_t *config, const devsdk_timeout *deadline, devsdk_error *err)
+static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadline, devsdk_error *err)
 {
   svc->adminstate = UNLOCKED;
 
   svc->eventq = iot_threadpool_alloc (1, svc->config.device.eventqlen, IOT_THREAD_NO_PRIORITY, IOT_THREAD_NO_AFFINITY, svc->logger);
   iot_threadpool_start (svc->eventq);
-
-  /* Set up SecretStore */
-
-  char *secure = getenv (SECUREENV);
-  if (secure && strcmp (secure, "false") == 0)
-  {
-    svc->secretstore = edgex_secrets_get_insecure ();
-  }
-  else
-  {
-    const char *sectype = iot_data_string_map_get_string (svc->config.sdkconf, "SecretStore/Type");
-    if (strcmp (sectype, "vault") == 0)
-    {
-      svc->secretstore = edgex_secrets_get_vault ();
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unknown Secret Store type %s", sectype);
-      *err = EDGEX_BAD_CONFIG;
-      return;
-    }
-  }
-  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->config.sdkconf))
-  {
-    *err = EDGEX_BAD_CONFIG;
-    return;
-  }
 
   /* Wait for metadata and data to be available */
 
@@ -826,14 +799,20 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   iot_threadpool_start (svc->thpool);
 
+  configtoml = edgex_device_loadConfig (svc->logger, svc->confpath, err);
+  if (err->code)
+  {
+    iot_log_error (svc->logger, "Unable to load config file: %s", err->reason);
+    return;
+  }
   configmap = edgex_config_defaults (driverdfls, svc->name);
+  edgex_device_overrideConfig_toml (configmap, configtoml);
+  edgex_device_overrideConfig_env (svc->logger, configmap);
 
   if (svc->regURL)
   {
     if (*svc->regURL == '\0')
     {
-      devsdk_error e;
-      configtoml = edgex_device_loadConfig (svc->logger, svc->confpath, &e);
       svc->regURL = edgex_device_getRegURL (configtoml);
     }
     if (svc->regURL)
@@ -860,9 +839,36 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
   }
 
+  /* Set up SecretStore */
+
+  char *secure = getenv (SECUREENV);
+  if (secure && strcmp (secure, "false") == 0)
+  {
+    svc->secretstore = edgex_secrets_get_insecure ();
+  }
+  else
+  {
+    const char *sectype = iot_data_string_map_get_string (configmap, "SecretStore/Type");
+    if (strcmp (sectype, "vault") == 0)
+    {
+      svc->secretstore = edgex_secrets_get_vault ();
+    }
+    else
+    {
+      iot_log_error (svc->logger, "Unknown Secret Store type %s", sectype);
+      *err = EDGEX_BAD_CONFIG;
+      return;
+    }
+  }
+  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->name, configmap))
+  {
+    *err = EDGEX_BAD_CONFIG;
+    return;
+  }
+
   if (svc->registry)
   {
-    if (!devsdk_registry_init (svc->registry, svc->logger, svc->thpool, svc->regURL))
+    if (!devsdk_registry_init (svc->registry, svc->logger, svc->thpool, svc->secretstore, svc->regURL))
     {
       iot_log_error (svc->logger, "cant initialise registry service at %s", svc->regURL);
       *err = EDGEX_INVALID_ARG;
@@ -890,9 +896,10 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       devsdk_nvpairs *regconf = devsdk_registry_get_config (svc->registry, svc->name, edgex_device_updateConf, svc, svc->stopconfig, &e);
       if (regconf)
       {
+        iot_data_free (configmap);
+        configmap = edgex_config_defaults (driverdfls, svc->name);
         edgex_device_overrideConfig_nvpairs (configmap, regconf);
         edgex_device_overrideConfig_env (svc->logger, configmap);
-        edgex_device_populateConfig (svc, configmap);
         devsdk_nvpairs_free (regconf);
       }
       else
@@ -904,31 +911,17 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
   }
 
-  if (uploadConfig || (svc->registry == NULL))
+  edgex_device_populateConfig (svc, configmap);
+
+  if (uploadConfig)
   {
-    if (configtoml == NULL)
+    iot_log_info (svc->logger, "Uploading configuration to registry.");
+    devsdk_registry_put_config (svc->registry, svc->name, configmap, err);
+    if (err->code)
     {
-      configtoml = edgex_device_loadConfig (svc->logger, svc->confpath, err);
-      if (err->code)
-      {
-        return;
-      }
-    }
-
-    edgex_device_overrideConfig_toml (configmap, configtoml);
-    edgex_device_overrideConfig_env (svc->logger, configmap);
-    edgex_device_populateConfig (svc, configmap);
-
-    if (uploadConfig)
-    {
-      iot_log_info (svc->logger, "Uploading configuration to registry.");
-      devsdk_registry_put_config (svc->registry, svc->name, configmap, err);
-      if (err->code)
-      {
-        iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
-        toml_free (configtoml);
-        return;
-      }
+      iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
+      toml_free (configtoml);
+      return;
     }
   }
 
@@ -947,14 +940,14 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     edgex_device_parseTomlClients (svc->logger, toml_table_in (configtoml, "Clients"), &svc->config.endpoints, err);
   }
 
+  toml_free (configtoml);
+
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
   iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
   iot_log_debug (svc->logger, "Service configuration follows:");
   edgex_device_dumpConfig (svc->logger, configmap);
 
-  startConfigured (svc, configtoml, &deadline, err);
-
-  toml_free (configtoml);
+  startConfigured (svc, &deadline, err);
 
   if (err->code == 0)
   {

@@ -2,6 +2,7 @@ This is the C SDK for EdgeX device services.
 
 Changes for 2.2.0 "Kamakura":
 
+- Implement secure Consul access using tokens from Vault
 - Add CORS support
 - Implement secure messagebus connections
 - Implement loading secrets from file
