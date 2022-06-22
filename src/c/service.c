@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -838,7 +838,19 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
     if (svc->regURL)
     {
-      svc->registry = devsdk_registry_get_registry (svc->logger, svc->thpool, svc->regURL);
+      char *delim = strstr (svc->regURL, "://");
+      if (delim)
+      {
+        int len = delim - svc->regURL;
+        if (len == strlen ("consul") && strncmp (svc->regURL, "consul", len) == 0)
+        {
+          svc->registry = devsdk_registry_get_consul ();
+        }
+        else if (len == strlen ("consul.http") && strncmp (svc->regURL, "consul.http", len) == 0)
+        {
+          svc->registry = devsdk_registry_get_consul ();
+        }
+      }
     }
     if (svc->registry == NULL)
     {
@@ -850,6 +862,12 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   if (svc->registry)
   {
+    if (!devsdk_registry_init (svc->registry, svc->logger, svc->thpool, svc->regURL))
+    {
+      iot_log_error (svc->logger, "cant initialise registry service at %s", svc->regURL);
+      *err = EDGEX_INVALID_ARG;
+      return;
+    }
     if (!devsdk_registry_waitfor (svc->registry, &deadline))
     {
       iot_log_error (svc->logger, "registry service not running at %s", svc->regURL);
@@ -1064,7 +1082,6 @@ void devsdk_service_free (devsdk_service_t *svc)
     iot_threadpool_free (svc->thpool);
     iot_threadpool_free (svc->eventq);
     devsdk_registry_free (svc->registry);
-    devsdk_registry_fini ();
     edgex_secrets_fini (svc->secretstore);
     iot_logger_free (svc->logger);
     edgex_device_freeConfig (svc);
