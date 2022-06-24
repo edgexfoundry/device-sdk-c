@@ -13,6 +13,7 @@
 #include "errorlist.h"
 #include "config.h"
 #include "parson.h"
+#include "api.h"
 #include "iot/base64.h"
 
 #define CONF_PREFIX "edgex/devices/2.0/"
@@ -345,7 +346,7 @@ static void edgex_consul_client_register_service
     char myUrl[URL_BUF_SIZE];
     char checkName[URL_BUF_SIZE];
     JSON_Value *checkval = json_value_init_object ();
-    snprintf (myUrl, URL_BUF_SIZE - 1, "http://%s:%u/api/v1/ping", host, port);
+    snprintf (myUrl, URL_BUF_SIZE - 1, "http://%s:%u" EDGEX_DEV_API2_PING, host, port);
     snprintf (checkName, URL_BUF_SIZE - 1, "Health Check: %s", servicename);
     JSON_Object *checkobj = json_value_get_object (checkval);
     json_object_set_string (checkobj, "Name", checkName);
