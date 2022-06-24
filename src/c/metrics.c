@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -28,7 +28,11 @@ static void edgex_metrics_populate (edgex_metricsresponse *m, uint64_t starttime
   struct rusage rstats;
 #ifdef __GNU_LIBRARY__
   double loads[1];
+#if (__GLIBC__ * 100 + __GLIBC_MINOR__) >= 233
+  struct mallinfo2 mi = mallinfo2 ();
+#else
   struct mallinfo mi = mallinfo ();
+#endif
   m->alloc = mi.uordblks;
   m->totalloc = mi.arena + mi.hblkhd;
   if (getloadavg (loads, 1) == 1)

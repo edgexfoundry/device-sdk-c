@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020
+ * Copyright (c) 2020-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -85,6 +85,15 @@ typedef devsdk_address_t (*devsdk_create_address) (void *impl, const devsdk_prot
  */
 
 typedef void (*devsdk_free_address) (void *impl, devsdk_address_t address);
+
+/**
+ * @brief Callback issued for validating device addresses.
+ * @param impl The context data passed in when the service was created.
+ * @param protocols The protocol properties for the device.
+ * @param exception Set this to an IOT_DATA_STRING to give details if the protocol properties are invalid
+ */
+
+typedef void (*devsdk_validate_address) (void *impl, const devsdk_protocols *protocols, iot_data_t **exception);
 
 /**
  * @brief Callback issued for parsing device resource attributes. 
@@ -264,6 +273,12 @@ void devsdk_callbacks_set_listeners
  */
 
 void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoevent_start_handler ae_starter, devsdk_autoevent_stop_handler ae_stopper);
+
+/**
+ * @brief Populate optional device address validation function
+ */
+
+extern void devsdk_callbacks_set_validate_addr (devsdk_callbacks *cb, devsdk_validate_address validate_addr);
 
 /**
  * @brief Create a new device service.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -1499,26 +1499,6 @@ void edgex_errorresponse_free (edgex_errorresponse *e)
     free ((char *)e->message);
     free (e);
   }
-}
-
-char *edgex_id_from_response (const char *response)
-{
-  char *result = NULL;
-  JSON_Value *val = json_parse_string (response);
-  if (val)
-  {
-    JSON_Array *arr = json_array (val);
-    if (arr)
-    {
-      JSON_Object *obj = json_array_get_object (arr, 0);
-      if (obj)
-      {
-        result = SAFE_STRDUP (json_object_get_string (obj, "id"));
-      }
-    }
-    json_value_free (val);
-  }
-  return result;
 }
 
 static JSON_Value *pingresponse_write (const edgex_pingresponse *pr)

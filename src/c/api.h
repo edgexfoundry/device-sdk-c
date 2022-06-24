@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020
+ * Copyright (c) 2020-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -25,6 +25,7 @@
 #define EDGEX_DEV_API2_CALLBACK_WATCHER "/api/v2/callback/watcher"
 #define EDGEX_DEV_API2_CALLBACK_WATCHER_NAME "/api/v2/callback/watcher/name/{name}"
 #define EDGEX_DEV_API2_CALLBACK_SERVICE "/api/v2/callback/service"
+#define EDGEX_DEV_API2_VALIDATE_ADDR "/api/v2/validate/device"
 
 /* Query parameters */
 

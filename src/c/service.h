@@ -39,6 +39,7 @@ struct devsdk_callbacks
   devsdk_remove_device_callback device_removed;
   devsdk_autoevent_start_handler ae_starter;
   devsdk_autoevent_stop_handler ae_stopper;
+  devsdk_validate_address validate_addr;
 };
 
 struct devsdk_service_t
