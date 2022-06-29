@@ -7,6 +7,7 @@
  */
 
 #include "secrets-insecure.h"
+#include "rest.h"
 
 #define SEC_PREFIX "Writable/InsecureSecrets/"
 #define SEC_PREFIXLEN (sizeof (SEC_PREFIX) - 1)
@@ -93,9 +94,8 @@ static void insecure_set (void *impl, const char *path, const iot_data_t *secret
   iot_log_error (insec->lc, "Storing secrets is not supported when running in insecure mode");
 }
 
-static devsdk_nvpairs *insecure_getregtoken (void *impl)
+static void insecure_getregtoken (void *impl, edgex_ctx *ctx)
 {
-  return NULL;
 }
 
 static void insecure_fini (void *impl)

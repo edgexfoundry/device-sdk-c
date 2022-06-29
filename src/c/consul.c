@@ -23,7 +23,6 @@ typedef struct consul_impl_t
   iot_logger_t *lc;
   iot_threadpool_t *pool;
   edgex_secret_provider_t *sp;
-  devsdk_nvpairs *token;
   char *host;
   uint16_t port;
 } consul_impl_t;
@@ -35,7 +34,6 @@ static bool edgex_consul_client_init (void *impl, iot_logger_t *logger, iot_thre
   consul->lc = logger;
   consul->pool = pool;
   consul->sp = sp;
-  consul->token = edgex_secrets_getregtoken (sp);
   char *pos = strstr (url, "://");
   if (pos)
   {
@@ -64,7 +62,6 @@ static void edgex_consul_client_free (void *impl)
 {
   consul_impl_t *consul = (consul_impl_t *)impl;
   free (consul->host);
-  devsdk_nvpairs_free (consul->token);
   free (impl);
 }
 
@@ -138,7 +135,7 @@ static devsdk_nvpairs *read_pairs (iot_logger_t *lc, const char *json, devsdk_er
 struct updatejob
 {
   char *url;
-  devsdk_nvpairs *token;
+  edgex_secret_provider_t *sp;
   iot_logger_t *lc;
   devsdk_registry_updatefn updater;
   void *updatectx;
@@ -170,7 +167,7 @@ static void *poll_consul (void *p)
     }
     free (index.value);
     index.value = NULL;
-    ctx.reqhdrs = job->token;
+    edgex_secrets_getregtoken (job->sp, &ctx);
     ctx.rsphdrs = &index;
     ctx.aborter = job->updatedone;
     edgex_http_get (job->lc, &ctx, job->url, edgex_http_write_cb, &err);
@@ -216,7 +213,7 @@ static devsdk_nvpairs *edgex_consul_client_get_config
   devsdk_nvpairs *result = NULL;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  ctx.reqhdrs = consul->token;
+  edgex_secrets_getregtoken (consul->sp, &ctx);
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, servicename);
   edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
   if (err->code == 0)
@@ -238,7 +235,7 @@ static devsdk_nvpairs *edgex_consul_client_get_config
   job->updater = updater;
   job->updatectx = updatectx;
   job->updatedone = updatedone;
-  job->token = consul->token;
+  job->sp = consul->sp;
   iot_threadpool_add_work (consul->pool, poll_consul, job, -1);
 
   return result;
@@ -308,7 +305,7 @@ static void edgex_consul_client_write_config (void *impl, const char *servicenam
   char *json = json_serialize_to_string (jresult);
   json_value_free (jresult);
 
-  ctx.reqhdrs = consul->token;
+  edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_put (consul->lc, &ctx, url, json, edgex_http_write_cb, err);
 
   json_free_serialized_string (json);
@@ -358,7 +355,7 @@ static void edgex_consul_client_register_service
   char *json = json_serialize_to_string (params);
   json_value_free (params);
 
-  ctx.reqhdrs = consul->token;
+  edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_put (consul->lc, &ctx, url, json, edgex_http_write_cb, err);
 
   if (err->code)
@@ -387,7 +384,7 @@ static void edgex_consul_client_deregister_service
     consul->host, consul->port, servicename
   );
 
-  ctx.reqhdrs = consul->token;
+  edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_put (consul->lc, &ctx, url, NULL, edgex_http_write_cb, err);
 
   if (err->code)
@@ -420,7 +417,7 @@ static void edgex_consul_client_query_service
 
   *err = EDGEX_OK;
 
-  ctx.reqhdrs = consul->token;
+  edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
 
   if (err->code == 0)
@@ -478,7 +475,7 @@ static bool edgex_consul_client_ping (void *impl)
     consul->port
   );
 
-  ctx.reqhdrs = consul->token;
+  edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_get (consul->lc, &ctx, url, NULL, &err);
   return (err.code == 0);
 }

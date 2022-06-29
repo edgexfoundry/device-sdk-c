@@ -19,7 +19,9 @@ typedef struct vault_impl_t
   char *baseurl;
   char *regurl;
   char *capath;
+  devsdk_nvpairs *regtoken;
   bool bearer;
+  pthread_mutex_t mtx;
 } vault_impl_t;
 
 static bool vault_init (void *impl, iot_logger_t *lc, const char *svcname, iot_data_t *config)
@@ -167,12 +169,10 @@ static void vault_set (void *impl, const char *path, const iot_data_t *secrets)
   free (ctx.buff);
 }
 
-static devsdk_nvpairs *vault_getregtoken (void *impl)
+static void vault_fetchregtoken (vault_impl_t *vault)
 {
   edgex_ctx ctx;
-  devsdk_nvpairs *result = NULL;
   devsdk_error err = EDGEX_OK;
-  vault_impl_t *vault = (vault_impl_t *)impl;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   if (vault->capath)
@@ -200,12 +200,12 @@ static devsdk_nvpairs *vault_getregtoken (void *impl)
         const iot_data_t *t = iot_data_string_map_get (d, "token");
         if (t)
         {
-          result = devsdk_nvpairs_new ("X-Consul-Token", iot_data_string (t), NULL);
+          vault->regtoken = devsdk_nvpairs_new ("X-Consul-Token", iot_data_string (t), NULL);
         }
       }
       iot_data_free (reply);
     }
-    if (result == NULL)
+    if (vault->regtoken == NULL)
     {
       iot_log_error (vault->lc, "vault: no consul token found in %s", ctx.buff);
     }
@@ -216,23 +216,37 @@ static devsdk_nvpairs *vault_getregtoken (void *impl)
   }
   devsdk_nvpairs_free (ctx.reqhdrs);
   free (ctx.buff);
+}
 
-  return result;
+static void vault_getregtoken (void *impl, edgex_ctx *ctx)
+{
+  vault_impl_t *vault = (vault_impl_t *)impl;
+  pthread_mutex_lock (&vault->mtx);
+  if (!vault->regtoken)
+  {
+    vault_fetchregtoken (vault);
+  }
+  ctx->reqhdrs = vault->regtoken;
+  pthread_mutex_unlock (&vault->mtx);
 }
 
 static void vault_fini (void *impl)
 {
   vault_impl_t *vault = (vault_impl_t *)impl;
+  pthread_mutex_destroy (&vault->mtx);
   free (vault->baseurl);
   free (vault->regurl);
   free (vault->token);
   free (vault->capath);
+  devsdk_nvpairs_free (vault->regtoken);
   free (impl);
 }
 
 void *edgex_secrets_vault_alloc ()
 {
-  return calloc (1, sizeof (vault_impl_t));
+  vault_impl_t *vault = calloc (1, sizeof (vault_impl_t));
+  pthread_mutex_init (&vault->mtx, NULL);
+  return vault;
 }
 
 const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_getregtoken, vault_fini };
