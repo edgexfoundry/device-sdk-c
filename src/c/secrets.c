@@ -23,9 +23,9 @@ typedef struct edgex_secret_provider_t
 
 static void edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub);
 
-bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, const char *svcname, iot_data_t *config)
+bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config)
 {
-  bool result = sp->fns.init (sp->impl, lc, svcname, config);
+  bool result = sp->fns.init (sp->impl, lc, sched, pool, svcname, config);
   if (result)
   {
     const char *secfile = iot_data_string_map_get_string (config, "SecretStore/SecretsFile");
@@ -55,6 +55,11 @@ static void edgex_secrets_set (edgex_secret_provider_t *sp, const char *path, co
 void edgex_secrets_getregtoken (edgex_secret_provider_t *sp, edgex_ctx *ctx)
 {
   return sp->fns.getregtoken (sp->impl, ctx);
+}
+
+void edgex_secrets_releaseregtoken (edgex_secret_provider_t *sp)
+{
+  return sp->fns.releaseregtoken (sp->impl);
 }
 
 void edgex_secrets_fini (edgex_secret_provider_t *sp)

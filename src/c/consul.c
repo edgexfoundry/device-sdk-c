@@ -170,6 +170,7 @@ static void *poll_consul (void *p)
     edgex_secrets_getregtoken (job->sp, &ctx);
     ctx.rsphdrs = &index;
     ctx.aborter = job->updatedone;
+    edgex_secrets_releaseregtoken (job->sp);
     edgex_http_get (job->lc, &ctx, job->url, edgex_http_write_cb, &err);
     if (*job->updatedone)
     {
@@ -216,6 +217,7 @@ static devsdk_nvpairs *edgex_consul_client_get_config
   edgex_secrets_getregtoken (consul->sp, &ctx);
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, servicename);
   edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
   if (err->code == 0)
   {
     result = read_pairs (consul->lc, ctx.buff, err);
@@ -307,6 +309,7 @@ static void edgex_consul_client_write_config (void *impl, const char *servicenam
 
   edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_put (consul->lc, &ctx, url, json, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
 
   json_free_serialized_string (json);
   free (ctx.buff);
@@ -357,6 +360,7 @@ static void edgex_consul_client_register_service
 
   edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_put (consul->lc, &ctx, url, json, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
 
   if (err->code)
   {
@@ -386,6 +390,7 @@ static void edgex_consul_client_deregister_service
 
   edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_put (consul->lc, &ctx, url, NULL, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
 
   if (err->code)
   {
@@ -419,6 +424,7 @@ static void edgex_consul_client_query_service
 
   edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
 
   if (err->code == 0)
   {
@@ -477,6 +483,7 @@ static bool edgex_consul_client_ping (void *impl)
 
   edgex_secrets_getregtoken (consul->sp, &ctx);
   edgex_http_get (consul->lc, &ctx, url, NULL, &err);
+  edgex_secrets_releaseregtoken (consul->sp);
   return (err.code == 0);
 }
 

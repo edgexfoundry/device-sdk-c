@@ -863,7 +863,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       return;
     }
   }
-  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->name, configmap))
+  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->scheduler, svc->thpool, svc->name, configmap))
   {
     *err = EDGEX_BAD_CONFIG;
     return;
