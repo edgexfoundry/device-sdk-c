@@ -182,9 +182,13 @@ const edgex_deviceprofile *edgex_devmap_profile
 
 static void remove_locked (edgex_devmap_t *map, edgex_device *olddev)
 {
+  edgex_map_remove (&map->devices, olddev->name);
+}
+
+static void release_profile_locked (edgex_devmap_t *map, edgex_device *olddev)
+{
   const char *key;
   bool last = true;
-  edgex_map_remove (&map->devices, olddev->name);
   edgex_map_iter iter = edgex_map_iter (map->devices);
   while ((key = edgex_map_next (&map->devices, &iter)))
   {
@@ -259,6 +263,10 @@ edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const e
       remove_locked (map, olddev);
       add_locked (map, dev);
       release = true;
+      if (strcmp (olddev->profile->name, dev->profile->name))
+      {
+        release_profile_locked (map, olddev);
+      }
     }
   }
   pthread_rwlock_unlock (&map->lock);
@@ -305,6 +313,7 @@ bool edgex_devmap_removedevice_byname (edgex_devmap_t *map, const char *name)
   {
     olddev = *od;
     remove_locked (map, olddev);
+    release_profile_locked (map, olddev);
   }
   pthread_rwlock_unlock (&map->lock);
   if (olddev)
