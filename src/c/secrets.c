@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021
+ * Copyright (c) 2021-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -23,9 +23,9 @@ typedef struct edgex_secret_provider_t
 
 static void edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub);
 
-bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_data_t *config)
+bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, const char *svcname, iot_data_t *config)
 {
-  bool result = sp->fns.init (sp->impl, lc, config);
+  bool result = sp->fns.init (sp->impl, lc, svcname, config);
   if (result)
   {
     const char *secfile = iot_data_string_map_get_string (config, "SecretStore/SecretsFile");
@@ -50,6 +50,11 @@ iot_data_t *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path)
 static void edgex_secrets_set (edgex_secret_provider_t *sp, const char *path, const iot_data_t *secrets)
 {
   sp->fns.set (sp->impl, path, secrets);
+}
+
+devsdk_nvpairs *edgex_secrets_getregtoken (edgex_secret_provider_t *sp)
+{
+  return sp->fns.getregtoken (sp->impl);
 }
 
 void edgex_secrets_fini (edgex_secret_provider_t *sp)

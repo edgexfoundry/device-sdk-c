@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021
+ * Copyright (c) 2021-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -17,11 +17,12 @@ typedef struct vault_impl_t
   iot_logger_t *lc;
   char *token;
   char *baseurl;
+  char *regurl;
   char *capath;
   bool bearer;
 } vault_impl_t;
 
-static bool vault_init (void *impl, iot_logger_t *lc, iot_data_t *config)
+static bool vault_init (void *impl, iot_logger_t *lc, const char *svcname, iot_data_t *config)
 {
   vault_impl_t *vault = (vault_impl_t *)impl;
   vault->lc = lc;
@@ -38,6 +39,16 @@ static bool vault_init (void *impl, iot_logger_t *lc, iot_data_t *config)
     path[0] == '/' ? "" : "/",
     path,
     path[strlen (path) - 1] == '/' ? "" : "/"
+  );
+  vault->regurl = malloc (URL_BUF_SIZE);
+  snprintf
+  (
+    vault->regurl, URL_BUF_SIZE,
+    "%s://%s:%u/v1/consul/creds/%s",
+    iot_data_string_map_get_string (config, "SecretStore/Protocol"),
+    iot_data_string_map_get_string (config, "SecretStore/Host"),
+    iot_data_ui16 (iot_data_string_map_get (config, "SecretStore/Port")),
+    svcname
   );
 
   const char *fname = iot_data_string_map_get_string (config, "SecretStore/TokenFile");
@@ -156,10 +167,64 @@ static void vault_set (void *impl, const char *path, const iot_data_t *secrets)
   free (ctx.buff);
 }
 
+static devsdk_nvpairs *vault_getregtoken (void *impl)
+{
+  edgex_ctx ctx;
+  devsdk_nvpairs *result = NULL;
+  devsdk_error err = EDGEX_OK;
+  vault_impl_t *vault = (vault_impl_t *)impl;
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  if (vault->capath)
+  {
+    ctx.cacerts_path = vault->capath;
+    ctx.verify_peer = 1;
+  }
+  if (vault->bearer)
+  {
+    ctx.jwt_token = vault->token;
+  }
+  else
+  {
+    ctx.reqhdrs = devsdk_nvpairs_new ("X-Vault-Token", vault->token, NULL);
+  }
+  edgex_http_get (vault->lc, &ctx, vault->regurl, edgex_http_write_cb, &err);
+  if (err.code == 0)
+  {
+    iot_data_t *reply = iot_data_from_json (ctx.buff);
+    if (reply)
+    {
+      const iot_data_t *d = iot_data_string_map_get (reply, "data");
+      if (d)
+      {
+        const iot_data_t *t = iot_data_string_map_get (d, "token");
+        if (t)
+        {
+          result = devsdk_nvpairs_new ("X-Consul-Token", iot_data_string (t), NULL);
+        }
+      }
+      iot_data_free (reply);
+    }
+    if (result == NULL)
+    {
+      iot_log_error (vault->lc, "vault: no consul token found in %s", ctx.buff);
+    }
+  }
+  else
+  {
+    iot_log_error (vault->lc, "vault: unable to retrieve consul token");
+  }
+  devsdk_nvpairs_free (ctx.reqhdrs);
+  free (ctx.buff);
+
+  return result;
+}
+
 static void vault_fini (void *impl)
 {
   vault_impl_t *vault = (vault_impl_t *)impl;
   free (vault->baseurl);
+  free (vault->regurl);
   free (vault->token);
   free (vault->capath);
   free (impl);
@@ -170,4 +235,4 @@ void *edgex_secrets_vault_alloc ()
   return calloc (1, sizeof (vault_impl_t));
 }
 
-const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_fini };
+const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_getregtoken, vault_fini };

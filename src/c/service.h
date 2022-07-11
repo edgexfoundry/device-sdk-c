@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -59,7 +59,7 @@ struct devsdk_service_t
   edgex_device_periodic_discovery_t *discovery;
   edgex_data_client_t *dataclient;
   edgex_secret_provider_t *secretstore;
-  devsdk_registry *registry;
+  devsdk_registry_t *registry;
   edgex_device_adminstate adminstate;
   uint64_t starttime;
   bool overwriteconfig;

@@ -1,137 +1,52 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  */
 
-#include "registry.h"
+#include "registry-impl.h"
 #include "consul.h"
-#include "map.h"
 #include "errorlist.h"
 #include "iot/time.h"
 
-typedef edgex_map(devsdk_registry_impl) devsdk_map_registry;
-
-typedef struct devsdk_registry
+typedef struct devsdk_registry_t
 {
-  void *location;
-  iot_logger_t *logger;
-  iot_threadpool_t *thpool;
-  devsdk_registry_impl impl;
-} devsdk_registry;
+  void *state;
+  devsdk_registry_impls fns;
+} devsdk_registry_t;
 
-static pthread_mutex_t reglock = PTHREAD_MUTEX_INITIALIZER;
-static devsdk_map_registry *regmap = NULL;
-
-static void reginit (void)
+devsdk_registry_t *devsdk_registry_get_consul ()
 {
-  pthread_mutex_lock (&reglock);
-  if (regmap == NULL)
-  {
-    devsdk_registry_impl consulimpl;
-    consulimpl.ping = edgex_consul_client_ping;
-    consulimpl.get_config = edgex_consul_client_get_config;
-    consulimpl.put_config = edgex_consul_client_write_config;
-    consulimpl.register_service = edgex_consul_client_register_service;
-    consulimpl.deregister_service = edgex_consul_client_deregister_service;
-    consulimpl.query_service = edgex_consul_client_query_service;
-    consulimpl.parser = devsdk_registry_parse_simple_url;
-    consulimpl.free_location = devsdk_registry_free_simple_url;
-    regmap = malloc (sizeof (devsdk_map_registry));
-    edgex_map_init (regmap);
-    edgex_map_set (regmap, "consul", consulimpl);
-    edgex_map_set (regmap, "consul.http", consulimpl);
-  }
-  pthread_mutex_unlock (&reglock);
+  devsdk_registry_t *result = malloc (sizeof (devsdk_registry_t));
+  result->state = devsdk_registry_consul_alloc ();
+  result->fns = devsdk_registry_consul_fns;
+  return result;
 }
 
-devsdk_registry *devsdk_registry_get_registry
-  (iot_logger_t *lc, iot_threadpool_t *tp, const char *url)
+bool devsdk_registry_init (devsdk_registry_t *reg, iot_logger_t *lc, iot_threadpool_t *thpool, edgex_secret_provider_t *sp, const char *url)
 {
-  devsdk_registry *res = NULL;
-  devsdk_registry_impl *impl;
-  char *delim = strstr (url, "://");
-  if (delim)
-  {
-    char *name = strndup (url, delim - url);
-    reginit ();
-    pthread_mutex_lock (&reglock);
-    impl = edgex_map_get (regmap, name);
-    pthread_mutex_unlock (&reglock);
-    if (impl)
-    {
-      void *loc = impl->parser (lc, delim + 3);
-      if (loc)
-      {
-        res = malloc (sizeof (devsdk_registry));
-        res->location = loc;
-        res->impl = *impl;
-        res->logger = lc;
-        res->thpool = tp;
-      }
-    }
-    else
-    {
-      iot_log_error (lc, "No registry implementation found for \"%s\"", name);
-    }
-    free (name);
-  }
-  else
-  {
-    iot_log_error (lc, "Unable to parse \"%s\" as url for registry", url);
-  }
-  return res;
+  return reg->fns.init (reg->state, lc, thpool, sp, url);
 }
 
-bool devsdk_registry_add_impl (const char *name, devsdk_registry_impl impl)
-{
-  bool res = false;
-  reginit ();
-  pthread_mutex_lock (&reglock);
-  if (edgex_map_get (regmap, name) == NULL)
-  {
-    res = true;
-    edgex_map_set (regmap, name, impl);
-  }
-  pthread_mutex_unlock (&reglock);
-  return res;
-}
-
-void devsdk_registry_free (devsdk_registry *reg)
+void devsdk_registry_free (devsdk_registry_t *reg)
 {
   if (reg)
   {
-    reg->impl.free_location (reg->location);
+    reg->fns.free (reg->state);
     free (reg);
   }
 }
 
-void devsdk_registry_fini ()
-{
-  reginit ();
-  pthread_mutex_lock (&reglock);
-  edgex_map_deinit (regmap);
-  free (regmap);
-  regmap = NULL;
-  pthread_mutex_unlock (&reglock);
-}
-
-bool devsdk_registry_ping (devsdk_registry *registry, devsdk_error *err)
-{
-  return registry->impl.ping (registry->logger, registry->location, err);
-}
-
-bool devsdk_registry_waitfor (devsdk_registry *registry, const devsdk_timeout *timeout)
+bool devsdk_registry_waitfor (devsdk_registry_t *registry, const devsdk_timeout *timeout)
 {
   while (true)
   {
     uint64_t t1, t2;
-    devsdk_error err = EDGEX_OK;
 
     t1 = iot_time_msecs ();
-    if (devsdk_registry_ping (registry, &err))
+    if (registry->fns.ping (registry->state))
     {
       return true;
     }
@@ -149,7 +64,7 @@ bool devsdk_registry_waitfor (devsdk_registry *registry, const devsdk_timeout *t
 
 devsdk_nvpairs *devsdk_registry_get_config
 (
-  devsdk_registry *registry,
+  devsdk_registry_t *registry,
   const char *servicename,
   devsdk_registry_updatefn updater,
   void *updatectx,
@@ -157,23 +72,17 @@ devsdk_nvpairs *devsdk_registry_get_config
   devsdk_error *err
 )
 {
-  return registry->impl.get_config (registry->logger, registry->thpool, registry->location, servicename, updater, updatectx, updatedone, err);
+  return registry->fns.get_config (registry->state, servicename, updater, updatectx, updatedone, err);
 }
 
-void devsdk_registry_put_config
-(
-  devsdk_registry *registry,
-  const char *servicename,
-  const iot_data_t *config,
-  devsdk_error *err
-)
+void devsdk_registry_put_config (devsdk_registry_t *registry, const char *servicename, const iot_data_t *config, devsdk_error *err)
 {
-  registry->impl.put_config (registry->logger, registry->location, servicename, config, err);
+  registry->fns.put_config (registry->state, servicename, config, err);
 }
 
 void devsdk_registry_register_service
 (
-  devsdk_registry *registry,
+  devsdk_registry_t *registry,
   const char *servicename,
   const char *hostname,
   uint16_t port,
@@ -181,26 +90,17 @@ void devsdk_registry_register_service
   devsdk_error *err
 )
 {
-  registry->impl.register_service
-  (
-    registry->logger,
-    registry->location,
-    servicename,
-    hostname,
-    port,
-    checkInterval,
-    err
-  );
+  registry->fns.register_service (registry->state, servicename, hostname, port, checkInterval, err);
 }
 
-void devsdk_registry_deregister_service (devsdk_registry *registry, const char *servicename, devsdk_error *err)
+void devsdk_registry_deregister_service (devsdk_registry_t *registry, const char *servicename, devsdk_error *err)
 {
-  registry->impl.deregister_service (registry->logger, registry->location, servicename, err);
+  registry->fns.deregister_service (registry->state, servicename, err);
 }
 
 void devsdk_registry_query_service
 (
-  devsdk_registry *registry,
+  devsdk_registry_t *registry,
   const char *servicename,
   char **hostname,
   uint16_t *port,
@@ -213,7 +113,7 @@ void devsdk_registry_query_service
   {
     t1 = iot_time_msecs ();
     *err = EDGEX_OK;
-    registry->impl.query_service (registry->logger, registry->location, servicename, hostname, port, err);
+    registry->fns.query_service (registry->state, servicename, hostname, port, err);
     if (err->code == 0)
     {
       break;
@@ -222,7 +122,6 @@ void devsdk_registry_query_service
     if (t2 > timeout->deadline - timeout->interval)
     {
       *err = EDGEX_REMOTE_SERVER_DOWN;
-      iot_log_error (registry->logger, "Service startup timeout reached");
       break;
     }
     if (timeout->interval > t2 - t1)
@@ -231,45 +130,3 @@ void devsdk_registry_query_service
     }
   }
 }
-
-void *devsdk_registry_parse_simple_url
-(
-  iot_logger_t *lc,
-  const char *location
-)
-{
-  devsdk_registry_hostport *res = NULL;
-  char *colon = strchr (location, ':');
-  if (colon && strlen (colon + 1))
-  {
-    char *end;
-    uint16_t port = strtoul (colon + 1, &end, 10);
-    if (*end == '\0')
-    {
-      res = malloc (sizeof (devsdk_registry_hostport));
-      res->port = port;
-      res->host = strndup (location, colon - location);
-    }
-    else
-    {
-      iot_log_error
-        (lc, "Unable to parse \"%s\" for port number for registry", colon + 1);
-    }
-  }
-  else
-  {
-    iot_log_error (lc, "No port number found in \"%s\".", location);
-  }
-  return res;
-}
-
-void devsdk_registry_free_simple_url
-(
-  void *location
-)
-{
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
-  free (endpoint->host);
-  free (endpoint);
-}
-

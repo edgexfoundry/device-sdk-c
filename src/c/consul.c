@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -17,12 +17,57 @@
 
 #define CONF_PREFIX "edgex/devices/2.0/"
 
-static devsdk_nvpairs *read_pairs
-(
-  iot_logger_t *lc,
-  const char *json,
-  devsdk_error *err
-)
+typedef struct consul_impl_t
+{
+  iot_logger_t *lc;
+  iot_threadpool_t *pool;
+  edgex_secret_provider_t *sp;
+  devsdk_nvpairs *token;
+  char *host;
+  uint16_t port;
+} consul_impl_t;
+
+static bool edgex_consul_client_init (void *impl, iot_logger_t *logger, iot_threadpool_t *pool, edgex_secret_provider_t *sp, const char *url)
+{
+  bool ok = false;
+  consul_impl_t *consul = (consul_impl_t *)impl;
+  consul->lc = logger;
+  consul->pool = pool;
+  consul->sp = sp;
+  consul->token = edgex_secrets_getregtoken (sp);
+  char *pos = strstr (url, "://");
+  if (pos)
+  {
+    pos += 3;
+    char *colon = strchr (pos, ':');
+    if (colon && strlen (colon + 1))
+    {
+      char *end;
+      uint16_t port = strtoul (colon + 1, &end, 10);
+      if (*end == '\0')
+      {
+        consul->port = port;
+        consul->host = strndup (pos, colon - pos);
+        ok = true;
+      }
+      else
+      {
+        iot_log_error (logger, "Unable to parse \"%s\" for port number for registry", colon + 1);
+      }
+    }
+  }
+  return ok;
+}
+
+static void edgex_consul_client_free (void *impl)
+{
+  consul_impl_t *consul = (consul_impl_t *)impl;
+  free (consul->host);
+  devsdk_nvpairs_free (consul->token);
+  free (impl);
+}
+
+static devsdk_nvpairs *read_pairs (iot_logger_t *lc, const char *json, devsdk_error *err)
 {
   const char *key;
   const char *keyindex;
@@ -92,6 +137,7 @@ static devsdk_nvpairs *read_pairs
 struct updatejob
 {
   char *url;
+  devsdk_nvpairs *token;
   iot_logger_t *lc;
   devsdk_registry_updatefn updater;
   void *updatectx;
@@ -123,6 +169,7 @@ static void *poll_consul (void *p)
     }
     free (index.value);
     index.value = NULL;
+    ctx.reqhdrs = job->token;
     ctx.rsphdrs = &index;
     ctx.aborter = job->updatedone;
     edgex_http_get (job->lc, &ctx, job->url, edgex_http_write_cb, &err);
@@ -152,11 +199,9 @@ static void *poll_consul (void *p)
   return NULL;
 }
 
-devsdk_nvpairs *edgex_consul_client_get_config
+static devsdk_nvpairs *edgex_consul_client_get_config
 (
-  iot_logger_t *lc,
-  iot_threadpool_t *thpool,
-  void *location,
+  void *impl,
   const char *servicename,
   devsdk_registry_updatefn updater,
   void *updatectx,
@@ -164,17 +209,18 @@ devsdk_nvpairs *edgex_consul_client_get_config
   devsdk_error *err
 )
 {
+  consul_impl_t *consul = (consul_impl_t *)impl;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
   devsdk_nvpairs *result = NULL;
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", endpoint->host, endpoint->port, servicename);
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+  ctx.reqhdrs = consul->token;
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, servicename);
+  edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
   if (err->code == 0)
   {
-    result = read_pairs (lc, ctx.buff, err);
+    result = read_pairs (consul->lc, ctx.buff, err);
     if (err->code)
     {
       devsdk_nvpairs_free (result);
@@ -186,12 +232,13 @@ devsdk_nvpairs *edgex_consul_client_get_config
 
   struct updatejob *job = malloc (sizeof (struct updatejob));
   job->url = malloc (URL_BUF_SIZE);
-  snprintf (job->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", endpoint->host, endpoint->port, servicename);
-  job->lc = lc;
+  snprintf (job->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, servicename);
+  job->lc = consul->lc;
   job->updater = updater;
   job->updatectx = updatectx;
   job->updatedone = updatedone;
-  iot_threadpool_add_work (thpool, poll_consul, job, -1);
+  job->token = consul->token;
+  iot_threadpool_add_work (consul->pool, poll_consul, job, -1);
 
   return result;
 }
@@ -206,24 +253,17 @@ static char *value_to_b64 (const char *value)
   return result;
 }
 
-void edgex_consul_client_write_config
-(
-  iot_logger_t *lc,
-  void *location,
-  const char *servicename,
-  const iot_data_t *config,
-  devsdk_error *err
-)
+static void edgex_consul_client_write_config (void *impl, const char *servicename, const iot_data_t *config, devsdk_error *err)
 {
+  consul_impl_t *consul = (consul_impl_t *)impl;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/txn",
-    endpoint->host, endpoint->port
+    consul->host, consul->port
   );
 
   JSON_Value *jresult = json_value_init_array ();
@@ -267,16 +307,16 @@ void edgex_consul_client_write_config
   char *json = json_serialize_to_string (jresult);
   json_value_free (jresult);
 
-  edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
+  ctx.reqhdrs = consul->token;
+  edgex_http_put (consul->lc, &ctx, url, json, edgex_http_write_cb, err);
 
   json_free_serialized_string (json);
   free (ctx.buff);
 }
 
-void edgex_consul_client_register_service
+static void edgex_consul_client_register_service
 (
-  iot_logger_t *lc,
-  void *location,
+  void *impl,
   const char *servicename,
   const char *host,
   uint16_t port,
@@ -284,15 +324,15 @@ void edgex_consul_client_register_service
   devsdk_error *err
 )
 {
+  consul_impl_t *consul = (consul_impl_t *)impl;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/register",
-    endpoint->host, endpoint->port
+    consul->host, consul->port
   );
 
   JSON_Value *params = json_value_init_object ();
@@ -317,69 +357,70 @@ void edgex_consul_client_register_service
   char *json = json_serialize_to_string (params);
   json_value_free (params);
 
-  edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
+  ctx.reqhdrs = consul->token;
+  edgex_http_put (consul->lc, &ctx, url, json, edgex_http_write_cb, err);
 
   if (err->code)
   {
-    iot_log_error (lc, "Register service failed: %s", ctx.buff);
+    iot_log_error (consul->lc, "Register service failed: %s", ctx.buff);
   }
   json_free_serialized_string (json);
   free (ctx.buff);
 }
 
-void edgex_consul_client_deregister_service
+static void edgex_consul_client_deregister_service
 (
-  iot_logger_t *lc,
-  void *location,
+  void *impl,
   const char *servicename,
   devsdk_error *err
 )
 {
+  consul_impl_t *consul = (consul_impl_t *)impl;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
     url, URL_BUF_SIZE - 1, "http://%s:%u/v1/agent/service/deregister/%s",
-    endpoint->host, endpoint->port, servicename
+    consul->host, consul->port, servicename
   );
 
-  edgex_http_put (lc, &ctx, url, NULL, edgex_http_write_cb, err);
+  ctx.reqhdrs = consul->token;
+  edgex_http_put (consul->lc, &ctx, url, NULL, edgex_http_write_cb, err);
 
   if (err->code)
   {
-    iot_log_error (lc, "Deregister service failed: %s", ctx.buff);
+    iot_log_error (consul->lc, "Deregister service failed: %s", ctx.buff);
   }
   free (ctx.buff);
 }
 
-void edgex_consul_client_query_service
+static void edgex_consul_client_query_service
 (
-  iot_logger_t *lc,
-  void *location,
+  void *impl,
   const char *servicename,
   char **host,
   uint16_t *port,
   devsdk_error *err
 )
 {
+  consul_impl_t *consul = (consul_impl_t *)impl;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
   (
     url, URL_BUF_SIZE - 1,
     "http://%s:%u/v1/catalog/service/%s",
-    endpoint->host, endpoint->port, servicename
+    consul->host, consul->port, servicename
   );
 
   *err = EDGEX_OK;
 
-  edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+  ctx.reqhdrs = consul->token;
+  edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
 
   if (err->code == 0)
   {
@@ -392,7 +433,7 @@ void edgex_consul_client_query_service
       if (nsvcs != 1)
       {
         iot_log_warn
-          (lc, "Multiple instances of %s found, using first.", servicename);
+          (consul->lc, "Multiple instances of %s found, using first.", servicename);
       }
       JSON_Object *obj = json_array_get_object (svcs, 0);
       const char *name = json_object_get_string (obj, "ServiceAddress");
@@ -403,13 +444,13 @@ void edgex_consul_client_query_service
       }
       else
       {
-        iot_log_error (lc, "consul: no ServiceAddress for %s", servicename);
+        iot_log_error (consul->lc, "consul: no ServiceAddress for %s", servicename);
         *err = EDGEX_BAD_CONFIG;
       }
     }
     else
     {
-      iot_log_error (lc, "consul: no service named %s", servicename);
+      iot_log_error (consul->lc, "consul: no service named %s", servicename);
       *err = EDGEX_BAD_CONFIG;
     }
 
@@ -419,16 +460,12 @@ void edgex_consul_client_query_service
   free (ctx.buff);
 }
 
-bool edgex_consul_client_ping
-(
-  iot_logger_t *lc,
-  void *location,
-  devsdk_error *err
-)
+static bool edgex_consul_client_ping (void *impl)
 {
+  consul_impl_t *consul = (consul_impl_t *)impl;
+  devsdk_error err = EDGEX_OK;
   edgex_ctx ctx;
   char url[URL_BUF_SIZE];
-  devsdk_registry_hostport *endpoint = (devsdk_registry_hostport *)location;
 
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf
@@ -436,10 +473,28 @@ bool edgex_consul_client_ping
     url,
     URL_BUF_SIZE - 1,
     "http://%s:%u/v1/status/leader",
-    endpoint->host,
-    endpoint->port
+    consul->host,
+    consul->port
   );
 
-  edgex_http_get (lc, &ctx, url, NULL, err);
-  return (err->code == 0);
+  ctx.reqhdrs = consul->token;
+  edgex_http_get (consul->lc, &ctx, url, NULL, &err);
+  return (err.code == 0);
 }
+
+void *devsdk_registry_consul_alloc ()
+{
+  return calloc (1, sizeof (consul_impl_t));
+}
+
+const devsdk_registry_impls devsdk_registry_consul_fns =
+{
+  edgex_consul_client_init,
+  edgex_consul_client_ping,
+  edgex_consul_client_get_config,
+  edgex_consul_client_write_config,
+  edgex_consul_client_register_service,
+  edgex_consul_client_deregister_service,
+  edgex_consul_client_query_service,
+  edgex_consul_client_free
+};
