@@ -127,7 +127,6 @@ static char *edgex_value_tostring (const iot_data_t *value)
 Reading:
   apiVersion: "v2"
   id: uuid (sdk to generate)
-  created: Timestamp (filled in downstream)
   origin: Timestamp (filled in by the implementation or the SDK)
   deviceName: String (name of the Device)
   resourceName: String (name of the DeviceResource)
@@ -145,8 +144,8 @@ or
 
 Event:
   apiVersion: "v2"
+  statusCode: int
   id: uuid (sdk to generate one)
-  created: Timestamp (filled in downstream)
   origin: Timestamp (filled in by the SDK)
   deviceName: String (name of the Device)
   profileName: String (name of the Profile)
@@ -305,11 +304,11 @@ edgex_event_cooked *edgex_data_process_event
     cbor_map_add (cevent, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("readings")), .value = cbor_move (crdgs) });
 
-    cbor_item_t *cwrapper = cbor_new_definite_map (2);
+    cbor_item_t *cwrapper = cbor_new_definite_map (3);
     cbor_map_add (cwrapper, (struct cbor_pair)
       { .key = cbor_move (cbor_build_string ("apiVersion")), .value = cbor_move (cbor_build_string (EDGEX_API_VERSION)) });
-    cbor_map_add (cwrapper, (struct cbor_pair)
-     { .key = cbor_move (cbor_build_string ("Event")), .value = cbor_move (cevent) });
+    cbor_map_add (cwrapper, (struct cbor_pair) { .key = cbor_move (cbor_build_string ("event")), .value = cbor_move (cevent) });
+    cbor_map_add (cwrapper, (struct cbor_pair) { .key = cbor_move (cbor_build_string ("statusCode")), .value = cbor_move (cbor_build_uint32 (MHD_HTTP_OK)) });
 
     result->encoding = CBOR;
     result->value.cbor.length = cbor_serialize_alloc (cwrapper, &result->value.cbor.data, &bsize);
@@ -366,7 +365,8 @@ edgex_event_cooked *edgex_data_process_event
 
     iot_data_t *reqmap = iot_data_alloc_map (IOT_DATA_STRING);
     iot_data_string_map_add (reqmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
-    iot_data_string_map_add (reqmap, "Event", evmap);
+    iot_data_string_map_add (reqmap, "event", evmap);
+    iot_data_string_map_add (reqmap, "statusCode", iot_data_alloc_ui32 (MHD_HTTP_OK));
     result->encoding = JSON;
     result->value.json = iot_data_to_json (reqmap);
     iot_data_free (reqmap);

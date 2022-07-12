@@ -22,6 +22,12 @@
 
 #define EDGEX_ERRBUFSZ 1024
 
+#if MHD_VERSION > 0x00097001
+#define EDGEX_MHD_RESULT enum MHD_Result
+#else
+#define EDGEX_MHD_RESULT int
+#endif
+
 typedef struct handler_list
 {
   devsdk_strings *url;
@@ -99,7 +105,7 @@ static devsdk_strings *processUrl (const char *url)
   return result;
 }
 
-static int queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
+static EDGEX_MHD_RESULT queryIterator (void *p, enum MHD_ValueKind kind, const char *key, const char *value)
 {
   if (strncmp (key, DS_PREFIX, strlen (DS_PREFIX)) == 0)
   {
@@ -248,7 +254,7 @@ static void set_header_if_nonempty (struct MHD_Response *response, const char *h
   }
 }
 
-static int http_handler
+static EDGEX_MHD_RESULT http_handler
 (
   void *this,
   struct MHD_Connection *conn,
