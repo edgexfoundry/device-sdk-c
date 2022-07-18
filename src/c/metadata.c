@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -258,6 +258,39 @@ edgex_device *edgex_metadata_client_get_devices
   return result;
 }
 
+static void edgex_metadata_process_device_response (iot_logger_t *lc, devsdk_error *err, const char *buff, const char *devname, char **id_ret)
+{
+  if (err->code == 0)
+  {
+    iot_data_t *response = iot_data_from_json (buff);
+    if (response)
+    {
+      const iot_data_t *entry = iot_data_vector_get (response, 0);
+      if (entry)
+      {
+        const char *id = iot_data_string_map_get_string (entry, "id");
+        if (id)
+        {
+          iot_log_info (lc, "Device %s created with id %s", devname, id);
+          if (id_ret)
+          {
+            *id_ret = strdup (id);
+          }
+        }
+        else
+        {
+          iot_log_error (lc, "Device %s create failed: %s", devname, iot_data_string_map_get_string (entry, "message"));
+        }
+      }
+      iot_data_free (response);
+    }
+  }
+  else
+  {
+    iot_log_info (lc, "Device %s create failed: %s: %s", devname, err->reason, buff);
+  }
+}
+
 char *edgex_metadata_client_add_device
 (
   iot_logger_t *lc,
@@ -302,20 +335,7 @@ char *edgex_metadata_client_add_device
   dev->autos = autos;
   json = edgex_createdevicereq_write (dev);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  if (err->code == 0)
-  {
-    result = edgex_id_from_response (ctx.buff);
-  }
-  else
-  {
-    iot_log_info
-    (
-      lc,
-      "edgex_metadata_client_add_device: %s: %s",
-      err->reason,
-      ctx.buff
-    );
-  }
+  edgex_metadata_process_device_response (lc, err, ctx.buff, name, &result);
   free (ctx.buff);
   free (dev->profile);
   json_free_serialized_string (json);
@@ -377,16 +397,7 @@ void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endp
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
-  if (err->code == 0)
-  {
-    char *id = edgex_id_from_response (ctx.buff);
-    iot_log_info (lc, "Device %s created with id %s", json_object_get_string (jobj, "name"), id);
-    free (id);
-  }
-  else
-  {
-    iot_log_info (lc, "edgex_metadata_client_add_device_jobj: %s: %s", err->reason, ctx.buff);
-  }
+  edgex_metadata_process_device_response (lc, err, ctx.buff, json_object_get_string (jobj, "name"), NULL);
   json_value_free (reqval);
   free (ctx.buff);
   json_free_serialized_string (json);

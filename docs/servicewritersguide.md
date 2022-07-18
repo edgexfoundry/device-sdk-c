@@ -71,3 +71,5 @@ An implementation may also implement the ae_starter and ae_stopper callbacks, in
 If the Registry is in use, then dynamic updates to configuration are possible. If the reconfiguration callback is registered, then when an element of the driver-specific configuration is changed, this callback will be invoked with the new configuration settings passed through.
 
 An implementation may also implement the discover callback. When this is called, the implementation should perform a scan for reachable devices, and register them using the devsdk_add_discovered_devices function.
+
+An implementation may also implement the validate_address callback. This is called when a device is added to the system. The function should check that the protocol properties given for a device are valid, and if not, return an exception (in which case the device addition will be aborted).

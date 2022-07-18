@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021
+ * Copyright (c) 2020-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -189,6 +189,11 @@ void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoe
 {
   cb->ae_starter = ae_starter;
   cb->ae_stopper = ae_stopper;
+}
+
+void devsdk_callbacks_set_validate_addr (devsdk_callbacks *cb, devsdk_validate_address validate_addr)
+{
+  cb->validate_addr = validate_addr;
 }
 
 struct sfx_struct

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -59,8 +59,6 @@ void edgex_pingresponse_write (const edgex_pingresponse *pr, devsdk_http_reply *
 void edgex_configresponse_write (const edgex_configresponse *cr, devsdk_http_reply *reply);
 void edgex_configresponse_free (edgex_configresponse *cr);
 void edgex_metricsresponse_write (const edgex_metricsresponse *mr, devsdk_http_reply *reply);
-
-char *edgex_id_from_response (const char *response);
 
 char *edgex_createDSreq_write (const edgex_deviceservice *ds);
 char *edgex_updateDSreq_write (const char *name, const char *baseaddr);

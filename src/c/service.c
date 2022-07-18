@@ -13,6 +13,7 @@
 #include "discovery.h"
 #include "callback2.h"
 #include "metrics.h"
+#include "validate.h"
 #include "errorlist.h"
 #include "rest-server.h"
 #include "profiles.h"
@@ -686,6 +687,8 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   }
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
+
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_VALIDATE_ADDR, DevSDK_Post, svc, edgex_device_handler_validate_addr);
 
   /* Load Devices from files and register in metadata */
 
