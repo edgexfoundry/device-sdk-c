@@ -7,6 +7,7 @@
  */
 
 #include "secrets-insecure.h"
+#include "rest.h"
 
 #define SEC_PREFIX "Writable/InsecureSecrets/"
 #define SEC_PREFIXLEN (sizeof (SEC_PREFIX) - 1)
@@ -56,7 +57,7 @@ static iot_data_t *insecure_parse_config (iot_data_t *config)
   return result;
 }
 
-static bool insecure_init (void *impl, iot_logger_t *lc, const char *svcname, iot_data_t *config)
+static bool insecure_init (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config)
 {
   insecure_impl_t *insec = (insecure_impl_t *)impl;
   insec->lc = lc;
@@ -93,9 +94,12 @@ static void insecure_set (void *impl, const char *path, const iot_data_t *secret
   iot_log_error (insec->lc, "Storing secrets is not supported when running in insecure mode");
 }
 
-static devsdk_nvpairs *insecure_getregtoken (void *impl)
+static void insecure_getregtoken (void *impl, edgex_ctx *ctx)
 {
-  return NULL;
+}
+
+static void insecure_releaseregtoken (void *impl)
+{
 }
 
 static void insecure_fini (void *impl)
@@ -111,4 +115,4 @@ void *edgex_secrets_insecure_alloc ()
   return calloc (1, sizeof (insecure_impl_t));
 }
 
-const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_getregtoken, insecure_fini };
+const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_getregtoken, insecure_releaseregtoken, insecure_fini };
