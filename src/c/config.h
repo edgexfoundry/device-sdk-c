@@ -46,7 +46,7 @@ typedef struct edgex_device_deviceinfo
   atomic_bool discovery_enabled;
   _Atomic(uint32_t) discovery_interval;
   _Atomic(uint32_t) maxcmdops;
-  _Atomic(uint32_t) maxcmdresultlen;
+  _Atomic(uint32_t) maxeventsize;
   const char *profilesdir;
   const char *devicesdir;
   atomic_bool updatelastconnected;

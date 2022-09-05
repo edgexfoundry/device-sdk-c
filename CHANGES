@@ -1,5 +1,9 @@
 This is the C SDK for EdgeX device services.
 
+Changes for 2.3.0 "Levski":
+
+- Implement MaxEventSize configuration
+
 Changes for 2.2.0 "Kamakura":
 
 - Implement ProtocolProperties validation

@@ -3,7 +3,7 @@
   [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
-    MaxCmdResultLen = 256
+    MaxEventSize = 1
   [Writable.Driver]
     TestParam2 = "World"
     TestParam3 = "Goodbye"

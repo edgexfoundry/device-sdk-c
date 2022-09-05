@@ -60,7 +60,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, DYN_PREFIX "Device/Discovery/Interval", iot_data_alloc_ui32 (0));
   iot_data_string_map_add (result, DYN_PREFIX "Device/UpdateLastConnected", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, DYN_PREFIX "Device/MaxCmdOps", iot_data_alloc_ui32 (0));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/MaxCmdResultLen", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, DYN_PREFIX "Device/MaxEventSize", iot_data_alloc_ui32 (0));
 
   iot_data_string_map_add (result, "Service/Host", iot_data_alloc_string (utsbuffer.nodename, IOT_DATA_COPY));
   iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (59999));
@@ -557,7 +557,7 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
   config->device.discovery_enabled = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Device/Discovery/Enabled"));
   config->device.discovery_interval = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/Discovery/Interval"));
   config->device.maxcmdops = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxCmdOps"));
-  config->device.maxcmdresultlen = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxCmdResultLen"));
+  config->device.maxeventsize = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxEventSize"));
   config->device.profilesdir = iot_data_string_map_get_string (map, "Device/ProfilesDir");
   config->device.devicesdir = iot_data_string_map_get_string (map, "Device/DevicesDir");
   config->device.updatelastconnected = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Device/UpdateLastConnected"));
@@ -715,8 +715,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_boolean
     (dobj, "DataTransform", svc->config.device.datatransform);
   json_object_set_uint (dobj, "MaxCmdOps", svc->config.device.maxcmdops);
-  json_object_set_uint
-    (dobj, "MaxCmdResultLen", svc->config.device.maxcmdresultlen);
+  json_object_set_uint (dobj, "MaxEventSize", svc->config.device.maxeventsize);
   json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
   json_object_set_string (dobj, "DevicesDir", svc->config.device.devicesdir);
   json_object_set_boolean

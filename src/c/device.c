@@ -690,6 +690,12 @@ static edgex_event_cooked *edgex_device_runget2
         {
           edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
         }
+        if (svc->config.device.maxeventsize && edgex_event_cooked_size (result) > svc->config.device.maxeventsize * 1024)
+        {
+          edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (result) / 1024);
+          edgex_event_cooked_free (result);
+          result = NULL;
+        }
       }
       else
       {
@@ -755,17 +761,17 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
       {
         edgex_baseresponse br;
         bool pushv = false;
-	bool retv = true;
-	if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_PUSH) &&
-	    (strcmp(iot_data_string_map_get_string(req->qparams, DS_PUSH), "yes") == 0))
-	  {
-	    pushv = true;
-	  }
-	if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_RETURN) &&
-	    (strcmp(iot_data_string_map_get_string(req->qparams, DS_RETURN), "no") == 0))
-	  {
-	    retv = false;
-	  }
+        bool retv = true;
+        if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_PUSH) &&
+            (strcmp(iot_data_string_map_get_string(req->qparams, DS_PUSH), "yes") == 0))
+        {
+          pushv = true;
+        }
+        if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_RETURN) &&
+            (strcmp(iot_data_string_map_get_string(req->qparams, DS_RETURN), "no") == 0))
+        {
+          retv = false;
+        }
 
         if (pushv)
         {
