@@ -3,7 +3,6 @@
   [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
-    MaxCmdResultLen = 256
 
 [Service]
   Port = 59999

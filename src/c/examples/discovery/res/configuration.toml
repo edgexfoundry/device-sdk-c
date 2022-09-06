@@ -3,7 +3,6 @@
   [Writable.Device]
     DataTransform = true
     MaxCmdOps = 128
-    MaxCmdResultLen = 256
     [Writable.Device.Discovery]
       Enabled = true
       Interval = 10
