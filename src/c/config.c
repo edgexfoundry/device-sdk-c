@@ -84,7 +84,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
   iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
-  edgex_mqtt_config_defaults (result);
+  edgex_mqtt_config_defaults (result, svcname);
   // NB redis-streams uses a subset of the mqtt options
 
   iot_data_string_map_add (result, "SecretStore/Type", iot_data_alloc_string ("vault", IOT_DATA_REF));
