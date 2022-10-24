@@ -13,7 +13,9 @@
 #include "iot/time.h"
 #include <MQTTAsync.h>
 
+#define DEFAULTPUBTOPIC "edgex/events/device"
 #define DEFAULTREQTOPIC "edgex/device/command/request/%s/#"
+#define DEFAULTRESPTOPIC "edgex/device/command/response"
 
 void edgex_mqtt_config_defaults (iot_data_t *allconf, const char *svcname)
 {
@@ -23,7 +25,7 @@ void edgex_mqtt_config_defaults (iot_data_t *allconf, const char *svcname)
   iot_data_string_map_add (allconf, EX_MQ_PROTOCOL, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_HOST, iot_data_alloc_string ("localhost", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_PORT, iot_data_alloc_ui16 (0));
-  iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string ("edgex/events/device", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string (DEFAULTPUBTOPIC, IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_AUTHMODE, iot_data_alloc_string ("none", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_SECRETNAME, iot_data_alloc_string ("", IOT_DATA_REF));
 
@@ -36,7 +38,7 @@ void edgex_mqtt_config_defaults (iot_data_t *allconf, const char *svcname)
   iot_data_string_map_add (allconf, EX_MQ_SKIPVERIFY, iot_data_alloc_bool (false));
 
   iot_data_string_map_add (allconf, EX_MQ_TOPIC_CMDREQ, iot_data_alloc_string (reqt, IOT_DATA_TAKE));
-  iot_data_string_map_add (allconf, EX_MQ_TOPIC_CMDRESP, iot_data_alloc_string ("edgex/device/command/response", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_TOPIC_CMDRESP, iot_data_alloc_string (DEFAULTRESPTOPIC, IOT_DATA_REF));
 }
 
 JSON_Value *edgex_mqtt_config_json (const iot_data_t *allconf)
