@@ -21,9 +21,10 @@ typedef struct edgex_secret_provider_t
   edgex_secret_impls fns;
 } edgex_secret_provider_t;
 
-static void edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub);
+static uint64_t edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub);
 
-bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config)
+bool edgex_secrets_init
+  (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m)
 {
   bool result = sp->fns.init (sp->impl, lc, sched, pool, svcname, config);
   if (result)
@@ -31,7 +32,8 @@ bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_sche
     const char *secfile = iot_data_string_map_get_string (config, "SecretStore/SecretsFile");
     if (strlen (secfile))
     {
-      edgex_secrets_from_file (sp, secfile, !iot_data_string_map_get_bool (config, "SecretStore/DisableScrubSecretsFile", false));
+      uint64_t count = edgex_secrets_from_file (sp, secfile, !iot_data_string_map_get_bool (config, "SecretStore/DisableScrubSecretsFile", false));
+      atomic_fetch_add (&m->secsto, count);
     }
   }
   return result;
@@ -118,6 +120,7 @@ void edgex_device_handler_secret (void *ctx, const devsdk_http_request *req, dev
   {
     iot_data_t *secrets = edgex_secrets_process_secretdata (iot_data_string_map_get (data, "secretData"));
     edgex_secrets_set (svc->secretstore, iot_data_string_map_get_string (data, "path"), secrets);
+    atomic_fetch_add (&svc->metrics.secsto, 1);
     iot_data_free (secrets);
     iot_data_free (data);
     edgex_baseresponse_populate (&br, "v2", MHD_HTTP_CREATED, "Secrets populated successfully");
@@ -130,8 +133,9 @@ void edgex_device_handler_secret (void *ctx, const devsdk_http_request *req, dev
   edgex_baseresponse_write (&br, reply);
 }
 
-static void edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub)
+static uint64_t edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub)
 {
+  uint64_t result = 0;
   char *json = iot_file_read (filename);
   iot_data_t *src = iot_data_from_json (json);
   if (iot_data_type (src) == IOT_DATA_MAP)
@@ -150,6 +154,7 @@ static void edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *fi
         }
         iot_data_t *secrets = edgex_secrets_process_secretdata (iot_data_string_map_get (element, "secretData"));
         edgex_secrets_set (sp, iot_data_string_map_get_string (element, "path"), secrets);
+        result++;
         iot_data_free (secrets);
         iot_data_string_map_add ((iot_data_t *)element, "imported", iot_data_alloc_bool (true));
         if (scrub)
@@ -164,4 +169,5 @@ static void edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *fi
   }
   iot_data_free (src);
   free (json);
+  return result;
 }

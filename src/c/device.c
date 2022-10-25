@@ -708,6 +708,7 @@ static edgex_event_cooked *edgex_device_runget2
       edgex_error_response
         (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on GET: ", dev->name, e ? iot_data_to_json (e) : "(unknown)");
     }
+    atomic_fetch_add (&svc->metrics.rcexe, 1);
   }
   else
   {
@@ -778,12 +779,12 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
           if (retv)
           {
             edgex_event_cooked_add_ref (event);
-            edgex_data_client_add_event_now (svc->dataclient, event);
+            edgex_data_client_add_event_now (svc->dataclient, event, &svc->metrics);
             edgex_event_cooked_write (event, reply);
           }
           else
           {
-            edgex_data_client_add_event (svc->dataclient, event);
+            edgex_data_client_add_event (svc->dataclient, event, &svc->metrics);
             edgex_baseresponse_populate (&br, "v2", MHD_HTTP_OK, "Event generated successfully");
             edgex_baseresponse_write (&br, reply);
           }

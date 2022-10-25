@@ -50,6 +50,7 @@ edgex_data_client_t *edgex_data_client_new_rest (const edgex_device_service_endp
   result->queue = queue;
   result->pf = edc_rest_postfn;
   result->ff = edc_rest_freefn;
+  result->mf = NULL;
   char *url = malloc (URL_BUF_SIZE);
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/event/", e->host, e->port);
   result->address = url;

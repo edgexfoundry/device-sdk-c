@@ -41,6 +41,7 @@ typedef struct edc_redstr_conninfo
   redisContext *ctx_rd;
   char *topicbase;
   char *pubsub_topicbase;
+  char *metric_topicbase;
   pthread_mutex_t mtx;
   pthread_t thread;
   ssize_t offset;
@@ -54,6 +55,7 @@ static void edc_redstr_freefn (iot_logger_t *lc, void *address)
   redisFree (cinfo->ctx_rd);
   free (cinfo->topicbase);
   free (cinfo->pubsub_topicbase);
+  free (cinfo->metric_topicbase);
   pthread_mutex_destroy (&cinfo->mtx);
   if (cinfo->running)
   {
@@ -97,6 +99,19 @@ static void edc_redstr_send (edc_redstr_conninfo *cinfo, const char *topic, cons
   freeReplyObject (reply);
   pthread_mutex_unlock (&cinfo->mtx);
   free (json);
+}
+
+static void edc_redstr_pubmetric (void *address, const char *mname, const iot_data_t *envelope)
+{
+  edc_redstr_conninfo *cinfo = (edc_redstr_conninfo *)address;
+
+  char *topic = malloc (strlen (cinfo->metric_topicbase) + strlen (mname) + 1);
+  strcpy (topic, cinfo->metric_topicbase);
+  strcat (topic, mname);
+
+  edc_redstr_send (cinfo, topic, envelope);
+
+  free (topic);
 }
 
 static char *edc_redstr_b64 (devsdk_http_data src)
@@ -314,6 +329,7 @@ edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const 
   edgex_data_client_t *result = NULL;
   const char *cmdtopic;
   const char *reptopic;
+  const char *mettopic;
   edc_redstr_conninfo *cinfo = calloc (1, sizeof (edc_redstr_conninfo));
   pthread_mutex_init (&cinfo->mtx, NULL);
 
@@ -386,8 +402,12 @@ edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const 
   cinfo->topicbase = strdup (iot_data_string_map_get_string (allconf, EX_MQ_TOPIC));
   cinfo->pubsub_topicbase = malloc (strlen (reptopic) + strlen (svc->name) + 2);
   sprintf (cinfo->pubsub_topicbase, "%s.%s", reptopic, svc->name);
+  mettopic = svc->config.metrics.topic;
+  cinfo->metric_topicbase = malloc (strlen (mettopic) + strlen (svc->name) + 3);
+  sprintf (cinfo->metric_topicbase, "%s.%s.", mettopic, svc->name);
   edc_redstr_remapslash (cinfo->topicbase);
   edc_redstr_remapslash (cinfo->pubsub_topicbase);
+  edc_redstr_remapslash (cinfo->metric_topicbase);
   cinfo->offset = strlen (cinfo->pubsub_topicbase) - strlen (cmdtopic) + sizeof ("/#");
 
   cinfo->svc = svc;
@@ -405,6 +425,7 @@ edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const 
   result->queue = queue;
   result->pf = edc_redstr_postfn;
   result->ff = edc_redstr_freefn;
+  result->mf = edc_redstr_pubmetric;
   result->address = cinfo;
   return result;
 }

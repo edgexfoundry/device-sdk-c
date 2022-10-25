@@ -25,11 +25,19 @@ typedef struct edc_postparams
 {
   edgex_data_client_t *client;
   edgex_event_cooked *event;
+  devsdk_metrics_t *metrics;
 } edc_postparams;
+
+static void edc_update_metrics (devsdk_metrics_t *metrics, const edgex_event_cooked *event)
+{
+  atomic_fetch_add (&metrics->esent, 1);
+  atomic_fetch_add (&metrics->rsent, event->nrdgs);
+}
 
 static void *edc_postjob (void *p)
 {
   edc_postparams *pp = (edc_postparams *)p;
+  edc_update_metrics (pp->metrics, pp->event);
   pp->client->pf (pp->client->lc, pp->client->address, pp->event);
   free (pp);
   return NULL;
@@ -199,6 +207,7 @@ edgex_event_cooked *edgex_data_process_event
   eventId = edgex_device_genuuid ();
   result = malloc (sizeof (edgex_event_cooked));
   atomic_store (&result->refs, 1);
+  result->nrdgs = commandinfo->nreqs;
 
   result->path = malloc (strlen (commandinfo->profile->name) + strlen (device_name) + strlen (commandinfo->name) + 3);
   strcpy (result->path, commandinfo->profile->name);
@@ -375,17 +384,79 @@ edgex_event_cooked *edgex_data_process_event
   return result;
 }
 
-void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *ev)
+void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *ev, devsdk_metrics_t *metrics)
 {
   edc_postparams *pp = malloc (sizeof (edc_postparams));
   pp->client = client;
   pp->event = ev;
+  pp->metrics = metrics;
   iot_threadpool_add_work (client->queue, edc_postjob, pp, -1);
 }
 
-void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *ev)
+void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *ev, devsdk_metrics_t *metrics)
 {
+  edc_update_metrics (metrics, ev);
   client->pf (client->lc, client->address, ev);
+}
+
+static char *edc_b64 (iot_data_t *src)
+{
+  size_t encsz;
+  char *result;
+  char *json = iot_data_to_json (src);
+  iot_data_free (src);
+  size_t sz = strlen (json) + 1;
+
+  encsz = iot_b64_encodesize (sz);
+  result = malloc (encsz);
+  iot_b64_encode (json, sz, result, encsz);
+  free (json);
+  return result;
+}
+
+static void edc_publish_metric (edgex_data_client_t *client, const char *mname, uint64_t val)
+{
+  iot_data_t *field;
+  iot_data_t *fields;
+  iot_data_t *metric;
+  iot_data_t *envelope;
+
+  field = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (field, "name", iot_data_alloc_string ("counter-count", IOT_DATA_REF));
+  iot_data_string_map_add (field, "value", iot_data_alloc_ui64 (val));
+  fields = iot_data_alloc_vector (1);
+  iot_data_vector_add (fields, 0, field);
+  metric = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (metric, "apiVersion", iot_data_alloc_string ("v2", IOT_DATA_REF));
+  iot_data_string_map_add (metric, "name", iot_data_alloc_string (mname, IOT_DATA_REF));
+  iot_data_string_map_add (metric, "fields", fields);
+  iot_data_string_map_add (metric, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
+
+  envelope = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (envelope, "CorrelationID", iot_data_alloc_string (edgex_device_get_crlid (), IOT_DATA_REF));
+  iot_data_string_map_add (envelope, "apiVersion", iot_data_alloc_string ("v2", IOT_DATA_REF));
+  iot_data_string_map_add (envelope, "ErrorCode", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (envelope, "ContentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
+  iot_data_string_map_add (envelope, "Payload", iot_data_alloc_string (edc_b64 (metric), IOT_DATA_TAKE));
+
+  client->mf (client->address, mname, envelope);
+
+  iot_data_free (envelope);
+}
+
+void edgex_data_client_publish_metrics (edgex_data_client_t *client, const devsdk_metrics_t *metrics, const edgex_device_metricinfo *cfg)
+{
+  if (client->mf)
+  {
+    iot_log_debug (client->lc, "Publishing metrics");
+    edgex_device_alloc_crlid (NULL);
+    if (cfg->flags & EX_METRIC_EVSENT) edc_publish_metric (client, "EventsSent", atomic_load (&metrics->esent));
+    if (cfg->flags & EX_METRIC_RDGSENT) edc_publish_metric (client, "ReadingsSent", atomic_load (&metrics->rsent));
+    if (cfg->flags & EX_METRIC_RDCMDS) edc_publish_metric (client, "ReadCommandsExecuted", atomic_load (&metrics->rcexe));
+    if (cfg->flags & EX_METRIC_SECREQ) edc_publish_metric (client, "SecuritySecretsRequested", atomic_load (&metrics->secrq));
+    if (cfg->flags & EX_METRIC_SECSTO) edc_publish_metric (client, "SecuritySecretsStored", atomic_load (&metrics->secsto));
+    edgex_device_free_crlid ();
+  }
 }
 
 void edgex_data_client_free (edgex_data_client_t *client)

@@ -10,6 +10,8 @@
 #define _EDGEX_DATA_H_ 1
 
 #include "devsdk/devsdk.h"
+#include "metrics.h"
+#include "config.h"
 #include "parson.h"
 #include "cmdinfo.h"
 #include "rest-server.h"
@@ -38,6 +40,7 @@ typedef enum { JSON, CBOR} edgex_event_encoding;
 typedef struct edgex_event_cooked
 {
   atomic_uint_fast32_t refs;
+  unsigned nrdgs;
   char *path;
   edgex_event_encoding encoding;
   union
@@ -66,6 +69,7 @@ edgex_event_cooked *edgex_data_process_event
 
 typedef void (*edc_freefn) (iot_logger_t *lc, void *address);
 typedef void (*edc_postfn) (iot_logger_t *lc, void *address, edgex_event_cooked *event);
+typedef void (*edc_metfn) (void *address, const char *mname, const iot_data_t *envelope);
 
 typedef struct edgex_data_client_t
 {
@@ -74,6 +78,7 @@ typedef struct edgex_data_client_t
   iot_threadpool_t *queue;
   edc_postfn pf;
   edc_freefn ff;
+  edc_metfn mf;
 } edgex_data_client_t;
 
 typedef struct edgex_device_service_endpoint edgex_device_service_endpoint;
@@ -82,9 +87,11 @@ edgex_data_client_t *edgex_data_client_new_rest (const edgex_device_service_endp
 
 void edgex_data_client_free (edgex_data_client_t *client);
 
-void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *eventval);
+void edgex_data_client_add_event (edgex_data_client_t *client, edgex_event_cooked *eventval, devsdk_metrics_t *metrics);
 
-void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *eventval);
+void edgex_data_client_add_event_now (edgex_data_client_t *client, edgex_event_cooked *eventval, devsdk_metrics_t *metrics);
+
+void edgex_data_client_publish_metrics (edgex_data_client_t *client, const devsdk_metrics_t *metrics, const edgex_device_metricinfo *cfg);
 
 void devsdk_commandresult_free (devsdk_commandresult *res, int n);
 

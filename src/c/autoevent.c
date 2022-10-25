@@ -88,7 +88,7 @@ static void *ae_runner (void *p)
             }
             else
             {
-              edgex_data_client_add_event (ai->svc->dataclient, event);
+              edgex_data_client_add_event (ai->svc->dataclient, event, &ai->svc->metrics);
             }
             if (ai->onChange)
             {
