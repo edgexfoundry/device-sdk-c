@@ -13,7 +13,7 @@
 #include "data.h"
 #include "devutil.h"
 
-void edgex_mqtt_config_defaults (iot_data_t *allconf);
+void edgex_mqtt_config_defaults (iot_data_t *allconf, const char *svcname);
 
 JSON_Value *edgex_mqtt_config_json (const iot_data_t *allconf);
 

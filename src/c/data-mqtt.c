@@ -13,12 +13,19 @@
 #include "iot/time.h"
 #include <MQTTAsync.h>
 
-void edgex_mqtt_config_defaults (iot_data_t *allconf)
+#define DEFAULTPUBTOPIC "edgex/events/device"
+#define DEFAULTREQTOPIC "edgex/device/command/request/%s/#"
+#define DEFAULTRESPTOPIC "edgex/device/command/response"
+
+void edgex_mqtt_config_defaults (iot_data_t *allconf, const char *svcname)
 {
+  char *reqt = malloc (sizeof (DEFAULTREQTOPIC) + strlen (svcname));
+  sprintf (reqt, DEFAULTREQTOPIC, svcname);
+
   iot_data_string_map_add (allconf, EX_MQ_PROTOCOL, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_HOST, iot_data_alloc_string ("localhost", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_PORT, iot_data_alloc_ui16 (0));
-  iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string ("edgex/events/device", IOT_DATA_REF));
+  iot_data_string_map_add (allconf, EX_MQ_TOPIC, iot_data_alloc_string (DEFAULTPUBTOPIC, IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_AUTHMODE, iot_data_alloc_string ("none", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_SECRETNAME, iot_data_alloc_string ("", IOT_DATA_REF));
 
@@ -29,6 +36,9 @@ void edgex_mqtt_config_defaults (iot_data_t *allconf)
   iot_data_string_map_add (allconf, EX_MQ_CERTFILE, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_KEYFILE, iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (allconf, EX_MQ_SKIPVERIFY, iot_data_alloc_bool (false));
+
+  iot_data_string_map_add (allconf, EX_MQ_TOPIC_CMDREQ, iot_data_alloc_string (reqt, IOT_DATA_TAKE));
+  iot_data_string_map_add (allconf, EX_MQ_TOPIC_CMDRESP, iot_data_alloc_string (DEFAULTRESPTOPIC, IOT_DATA_REF));
 }
 
 JSON_Value *edgex_mqtt_config_json (const iot_data_t *allconf)
@@ -51,8 +61,14 @@ JSON_Value *edgex_mqtt_config_json (const iot_data_t *allconf)
   json_object_set_string (optobj, "CertFile", iot_data_string_map_get_string (allconf, EX_MQ_CERTFILE));
   json_object_set_string (optobj, "KeyFile", iot_data_string_map_get_string (allconf, EX_MQ_KEYFILE));
   json_object_set_boolean (optobj, "SkipCertVerify", iot_data_bool (iot_data_string_map_get (allconf, EX_MQ_SKIPVERIFY)));
-
   json_object_set_value (mqobj, "Optional", optval);
+
+  JSON_Value *topicval = json_value_init_object ();
+  JSON_Object *topicobj = json_value_get_object (topicval);
+  json_object_set_string (topicobj, "CommandRequestTopic", iot_data_string_map_get_string (allconf, EX_MQ_TOPIC_CMDREQ));
+  json_object_set_string (topicobj, "CommandResponseTopicPrefix", iot_data_string_map_get_string (allconf, EX_MQ_TOPIC_CMDRESP));
+  json_object_set_value (mqobj, "Topics", topicval);
+
   return mqval;
 }
 

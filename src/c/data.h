@@ -30,6 +30,8 @@
 #define EX_MQ_CERTFILE "MessageQueue/Optional/CertFile"
 #define EX_MQ_KEYFILE "MessageQueue/Optional/KeyFile"
 #define EX_MQ_SKIPVERIFY "MessageQueue/Optional/SkipCertVerify"
+#define EX_MQ_TOPIC_CMDREQ "MessageQueue/Topics/CommandRequestTopic"
+#define EX_MQ_TOPIC_CMDRESP "MessageQueue/Topics/CommandResponseTopicPrefix"
 
 typedef enum { JSON, CBOR} edgex_event_encoding;
 
