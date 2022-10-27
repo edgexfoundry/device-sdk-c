@@ -11,6 +11,7 @@
 
 #include "rest.h"
 #include "rest-server.h"
+#include "metrics.h"
 #include "iot/scheduler.h"
 
 typedef struct edgex_secret_provider_t edgex_secret_provider_t;
@@ -18,7 +19,8 @@ typedef struct edgex_secret_provider_t edgex_secret_provider_t;
 edgex_secret_provider_t *edgex_secrets_get_insecure (void);
 edgex_secret_provider_t *edgex_secrets_get_vault (void);
 
-bool edgex_secrets_init (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config);
+bool edgex_secrets_init
+  (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m);
 void edgex_secrets_reconfigure (edgex_secret_provider_t *sp, iot_data_t *config);
 iot_data_t *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path);
 void edgex_secrets_getregtoken (edgex_secret_provider_t *sp, edgex_ctx *ctx);

@@ -252,6 +252,7 @@ edgex_data_client_t *edgex_data_client_new_mqtt (devsdk_service_t *svc, const de
   result->queue = queue;
   result->pf = edc_mqtt_postfn;
   result->ff = edc_mqtt_freefn;
+  result->mf = NULL;
   result->address = cinfo;
 
   cinfo->qos = iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_QOS));

@@ -16,6 +16,12 @@
 
 #include <stdatomic.h>
 
+#define EX_METRIC_EVSENT 0x1
+#define EX_METRIC_RDGSENT 0x2
+#define EX_METRIC_RDCMDS 0x4
+#define EX_METRIC_SECREQ 0x8
+#define EX_METRIC_SECSTO 0x10
+
 typedef struct edgex_device_serviceinfo
 {
   const char *host;
@@ -39,6 +45,13 @@ typedef struct edgex_service_endpoints
   edgex_device_service_endpoint data;
   edgex_device_service_endpoint metadata;
 } edgex_service_endpoints;
+
+typedef struct edgex_device_metricinfo
+{
+  uint64_t flags;
+  const char *interval;
+  const char *topic;
+} edgex_device_metricinfo;
 
 typedef struct edgex_device_deviceinfo
 {
@@ -68,6 +81,7 @@ typedef struct edgex_device_config
   edgex_device_serviceinfo service;
   edgex_service_endpoints endpoints;
   edgex_device_deviceinfo device;
+  edgex_device_metricinfo metrics;
   iot_loglevel_t loglevel;
   iot_data_t *driverconf;
   iot_data_t *sdkconf;

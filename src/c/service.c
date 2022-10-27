@@ -306,6 +306,11 @@ devsdk_service_t *devsdk_service_new
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
   result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns->discover, impldata);
+  atomic_store (&result->metrics.esent, 0);
+  atomic_store (&result->metrics.rsent, 0);
+  atomic_store (&result->metrics.rcexe, 0);
+  atomic_store (&result->metrics.secrq, 0);
+  atomic_store (&result->metrics.secsto, 0);
   return result;
 }
 
@@ -334,6 +339,28 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->data.size = strlen (json);
   reply->content_type = CONTENT_JSON;
   reply->code = MHD_HTTP_OK;
+}
+
+static void *devsdk_run_metrics (void *p)
+{
+  devsdk_service_t *svc = (devsdk_service_t *)p;
+  edgex_data_client_publish_metrics (svc->dataclient, &svc->metrics, &svc->config.metrics);
+  return NULL;
+}
+
+void devsdk_schedule_metrics (devsdk_service_t *svc)
+{
+  uint64_t interval = edgex_parsetime (svc->config.metrics.interval);
+  if (svc->metricschedule)
+  {
+    iot_schedule_delete (svc->scheduler, svc->metricschedule);
+    svc->metricschedule = NULL;
+  }
+  if (interval)
+  {
+    svc->metricschedule = iot_schedule_create (svc->scheduler, devsdk_run_metrics, NULL, svc, IOT_MS_TO_NS (interval), 0, 0, svc->thpool, -1);
+    iot_schedule_add (svc->scheduler, svc->metricschedule);
+  }
 }
 
 static void devsdk_get_deadline (devsdk_timeout *result, uint64_t starttime)
@@ -776,6 +803,9 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   edgex_device_periodic_discovery_configure (svc->discovery, svc->config.device.discovery_enabled, svc->config.device.discovery_interval);
 
+  svc->metricschedule = NULL;
+  devsdk_schedule_metrics (svc);
+
   if (svc->config.service.startupmsg)
   {
     iot_log_info (svc->logger, svc->config.service.startupmsg);
@@ -863,7 +893,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       return;
     }
   }
-  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->scheduler, svc->thpool, svc->name, configmap))
+  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->scheduler, svc->thpool, svc->name, configmap, &svc->metrics))
   {
     *err = EDGEX_BAD_CONFIG;
     return;
@@ -1019,7 +1049,7 @@ void devsdk_post_readings
       }
       else
       {
-        edgex_data_client_add_event (svc->dataclient, event);
+        edgex_data_client_add_event (svc->dataclient, event, &svc->metrics);
       }
 
       if (svc->config.device.updatelastconnected)
@@ -1037,6 +1067,7 @@ void devsdk_post_readings
 
 iot_data_t *devsdk_get_secrets (devsdk_service_t *svc, const char *path)
 {
+  atomic_fetch_add (&svc->metrics.secrq, 1);
   return edgex_secrets_get (svc->secretstore, path);
 }
 
@@ -1055,6 +1086,10 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err)
   if (svc->discovery)
   {
     edgex_device_periodic_discovery_stop (svc->discovery);
+  }
+  if (svc->metricschedule)
+  {
+    iot_schedule_delete (svc->scheduler, svc->metricschedule);
   }
   if (svc->scheduler)
   {

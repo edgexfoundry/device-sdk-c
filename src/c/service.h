@@ -10,6 +10,7 @@
 #define _EDGEX_DEVICE_SERVICE_H_ 1
 
 #include "devsdk/devsdk.h"
+#include "metrics.h"
 #include "registry.h"
 #include "config.h"
 #include "data.h"
@@ -63,6 +64,8 @@ struct devsdk_service_t
   devsdk_registry_t *registry;
   edgex_device_adminstate adminstate;
   uint64_t starttime;
+  devsdk_metrics_t metrics;
+  iot_schedule_t *metricschedule;
   bool overwriteconfig;
 
   edgex_devmap_t *devices;
@@ -71,5 +74,7 @@ struct devsdk_service_t
   iot_threadpool_t *eventq;
   iot_scheduler_t *scheduler;
 };
+
+extern void devsdk_schedule_metrics (devsdk_service_t *svc);
 
 #endif
