@@ -1,0 +1,6 @@
+find_library (IOT_LIBRARY iot PATHS /opt/iotech/iot/${IOT_VER}/lib)
+find_path (IOT_INCLUDE_DIR iot/iot.h PATHS /opt/iotech/iot/${IOT_VER}/include)
+include (FindPackageHandleStandardArgs)
+find_package_handle_standard_args (IOT DEFAULT_MSG IOT_LIBRARY IOT_INCLUDE_DIR)
+set (IOT_INCLUDE_DIRS ${IOT_INCLUDE_DIR})
+message (STATUS "${IOT_INCLUDE_DIRS}")

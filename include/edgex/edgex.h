@@ -44,7 +44,7 @@ typedef struct edgex_resourceoperation
 
 typedef struct
 {
-  edgex_propertytype type;
+  iot_typecode_t type;
   char *units;
   bool readable;
   bool writable;

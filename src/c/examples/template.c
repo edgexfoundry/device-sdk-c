@@ -1,7 +1,7 @@
 /* template implementation of an Edgex device service using C SDK */
 
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -181,15 +181,15 @@ static bool template_put_handler
     /* Log the attributes */
     iot_log_debug (driver->lc, "  Requested device write %u:", i);
     dump_attributes (driver->lc, requests[i].resource->attrs);
-    switch (edgex_propertytype_data (values[i]))
+    switch (iot_data_type (values[i]))
     {
-      case Edgex_String:
+      case IOT_DATA_STRING:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_string (values[i]));
         break;
-      case Edgex_Uint64:
+      case IOT_DATA_UINT64:
         iot_log_debug (driver->lc, "  Value: %lu", iot_data_ui64 (values[i]));
         break;
-      case Edgex_Bool:
+      case IOT_DATA_BOOL:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_bool (values[i]) ? "true" : "false");
         break;
       /* etc etc */

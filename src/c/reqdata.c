@@ -136,6 +136,7 @@ extern iot_data_t *edgex_reqdata_get_binary (const edgex_reqdata_t *data, const 
     if (b64)
     {
       result = iot_data_alloc_array_from_base64 (b64);
+      iot_data_array_to_binary (result);
     }
   }
   else
@@ -150,7 +151,7 @@ extern iot_data_t *edgex_reqdata_get_binary (const edgex_reqdata_t *data, const 
         {
           size_t sz = cbor_bytestring_length (pairs[i].value);
           void *bytes = cbor_bytestring_handle (pairs[i].value);
-          result = iot_data_alloc_array (bytes, sz, IOT_DATA_UINT8, IOT_DATA_COPY);
+          result = iot_data_alloc_binary (bytes, (uint32_t)sz, IOT_DATA_COPY);
         }
         else
         {
@@ -159,12 +160,6 @@ extern iot_data_t *edgex_reqdata_get_binary (const edgex_reqdata_t *data, const 
         break;
       }
     }
-  }
-  if (result)
-  {
-    iot_data_t *b = iot_data_alloc_bool (true);
-    iot_data_set_metadata (result, b);
-    iot_data_free (b);
   }
   return result;
 }
