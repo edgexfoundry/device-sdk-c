@@ -200,25 +200,41 @@ void devsdk_nvpairs_free (devsdk_nvpairs *p)
 static const char *proptypes[] =
 {
   "Int8", "Uint8", "Int16", "Uint16", "Int32", "Uint32", "Int64", "Uint64",
-  "Float32", "Float64", "Bool", "String", "Unused1", "Binary", "Object", "Unused2",
+  "Float32", "Float64", "Bool", "Unused1", "String", "Unused2", "Binary", "Unused3", "Unused4", "Unused5", "Object"
+};
+
+static const char *arrProptypes[] =
+{
   "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array", "Uint32Array", "Int64Array", "Uint64Array",
   "Float32Array", "Float64Array", "BoolArray"
 };
 
-const char *edgex_propertytype_tostring (edgex_propertytype pt)
+const char *edgex_typecode_tostring (iot_typecode_t tc)
 {
-  return proptypes[pt];
+  return tc.type == IOT_DATA_ARRAY ? arrProptypes[tc.element_type] : proptypes[tc.type];
 }
 
-bool edgex_propertytype_fromstring (edgex_propertytype *res, const char *str)
+static bool typecode_from_edgex_name (iot_typecode_t *res, const char *str)
 {
   if (str)
   {
-    for (edgex_propertytype i = Edgex_Int8; i <= Edgex_BoolArray; i++)
+    for (int i = 0; i < sizeof (arrProptypes) / sizeof (*arrProptypes); i++)
     {
-      if (i != Edgex_Unused1 && i != Edgex_Unused2 && strcmp (str, proptypes[i]) == 0)
+      if (strcmp (str, arrProptypes[i]) == 0)
       {
-        *res = i;
+        res->type = IOT_DATA_ARRAY;
+        res->element_type = i;
+        res->key_type = IOT_DATA_INVALID;
+        return true;
+      }
+    }
+    for (int i = 0; i < sizeof (proptypes) / sizeof (*proptypes); i++)
+    {
+      if (strcmp (str, proptypes[i]) == 0 && strncmp (str, "Unused", 5) != 0)
+      {
+        res->type = i;
+        res->element_type = (i == IOT_DATA_MAP) ? IOT_DATA_MULTI : IOT_DATA_INVALID;
+        res->key_type = (i == IOT_DATA_MAP) ? IOT_DATA_STRING : IOT_DATA_INVALID;
         return true;
       }
     }
@@ -272,7 +288,7 @@ static bool get_transformArg
   iot_logger_t *lc,
   const JSON_Object *obj,
   const char *name,
-  edgex_propertytype type,
+  iot_typecode_t type,
   edgex_transformArg *res
 )
 {
@@ -284,7 +300,7 @@ static bool get_transformArg
   str = json_object_get_string (obj, name);
   if (str && *str)
   {
-    if (type >= Edgex_Int8 && type <= Edgex_Uint64)
+    if (type.type >= IOT_DATA_INT8 && type.type <= IOT_DATA_UINT64)
     {
       errno = 0;
       int64_t i = strtol (str, &end, 0);
@@ -299,7 +315,7 @@ static bool get_transformArg
         res->value.ival = i;
       }
     }
-    else if (type == Edgex_Float32 || type == Edgex_Float64)
+    else if (type.type == IOT_DATA_FLOAT32 || type.type == IOT_DATA_FLOAT64)
     {
       errno = 0;
       double d = strtod (str, &end);
@@ -326,10 +342,10 @@ static bool get_transformArg
 static edgex_propertyvalue *propertyvalue_read
   (iot_logger_t *lc, const JSON_Object *obj)
 {
-  edgex_propertytype pt;
+  iot_typecode_t pt;
   edgex_propertyvalue *result = NULL;
   const char *tstr = json_object_get_string (obj, "valueType");
-  if (edgex_propertytype_fromstring (&pt, tstr))
+  if (typecode_from_edgex_name (&pt, tstr))
   {
     bool ok = true;
     result = malloc (sizeof (edgex_propertyvalue));
@@ -341,7 +357,7 @@ static edgex_propertyvalue *propertyvalue_read
     ok &= get_transformArg (lc, obj, "shift", pt, &result->shift);
     if (result->mask.enabled || result->shift.enabled)
     {
-      if (pt == Edgex_Float32 || pt == Edgex_Float64)
+      if (pt.type == IOT_DATA_FLOAT32 || pt.type == IOT_DATA_FLOAT64)
       {
         iot_log_error (lc, "Mask/Shift transform specified for float data");
         ok = false;
@@ -359,7 +375,7 @@ static edgex_propertyvalue *propertyvalue_read
     result->defaultvalue = get_string (obj, "defaultValue");
     result->assertion = get_string (obj, "assertion");
     result->units = get_string (obj, "units");
-    result->mediaType = get_string_dfl (obj, "mediaType", (pt == Edgex_Binary) ? "application/octet-stream" : "");
+    result->mediaType = get_string_dfl (obj, "mediaType", (pt.type == IOT_DATA_BINARY) ? "application/octet-stream" : "");
   }
   else
   {
@@ -1086,22 +1102,6 @@ edgex_device *edgex_createdevicereq_read (const char *json)
   return result;
 }
 
-iot_typecode_t *edgex_propertytype_totypecode (edgex_propertytype pt)
-{
-  if (pt <= Edgex_String)
-  {
-    return iot_typecode_alloc_basic (pt);
-  }
-  if (pt == Edgex_Binary)
-  {
-    return iot_typecode_alloc_array (IOT_DATA_UINT8);
-  }
-  else
-  {
-    return iot_typecode_alloc_array (pt - (Edgex_Int8Array - Edgex_Int8));
-  }
-}
-
 devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p)
 {
   devsdk_device_resources *result = NULL;
@@ -1111,7 +1111,7 @@ devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p
     devsdk_device_resources *entry = malloc (sizeof (devsdk_device_resources));
     entry->resname = strdup (r->name);
     entry->attributes = iot_data_copy (r->attributes);
-    entry->type = edgex_propertytype_totypecode (r->properties->type);
+    entry->type = r->properties->type;
     entry->readable = r->properties->readable;
     entry->writable = r->properties->writable;
     entry->next = result;

@@ -246,7 +246,7 @@ devsdk_service_t *devsdk_service_new
   {
     edgex_logger_nametolevel (llstr, &ll);
   }
-  iot_logger_t *logger = iot_logger_alloc_custom (defaultname, ll, "", edgex_log_tostdout, NULL, true);
+  iot_logger_t *logger = iot_logger_alloc_custom (defaultname, ll, true, NULL, edgex_log_tostdout, (void *)defaultname, NULL);
   if (impldata == NULL)
   {
     iot_log_error (logger, "devsdk_service_new: no implementation object");
@@ -278,7 +278,6 @@ devsdk_service_t *devsdk_service_new
     return NULL;
   }
 
-  iot_init ();
   if (result->name)
   {
     const char *n = result->name;
@@ -287,7 +286,8 @@ devsdk_service_t *devsdk_service_new
     strcpy (result->name, defaultname);
     strcat (result->name, "_");
     strcat (result->name, n);
-    result->logger->name = result->name;
+    iot_logger_free (result->logger);
+    result->logger = iot_logger_alloc_custom (result->name, ll, true, NULL, edgex_log_tostdout, result->name, NULL);
   }
   else
   {
@@ -1129,6 +1129,5 @@ void devsdk_service_free (devsdk_service_t *svc)
     free (svc->confpath);
     free (svc->name);
     free (svc);
-    iot_fini ();
   }
 }

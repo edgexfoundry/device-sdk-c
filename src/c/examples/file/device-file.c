@@ -248,7 +248,7 @@ int main (int argc, char *argv[])
                 devsdk_commandresult results[1];
                 iot_log_info (impl->lc, "File size: %" PRIu32, size);
                 results[0].origin = 0;
-                results[0].value = iot_data_alloc_array (data, size, IOT_DATA_UINT8, IOT_DATA_TAKE);
+                results[0].value = iot_data_alloc_binary (data, size, IOT_DATA_TAKE);
 
                 /* Trigger an event */
                 devsdk_post_readings (service, dname, "File", results);

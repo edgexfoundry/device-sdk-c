@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021
+ * Copyright (c) 2018-2022
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -439,7 +439,7 @@ void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
       }
       else
       {
-        newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
+        newval = iot_data_alloc_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
       }
       if (newval)
       {
@@ -472,7 +472,7 @@ void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
     char *newtxt = checkOverride (query);
     if (newtxt)
     {
-      iot_data_t *newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), newtxt);
+      iot_data_t *newval = iot_data_alloc_from_string (iot_data_type (iot_data_map_iter_value (&iter)), newtxt);
       if (newval)
       {
         iot_log_info (lc, "Override config %s = %s", key, newtxt);
@@ -505,7 +505,7 @@ void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpai
     raw = devsdk_nvpairs_value (pairs, iot_data_map_iter_string_key (&iter));
     if (raw)
     {
-      iot_data_t *newval = edgex_data_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
+      iot_data_t *newval = iot_data_alloc_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
       if (newval)
       {
         iot_data_free (iot_data_map_iter_replace_value (&iter, newval));

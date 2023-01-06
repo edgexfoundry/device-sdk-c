@@ -17,6 +17,8 @@ string (REGEX REPLACE "^...." "" VERSION_PATCH ${CSDK_DOT_VERSION})
 
 # Find required libraries
 
+set (IOT_VER 1.4)
+
 find_package (LIBMICROHTTP REQUIRED)
 if (NOT LIBMICROHTTP_FOUND)
   message (FATAL_ERROR "microhttp library or header not found")
@@ -45,6 +47,9 @@ find_package (LIBHIREDIS REQUIRED)
 if (NOT LIBHIREDIS_FOUND)
   message (FATAL_ERROR "Hiredis (Redis client) library or header not found")
 endif ()
+find_package (IOT REQUIRED)
+set (LINK_LIBRARIES ${LINK_LIBRARIES} ${IOT_LIBRARIES})
+set (INCLUDE_DIRS ${INCLUDE_DIRS} ${IOT_INCLUDE_DIRS})
 
 message (STATUS "C SDK ${CSDK_DOT_VERSION} for ${CMAKE_SYSTEM_NAME}")
 

@@ -33,22 +33,18 @@ CSDK_HAVE_ATOMIC)
 
 # Set default files to compile and libraries
 
-file (GLOB C_FILES *.c iot/*.c)
-set (LINK_LIBRARIES ${LIBMICROHTTP_LIBRARIES} ${CURL_LIBRARIES} ${LIBYAML_LIBRARIES} ${LIBUUID_LIBRARIES} ${LIBCBOR_LIBRARIES} ${LIBPAHO_LIBRARIES} ${LIBHIREDIS_LIBRARIES})
+file (GLOB C_FILES *.c)
+set (LINK_LIBRARIES ${LIBMICROHTTP_LIBRARIES} ${CURL_LIBRARIES} ${LIBYAML_LIBRARIES} ${LIBUUID_LIBRARIES} ${LIBCBOR_LIBRARIES} ${LIBPAHO_LIBRARIES} ${LIBHIREDIS_LIBRARIES} ${IOT_LIBRARY})
 if (NOT CSDK_HAVE_ATOMIC)
   list (APPEND LINK_LIBRARIES atomic)
 endif ()
 
-set (IOT_HAS_XML ON)
-file (STRINGS ${CMAKE_SOURCE_DIR}/c/iot/VERSION IOT_DOT_VERSION)
-
 configure_file ("defs.h.in" "${CMAKE_SOURCE_DIR}/../include/edgex/csdk-defs.h")
-configure_file ("iot/defs.h.in" "${CMAKE_SOURCE_DIR}/../include/iot/defs.h")
 
 # Main sdk library
 
 add_library (csdk SHARED ${C_FILES} )
-target_include_directories (csdk PRIVATE ../../include)
+target_include_directories (csdk PRIVATE ../../include ${INCLUDE_DIRS})
 target_link_libraries (csdk PUBLIC m ${LINK_LIBRARIES})
 set_target_properties (csdk PROPERTIES DEFINE_SYMBOL "CSDK_EXPORTS")
 

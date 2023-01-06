@@ -45,88 +45,20 @@ static void *edc_postjob (void *p)
 
 static char *edgex_value_tostring (const iot_data_t *value)
 {
-#define BUFSIZE 32
   char *res;
-
-  if (iot_data_type (value) == IOT_DATA_ARRAY && edgex_propertytype_data (value) != Edgex_Binary)
+  if (iot_data_type (value) == IOT_DATA_BINARY)
   {
-    char vstr[BUFSIZE];
-    uint32_t length = iot_data_array_length (value);
-    res = malloc (BUFSIZE * length);
-    res[0] = 0;
-    for (uint32_t i = 0; i < length; i++)
-    {
-      switch (edgex_propertytype_data (value))
-      {
-        case Edgex_Int8Array:
-          sprintf (vstr, "%" PRIi8, ((int8_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Uint8Array:
-          sprintf (vstr, "%" PRIu8, ((uint8_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Int16Array:
-          sprintf (vstr, "%" PRIi16, ((int16_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Uint16Array:
-          sprintf (vstr, "%" PRIu16, ((uint16_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Int32Array:
-          sprintf (vstr, "%" PRIi32, ((int32_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Uint32Array:
-          sprintf (vstr, "%" PRIu32, ((uint32_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Int64Array:
-          sprintf (vstr, "%" PRIi64, ((int64_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Uint64Array:
-          sprintf (vstr, "%" PRIu64, ((uint64_t *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Float32Array:
-          sprintf (vstr, "%.8e", ((float *)iot_data_address (value))[i]);
-          break;
-        case Edgex_Float64Array:
-          sprintf (vstr, "%.16e", ((double *)iot_data_address (value))[i]);
-          break;
-        case Edgex_BoolArray:
-          strcpy (vstr, ((bool *)iot_data_address (value))[i] ? "true" : "false");
-          break;
-        default:
-          strcpy (vstr, "?");
-      }
-#ifdef CSDK_LEGACY_ARRAYS
-      strcat (res, i ? ",\"" : "[\"");
-      strcat (res, vstr);
-      strcat (res, "\"");
-#else
-      strcat (res, i ? "," : "[");
-      strcat (res, vstr);
-#endif
-    }
-    strcat (res, "]");
+    uint32_t sz, rsz;
+    rsz = iot_data_array_size (value);
+    sz = iot_b64_encodesize (rsz);
+    res = malloc (sz);
+    iot_b64_encode (iot_data_address (value), rsz, res, sz);
   }
   else
   {
-    switch (edgex_propertytype_data (value))
-    {
-      case Edgex_String:
-        res = strdup (iot_data_string (value));
-        break;
-      case Edgex_Binary:
-      {
-        uint32_t sz, rsz;
-        const uint8_t *data = iot_data_address (value);
-        rsz = iot_data_array_size (value);
-        sz = iot_b64_encodesize (rsz);
-        res = malloc (sz);
-        iot_b64_encode (data, rsz, res, sz);
-        break;
-      }
-      default:
-        res = iot_data_to_json (value);
-        break;
-    }
+    res = (iot_data_type (value) == IOT_DATA_STRING) ? strdup (iot_data_string (value)) : iot_data_to_json (value);
   }
+
   return res;
 }
 
@@ -177,11 +109,8 @@ edgex_event_cooked *edgex_data_process_event
 
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
-    if (commandinfo->pvals[i]->type == Edgex_Binary)
+    if (commandinfo->pvals[i]->type.type == IOT_DATA_BINARY)
     {
-      iot_data_t *b = iot_data_alloc_bool (true);
-      iot_data_set_metadata (values[i].value, b);
-      iot_data_free (b);
       useCBOR = true;
     }
     if (doTransforms)
@@ -227,10 +156,11 @@ edgex_event_cooked *edgex_data_process_event
       cbor_item_t *cread;
       cbor_item_t *crdg;
 
-      edgex_propertytype pt = edgex_propertytype_data (values[i].value);
+      iot_typecode_t tc;
+      iot_data_typecode (values[i].value, &tc);
       char *id = edgex_device_genuuid ();
 
-      if (pt == Edgex_Binary)
+      if (tc.type == IOT_DATA_BINARY)
       {
         const uint8_t *data;
         crdg = cbor_new_definite_map (9);
@@ -249,7 +179,7 @@ edgex_event_cooked *edgex_data_process_event
         cread = cbor_build_string (reading);
         free (reading);
         cbor_map_add (crdg, (struct cbor_pair)
-          { .key = cbor_move (cbor_build_string (pt == Edgex_Object ? "objectValue" : "value")), .value = cbor_move (cread) });
+          { .key = cbor_move (cbor_build_string (tc.type == IOT_DATA_MAP ? "objectValue" : "value")), .value = cbor_move (cread) });
       }
 
       cbor_map_add (crdg, (struct cbor_pair)
@@ -286,7 +216,7 @@ edgex_event_cooked *edgex_data_process_event
       cbor_map_add (crdg, (struct cbor_pair)
       {
         .key = cbor_move (cbor_build_string ("valueType")),
-        .value = cbor_move (cbor_build_string (edgex_propertytype_tostring (pt)))
+        .value = cbor_move (cbor_build_string (edgex_typecode_tostring (tc)))
       });
 
       cbor_map_add (crdg, (struct cbor_pair)
@@ -330,26 +260,24 @@ edgex_event_cooked *edgex_data_process_event
     {
       iot_data_t *rmap = iot_data_alloc_map (IOT_DATA_STRING);
       char *id = edgex_device_genuuid ();
-      edgex_propertytype pt = edgex_propertytype_data (values[i].value);
+      iot_typecode_t tc;
+      iot_data_typecode (values[i].value, &tc);
+
       iot_data_string_map_add (rmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
       iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
       iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
       iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
       iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
-      iot_data_string_map_add (rmap, "valueType", iot_data_alloc_string (edgex_propertytype_tostring (pt), IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "valueType", iot_data_alloc_string (edgex_typecode_tostring (tc), IOT_DATA_REF));
       iot_data_string_map_add (rmap, "origin", iot_data_alloc_ui64 (values[i].origin ? values[i].origin : timenow));
-      switch (iot_data_type (values[i].value))
+      switch (tc.type)
       {
+        case IOT_DATA_BINARY:
+          iot_data_string_map_add (rmap, "binaryValue", iot_data_copy (values[i].value));
+          iot_data_string_map_add (rmap, "mediaType", iot_data_alloc_string (commandinfo->pvals[i]->mediaType, IOT_DATA_REF));
+          break;
         case IOT_DATA_ARRAY:
-          if (pt == Edgex_Binary)
-          {
-            iot_data_string_map_add (rmap, "binaryValue", iot_data_copy (values[i].value));
-            iot_data_string_map_add (rmap, "mediaType", iot_data_alloc_string (commandinfo->pvals[i]->mediaType, IOT_DATA_REF));
-          }
-          else
-          {
-            iot_data_string_map_add (rmap, "value", iot_data_alloc_string (edgex_value_tostring (values[i].value), IOT_DATA_TAKE));
-          }
+          iot_data_string_map_add (rmap, "value", iot_data_alloc_string (edgex_value_tostring (values[i].value), IOT_DATA_TAKE));
           break;
         case IOT_DATA_MAP:
           iot_data_string_map_add (rmap, "objectValue", iot_data_copy (values[i].value));

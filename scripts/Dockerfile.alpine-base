@@ -14,11 +14,11 @@
 # limitations under the License.
 #
 
-ARG BASE=alpine:3.15
+ARG BASE=alpine:3.16
 FROM ${BASE} as builder
 RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
-RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.15/main' >> /etc/apk/repositories
-RUN apk add --update --no-cache binutils gcc libc-dev make git cmake yaml-dev curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev libcbor-dev paho-mqtt-c-dev-1.3 hiredis-dev
+RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.16/main' >> /etc/apk/repositories
+RUN apk add --update --no-cache binutils gcc libc-dev make git cmake yaml-dev curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev libcbor-dev paho-mqtt-c-dev-1.3 iotech-iot-1.4-dev hiredis-dev
 
 RUN mkdir /tmp/sdk
 COPY VERSION /tmp/sdk
@@ -35,10 +35,9 @@ FROM ${BASE}
 LABEL maintainer="IOTech <support@iotechsys.com>"
 
 RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
-RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.15/main' >> /etc/apk/repositories
-RUN apk add --update --no-cache binutils gcc libc-dev make git cmake yaml curl libmicrohttpd libuuid libcbor paho-mqtt-c-dev-1.3 hiredis-dev
+RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.16/main' >> /etc/apk/repositories
+RUN apk add --update --no-cache binutils gcc libc-dev make git cmake yaml curl libmicrohttpd libuuid libcbor paho-mqtt-c-dev-1.3 iotech-iot-1.4 hiredis-dev
 
-COPY --from=builder /usr/local/include/iot /usr/local/include/iot
 COPY --from=builder /usr/local/include/edgex /usr/local/include/edgex
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /usr/local/share/device-sdk-c /usr/local/share/device-sdk-c

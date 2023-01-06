@@ -15,7 +15,6 @@
  */
 
 #include "iot/data.h"
-#include "iot/typecode.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +45,7 @@ typedef struct devsdk_resource_t
 {
   char *name;
   devsdk_resource_attr_t attrs;
-  iot_typecode_t *type;
+  iot_typecode_t type;
 } devsdk_resource_t;
 
 /**
@@ -92,7 +91,7 @@ typedef struct devsdk_device_resources
   /** Attributes of the device resource */
   iot_data_t *attributes;
   /** Type of the data that may be read or written */
-  iot_typecode_t *type;
+  iot_typecode_t type;
   /** Whether the resource may be read */
   bool readable;
   /** Whether the resource may be written */
