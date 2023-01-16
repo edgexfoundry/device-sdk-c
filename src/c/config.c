@@ -92,7 +92,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
-  iot_data_string_map_add (result, EX_MQ_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, EX_BUS_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
   edgex_mqtt_config_defaults (result, svcname);
   // NB redis-streams uses a subset of the mqtt options
 
@@ -758,7 +758,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
 
   json_object_set_value (obj, DYN_NAME, wval);
 
-  const char *mqtype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+  const char *mqtype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
   if (strcmp (mqtype, "mqtt") == 0)
   {
     JSON_Value *mqval = edgex_mqtt_config_json (svc->config.sdkconf);

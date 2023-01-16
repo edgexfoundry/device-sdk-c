@@ -553,7 +553,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   if (iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false))
   {
-    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
     if (strcmp (bustype, "mqtt") == 0)
     {
       svc->dataclient = edgex_data_client_new_mqtt (svc, deadline, svc->eventq);
