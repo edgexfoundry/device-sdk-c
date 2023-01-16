@@ -16,7 +16,7 @@
 #include "api.h"
 #include "iot/base64.h"
 
-#define CONF_PREFIX "edgex/devices/2.0/"
+#define CONF_PREFIX "edgex/v3/"
 
 typedef struct consul_impl_t
 {
