@@ -481,12 +481,12 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
         bool pushv = false;
         bool retv = true;
         if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_PUSH) &&
-            (strcmp(iot_data_string_map_get_string(req->qparams, DS_PUSH), "yes") == 0))
+            (strcmp(iot_data_string_map_get_string(req->qparams, DS_PUSH), "true") == 0))
         {
           pushv = true;
         }
         if (req->qparams && iot_data_string_map_get_string(req->qparams, DS_RETURN) &&
-            (strcmp(iot_data_string_map_get_string(req->qparams, DS_RETURN), "no") == 0))
+            (strcmp(iot_data_string_map_get_string(req->qparams, DS_RETURN), "false") == 0))
         {
           retv = false;
         }

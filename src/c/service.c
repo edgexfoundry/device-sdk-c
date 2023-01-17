@@ -46,14 +46,14 @@ void devsdk_usage ()
 {
   printf ("  -cp, --configProvider=<url>\tIndicates to use Configuration Provider service at specified URL.\n"
           "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: consul.http://localhost:8500\n");
-  printf ("  -o, --overwrite            \tOverwrite configuration in provider with local configuration.\n"
+  printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
           "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
           "                             \tproblematic if those settings were edited by hand intentionally\n");
-  printf ("  -f, --file                 \tIndicates name of the local configuration file. Defaults to configuration.toml\n");
-  printf ("  -p, --profile=<name>       \tIndicate configuration profile other than default.\n");
-  printf ("  -c, --confdir=<dir>        \tSpecify local configuration directory\n");
-  printf ("  -r, --registry             \tIndicates service should use Registry.\n");
-  printf ("  -i, --instance=<name>      \tSpecify device service instance name (if specified this is appended to the device service name).\n");
+  printf ("  -cf, --configFile          \tIndicates name of the local configuration file. Defaults to configuration.toml\n");
+  printf ("  -p,  --profile=<name>       \tIndicate configuration profile other than default.\n");
+  printf ("  -cd, --configDir=<dir>     \tSpecify local configuration directory\n");
+  printf ("  -r,  --registry             \tIndicates service should use Registry.\n");
+  printf ("  -i,  --instance=<name>      \tSpecify device service instance name (if specified this is appended to the device service name).\n");
 }
 
 static bool testArg (const char *arg, const char *val, const char *pshort, const char *plong, const char **var, bool *result)
@@ -150,8 +150,8 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       testArg (arg, val, "-cp", "--configProvider", &svc->regURL, &result) ||
       testArg (arg, val, "-i", "--instance", (const char **)&svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
-      testArg (arg, val, "-c", "--confdir", &svc->confdir, &result) ||
-      testArg (arg, val, "-f", "--file", &svc->conffile, &result)
+      testArg (arg, val, "-cd", "--configDir", &svc->confdir, &result) ||
+      testArg (arg, val, "-cf", "--configFile", &svc->conffile, &result)
     )
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
@@ -175,9 +175,9 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   }
   *argc_p = argc;
 
-  checkEnv (&svc->regURL, "EDGEX_CONFIGURATION_PROVIDER");
+  checkEnv (&svc->regURL, "EDGEX_CONFIG_PROVIDER");
   checkEnv (&svc->profile, "EDGEX_PROFILE");
-  checkEnv (&svc->confdir, "EDGEX_CONF_DIR");
+  checkEnv (&svc->confdir, "EDGEX_CONFIG_DIR");
   checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE");
   checkEnv ((const char **)&svc->name, "EDGEX_INSTANCE_NAME");
   checkEnvBool (&usereg, "EDGEX_USE_REGISTRY");
@@ -553,7 +553,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   if (iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false))
   {
-    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_MQ_TYPE);
+    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
     if (strcmp (bustype, "mqtt") == 0)
     {
       svc->dataclient = edgex_data_client_new_mqtt (svc, deadline, svc->eventq);

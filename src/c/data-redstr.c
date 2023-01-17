@@ -20,14 +20,14 @@ JSON_Value *edgex_redstr_config_json (const iot_data_t *allconf)
 {
   JSON_Value *mqval = json_value_init_object ();
   JSON_Object *mqobj = json_value_get_object (mqval);
-  json_object_set_string (mqobj, "Host", iot_data_string_map_get_string (allconf, EX_MQ_HOST));
-  json_object_set_uint (mqobj, "Port", iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT)));
-  json_object_set_string (mqobj, "Topic", iot_data_string_map_get_string (allconf, EX_MQ_TOPIC));
+  json_object_set_string (mqobj, "Host", iot_data_string_map_get_string (allconf, EX_BUS_HOST));
+  json_object_set_uint (mqobj, "Port", iot_data_ui16 (iot_data_string_map_get (allconf, EX_BUS_PORT)));
+  json_object_set_string (mqobj, "Topic", iot_data_string_map_get_string (allconf, EX_BUS_TOPIC));
 
   JSON_Value *topicval = json_value_init_object ();
   JSON_Object *topicobj = json_value_get_object (topicval);
-  json_object_set_string (topicobj, "CommandRequestTopic", iot_data_string_map_get_string (allconf, EX_MQ_TOPIC_CMDREQ));
-  json_object_set_string (topicobj, "CommandResponseTopicPrefix", iot_data_string_map_get_string (allconf, EX_MQ_TOPIC_CMDRESP));
+  json_object_set_string (topicobj, "CommandRequestTopic", iot_data_string_map_get_string (allconf, EX_BUS_TOPIC_CMDREQ));
+  json_object_set_string (topicobj, "CommandResponseTopicPrefix", iot_data_string_map_get_string (allconf, EX_BUS_TOPIC_CMDRESP));
   json_object_set_value (mqobj, "Topics", topicval);
 
   return mqval;
@@ -333,8 +333,8 @@ edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const 
   edc_redstr_conninfo *cinfo = calloc (1, sizeof (edc_redstr_conninfo));
   pthread_mutex_init (&cinfo->mtx, NULL);
 
-  const char *host = iot_data_string_map_get_string (allconf, EX_MQ_HOST);
-  uint16_t port = iot_data_ui16 (iot_data_string_map_get (allconf, EX_MQ_PORT));
+  const char *host = iot_data_string_map_get_string (allconf, EX_BUS_HOST);
+  uint16_t port = iot_data_ui16 (iot_data_string_map_get (allconf, EX_BUS_PORT));
   if (port == 0)
   {
     port = 6379;
@@ -373,10 +373,10 @@ edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const 
     return NULL;
   }
 
-  if (strcmp (iot_data_string_map_get_string (allconf, EX_MQ_AUTHMODE), "usernamepassword") == 0)
+  if (strcmp (iot_data_string_map_get_string (allconf, EX_BUS_AUTHMODE), "usernamepassword") == 0)
   {
     bool auth = true;
-    iot_data_t *secrets = devsdk_get_secrets (svc, iot_data_string_map_get_string (allconf, EX_MQ_SECRETNAME));
+    iot_data_t *secrets = devsdk_get_secrets (svc, iot_data_string_map_get_string (allconf, EX_BUS_SECRETNAME));
     const char *pass = iot_data_string_map_get_string (secrets, "password");
     if (pass)
     {
@@ -391,15 +391,15 @@ edgex_data_client_t *edgex_data_client_new_redstr (devsdk_service_t *svc, const 
     }
   }
 
-  cmdtopic = iot_data_string_map_get_string (allconf, EX_MQ_TOPIC_CMDREQ);
+  cmdtopic = iot_data_string_map_get_string (allconf, EX_BUS_TOPIC_CMDREQ);
   if (!edc_redis_subscribe (lc, cinfo->ctx_rd, cmdtopic))
   {
     edc_redstr_freefn (lc, cinfo);
     return NULL;
   }
 
-  reptopic = iot_data_string_map_get_string (allconf, EX_MQ_TOPIC_CMDRESP);
-  cinfo->topicbase = strdup (iot_data_string_map_get_string (allconf, EX_MQ_TOPIC));
+  reptopic = iot_data_string_map_get_string (allconf, EX_BUS_TOPIC_CMDRESP);
+  cinfo->topicbase = strdup (iot_data_string_map_get_string (allconf, EX_BUS_TOPIC));
   cinfo->pubsub_topicbase = malloc (strlen (reptopic) + strlen (svc->name) + 2);
   sprintf (cinfo->pubsub_topicbase, "%s.%s", reptopic, svc->name);
   mettopic = svc->config.metrics.topic;
