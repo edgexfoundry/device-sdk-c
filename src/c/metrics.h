@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -10,9 +10,6 @@
 #define _EDGEX_DEVICE_METRICS_H_ 1
 
 #include <stdatomic.h>
-#include "rest-server.h"
-
-extern void edgex_device_handler_metricsv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
 typedef struct devsdk_metrics_t
 {

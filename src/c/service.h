@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -10,7 +10,6 @@
 #define _EDGEX_DEVICE_SERVICE_H_ 1
 
 #include "devsdk/devsdk.h"
-#include "metrics.h"
 #include "registry.h"
 #include "config.h"
 #include "data.h"
