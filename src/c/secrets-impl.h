@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022
+ * Copyright (c) 2021-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -12,8 +12,10 @@
 #include "edgex/edgex-base.h"
 #include "iot/scheduler.h"
 #include "rest.h"
+#include "metrics.h"
 
-typedef bool (*edgex_secret_init_fn) (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config);
+typedef bool (*edgex_secret_init_fn)
+  (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m);
 typedef void (*edgex_secret_reconfigure_fn) (void *impl, iot_data_t *config);
 typedef iot_data_t * (*edgex_secret_get_fn) (void *impl, const char *path);
 typedef void (*edgex_secret_set_fn) (void *impl, const char *path, const iot_data_t *secrets);

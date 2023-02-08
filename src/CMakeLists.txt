@@ -17,7 +17,7 @@ string (REGEX REPLACE "^...." "" VERSION_PATCH ${CSDK_DOT_VERSION})
 
 # Find required libraries
 
-set (IOT_VER 1.4)
+set (IOT_VER 1.5)
 
 find_package (LIBMICROHTTP REQUIRED)
 if (NOT LIBMICROHTTP_FOUND)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -84,12 +84,12 @@ static void *ae_runner (void *p)
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)
             {
               iot_log_error (ai->svc->logger, "Auto Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
-              edgex_event_cooked_free (event);
             }
             else
             {
-              edgex_data_client_add_event (ai->svc->dataclient, event, &ai->svc->metrics);
+              edgex_data_client_add_event (ai->svc->msgbus, event, &ai->svc->metrics);
             }
+            edgex_event_cooked_free (event);
             if (ai->onChange)
             {
               devsdk_commandresult_free (ai->last, ai->resource->nreqs);

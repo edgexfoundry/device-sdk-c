@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022
+ * Copyright (c) 2021-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -26,6 +26,7 @@ typedef struct vault_impl_t
   char *capath;
   devsdk_nvpairs *regtoken;
   bool bearer;
+  devsdk_metrics_t *metrics;
   pthread_mutex_t mtx;
 } vault_impl_t;
 
@@ -138,12 +139,14 @@ void vault_schedule_renewal (vault_impl_t *vault)
   iot_data_free (info);
 }
 
-static bool vault_init (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config)
+static bool vault_init
+  (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m)
 {
   vault_impl_t *vault = (vault_impl_t *)impl;
   vault->lc = lc;
   vault->scheduler = sched;
   vault->thpool = pool;
+  vault->metrics = m;
 
   char *host = malloc (URL_BUF_SIZE);
   snprintf
@@ -236,6 +239,7 @@ static iot_data_t *vault_get (void *impl, const char *path)
     result = iot_data_alloc_map (IOT_DATA_STRING);
   }
   iot_data_free (reply);
+  atomic_fetch_add (&vault->metrics->secrq, 1);
   return result;
 }
 

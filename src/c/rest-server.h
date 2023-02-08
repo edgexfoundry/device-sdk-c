@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -31,5 +31,8 @@ extern bool edgex_rest_server_register_handler
 );
 
 void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, int code, char *msg, ...);
+
+iot_data_t *edgex_v3_error_response (iot_logger_t *lc, char *msg, ...);
+iot_data_t *edgex_v3_base_response (const char *msg);
 
 #endif

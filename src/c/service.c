@@ -9,6 +9,7 @@
 #include "service.h"
 #include "api.h"
 #include "edgex-logging.h"
+#include "bus.h"
 #include "device.h"
 #include "discovery.h"
 #include "callback2.h"
@@ -18,14 +19,13 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "data.h"
-#include "data-mqtt.h"
-#include "data-redstr.h"
 #include "rest.h"
 #include "edgex-rest.h"
 #include "iot/time.h"
 #include "iot/iot.h"
 #include "filesys.h"
 #include "devutil.h"
+#include "correlation.h"
 #include "edgex/csdk-defs.h"
 
 #include <stdlib.h>
@@ -340,10 +340,42 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
+static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uint64_t val)
+{
+  iot_data_t *field;
+  iot_data_t *fields;
+  iot_data_t *metric;
+
+  field = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (field, "name", iot_data_alloc_string ("counter-count", IOT_DATA_REF));
+  iot_data_string_map_add (field, "value", iot_data_alloc_ui64 (val));
+  fields = iot_data_alloc_vector (1);
+  iot_data_vector_add (fields, 0, field);
+  metric = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (metric, "apiVersion", iot_data_alloc_string ("v2", IOT_DATA_REF));
+  iot_data_string_map_add (metric, "name", iot_data_alloc_string (mname, IOT_DATA_REF));
+  iot_data_string_map_add (metric, "fields", fields);
+  iot_data_string_map_add (metric, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
+
+  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_METRIC, mname);
+  edgex_bus_post (svc->msgbus, topic, metric);
+  free (topic);
+
+  iot_data_free (metric);
+}
+
 static void *devsdk_run_metrics (void *p)
 {
   devsdk_service_t *svc = (devsdk_service_t *)p;
-  edgex_data_client_publish_metrics (svc->dataclient, &svc->metrics, &svc->config.metrics);
+  iot_log_debug (svc->logger, "Publishing metrics");
+  edgex_device_alloc_crlid (NULL);
+  if (svc->config.metrics.flags & EX_METRIC_EVSENT) devsdk_publish_metric (svc, "EventsSent", atomic_load (&svc->metrics.esent));
+  if (svc->config.metrics.flags & EX_METRIC_RDGSENT) devsdk_publish_metric (svc, "ReadingsSent", atomic_load (&svc->metrics.rsent));
+  if (svc->config.metrics.flags & EX_METRIC_RDCMDS) devsdk_publish_metric (svc, "ReadCommandsExecuted", atomic_load (&svc->metrics.rcexe));
+  if (svc->config.metrics.flags & EX_METRIC_SECREQ) devsdk_publish_metric (svc, "SecuritySecretsRequested", atomic_load (&svc->metrics.secrq));
+  if (svc->config.metrics.flags & EX_METRIC_SECSTO) devsdk_publish_metric (svc, "SecuritySecretsStored", atomic_load (&svc->metrics.secsto));
+  edgex_device_free_crlid ();
+
   return NULL;
 }
 
@@ -553,17 +585,17 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
   if (strcmp (bustype, "mqtt") == 0)
   {
-    svc->dataclient = edgex_data_client_new_mqtt (svc, deadline, svc->eventq);
+    svc->msgbus = edgex_bus_create_mqtt (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline);
   }
   else if (strcmp (bustype, "redis") == 0)
   {
-    svc->dataclient = edgex_data_client_new_redstr (svc, deadline, svc->eventq);
+    svc->msgbus = edgex_bus_create_redstr (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline);
   }
   else
   {
     iot_log_error (svc->logger, "Unknown Message Bus type %s", bustype);
   }
-  if (svc->dataclient == NULL)
+  if (svc->msgbus == NULL)
   {
     *err = EDGEX_REMOTE_SERVER_DOWN;
     return;
@@ -700,8 +732,9 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   }
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
-
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_VALIDATE_ADDR, DevSDK_Post, svc, edgex_device_handler_validate_addr);
+  char *vpath = edgex_bus_mktopic (svc->msgbus, "", EDGEX_DEV_TOPIC_VALIDATE);
+  edgex_bus_register_handler (svc->msgbus, vpath, svc, edgex_device_handler_validate_addr_v3);
+  free (vpath);
 
   /* Load Devices from files and register in metadata */
 
@@ -740,6 +773,12 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   /* Start scheduled events */
 
   iot_scheduler_start (svc->scheduler);
+
+  /* Register MessageBus handlers */
+
+  char *dpath = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEVICE, "{device}/{op}/{cmd}");
+  edgex_bus_register_handler (svc->msgbus, dpath, svc, edgex_device_handler_devicev3);
+  free (dpath);
 
   /* Register REST handlers */
 
@@ -1033,7 +1072,7 @@ void devsdk_post_readings
       }
       else
       {
-        edgex_data_client_add_event (svc->dataclient, event, &svc->metrics);
+        edgex_data_client_add_event (svc->msgbus, event, &svc->metrics);
       }
 
       if (svc->config.device.updatelastconnected)
@@ -1051,7 +1090,6 @@ void devsdk_post_readings
 
 iot_data_t *devsdk_get_secrets (devsdk_service_t *svc, const char *path)
 {
-  atomic_fetch_add (&svc->metrics.secrq, 1);
   return edgex_secrets_get (svc->secretstore, path);
 }
 
@@ -1100,7 +1138,7 @@ void devsdk_service_free (devsdk_service_t *svc)
   {
     iot_scheduler_free (svc->scheduler);
     edgex_devmap_free (svc->devices);
-    edgex_data_client_free (svc->dataclient);
+    edgex_bus_free (svc->msgbus);
     edgex_watchlist_free (svc->watchlist);
     edgex_device_periodic_discovery_free (svc->discovery);
     iot_threadpool_free (svc->thpool);

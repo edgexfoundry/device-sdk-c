@@ -1,5 +1,11 @@
 This is the C SDK for EdgeX device services.
 
+Changes for 3.0.0 "Minnesota":
+
+- Support EdgeX v3 API
+- SDK API updates: see README.v3.md
+- MQTT support for all message bus operations (not just event push)
+
 Changes for 2.3.0 "Levski":
 
 - Publish metrics on pub/sub (redis only)
