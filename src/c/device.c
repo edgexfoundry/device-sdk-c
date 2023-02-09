@@ -19,6 +19,7 @@
 #include "iot/config.h"
 #include "transform.h"
 #include "reqdata.h"
+#include "request_auth.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -351,7 +352,7 @@ static void edgex_device_runput2
         if (svc->config.device.updatelastconnected)
         {
           devsdk_error err;
-          edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+          edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, &err);
         }
       }
       else
@@ -406,7 +407,7 @@ static edgex_event_cooked *edgex_device_runget2
       {
         if (svc->config.device.updatelastconnected)
         {
-          edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+          edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, &err);
         }
         if (svc->config.device.maxeventsize && edgex_event_cooked_size (result) > svc->config.device.maxeventsize * 1024)
         {
@@ -418,7 +419,7 @@ static edgex_event_cooked *edgex_device_runget2
       else
       {
         edgex_error_response (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Assertion failed for device %s. Marking as down.", dev->name);
-        edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->name, DOWN, &err);
+        edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, DOWN, &err);
       }
     }
     else
@@ -552,25 +553,28 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
 
 void edgex_device_handler_device_namev2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  edgex_device *dev;
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  const char *name = devsdk_nvpairs_value (req->params, "name");
+  if (request_is_authenticated(ctx,req,reply))
+  {
+    edgex_device *dev;
+    devsdk_service_t *svc = (devsdk_service_t *) ctx;
+    const char *name = devsdk_nvpairs_value (req->params, "name");
 
-  iot_log_debug (svc->logger, "Incoming %s command for device name %s", methStr (req->method), name);
-  if (svc->adminstate == LOCKED)
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "device endpoint: service is locked");
-    return;
-  }
+    iot_log_debug (svc->logger, "Incoming %s command for device name %s", methStr (req->method), name);
+    if (svc->adminstate == LOCKED)
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "device endpoint: service is locked");
+      return;
+    }
 
-  dev = edgex_devmap_device_byname (svc->devices, name);
-  if (dev)
-  {
-    edgex_device_v2impl (svc, dev, req, reply);
-  }
-  else
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "No device named %s", name);
+    dev = edgex_devmap_device_byname (svc->devices, name);
+    if (dev)
+    {
+      edgex_device_v2impl (svc, dev, req, reply);
+    }
+    else
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_FOUND, "No device named %s", name);
+    }
   }
 }
 

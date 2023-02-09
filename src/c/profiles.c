@@ -31,7 +31,7 @@ const edgex_deviceprofile *edgex_deviceprofile_get_internal
   if (dp == NULL)
   {
     edgex_deviceprofile *newdp = edgex_metadata_client_get_deviceprofile
-      (svc->logger, &svc->config.endpoints, name, err);
+      (svc->logger, &svc->config.endpoints, svc->secretstore, name, err);
     if (newdp)
     {
       edgex_devmap_add_profile (svc->devices, newdp);
@@ -65,7 +65,7 @@ static void edgex_add_profile_json (devsdk_service_t *svc, const char *fname, de
       {
         JSON_Value *copy = json_value_deep_copy (jval);
         JSON_Object *profobj = json_value_get_object (copy);
-        edgex_metadata_client_add_profile_jobj (svc->logger, &svc->config.endpoints, profobj, err);
+        edgex_metadata_client_add_profile_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, profobj, err);
       }
     }
     else
@@ -187,7 +187,7 @@ void edgex_add_profile (devsdk_service_t *svc, const char *fname, devsdk_error *
     else
     {
       iot_log_info (lc, "Uploading deviceprofile from %s", fname);
-      free (edgex_metadata_client_create_deviceprofile_file (lc, endpoints, fname, err));
+      free (edgex_metadata_client_create_deviceprofile_file (lc, endpoints, svc->secretstore, fname, err));
       if (err->code)
       {
         iot_log_error (lc, "Error uploading device profile");

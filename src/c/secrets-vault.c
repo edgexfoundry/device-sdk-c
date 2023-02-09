@@ -23,6 +23,8 @@ typedef struct vault_impl_t
   char *regurl;
   char *tokinfourl;
   char *tokrenewurl;
+  char *jwtissueurl;
+  char *jwtvalidateurl;
   char *capath;
   devsdk_nvpairs *regtoken;
   bool bearer;
@@ -61,6 +63,27 @@ static iot_data_t *vault_rest_get (vault_impl_t *vault, const char *url)
   edgex_ctx ctx;
   vault_initctx (vault, &ctx);
   edgex_http_get (vault->lc, &ctx, url, edgex_http_write_cb, &err);
+  if (err.code == 0)
+  {
+    result = iot_data_from_json (ctx.buff);
+  }
+  else
+  {
+    iot_log_error (vault->lc, "vault: GET %s failed", url);
+  }
+  vault_freectx (&ctx);
+  return result;
+}
+
+static iot_data_t *vault_rest_post (vault_impl_t *vault, const char *url, const char *body)
+{
+  devsdk_error err = EDGEX_OK;
+  iot_data_t *result = NULL;
+  edgex_ctx ctx;
+
+  vault_initctx (vault, &ctx);
+  edgex_http_post (vault->lc, &ctx, url, body, edgex_http_write_cb, &err);
+
   if (err.code == 0)
   {
     result = iot_data_from_json (ctx.buff);
@@ -166,6 +189,10 @@ static bool vault_init
   snprintf (vault->tokinfourl, URL_BUF_SIZE, "%s/v1/auth/token/lookup-self", host);
   vault->tokrenewurl = malloc (URL_BUF_SIZE);
   snprintf (vault->tokrenewurl, URL_BUF_SIZE, "%s/v1/auth/token/renew-self", host);
+  vault->jwtissueurl = malloc (URL_BUF_SIZE);
+  snprintf (vault->jwtissueurl, URL_BUF_SIZE, "%s/v1/identity/oidc/token/%s", host, svcname);
+  vault->jwtvalidateurl = malloc (URL_BUF_SIZE);
+  snprintf (vault->jwtvalidateurl, URL_BUF_SIZE, "%s/v1/identity/oidc/introspect", host);
   free (host);
 
   const char *fname = iot_data_string_map_get_string (config, "SecretStore/TokenFile");
@@ -303,6 +330,56 @@ static void vault_releaseregtoken (void *impl)
   pthread_mutex_unlock (&vault->mtx);
 }
 
+static iot_data_t * vault_requestjwt (void *impl)
+{
+  iot_data_t *result = NULL;
+  vault_impl_t *vault = (vault_impl_t *)impl;
+  
+  iot_data_t *reply = vault_rest_get (vault, vault->jwtissueurl);
+  if (reply)
+  {
+    const iot_data_t *d = iot_data_string_map_get (reply, "data");
+    if (d)
+    {
+      const iot_data_t *t = iot_data_string_map_get (d, "token");
+      if (t)
+      {
+        result = iot_data_copy (t);
+      }
+    }
+  }
+  if (result == NULL)
+  {
+    iot_log_error (vault->lc, "vault: get JWT request failed");
+    result = iot_data_alloc_map (IOT_DATA_STRING);
+  }
+  iot_data_free (reply);
+  return result;
+}
+
+static bool vault_isjwtvalid (void *impl, const char *jwt)
+{
+  bool result = false;
+  vault_impl_t *vault = (vault_impl_t *)impl;
+
+  JSON_Value *jval = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (jval);
+  json_object_set_string (obj, "token", jwt);
+
+  char * json = json_serialize_to_string (jval);
+  json_value_free (jval);
+
+  iot_data_t *reply = vault_rest_post (vault, vault->jwtvalidateurl, json);
+  json_free_serialized_string (json);
+
+  if (reply)
+  {
+    result = iot_data_string_map_get_bool (reply, "active", false);
+  }
+  iot_data_free (reply);
+  return result;
+}
+
 static void vault_fini (void *impl)
 {
   vault_impl_t *vault = (vault_impl_t *)impl;
@@ -324,4 +401,4 @@ void *edgex_secrets_vault_alloc ()
   return vault;
 }
 
-const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_getregtoken, vault_releaseregtoken, vault_fini };
+const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_getregtoken, vault_releaseregtoken, vault_requestjwt, vault_isjwtvalid, vault_fini };

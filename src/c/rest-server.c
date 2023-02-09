@@ -402,6 +402,7 @@ static EDGEX_MHD_RESULT http_handler
           req.method = method;
           req.data.bytes = ctx->m_data;
           req.data.size = ctx->m_size;
+          req.authorization_header_value = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, MHD_HTTP_HEADER_AUTHORIZATION);
           req.content_type = MHD_lookup_connection_value (conn, MHD_HEADER_KIND, MHD_HTTP_HEADER_CONTENT_TYPE);
           memset (&rep, 0, sizeof (devsdk_http_reply));
           h->handler (h->ctx, &req, &rep);

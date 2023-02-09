@@ -27,6 +27,7 @@
 #include "devutil.h"
 #include "correlation.h"
 #include "edgex/csdk-defs.h"
+#include "request_auth.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -326,18 +327,21 @@ static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_htt
 
 static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
-  JSON_Value *val = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (val);
-  json_object_set_string (obj, "version", svc->version);
-  json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
-  json_object_set_string (obj, "serviceName", svc->name);
-  char *json = json_serialize_to_string (val);
-  json_value_free (val);
-  reply->data.bytes = json;
-  reply->data.size = strlen (json);
-  reply->content_type = CONTENT_JSON;
-  reply->code = MHD_HTTP_OK;
+  if (request_is_authenticated(ctx, req, reply))
+  {
+    devsdk_service_t *svc = (devsdk_service_t *) ctx;
+    JSON_Value *val = json_value_init_object ();
+    JSON_Object *obj = json_value_get_object (val);
+    json_object_set_string (obj, "version", svc->version);
+    json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
+    json_object_set_string (obj, "serviceName", svc->name);
+    char *json = json_serialize_to_string (val);
+    json_value_free (val);
+    reply->data.bytes = json;
+    reply->data.size = strlen (json);
+    reply->content_type = CONTENT_JSON;
+    reply->code = MHD_HTTP_OK;
+  }
 }
 
 static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uint64_t val)
@@ -464,7 +468,7 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
         JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
         JSON_Object *deviceobj = json_value_get_object (jval);
         json_object_set_string (deviceobj, "serviceName", svc->name);
-        edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, deviceobj, err);
+        edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, deviceobj, err);
       }
       else
       {
@@ -617,7 +621,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   edgex_deviceservice *ds;
   ds = edgex_metadata_client_get_deviceservice
-    (svc->logger, &svc->config.endpoints, svc->name, err);
+    (svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, err);
   if (err->code)
   {
     iot_log_error (svc->logger, "get_deviceservice failed");
@@ -639,7 +643,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
       ds->labels = devsdk_strings_new (svc->config.service.labels[n], ds->labels);
     }
 
-    edgex_metadata_client_create_deviceservice (svc->logger, &svc->config.endpoints, ds, err);
+    edgex_metadata_client_create_deviceservice (svc->logger, &svc->config.endpoints, svc->secretstore, ds, err);
     if (err->code)
     {
       iot_log_error
@@ -659,7 +663,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
       iot_log_info (svc->logger, "Updating service endpoint in metadata");
       free (ds->baseaddress);
       ds->baseaddress = base;
-      edgex_metadata_client_update_deviceservice (svc->logger, &svc->config.endpoints, ds->name, ds->baseaddress, err);
+      edgex_metadata_client_update_deviceservice (svc->logger, &svc->config.endpoints, svc->secretstore, ds->name, ds->baseaddress, err);
       if (err->code)
       {
         iot_log_error (svc->logger, "update_deviceservice failed");
@@ -687,7 +691,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   /* Obtain Devices from metadata */
 
   edgex_device *devs = edgex_metadata_client_get_devices
-    (svc->logger, &svc->config.endpoints, svc->name, err);
+    (svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, err);
 
   if (err->code)
   {
@@ -758,7 +762,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   /* Get Provision Watchers */
 
-  edgex_watcher *w = edgex_metadata_client_get_watchers (svc->logger, &svc->config.endpoints, svc->name, err);
+  edgex_watcher *w = edgex_metadata_client_get_watchers (svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, err);
   if (err->code)
   {
     iot_log_error (svc->logger, "Unable to retrieve provision watchers from metadata");
@@ -1078,7 +1082,7 @@ void devsdk_post_readings
       if (svc->config.device.updatelastconnected)
       {
         devsdk_error err = EDGEX_OK;
-        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, devname, &err);
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, devname, &err);
       }
     }
   }

@@ -11,6 +11,7 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "edgex-rest.h"
+#include "request_auth.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -128,35 +129,38 @@ void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *di
 
 void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  if (request_is_authenticated(ctx,req,reply))
+  {
+    devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
-  if (svc->userfns.discover == NULL)
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_IMPLEMENTED, "Dynamic discovery is not implemented in this device service");
-  }
-  else if (svc->adminstate == LOCKED)
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device service is administratively locked");
-  }
-  else if (!svc->config.device.discovery_enabled)
-  {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_SERVICE_UNAVAILABLE, "Discovery disabled by configuration");
-  }
-  else
-  {
-    if (pthread_mutex_trylock (&svc->discovery->lock) == 0)
+    if (svc->userfns.discover == NULL)
     {
-      iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc->discovery, -1);
-      pthread_mutex_unlock (&svc->discovery->lock);
-      reply->data.bytes = strdup ("Running discovery\n");
+      edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_IMPLEMENTED, "Dynamic discovery is not implemented in this device service");
+    }
+    else if (svc->adminstate == LOCKED)
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device service is administratively locked");
+    }
+    else if (!svc->config.device.discovery_enabled)
+    {
+      edgex_error_response (svc->logger, reply, MHD_HTTP_SERVICE_UNAVAILABLE, "Discovery disabled by configuration");
     }
     else
     {
-      reply->data.bytes = strdup ("Discovery already running; ignoring new request\n");
-    }
+      if (pthread_mutex_trylock (&svc->discovery->lock) == 0)
+      {
+        iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc->discovery, -1);
+        pthread_mutex_unlock (&svc->discovery->lock);
+        reply->data.bytes = strdup ("Running discovery\n");
+      }
+      else
+      {
+        reply->data.bytes = strdup ("Discovery already running; ignoring new request\n");
+      }
 
-    reply->code = MHD_HTTP_ACCEPTED;
-    reply->data.size = strlen (reply->data.bytes);
-    reply->content_type = CONTENT_PLAINTEXT;
+      reply->code = MHD_HTTP_ACCEPTED;
+      reply->data.size = strlen (reply->data.bytes);
+      reply->content_type = CONTENT_PLAINTEXT;
+    }
   }
 }

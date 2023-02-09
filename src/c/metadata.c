@@ -21,6 +21,7 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char *name,
   devsdk_error *err
 )
@@ -43,7 +44,13 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
     ename
   );
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   if (err->code == 0)
   {
@@ -62,6 +69,7 @@ void edgex_metadata_client_set_device_opstate
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char *devicename,
   edgex_device_operatingstate opstate,
   devsdk_error *err
@@ -75,7 +83,14 @@ void edgex_metadata_client_set_device_opstate
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_patch (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   json_free_serialized_string (json);
   free (ctx.buff);
 }
@@ -84,6 +99,7 @@ void edgex_metadata_client_update_deviceservice
 (
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char * name,
   const char * baseaddr,
   devsdk_error * err
@@ -97,7 +113,14 @@ void edgex_metadata_client_update_deviceservice
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/deviceservice", endpoints->metadata.host, endpoints->metadata.port);
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_patch (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   json_free_serialized_string (json);
   free (ctx.buff);
 }
@@ -106,6 +129,7 @@ void edgex_metadata_client_update_lastconnected
 (
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char * devicename,
   devsdk_error * err
 )
@@ -118,7 +142,14 @@ void edgex_metadata_client_update_lastconnected
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+  
   edgex_http_patch (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   json_free_serialized_string (json);
   free (ctx.buff);
 }
@@ -127,6 +158,7 @@ char *edgex_metadata_client_create_deviceprofile_file
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char *filename,
   devsdk_error *err
 )
@@ -143,7 +175,15 @@ char *edgex_metadata_client_create_deviceprofile_file
     endpoints->metadata.host,
     endpoints->metadata.port
   );
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+  
   edgex_http_postfile (lc, &ctx, url, filename, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   return ctx.buff;
 }
 
@@ -151,6 +191,7 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char *name,
   devsdk_error *err
 )
@@ -173,7 +214,13 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
     ename
   );
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   rc = edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   if (rc == 404)
   {
@@ -196,6 +243,7 @@ void edgex_metadata_client_create_deviceservice
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const edgex_deviceservice *newds,
   devsdk_error *err
 )
@@ -214,7 +262,15 @@ void edgex_metadata_client_create_deviceservice
     endpoints->metadata.port
   );
   json = edgex_createDSreq_write (newds);
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   json_free_serialized_string (json);
   free (ctx.buff);
 }
@@ -223,6 +279,7 @@ edgex_device *edgex_metadata_client_get_devices
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char *servicename,
   devsdk_error *err
 )
@@ -244,7 +301,13 @@ edgex_device *edgex_metadata_client_get_devices
     ename
   );
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   curl_free (ename);
   if (err->code)
@@ -295,6 +358,7 @@ char *edgex_metadata_client_add_device
 (
   iot_logger_t *lc,
   edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char *name,
   const char *description,
   const devsdk_strings *labels,
@@ -334,7 +398,15 @@ char *edgex_metadata_client_add_device
   dev->profile->name = (char *)profile_name;
   dev->autos = autos;
   json = edgex_createdevicereq_write (dev);
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   edgex_metadata_process_device_response (lc, err, ctx.buff, name, &result);
   free (ctx.buff);
   free (dev->profile);
@@ -344,7 +416,7 @@ char *edgex_metadata_client_add_device
   return result;
 }
 
-void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, JSON_Object *jobj, devsdk_error *err)
+void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, JSON_Object *jobj, devsdk_error *err)
 {
   if (!json_object_get_string (jobj, "apiVersion"))
   {
@@ -359,7 +431,15 @@ void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_end
   memset (&ctx, 0, sizeof (edgex_ctx));
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/deviceprofile", endpoints->metadata.host, endpoints->metadata.port);
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   if (err->code == 0)
   {
     iot_log_info (lc, "Device profile %s created", json_object_get_string (jobj, "name"));
@@ -373,7 +453,7 @@ void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_end
   json_free_serialized_string (json);
 }
 
-void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, JSON_Object *jobj, devsdk_error *err)
+void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, JSON_Object *jobj, devsdk_error *err)
 {
   if (!json_object_get_string (jobj, "adminState"))
   {
@@ -396,7 +476,15 @@ void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endp
   memset (&ctx, 0, sizeof (edgex_ctx));
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
+  
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   edgex_metadata_process_device_response (lc, err, ctx.buff, json_object_get_string (jobj, "name"), NULL);
   json_value_free (reqval);
   free (ctx.buff);
@@ -407,6 +495,7 @@ void edgex_metadata_client_add_or_modify_device
 (
   iot_logger_t *lc,
   edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char * name,
   const char * description,
   const devsdk_strings * labels,
@@ -440,9 +529,13 @@ void edgex_metadata_client_add_or_modify_device
   dev->profile->name = (char *)profile_name;
 
   json = edgex_createdevicereq_write (dev);
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   if (edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, &err) == 409)
   {
-    if (edgex_metadata_client_check_device (lc, endpoints, name))
+    if (edgex_metadata_client_check_device (lc, endpoints, secretprovider, name))
     {
       iot_log_info (lc, "edgex_metadata_client_add_or_update_device: updating device %s", name);
       free (ctx.buff);
@@ -451,6 +544,9 @@ void edgex_metadata_client_add_or_modify_device
       edgex_http_patch (lc, &ctx, url, json, edgex_http_write_cb, &err);
     }
   }
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   if (err.code != 0)
   {
@@ -463,7 +559,7 @@ void edgex_metadata_client_add_or_modify_device
   free (dev);
 }
 
-bool edgex_metadata_client_check_device (iot_logger_t *lc, edgex_service_endpoints *endpoints, const char *devicename)
+bool edgex_metadata_client_check_device (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, const char *devicename)
 {
   edgex_ctx ctx;
   devsdk_error err;
@@ -476,7 +572,13 @@ bool edgex_metadata_client_check_device (iot_logger_t *lc, edgex_service_endpoin
 
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device/check/name/%s", endpoints->metadata.host, endpoints->metadata.port, ename);
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   result = (edgex_http_get (lc, &ctx, url, edgex_http_write_cb, &err) == 200);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   free (ctx.buff);
   curl_free (ename);
@@ -487,6 +589,7 @@ void edgex_metadata_client_update_device
 (
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char * name,
   const char * description,
   const devsdk_strings * labels,
@@ -511,7 +614,14 @@ void edgex_metadata_client_update_device
   json = edgex_device_write_sparse
     (name, description, labels, profile_name);
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_patch (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   if (err->code != 0)
   {
     iot_log_info
@@ -530,6 +640,7 @@ void edgex_metadata_client_delete_device_byname
 (
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char * devicename,
   devsdk_error * err
 )
@@ -550,7 +661,13 @@ void edgex_metadata_client_delete_device_byname
     ename
   );
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_delete (lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   curl_free (ename);
   free (ctx.buff);
@@ -560,6 +677,7 @@ edgex_watcher *edgex_metadata_client_get_watchers
 (
   iot_logger_t * lc,
   edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
   const char * servicename,
   devsdk_error * err
 )
@@ -581,7 +699,13 @@ edgex_watcher *edgex_metadata_client_get_watchers
     ename
   );
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_get (lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   curl_free (ename);
   if (err->code)
