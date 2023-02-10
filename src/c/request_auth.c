@@ -13,10 +13,9 @@
 
 #include <microhttpd.h>
 
-bool request_is_authenticated (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
-{
-  devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
+bool request_is_authenticated (edgex_secret_provider_t * secretprovider, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
   bool valid_jwt = false;
 
   // Calling request_is_authenticated requires that the Authorization header is present on the request
@@ -28,7 +27,7 @@ bool request_is_authenticated (void *ctx, const devsdk_http_request *req, devsdk
   {
     const char * jwt = req->authorization_header_value + strlen("Bearer ");
     printf("Checking JWT %s\n", jwt);
-    valid_jwt = edgex_secrets_is_jwt_valid (svc->secretstore, jwt);
+    valid_jwt = edgex_secrets_is_jwt_valid (secretprovider, jwt);
   }
 
   if (!valid_jwt)
@@ -41,3 +40,12 @@ bool request_is_authenticated (void *ctx, const devsdk_http_request *req, devsdk
   return valid_jwt;
 }
 
+
+void http_auth_wrapper (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  auth_wrapper_t *wrapper = (auth_wrapper_t *)ctx;
+  if (request_is_authenticated (wrapper->secretprovider, req, reply))
+  {
+    (wrapper->h)(wrapper->h_ctx, req, reply);
+  }
+}

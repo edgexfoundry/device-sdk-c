@@ -327,21 +327,18 @@ static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_htt
 
 static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  if (request_is_authenticated(ctx, req, reply))
-  {
-    devsdk_service_t *svc = (devsdk_service_t *) ctx;
-    JSON_Value *val = json_value_init_object ();
-    JSON_Object *obj = json_value_get_object (val);
-    json_object_set_string (obj, "version", svc->version);
-    json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
-    json_object_set_string (obj, "serviceName", svc->name);
-    char *json = json_serialize_to_string (val);
-    json_value_free (val);
-    reply->data.bytes = json;
-    reply->data.size = strlen (json);
-    reply->content_type = CONTENT_JSON;
-    reply->code = MHD_HTTP_OK;
-  }
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  JSON_Value *val = json_value_init_object ();
+  JSON_Object *obj = json_value_get_object (val);
+  json_object_set_string (obj, "version", svc->version);
+  json_object_set_string (obj, "sdk_version", CSDK_VERSION_STR);
+  json_object_set_string (obj, "serviceName", svc->name);
+  char *json = json_serialize_to_string (val);
+  json_value_free (val);
+  reply->data.bytes = json;
+  reply->data.size = strlen (json);
+  reply->content_type = CONTENT_JSON;
+  reply->code = MHD_HTTP_OK;
 }
 
 static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uint64_t val)
@@ -786,26 +783,37 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   /* Register REST handlers */
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_NAME, DevSDK_Delete, svc, edgex_device_handler_callback_device_name);
+  svc->callback_device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_device_name};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_NAME, DevSDK_Delete, &svc->callback_device_name_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_profile);
+  svc->callback_profile_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_profile};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, &svc->callback_profile_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_watcher);
+  svc->callback_watcher_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_watcher};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, &svc->callback_watcher_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_NAME, DevSDK_Delete, svc, edgex_device_handler_callback_watcher_name);
+  svc->callback_watcher_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_watcher_name};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_NAME, DevSDK_Delete, &svc->callback_watcher_name_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, svc, edgex_device_handler_callback_service);
+  svc->callback_service_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_service};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, &svc->callback_service_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, svc, edgex_device_handler_device_namev2);
+  svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
+  svc->discovery_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_discoveryv2};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, &svc->discovery_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
+  svc->config_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_configv2};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, &svc->config_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_SECRET, DevSDK_Post, svc, edgex_device_handler_secret);
+  svc->secret_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_secret};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_SECRET, DevSDK_Post, &svc->secret_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);
+  svc->version_wrapper = (auth_wrapper_t){ svc, svc->secretstore, version_handler};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, &svc->version_wrapper, http_auth_wrapper);
 
+  // No auth wrapper for ping (required for health check)
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_PING, DevSDK_Get, svc, ping2_handler);
 
   /* Ready. Register ourselves and log that we have started. */
@@ -1034,7 +1042,9 @@ void devsdk_register_http_handler
   }
   else
   {
-    edgex_rest_server_register_handler (svc->daemon, url, methods, context, handler);
+    auth_wrapper_t *dynamic_wrapper = calloc(sizeof(auth_wrapper_t), 1); // No unregister(); this memory will never be freed
+    *dynamic_wrapper = (auth_wrapper_t){ context, svc->secretstore, handler};  // Use our secretstore, and caller's context
+    edgex_rest_server_register_handler (svc->daemon, url, methods, dynamic_wrapper, http_auth_wrapper);
   }
 }
 

@@ -125,28 +125,25 @@ static iot_data_t *edgex_secrets_process_secretdata (const iot_data_t *sd)
 
 void edgex_device_handler_secret (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
-  if (request_is_authenticated(ctx,req,reply))
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  edgex_baseresponse br;
+  iot_data_t *data = iot_data_from_json (req->data.bytes);
+
+  if (data)
   {
-    devsdk_service_t *svc = (devsdk_service_t *) ctx;
-    edgex_baseresponse br;
-    iot_data_t *data = iot_data_from_json (req->data.bytes);
-
-    if (data)
-    {
-      iot_data_t *secrets = edgex_secrets_process_secretdata (iot_data_string_map_get (data, "secretData"));
-      edgex_secrets_set (svc->secretstore, iot_data_string_map_get_string (data, "path"), secrets);
-      atomic_fetch_add (&svc->metrics.secsto, 1);
-      iot_data_free (secrets);
-      iot_data_free (data);
-      edgex_baseresponse_populate (&br, "v2", MHD_HTTP_CREATED, "Secrets populated successfully");
-    }
-    else
-    {
-      edgex_baseresponse_populate (&br, "v2", MHD_HTTP_BAD_REQUEST, "Unable to parse secrets");
-    }
-
-    edgex_baseresponse_write (&br, reply);
+    iot_data_t *secrets = edgex_secrets_process_secretdata (iot_data_string_map_get (data, "secretData"));
+    edgex_secrets_set (svc->secretstore, iot_data_string_map_get_string (data, "path"), secrets);
+    atomic_fetch_add (&svc->metrics.secsto, 1);
+    iot_data_free (secrets);
+    iot_data_free (data);
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_CREATED, "Secrets populated successfully");
   }
+  else
+  {
+    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_BAD_REQUEST, "Unable to parse secrets");
+  }
+
+  edgex_baseresponse_write (&br, reply);
 }
 
 static uint64_t edgex_secrets_from_file (edgex_secret_provider_t *sp, const char *filename, bool scrub)

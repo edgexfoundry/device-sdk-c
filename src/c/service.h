@@ -20,6 +20,7 @@
 #include "rest-server.h"
 #include "iot/threadpool.h"
 #include "iot/scheduler.h"
+#include "request_auth.h"
 
 struct devsdk_callbacks
 {
@@ -72,6 +73,22 @@ struct devsdk_service_t
   iot_threadpool_t *thpool;
   iot_threadpool_t *eventq;
   iot_scheduler_t *scheduler;
+
+  auth_wrapper_t callback_device_wrapper;
+  auth_wrapper_t validate_addr_wrapper;
+  auth_wrapper_t callback_device_name_wrapper;
+  auth_wrapper_t callback_profile_wrapper;
+  auth_wrapper_t callback_watcher_wrapper;
+  auth_wrapper_t callback_watcher_name_wrapper;
+  auth_wrapper_t callback_service_wrapper;
+  auth_wrapper_t device_name_wrapper;
+  auth_wrapper_t discovery_wrapper;
+  auth_wrapper_t metrics_wrapper;
+  auth_wrapper_t config_wrapper;
+  auth_wrapper_t secret_wrapper;
+  auth_wrapper_t version_wrapper;
+  // Note: no ping_wrapper (intentionally)!
+
 };
 
 extern void devsdk_schedule_metrics (devsdk_service_t *svc);
