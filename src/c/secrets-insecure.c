@@ -107,8 +107,8 @@ static void insecure_releaseregtoken (void *impl)
 
 static iot_data_t * insecure_requestjwt (void *impl)
 {
-  	// {"alg":"None","typ":"JWT"}.{}.
-  return iot_data_alloc_string ("eyJhbGciOiJOb25lIiwidHlwIjoiSldUIn0.e30.", IOT_DATA_REF); 
+  // "" will cause no Authorization header to be sent in rest.c
+  return iot_data_alloc_string ("", IOT_DATA_REF); 
 }
 
 static bool insecure_isjwtvalid (void *impl, const char *jwt)

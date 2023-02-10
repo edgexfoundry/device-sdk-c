@@ -362,15 +362,16 @@ static bool vault_isjwtvalid (void *impl, const char *jwt)
   bool result = false;
   vault_impl_t *vault = (vault_impl_t *)impl;
 
-  JSON_Value *jval = json_value_init_object ();
-  JSON_Object *obj = json_value_get_object (jval);
-  json_object_set_string (obj, "token", jwt);
-
-  char * json = json_serialize_to_string (jval);
-  json_value_free (jval);
+  iot_data_t * body = iot_data_alloc_map(IOT_DATA_STRING);
+  iot_data_string_map_add(body, "token", iot_data_alloc_string(jwt, IOT_DATA_REF));
+  char * json = iot_data_to_json (body);
+  iot_data_free(body);
+  body = NULL;
 
   iot_data_t *reply = vault_rest_post (vault, vault->jwtvalidateurl, json);
-  json_free_serialized_string (json);
+  
+  free (json);
+  json = NULL;
 
   if (reply)
   {
