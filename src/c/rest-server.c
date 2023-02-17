@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -475,11 +475,24 @@ static void edgex_rest_sa_out (char *res, const struct sockaddr *sa)
   }
 }
 
+static void edgex_rest_server_log (void *ctx, const char * fmt, va_list ap)
+{
+  va_list ap2;
+  char *msg;
+  iot_logger_t *lc = (iot_logger_t *)ctx;
+  va_copy (ap2, ap);
+  msg = malloc (vsnprintf (NULL, 0, fmt, ap) + 1);
+  vsprintf (msg, fmt, ap2);
+  va_end (ap2);
+  iot_log_error (lc, "microhttpd error: %s", msg);
+  free (msg);
+}
+
 edgex_rest_server *edgex_rest_server_create
   (iot_logger_t *lc, const char *bindaddr, uint16_t port, uint64_t maxsize, devsdk_error *err)
 {
   edgex_rest_server *svr;
-  uint16_t flags = MHD_USE_THREAD_PER_CONNECTION;
+  uint16_t flags = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG;
 
   svr = calloc (1, sizeof (edgex_rest_server));
   svr->lc = lc;
@@ -504,7 +517,7 @@ edgex_rest_server *edgex_rest_server_create
       {
         flags |= MHD_USE_IPv6;
       }
-      svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_SOCK_ADDR, res->ai_addr, MHD_OPTION_END);
+      svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_EXTERNAL_LOGGER, edgex_rest_server_log, lc, MHD_OPTION_SOCK_ADDR, res->ai_addr, MHD_OPTION_END);
       freeaddrinfo (res);
     }
     else
@@ -515,7 +528,7 @@ edgex_rest_server *edgex_rest_server_create
   else
   {
     iot_log_info (lc, "Starting HTTP server on port %d (all interfaces)", port);
-    svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_END);
+    svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_EXTERNAL_LOGGER, edgex_rest_server_log, lc, MHD_OPTION_END);
   }
 
   if (svr->daemon == NULL)
