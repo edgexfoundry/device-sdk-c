@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -12,7 +12,6 @@
 #include "device.h"
 #include "discovery.h"
 #include "callback2.h"
-#include "metrics.h"
 #include "validate.h"
 #include "errorlist.h"
 #include "rest-server.h"
@@ -549,41 +548,28 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   svc->eventq = iot_threadpool_alloc (1, svc->config.device.eventqlen, IOT_THREAD_NO_PRIORITY, IOT_THREAD_NO_AFFINITY, svc->logger);
   iot_threadpool_start (svc->eventq);
 
-  /* Wait for metadata and data to be available */
+  // Initialize MessageBus client
 
-  if (iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false))
+  const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
+  if (strcmp (bustype, "mqtt") == 0)
   {
-    const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
-    if (strcmp (bustype, "mqtt") == 0)
-    {
-      svc->dataclient = edgex_data_client_new_mqtt (svc, deadline, svc->eventq);
-    }
-    else if (strcmp (bustype, "redis") == 0)
-    {
-      svc->dataclient = edgex_data_client_new_redstr (svc, deadline, svc->eventq);
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unknown Message Bus type %s", bustype);
-    }
-    if (svc->dataclient == NULL)
-    {
-      *err = EDGEX_REMOTE_SERVER_DOWN;
-      return;
-    }
+    svc->dataclient = edgex_data_client_new_mqtt (svc, deadline, svc->eventq);
+  }
+  else if (strcmp (bustype, "redis") == 0)
+  {
+    svc->dataclient = edgex_data_client_new_redstr (svc, deadline, svc->eventq);
   }
   else
   {
-    if (svc->registry)
-    {
-      devsdk_registry_query_service (svc->registry, "core-data", &svc->config.endpoints.data.host, &svc->config.endpoints.data.port, deadline, err);
-    }
-    if (err->code || !ping_client (svc->logger, "core-data", &svc->config.endpoints.data, deadline, err))
-    {
-      return;
-    }
-    svc->dataclient = edgex_data_client_new_rest (&svc->config.endpoints.data, svc->logger, svc->eventq);
+    iot_log_error (svc->logger, "Unknown Message Bus type %s", bustype);
   }
+  if (svc->dataclient == NULL)
+  {
+    *err = EDGEX_REMOTE_SERVER_DOWN;
+    return;
+  }
+
+  /* Wait for core-metadata to be available */
 
   if (!ping_client (svc->logger, "core-metadata", &svc->config.endpoints.metadata, deadline, err))
   {
@@ -770,8 +756,6 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, svc, edgex_device_handler_device_namev2);
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
-
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_METRICS, DevSDK_Get, svc, edgex_device_handler_metricsv2);
 
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 

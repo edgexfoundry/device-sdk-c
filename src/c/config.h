@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -42,7 +42,6 @@ typedef struct edgex_device_service_endpoint
 
 typedef struct edgex_service_endpoints
 {
-  edgex_device_service_endpoint data;
   edgex_device_service_endpoint metadata;
 } edgex_service_endpoints;
 

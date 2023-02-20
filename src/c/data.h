@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -83,8 +83,6 @@ typedef struct edgex_data_client_t
 } edgex_data_client_t;
 
 typedef struct edgex_device_service_endpoint edgex_device_service_endpoint;
-
-edgex_data_client_t *edgex_data_client_new_rest (const edgex_device_service_endpoint *e, iot_logger_t *lc, iot_threadpool_t *queue);
 
 void edgex_data_client_free (edgex_data_client_t *client);
 

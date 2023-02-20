@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -87,7 +87,6 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Service/CORSConfiguration/CORSMaxAge", iot_data_alloc_ui32 (3600));
 
   iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
-  iot_data_string_map_add (result, "Device/UseMessageBus", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
@@ -312,10 +311,8 @@ void edgex_device_parseTomlClients
 {
   if (clients)
   {
-    parseClient (lc, toml_table_in (clients, "core-data"), &endpoints->data, err);
     parseClient (lc, toml_table_in (clients, "core-metadata"), &endpoints->metadata, err);
   }
-  checkClientOverride (lc, "CORE_DATA", &endpoints->data);
   checkClientOverride (lc, "CORE_METADATA", &endpoints->metadata);
 }
 
@@ -696,7 +693,6 @@ void edgex_device_freeConfig (devsdk_service_t *svc)
     free (svc->config.service.labels);
   }
 
-  free (svc->config.endpoints.data.host);
   free (svc->config.endpoints.metadata.host);
 
   iot_data_free (svc->config.sdkconf);
@@ -745,7 +741,6 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
-  json_object_set_boolean (dobj, "UseMessageBus", iot_data_string_map_get_bool (svc->config.sdkconf, "Device/UseMessageBus", false));
 
   JSON_Value *lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);
@@ -780,12 +775,6 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_string (mobj, "Host", svc->config.endpoints.metadata.host);
   json_object_set_uint (mobj, "Port", svc->config.endpoints.metadata.port);
   json_object_set_value (cobj, "Metadata", mval);
-
-  dval = json_value_init_object ();
-  dobj = json_value_get_object (dval);
-  json_object_set_string (dobj, "Host", svc->config.endpoints.data.host);
-  json_object_set_uint (dobj, "Port", svc->config.endpoints.data.port);
-  json_object_set_value (cobj, "Data", dval);
 
   json_object_set_value (obj, "Clients", cval);
 
