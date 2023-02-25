@@ -19,6 +19,9 @@
 
 #include <microhttpd.h>
 
+static int init_flg_mstr = -1;
+static int init_flg_slv = -1;
+
 typedef struct edgex_autoimpl
 {
   devsdk_service_t *svc;
@@ -45,6 +48,7 @@ static void edgex_autoimpl_release (edgex_autoimpl *ai)
 
 static void *ae_runner (void *p)
 {
+  sem_wait (&slv_mutex);
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
   atomic_fetch_add (&ai->refs, 1);
 
@@ -55,6 +59,7 @@ static void *ae_runner (void *p)
     {
       edgex_device_release (ai->svc, dev);
       edgex_autoimpl_release (ai);
+      sem_post (&slv_mutex);
       return NULL;
     }
     edgex_device_alloc_crlid (NULL);
@@ -138,6 +143,7 @@ static void *ae_runner (void *p)
     }
   }
   edgex_autoimpl_release (ai);
+  sem_post (&slv_mutex);
   return NULL;
 }
 
@@ -154,6 +160,17 @@ static void *starter (void *p)
 
 void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
 {
+  if (init_flg_mstr != 0)
+  {
+    init_flg_mstr = sem_init (&mstr_mutex, 0, 1);
+  }
+
+  if (init_flg_slv != 0)
+  {
+    init_flg_slv = sem_init (&slv_mutex, 0, 1)
+  }
+  
+  sem_wait (&mstr_mutex);
   for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
   {
     if (ae->impl == NULL)
@@ -202,6 +219,7 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
       iot_schedule_add (ae->impl->svc->scheduler, ae->impl->handle);
     }
   }
+  sem_post (&mstr_mutex);
 }
 
 static void stopper (edgex_autoimpl *ai)
@@ -228,5 +246,46 @@ void edgex_device_autoevent_stop (edgex_device *dev)
       stopper (ae->impl);
       ae->impl = NULL;
     }
+  }
+}
+
+void edgex_device_autoevent_stop_to_update (edgex_device *dev)
+{
+  if (init_flg_mstr != 0)
+  {
+    init_flg_mstr = sem_init (&mstr_mutex, 0, 1);
+  }
+
+  if (init_flg_slv != 0)
+  {
+    init_flg_slv = sem_init (&slv_mutex, 0, 1);
+  }
+
+  sem_wait (&mstr_mutex);
+  for (edgex_device_autoevents *ae = dev->autos; ae; ae = ae->next)
+  {
+    if (ae->impl)
+    {      
+      sem_wait (&slv_mutex);
+      stopper (ae->impl);
+      ae->impl = NULL;
+      sem_post (&slv_mutex);
+    }
+  }
+  sem_post (&mstr_mutex);
+}
+
+void clear_ae_signals ()
+{
+  if (init_flg_mstr == 0)
+  { 
+    sem_destroy (&mstr_mutex);
+    init_flg_mstr = -1;
+  }
+
+  if (init_flg_slv == 0)
+  {
+    sem_destroy (&slv_mutex);
+    init_flg_slv = -1; 
   }
 }
