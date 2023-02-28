@@ -13,6 +13,11 @@
 #include "edgex2.h"
 #include "rest-server.h"
 
+devsdk_new_device *device_first;
+devsdk_new_device *device_latest;
+void devsdk_add_new_device (devsdk_new_device *dev_list, const char *name);
+void devsdk_clean_device(devsdk_new_device *dev_list);
+bool search_devsdk_device (devsdk_new_device *dev_list, char *name);
 devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs);
 void devsdk_strings_free (devsdk_strings *strs);
 char *devsdk_nvpairs_write (const devsdk_nvpairs *e);

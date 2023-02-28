@@ -28,6 +28,12 @@ typedef struct devsdk_nvpairs
   struct devsdk_nvpairs *next;
 } devsdk_nvpairs;
 
+typedef struct devsdk_new_device
+{
+  char *name;
+  struct devsdk_new_device *next;
+} devsdk_new_device;
+
 /**
  * @brief Creates a new string list, optionally adding to an existing list
  * @param str The string to be added

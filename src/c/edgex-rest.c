@@ -75,6 +75,65 @@ static JSON_Value *strings_to_array (const devsdk_strings *s)
   return result;
 }
 
+void devsdk_add_new_device (devsdk_new_device *dev_list, const char *name)
+{
+  int chrlen = strlen(name);
+  if (dev_list == NULL)
+  {
+    dev_list = (devsdk_new_device *)malloc(sizeof(devsdk_new_device));
+    device_first = dev_list;
+    device_latest = device_first;
+    device_latest->name = (char *)malloc(chrlen + 1);
+    snprintf(device_latest->name, chrlen + 1, "%s", name);
+    device_latest->next = NULL;
+    return;
+  }
+  dev_list->next = (devsdk_new_device *)malloc(sizeof(devsdk_new_device));
+  device_latest = dev_list->next;
+  device_latest->name = (char *)malloc(chrlen + 1);
+  snprintf(device_latest->name, chrlen + 1, "%s", name);
+  device_latest->next = NULL;
+}
+
+bool search_devsdk_device (devsdk_new_device *dev_list, char *name)
+{
+  devsdk_new_device *devs = dev_list;
+  if (devs == NULL)
+  {
+    return false;
+  }  
+  for(devsdk_new_device *d = devs; d; d = d->next)
+  {
+    if(strcmp(d->name, name) == 0)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void devsdk_clean_device(devsdk_new_device *dev_list)
+{
+  devsdk_new_device *devs = dev_list;
+  devsdk_new_device *devs_next = NULL;
+  devsdk_new_device *devs_curr = NULL;
+  if(devs)
+  {
+    for(devsdk_new_device *d = devs; d; d = d->next)
+    {
+      devs_next = d->next;
+      devs_curr = d;
+      free(devs_curr->name);
+      devs_curr->name = NULL;
+      free(devs_curr);
+      d = NULL;
+      d = devs_next;
+    }
+  }
+  device_first = NULL;
+  device_latest = NULL;
+}
+
 devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs)
 {
   devsdk_strings *result = NULL;

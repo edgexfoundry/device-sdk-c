@@ -89,6 +89,7 @@ void edgex_add_device
 
   if (result)
   {
+    devsdk_add_new_device (device_latest, name);
     iot_log_info (svc->logger, "Device %s added with id %s", name, result);
     free (result);
   }
