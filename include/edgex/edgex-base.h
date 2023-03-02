@@ -28,7 +28,7 @@ typedef struct devsdk_nvpairs
   struct devsdk_nvpairs *next;
 } devsdk_nvpairs;
 
-/**
+/** 
  * @brief Creates a new string list, optionally adding to an existing list
  * @param str The string to be added
  * @param list A list that will be extended, or NULL
