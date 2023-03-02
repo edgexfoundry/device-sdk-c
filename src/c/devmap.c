@@ -100,7 +100,7 @@ static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
     edgex_map_set (&map->profiles, dup->profile->name, dup->profile);
   }
   edgex_map_set (&map->devices, dup->name, dup);
-  result = search_devsdk_device(device_first, dup->name);
+  result = search_devsdk_new_device (map->svc->add_device_new, dup->name)
   if (result)
   {
     edgex_device_autoevent_start (map->svc, dup);

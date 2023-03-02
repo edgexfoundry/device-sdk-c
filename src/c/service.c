@@ -678,7 +678,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   }
 
   edgex_devmap_populate_devices (svc->devices, devs);
-  devsdk_clean_device(device_first);
+  devsdk_clean_new_device(svc->add_device_new);
   edgex_device_free (svc, devs);
 
   /* Start REST server now so that we get the callbacks on device addition */
@@ -802,8 +802,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   toml_table_t *configtoml = NULL;
   bool uploadConfig = false;
   iot_data_t *configmap;
-  device_first = NULL;
-  device_latest = NULL;
+  svc->add_device_new = NULL;
 
   if (svc->starttime)
   {
