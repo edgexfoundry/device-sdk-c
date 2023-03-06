@@ -642,7 +642,7 @@ static int32_t edgex_device_runput3
       if (svc->config.device.updatelastconnected)
       {
         devsdk_error err;
-        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, &err);
       }
     }
     else
@@ -699,7 +699,7 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
       {
         if (svc->config.device.updatelastconnected)
         {
-          edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, dev->name, &err);
+          edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, &err);
         }
         if (svc->config.device.maxeventsize && edgex_event_cooked_size (result) > svc->config.device.maxeventsize * 1024)
         {
@@ -711,7 +711,7 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
       else
       {
         *reply = edgex_v3_error_response (svc->logger, "Assertion failed for device %s. Marking as down.", dev->name);
-        edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, dev->name, DOWN, &err);
+        edgex_metadata_client_set_device_opstate (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, DOWN, &err);
       }
     }
     else

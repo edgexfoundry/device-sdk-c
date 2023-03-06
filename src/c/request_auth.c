@@ -21,18 +21,15 @@ bool request_is_authenticated (edgex_secret_provider_t * secretprovider, const d
   // Calling request_is_authenticated requires that the Authorization header is present on the request
   // and that it is a Bearer token and that the JWT validates with Vault; otherwise authorization fails.
 
-  printf("Authenticating request\n");
   if (req->authorization_header_value != NULL && 
     (strncasecmp("Bearer ", req->authorization_header_value, strlen("Bearer ")) == 0))
   {
     const char * jwt = req->authorization_header_value + strlen("Bearer ");
-    printf("Checking JWT %s\n", jwt);
     valid_jwt = edgex_secrets_is_jwt_valid (secretprovider, jwt);
   }
 
   if (!valid_jwt)
   {
-    printf("Unauthorized\n");
     reply->code = MHD_HTTP_UNAUTHORIZED;
     // Caller handler is expected to cease further processing
   }
