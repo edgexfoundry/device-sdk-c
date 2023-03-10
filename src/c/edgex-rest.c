@@ -75,6 +75,37 @@ static JSON_Value *strings_to_array (const devsdk_strings *s)
   return result;
 }
 
+void devsdk_add_new_device (iot_data_t *devices, const char *name)
+{
+  if(devices == NULL)
+  {
+    devices = iot_data_alloc_map (IOT_DATA_STRING);
+  }
+  /*Check if memory got allocated or already allocated*/
+  if(devices)
+  {
+    iot_data_map_add (devices, iot_data_alloc_string (name, IOT_DATA_COPY), iot_data_alloc_null ());
+  }
+}
+
+void devsdk_clean_new_device (iot_data_t *devices)
+{
+  if(devices)
+  {
+    iot_data_free (devices);
+    devices = NULL;
+  }
+}
+
+bool search_devsdk_new_device (iot_data_t *devices, char *name)
+{
+  if (devices && iot_data_string_map_get (devices, name))
+  {
+    return true;
+  }
+  return false;
+}
+
 devsdk_strings *devsdk_strings_dup (const devsdk_strings *strs)
 {
   devsdk_strings *result = NULL;

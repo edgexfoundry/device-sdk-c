@@ -88,6 +88,7 @@ static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
   edgex_device *dup = edgex_device_dup (newdev);
   atomic_store (&dup->refs, 1);
   dup->ownprofile = false;
+  bool result = false;
   edgex_deviceprofile **pp = edgex_map_get (&map->profiles, dup->profile->name);
   if (pp)
   {
@@ -99,7 +100,11 @@ static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
     edgex_map_set (&map->profiles, dup->profile->name, dup->profile);
   }
   edgex_map_set (&map->devices, dup->name, dup);
-  edgex_device_autoevent_start (map->svc, dup);
+  result = search_devsdk_new_device (map->svc->add_device_new, dup->name);
+  if (result)
+  {
+    edgex_device_autoevent_start (map->svc, dup);
+  }
 }
 
 void edgex_devmap_populate_devices

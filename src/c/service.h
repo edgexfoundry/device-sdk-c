@@ -72,6 +72,7 @@ struct devsdk_service_t
   iot_threadpool_t *thpool;
   iot_threadpool_t *eventq;
   iot_scheduler_t *scheduler;
+  iot_data_t *add_device_new;
 };
 
 extern void devsdk_schedule_metrics (devsdk_service_t *svc);
