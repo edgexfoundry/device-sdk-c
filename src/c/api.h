@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2022
+ * Copyright (c) 2020-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -8,6 +8,8 @@
 
 #ifndef _EDGEX_API_H_
 #define _EDGEX_API_H_ 1
+
+#define EDGEX_API_VERSION "v2"
 
 /* Endpoints */
 
@@ -26,6 +28,14 @@
 #define EDGEX_DEV_API2_CALLBACK_WATCHER_NAME "/api/v2/callback/watcher/name/{name}"
 #define EDGEX_DEV_API2_CALLBACK_SERVICE "/api/v2/callback/service"
 #define EDGEX_DEV_API2_VALIDATE_ADDR "/api/v2/validate/device"
+
+/* Topics */
+
+#define EDGEX_DEV_TOPIC_DEVICE "device/command/request"
+#define EDGEX_DEV_TOPIC_VALIDATE "validate/device"
+#define EDGEX_DEV_TOPIC_RESPONSE "response"
+#define EDGEX_DEV_TOPIC_EVENT "events/device"
+#define EDGEX_DEV_TOPIC_METRIC "telemetry"
 
 /* Query parameters */
 

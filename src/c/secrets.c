@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022
+ * Copyright (c) 2021-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -26,7 +26,7 @@ static uint64_t edgex_secrets_from_file (edgex_secret_provider_t *sp, const char
 bool edgex_secrets_init
   (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m)
 {
-  bool result = sp->fns.init (sp->impl, lc, sched, pool, svcname, config);
+  bool result = sp->fns.init (sp->impl, lc, sched, pool, svcname, config, m);
   if (result)
   {
     const char *secfile = iot_data_string_map_get_string (config, "SecretStore/SecretsFile");

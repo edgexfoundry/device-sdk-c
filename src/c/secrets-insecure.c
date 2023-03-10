@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022
+ * Copyright (c) 2021-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -18,6 +18,7 @@ typedef struct insecure_impl_t
 {
   iot_logger_t *lc;
   iot_data_t *map;
+  devsdk_metrics_t *metrics;
   pthread_mutex_t mutex;
 } insecure_impl_t;
 
@@ -57,12 +58,14 @@ static iot_data_t *insecure_parse_config (iot_data_t *config)
   return result;
 }
 
-static bool insecure_init (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config)
+static bool insecure_init
+  (void *impl, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m)
 {
   insecure_impl_t *insec = (insecure_impl_t *)impl;
   insec->lc = lc;
   pthread_mutex_init (&insec->mutex, NULL);
   insec->map = insecure_parse_config (config);
+  insec->metrics = m;
   return true;
 }
 
@@ -84,7 +87,7 @@ static iot_data_t *insecure_get (void *impl, const char *path)
   const iot_data_t *secrets = iot_data_string_map_get (insec->map, path);
   result = secrets ? iot_data_copy (secrets) : iot_data_alloc_map (IOT_DATA_STRING);
   pthread_mutex_unlock (&insec->mutex);
-
+  atomic_fetch_add (&insec->metrics->secrq, 1);
   return result;
 }
 
