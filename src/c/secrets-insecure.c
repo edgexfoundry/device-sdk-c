@@ -105,6 +105,18 @@ static void insecure_releaseregtoken (void *impl)
 {
 }
 
+static iot_data_t * insecure_requestjwt (void *impl)
+{
+  // "" will cause no Authorization header to be sent in rest.c
+  return iot_data_alloc_string ("", IOT_DATA_REF); 
+}
+
+static bool insecure_isjwtvalid (void *impl, const char *jwt)
+{
+  return true;
+}
+
+
 static void insecure_fini (void *impl)
 {
   insecure_impl_t *insec = (insecure_impl_t *)impl;
@@ -118,4 +130,4 @@ void *edgex_secrets_insecure_alloc ()
   return calloc (1, sizeof (insecure_impl_t));
 }
 
-const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_getregtoken, insecure_releaseregtoken, insecure_fini };
+const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_getregtoken, insecure_releaseregtoken, insecure_requestjwt, insecure_isjwtvalid, insecure_fini };

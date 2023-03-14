@@ -27,6 +27,7 @@
 #include "devutil.h"
 #include "correlation.h"
 #include "edgex/csdk-defs.h"
+#include "request_auth.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -464,7 +465,7 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
         JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
         JSON_Object *deviceobj = json_value_get_object (jval);
         json_object_set_string (deviceobj, "serviceName", svc->name);
-        edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, deviceobj, err);
+        edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, deviceobj, err);
       }
       else
       {
@@ -617,7 +618,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   edgex_deviceservice *ds;
   ds = edgex_metadata_client_get_deviceservice
-    (svc->logger, &svc->config.endpoints, svc->name, err);
+    (svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, err);
   if (err->code)
   {
     iot_log_error (svc->logger, "get_deviceservice failed");
@@ -639,7 +640,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
       ds->labels = devsdk_strings_new (svc->config.service.labels[n], ds->labels);
     }
 
-    edgex_metadata_client_create_deviceservice (svc->logger, &svc->config.endpoints, ds, err);
+    edgex_metadata_client_create_deviceservice (svc->logger, &svc->config.endpoints, svc->secretstore, ds, err);
     if (err->code)
     {
       iot_log_error
@@ -659,7 +660,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
       iot_log_info (svc->logger, "Updating service endpoint in metadata");
       free (ds->baseaddress);
       ds->baseaddress = base;
-      edgex_metadata_client_update_deviceservice (svc->logger, &svc->config.endpoints, ds->name, ds->baseaddress, err);
+      edgex_metadata_client_update_deviceservice (svc->logger, &svc->config.endpoints, svc->secretstore, ds->name, ds->baseaddress, err);
       if (err->code)
       {
         iot_log_error (svc->logger, "update_deviceservice failed");
@@ -687,7 +688,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   /* Obtain Devices from metadata */
 
   edgex_device *devs = edgex_metadata_client_get_devices
-    (svc->logger, &svc->config.endpoints, svc->name, err);
+    (svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, err);
 
   if (err->code)
   {
@@ -758,7 +759,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   /* Get Provision Watchers */
 
-  edgex_watcher *w = edgex_metadata_client_get_watchers (svc->logger, &svc->config.endpoints, svc->name, err);
+  edgex_watcher *w = edgex_metadata_client_get_watchers (svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, err);
   if (err->code)
   {
     iot_log_error (svc->logger, "Unable to retrieve provision watchers from metadata");
@@ -782,26 +783,37 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   /* Register REST handlers */
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_NAME, DevSDK_Delete, svc, edgex_device_handler_callback_device_name);
+  svc->callback_device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_device_name};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_NAME, DevSDK_Delete, &svc->callback_device_name_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_profile);
+  svc->callback_profile_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_profile};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, &svc->callback_profile_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_watcher);
+  svc->callback_watcher_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_watcher};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, &svc->callback_watcher_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_NAME, DevSDK_Delete, svc, edgex_device_handler_callback_watcher_name);
+  svc->callback_watcher_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_watcher_name};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_NAME, DevSDK_Delete, &svc->callback_watcher_name_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, svc, edgex_device_handler_callback_service);
+  svc->callback_service_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_service};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, &svc->callback_service_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, svc, edgex_device_handler_device_namev2);
+  svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
+  svc->discovery_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_discoveryv2};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, &svc->discovery_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
+  svc->config_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_configv2};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, &svc->config_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_SECRET, DevSDK_Post, svc, edgex_device_handler_secret);
+  svc->secret_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_secret};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_SECRET, DevSDK_Post, &svc->secret_wrapper, http_auth_wrapper);
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, svc, version_handler);
+  svc->version_wrapper = (auth_wrapper_t){ svc, svc->secretstore, version_handler};
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, &svc->version_wrapper, http_auth_wrapper);
 
+  // No auth wrapper for ping (required for health check)
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_PING, DevSDK_Get, svc, ping2_handler);
 
   /* Ready. Register ourselves and log that we have started. */
@@ -1030,7 +1042,9 @@ void devsdk_register_http_handler
   }
   else
   {
-    edgex_rest_server_register_handler (svc->daemon, url, methods, context, handler);
+    auth_wrapper_t *dynamic_wrapper = calloc(sizeof(auth_wrapper_t), 1); // No unregister(); this memory will never be freed
+    *dynamic_wrapper = (auth_wrapper_t){ context, svc->secretstore, handler};  // Use our secretstore, and caller's context
+    edgex_rest_server_register_handler (svc->daemon, url, methods, dynamic_wrapper, http_auth_wrapper);
   }
 }
 
@@ -1078,7 +1092,7 @@ void devsdk_post_readings
       if (svc->config.device.updatelastconnected)
       {
         devsdk_error err = EDGEX_OK;
-        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, devname, &err);
+        edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, devname, &err);
       }
     }
   }

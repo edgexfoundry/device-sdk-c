@@ -98,14 +98,14 @@ static void *ae_runner (void *p)
             }
             if (ai->svc->config.device.updatelastconnected)
             {
-              edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, dev->name, &err);
+              edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, ai->svc->secretstore, dev->name, &err);
             }
           }
           else
           {
             iot_log_error (ai->svc->logger, "Assertion failed for device %s. Disabling.", dev->name);
             edgex_metadata_client_set_device_opstate
-              (ai->svc->logger, &ai->svc->config.endpoints, dev->name, DOWN, &err);
+              (ai->svc->logger, &ai->svc->config.endpoints, ai->svc->secretstore, dev->name, DOWN, &err);
           }
         }
         devsdk_commandresult_free (resdup, ai->resource->nreqs);

@@ -73,7 +73,7 @@ static struct curl_slist *edgex_add_other_hdrs (struct curl_slist *slist, const 
 
 static struct curl_slist *edgex_add_auth_hdr (edgex_ctx *ctx, struct curl_slist *slist)
 {
-  if (ctx->jwt_token)
+  if (ctx->jwt_token && strlen(ctx->jwt_token) > 0)
   {
     char *bearer = malloc (sizeof (EDGEX_AUTH_HDR) + strnlen (ctx->jwt_token, MAX_TOKEN_LEN));
     strcpy (bearer, EDGEX_AUTH_HDR);

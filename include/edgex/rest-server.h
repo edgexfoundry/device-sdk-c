@@ -45,6 +45,7 @@ typedef struct
   devsdk_http_method method;
   devsdk_http_data data;
   const char *content_type;
+  const char *authorization_header_value;
 } devsdk_http_request;
 
 typedef struct

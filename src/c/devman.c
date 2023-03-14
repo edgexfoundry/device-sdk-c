@@ -76,6 +76,7 @@ void edgex_add_device
   (
     svc->logger,
     &svc->config.endpoints,
+    svc->secretstore,
     name,
     description,
     labels,
@@ -141,7 +142,7 @@ void edgex_remove_device_byname (devsdk_service_t *svc, const char *name, devsdk
 {
   *err = EDGEX_OK;
   edgex_metadata_client_delete_device_byname
-    (svc->logger, &svc->config.endpoints, name, err);
+    (svc->logger, &svc->config.endpoints, svc->secretstore, name, err);
   if (err->code != 0)
   {
     iot_log_error
@@ -164,6 +165,7 @@ void edgex_update_device
   (
     svc->logger,
     &svc->config.endpoints,
+    svc->secretstore,
     name,
     description,
     labels,
@@ -216,6 +218,7 @@ void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, de
         (
           svc->logger,
           &svc->config.endpoints,
+          svc->secretstore,
           devices[i].name,
           devices[i].description,
           labels,
@@ -240,6 +243,7 @@ void devsdk_set_device_opstate (devsdk_service_t *svc, char *devname, bool opera
   (
     svc->logger,
     &svc->config.endpoints,
+    svc->secretstore,
     devname,
     operational ? UP : DOWN,
     err

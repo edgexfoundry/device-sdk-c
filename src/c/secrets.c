@@ -13,6 +13,8 @@
 #include "edgex-rest.h"
 #include "service.h"
 #include "iot/iot.h"
+#include "request_auth.h"
+
 #include <microhttpd.h>
 
 typedef struct edgex_secret_provider_t
@@ -63,6 +65,17 @@ void edgex_secrets_releaseregtoken (edgex_secret_provider_t *sp)
 {
   return sp->fns.releaseregtoken (sp->impl);
 }
+
+iot_data_t *edgex_secrets_request_jwt (edgex_secret_provider_t *sp)
+{
+  return sp->fns.requestjwt (sp->impl);
+}
+
+bool edgex_secrets_is_jwt_valid (edgex_secret_provider_t *sp, const char *jwt)
+{
+  return sp->fns.isjwtvalid (sp->impl, jwt);
+}
+
 
 void edgex_secrets_fini (edgex_secret_provider_t *sp)
 {

@@ -20,7 +20,7 @@ typedef struct edgex_ctx
   int verify_peer;        // enables TLS peer verification via Curl
   char *tls_cert;         // Location of PEM encoded X509 cert to use for TLS client auth
   char *tls_key;          // Location of PEM encoded priv key to use for TLS client auth
-  char *jwt_token;        // access_token provided by server for authenticating REST calls
+  const char *jwt_token;   // access_token provided by server for authenticating REST calls
   devsdk_nvpairs *reqhdrs; // headers to be sent with request
   devsdk_nvpairs *rsphdrs; // headers to be retrieved from response
   atomic_bool *aborter;   // if non-null, can kill a request by setting to true
