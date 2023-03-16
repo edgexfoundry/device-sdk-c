@@ -19,11 +19,14 @@ The C SDK provides a framework for building EdgeX device services in C.
   * paho (version 1.3.x)
   * libuuid (from util-linux v2.x)
   * hiredis (version 0.14)
+  * IOTech's C utilities package (version 1.5)
 
-On Debian 11 "Bullseye" these libraries can be installed by
+On Debian 11 "Bullseye" the requred system libraries can be installed by
 ```
 apt-get install libcurl4-openssl-dev libmicrohttpd-dev libyaml-dev libcbor-dev libpaho-mqtt-dev libhiredis-dev
 ```
+
+To install the C utilities see [```README.IOT.md```](README.IOT.md)
 
 ### Building
 
