@@ -132,7 +132,7 @@ void edgex_device_handler_secret (void *ctx, const devsdk_http_request *req, dev
   if (data)
   {
     iot_data_t *secrets = edgex_secrets_process_secretdata (iot_data_string_map_get (data, "secretData"));
-    edgex_secrets_set (svc->secretstore, iot_data_string_map_get_string (data, "path"), secrets);
+    edgex_secrets_set (svc->secretstore, iot_data_string_map_get_string (data, "secretName"), secrets);
     atomic_fetch_add (&svc->metrics.secsto, 1);
     iot_data_free (secrets);
     iot_data_free (data);
@@ -166,7 +166,7 @@ static uint64_t edgex_secrets_from_file (edgex_secret_provider_t *sp, const char
           continue;
         }
         iot_data_t *secrets = edgex_secrets_process_secretdata (iot_data_string_map_get (element, "secretData"));
-        edgex_secrets_set (sp, iot_data_string_map_get_string (element, "path"), secrets);
+        edgex_secrets_set (sp, iot_data_string_map_get_string (element, "secretName"), secrets);
         result++;
         iot_data_free (secrets);
         iot_data_string_map_add ((iot_data_t *)element, "imported", iot_data_alloc_bool (true));
