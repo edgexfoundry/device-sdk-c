@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -12,6 +12,7 @@
 #include "api.h"
 #include "metadata.h"
 #include "edgex-rest.h"
+#include "dto-read.h"
 #include "rest.h"
 #include "errorlist.h"
 #include "config.h"
@@ -55,8 +56,13 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
 
   if (err->code == 0)
   {
-    result = edgex_getprofileresponse_read (lc, ctx.buff);
-    if (!result)
+    iot_data_t *obj = iot_data_from_json (ctx.buff);
+    if (obj)
+    {
+      result = edgex_profile_read (iot_data_string_map_get (obj, "profile"));
+      iot_data_free (obj);
+    }
+    else
     {
       *err = EDGEX_PROFILE_PARSE_ERROR;
     }
@@ -715,7 +721,9 @@ edgex_watcher *edgex_metadata_client_get_watchers
     return 0;
   }
 
-  result = edgex_watchers_read (ctx.buff);
+  iot_data_t *p = iot_data_from_json (ctx.buff);
+  result = edgex_pws_read (p);
+  iot_data_free (p);
   free (ctx.buff);
   *err = EDGEX_OK;
   return result;

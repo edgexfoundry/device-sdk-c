@@ -36,6 +36,14 @@
 #define EDGEX_DEV_TOPIC_RESPONSE "response"
 #define EDGEX_DEV_TOPIC_EVENT "events/device"
 #define EDGEX_DEV_TOPIC_METRIC "telemetry"
+#define EDGEX_DEV_TOPIC_ADD_DEV "system-events/core-metadata/device/add"
+#define EDGEX_DEV_TOPIC_DEL_DEV "system-events/core-metadata/device/delete"
+#define EDGEX_DEV_TOPIC_UPDATE_DEV "system-events/core-metadata/device/update"
+#define EDGEX_DEV_TOPIC_ADD_PW "system-events/core-metadata/provisionwatcher/add"
+#define EDGEX_DEV_TOPIC_DEL_PW "system-events/core-metadata/provisionwatcher/delete"
+#define EDGEX_DEV_TOPIC_UPDATE_PW "system-events/core-metadata/provisionwatcher/update"
+#define EDGEX_DEV_TOPIC_DEVICESERVICE "system-events/core-metadata/deviceservice/update"
+#define EDGEX_DEV_TOPIC_UPDATE_PROFILE "system-events/core-metadata/deviceprofile/update"
 
 /* Query parameters */
 

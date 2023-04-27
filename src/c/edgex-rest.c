@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -214,34 +214,6 @@ const char *edgex_typecode_tostring (iot_typecode_t tc)
   return tc.type == IOT_DATA_ARRAY ? arrProptypes[tc.element_type] : proptypes[tc.type];
 }
 
-static bool typecode_from_edgex_name (iot_typecode_t *res, const char *str)
-{
-  if (str)
-  {
-    for (int i = 0; i < sizeof (arrProptypes) / sizeof (*arrProptypes); i++)
-    {
-      if (strcmp (str, arrProptypes[i]) == 0)
-      {
-        res->type = IOT_DATA_ARRAY;
-        res->element_type = i;
-        res->key_type = IOT_DATA_INVALID;
-        return true;
-      }
-    }
-    for (int i = 0; i < sizeof (proptypes) / sizeof (*proptypes); i++)
-    {
-      if (strcmp (str, proptypes[i]) == 0 && strncmp (str, "Unused", 5) != 0)
-      {
-        res->type = i;
-        res->element_type = (i == IOT_DATA_MAP) ? IOT_DATA_MULTI : IOT_DATA_INVALID;
-        res->key_type = (i == IOT_DATA_MAP) ? IOT_DATA_STRING : IOT_DATA_INVALID;
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 static const char *adstatetypes[] = { "LOCKED", "UNLOCKED" };
 
 static const char *edgex_adminstate_tostring (edgex_device_adminstate ad)
@@ -266,122 +238,6 @@ static edgex_device_operatingstate edgex_operatingstate_fromstring
   (const char *str)
 {
   return (str && strcmp (str, opstatetypes[DOWN]) == 0) ? DOWN : UP;
-}
-
-static void edgex_get_readwrite (const JSON_Object *object, bool *read, bool *write)
-{
-  const char *rwstring = json_object_get_string (object, "readWrite");
-  if (rwstring && *rwstring)
-  {
-    *read = strchr (rwstring, 'R');
-    *write = strchr (rwstring, 'W');
-  }
-  else
-  {
-    *read = true;
-    *write = true;
-  }
-}
-
-static bool get_transformArg
-(
-  iot_logger_t *lc,
-  const JSON_Object *obj,
-  const char *name,
-  iot_typecode_t type,
-  edgex_transformArg *res
-)
-{
-  const char *str;
-  char *end = NULL;
-  bool ok = true;
-
-  res->enabled = false;
-  str = json_object_get_string (obj, name);
-  if (str && *str)
-  {
-    if (type.type >= IOT_DATA_INT8 && type.type <= IOT_DATA_UINT64)
-    {
-      errno = 0;
-      int64_t i = strtol (str, &end, 0);
-      if (errno || (end && *end))
-      {
-        iot_log_error (lc, "Unable to parse \"%s\" as integer for valueproperty \"%s\"", str, name);
-        ok = false;
-      }
-      else
-      {
-        res->enabled = true;
-        res->value.ival = i;
-      }
-    }
-    else if (type.type == IOT_DATA_FLOAT32 || type.type == IOT_DATA_FLOAT64)
-    {
-      errno = 0;
-      double d = strtod (str, &end);
-      if (errno || (end && *end))
-      {
-        iot_log_error ( lc, "Unable to parse \"%s\" as float for valueproperty \"%s\"", str, name);
-        ok = false;
-      }
-      else
-      {
-        res->enabled = true;
-        res->value.dval = d;
-      }
-    }
-    else
-    {
-      iot_log_error (lc, "Valueproperty \"%s\" specified for non-numeric data", name);
-      ok = false;
-    }
-  }
-  return ok;
-}
-
-static edgex_propertyvalue *propertyvalue_read
-  (iot_logger_t *lc, const JSON_Object *obj)
-{
-  iot_typecode_t pt;
-  edgex_propertyvalue *result = NULL;
-  const char *tstr = json_object_get_string (obj, "valueType");
-  if (typecode_from_edgex_name (&pt, tstr))
-  {
-    bool ok = true;
-    result = malloc (sizeof (edgex_propertyvalue));
-    memset (result, 0, sizeof (edgex_propertyvalue));
-    ok &= get_transformArg (lc, obj, "scale", pt, &result->scale);
-    ok &= get_transformArg (lc, obj, "offset", pt, &result->offset);
-    ok &= get_transformArg (lc, obj, "base", pt, &result->base);
-    ok &= get_transformArg (lc, obj, "mask", pt, &result->mask);
-    ok &= get_transformArg (lc, obj, "shift", pt, &result->shift);
-    if (result->mask.enabled || result->shift.enabled)
-    {
-      if (pt.type == IOT_DATA_FLOAT32 || pt.type == IOT_DATA_FLOAT64)
-      {
-        iot_log_error (lc, "Mask/Shift transform specified for float data");
-        ok = false;
-      }
-    }
-    ok &= get_transformArg (lc, obj, "minimum", pt, &result->minimum);
-    ok &= get_transformArg (lc, obj, "maximum", pt, &result->maximum);
-    if (!ok)
-    {
-      free (result);
-      return NULL;
-    }
-    result->type = pt;
-    edgex_get_readwrite (obj, &result->readable, &result->writable);
-    result->defaultvalue = get_string (obj, "defaultValue");
-    result->assertion = get_string (obj, "assertion");
-    result->units = get_string (obj, "units");
-    result->mediaType = get_string_dfl (obj, "mediaType", (pt.type == IOT_DATA_BINARY) ? "application/octet-stream" : "");
-  }
-  else
-  {
-    iot_log_error (lc, "Unable to parse \"%s\" as data type", tstr ? tstr : "(null)");
-  }
-  return result;
 }
 
 static edgex_propertyvalue *propertyvalue_dup (const edgex_propertyvalue *pv)
@@ -415,34 +271,6 @@ static void propertyvalue_free (edgex_propertyvalue *e)
   free (e->units);
   free (e->mediaType);
   free (e);
-}
-
-static edgex_deviceresource *deviceresource_read
-  (iot_logger_t *lc, const JSON_Object *obj)
-{
-  edgex_deviceresource *result = NULL;
-  edgex_propertyvalue *pv = propertyvalue_read (lc, json_object_get_object (obj, "properties"));
-  char *name = get_string (obj, "name");
-
-  if (pv)
-  {
-    JSON_Value *attributes_val;
-
-    result = malloc (sizeof (edgex_deviceresource));
-    result->name = name;
-    result->description = get_string (obj, "description");
-    result->tag = get_string (obj, "tag");
-    result->properties = pv;
-    attributes_val = json_object_get_value (obj, "attributes");
-    result->attributes = string_map_read (attributes_val);
-    result->parsed_attrs = NULL;
-    result->next = NULL;
-  }
-  else
-  {
-    iot_log_error (lc, "Error reading property for deviceResource %s", name);
-  }
-  return result;
 }
 
 static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresource *e)
@@ -485,19 +313,6 @@ static void deviceresource_free (devsdk_service_t *svc, edgex_deviceresource *e)
   }
 }
 
-static edgex_resourceoperation *resourceoperation_read (const JSON_Object *obj)
-{
-  edgex_resourceoperation *result = malloc (sizeof (edgex_resourceoperation));
-  JSON_Object *mappings_obj;
-
-  result->deviceResource = get_string (obj, "deviceResource");
-  result->defaultValue = get_string (obj, "defaultValue");
-  mappings_obj = json_object_get_object (obj, "mappings");
-  result->mappings = devsdk_nvpairs_read (mappings_obj);
-  result->next = NULL;
-  return result;
-}
-
 static edgex_resourceoperation *resourceoperation_dup (const edgex_resourceoperation *ro)
 {
   edgex_resourceoperation *result = NULL;
@@ -507,7 +322,7 @@ static edgex_resourceoperation *resourceoperation_dup (const edgex_resourceopera
     edgex_resourceoperation *elem = malloc (sizeof (edgex_resourceoperation));
     elem->deviceResource = strdup (ro->deviceResource);
     elem->defaultValue = strdup (ro->defaultValue);
-    elem->mappings = devsdk_nvpairs_dup (ro->mappings);
+    elem->mappings = iot_data_add_ref (ro->mappings);
     elem->next = NULL;
     *current = elem;
     current = &(elem->next);
@@ -523,34 +338,10 @@ static void resourceoperation_free (edgex_resourceoperation *e)
     edgex_resourceoperation *current = e;
     free (e->deviceResource);
     free (e->defaultValue);
-    devsdk_nvpairs_free (e->mappings);
+    iot_data_free (e->mappings);
     e = e->next;
     free (current);
   }
-}
-
-static edgex_devicecommand *devicecommand_read (const JSON_Object *obj)
-{
-  edgex_devicecommand *result = malloc (sizeof (edgex_devicecommand));
-  size_t count;
-  JSON_Array *array;
-  edgex_resourceoperation **last_ptr = &result->resourceOperations;
-
-  result->name = get_string (obj, "name");
-  edgex_get_readwrite (obj, &result->readable, &result->writable);
-  array = json_object_get_array (obj, "resourceOperations");
-  result->resourceOperations = NULL;
-  count = json_array_get_count (array);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_resourceoperation *temp = resourceoperation_read
-      (json_array_get_object (array, i));
-    *last_ptr = temp;
-    last_ptr = &(temp->next);
-  }
-
-  result->next = NULL;
-  return result;
 }
 
 static edgex_devicecommand *devicecommand_dup (const edgex_devicecommand *pr)
@@ -582,103 +373,6 @@ static void devicecommand_free (edgex_devicecommand *e)
     e = e->next;
     free (current);
   }
-}
-
-static bool resourceop_validate (iot_logger_t *lc, edgex_resourceoperation *ro, edgex_deviceresource *reslist)
-{
-  while (ro)
-  {
-    edgex_deviceresource *res = reslist;
-    while (res)
-    {
-      if (strcmp (ro->deviceResource, res->name) == 0)
-      {
-        break;
-      }
-      res = res->next;
-    }
-    if (res == NULL)
-    {
-      iot_log_error (lc, "No deviceResource \"%s\" found", ro->deviceResource);
-      return false;
-    }
-    ro = ro->next;
-  }
-  return true;
-}
-
-static edgex_deviceprofile *deviceprofile_read (iot_logger_t *lc, const JSON_Object *obj)
-{
-  edgex_deviceprofile *result = calloc (1, sizeof (edgex_deviceprofile));
-  size_t count;
-  JSON_Array *array;
-  edgex_deviceresource **last_ptr = &result->device_resources;
-  edgex_devicecommand **last_ptr2 = &result->device_commands;
-
-  result->name = get_string (obj, "name");
-  result->description = get_string (obj, "description");
-  result->created = json_object_get_uint (obj, "created");
-  result->modified = json_object_get_uint (obj, "modified");
-  result->origin = json_object_get_uint (obj, "origin");
-  result->manufacturer = get_string (obj, "manufacturer");
-  result->model = get_string (obj, "model");
-  result->labels = array_to_strings (json_object_get_array (obj, "labels"));
-  array = json_object_get_array (obj, "deviceResources");
-  count = json_array_get_count (array);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_deviceresource *temp = deviceresource_read
-      (lc, json_array_get_object (array, i));
-    if (temp)
-    {
-      *last_ptr = temp;
-      last_ptr = &(temp->next);
-    }
-    else
-    {
-      iot_log_error (lc, "Parse error in device profile %s", result->name);
-      edgex_deviceprofile_free (NULL, result);
-      return NULL;
-    }
-  }
-  array = json_object_get_array (obj, "deviceCommands");
-  count = json_array_get_count (array);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_devicecommand *temp = devicecommand_read
-      (json_array_get_object (array, i));
-    if (resourceop_validate (lc, temp->resourceOperations, result->device_resources))
-    {
-      *last_ptr2 = temp;
-      last_ptr2 = &(temp->next);
-    }
-    else
-    {
-      iot_log_error (lc, "Parse error in deviceCommand %s of device profile %s", temp->name, result->name);
-      devicecommand_free (temp);
-      edgex_deviceprofile_free (NULL, result);
-      return NULL;
-    }
-  }
-  return result;
-}
-
-edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *json)
-{
-  edgex_deviceprofile *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Object *obj;
-
-  obj = json_value_get_object (val);
-
-  if (obj)
-  {
-    result = deviceprofile_read (lc, obj);
-  }
-
-  json_value_free (val);
-
-  return result;
 }
 
 static void cmdinfo_free (edgex_cmdinfo *inf)
@@ -864,9 +558,6 @@ edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *src)
     dest = calloc (1, sizeof (edgex_deviceprofile));
     dest->name = strdup (src->name);
     dest->description = SAFE_STRDUP (src->description);
-    dest->created = src->created;
-    dest->modified = src->modified;
-    dest->origin = src->origin;
     dest->manufacturer = SAFE_STRDUP (src->manufacturer);
     dest->model = SAFE_STRDUP (src->model);
     dest->labels = devsdk_strings_dup (src->labels);
@@ -926,28 +617,6 @@ edgex_deviceservice *edgex_getDSresponse_read (const char *json)
     if (ds)
     {
       result = deviceservice_read (ds);
-    }
-  }
-
-  json_value_free (val);
-
-  return result;
-}
-
-edgex_deviceprofile *edgex_getprofileresponse_read (iot_logger_t *lc, const char *json)
-{
-  edgex_deviceprofile *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Object *obj;
-
-  obj = json_value_get_object (val);
-
-  if (obj)
-  {
-    JSON_Object *dp = json_object_get_object (obj, "profile");
-    if (dp)
-    {
-      result = deviceprofile_read (lc, dp);
     }
   }
 
@@ -1077,28 +746,6 @@ char *edgex_createdevicereq_write (const edgex_device *dev)
   JSON_Value *val = edgex_wrap_request ("Device", device_write (dev));
   char *result = json_serialize_to_string (val);
   json_value_free (val);
-  return result;
-}
-
-edgex_device *edgex_createdevicereq_read (const char *json)
-{
-  edgex_device *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Object *obj;
-
-  obj = json_value_get_object (val);
-
-  if (obj)
-  {
-    JSON_Object *devobj = json_object_get_object (obj, "device");
-    if (devobj)
-    {
-      result = device_read (devobj);
-    }
-  }
-
-  json_value_free (val);
-
   return result;
 }
 
@@ -1257,137 +904,17 @@ edgex_device *edgex_devices_read (iot_logger_t *lc, const char *json)
   return result;
 }
 
-static edgex_blocklist *blocklist_read (const JSON_Object *obj)
-{
-  edgex_blocklist *result = NULL;
-  size_t count = json_object_get_count (obj);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_blocklist *bl = malloc (sizeof (edgex_blocklist));
-    bl->name = strdup (json_object_get_name (obj, i));
-    bl->values = array_to_strings (json_value_get_array (json_object_get_value_at (obj, i)));
-    bl->next = result;
-    result = bl;
-  }
-  return result;
-}
-
-static edgex_blocklist *edgex_blocklist_dup (const edgex_blocklist *e)
-{
-  edgex_blocklist *result = NULL;
-  edgex_blocklist **last = &result;
-  for (const edgex_blocklist *bl = e; bl; bl = bl->next)
-  {
-    edgex_blocklist *elem = calloc (1, sizeof (edgex_blocklist));
-    elem->name = strdup (bl->name);
-    elem->values = devsdk_strings_dup (bl->values);
-    *last = elem;
-    last = &(elem->next);
-  }
-  return result;
-}
-
-static void edgex_blocklist_free (edgex_blocklist *e)
-{
-  while (e)
-  {
-    edgex_blocklist *current = e;
-    free (e->name);
-    devsdk_strings_free (e->values);
-    e = e->next;
-    free (current);
-  }
-}
-
-static edgex_watcher *watcher_read (const JSON_Object *obj)
-{
-  edgex_watcher *result = calloc (1, sizeof (edgex_watcher));
-  result->name = get_string (obj, "name");
-  result->profile = get_string (obj, "profileName");
-  JSON_Object *idobj = json_object_get_object (obj, "identifiers");
-  if (idobj)
-  {
-    result->identifiers = devsdk_nvpairs_read (idobj);
-  }
-  JSON_Object *blockObj = json_object_get_object (obj, "blockingIdentifiers");
-  if (blockObj)
-  {
-    result->blocking_identifiers = blocklist_read (blockObj);
-  }
-  JSON_Array *aearray = json_object_get_array (obj, "autoEvents");
-  size_t count = json_array_get_count (aearray);
-  for (size_t i = 0; i < count; i++)
-  {
-    edgex_device_autoevents *temp = autoevent_read (json_array_get_object (aearray, i));
-    temp->next = result->autoevents;
-    result->autoevents = temp;
-  }
-  result->adminstate = edgex_adminstate_fromstring
-    (json_object_get_string (obj, "adminState"));
-
-  return result;
-}
-
-edgex_watcher *edgex_createPWreq_read (const char *json)
-{
-  edgex_watcher *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Object *obj;
-
-  obj = json_value_get_object (val);
-
-  if (obj)
-  {
-    JSON_Object *pwobj = json_object_get_object (obj, "provisionWatcher");
-    if (pwobj)
-    {
-      result = watcher_read (pwobj);
-    }
-  }
-
-  json_value_free (val);
-
-  return result;
-}
-
-edgex_watcher *edgex_watchers_read (const char *json)
-{
-  edgex_watcher *result = NULL;
-  JSON_Value *val = json_parse_string (json);
-  JSON_Object *obj = json_value_get_object (val);
-
-  JSON_Array *array = json_object_get_array (obj, "provisionWatchers");
-  edgex_watcher **last_ptr = &result;
-
-  if (array)
-  {
-    size_t count = json_array_get_count (array);
-    for (size_t i = 0; i < count; i++)
-    {
-      edgex_watcher *temp = watcher_read (json_array_get_object (array, i));
-      if (temp)
-      {
-        *last_ptr = temp;
-        last_ptr = &(temp->next);
-      }
-    }
-  }
-
-  json_value_free (val);
-
-  return result;
-}
-
 edgex_watcher *edgex_watcher_dup (const edgex_watcher *e)
 {
   edgex_watcher *res = malloc (sizeof (edgex_watcher));
   res->regs = NULL;
   res->name = strdup (e->name);
-  res->identifiers = devsdk_nvpairs_dup (e->identifiers);
-  res->blocking_identifiers = edgex_blocklist_dup (e->blocking_identifiers);
+  res->identifiers = iot_data_add_ref (e->identifiers);
+  res->blocking_identifiers = iot_data_add_ref (e->blocking_identifiers);
   res->autoevents = autoevents_dup (e->autoevents);
   res->profile = strdup (e->profile);
   res->adminstate = e->adminstate;
+  res->enabled = e->enabled;
   res->next = NULL;
   return res;
 }
@@ -1399,9 +926,9 @@ void edgex_watcher_free (edgex_watcher *e)
   {
     edgex_watcher *next = ew->next;
     free (ew->name);
-    devsdk_nvpairs_free (ew->identifiers);
+    iot_data_free (ew->identifiers);
     edgex_watcher_regexes_free (ew->regs);
-    edgex_blocklist_free (ew->blocking_identifiers);
+    iot_data_free (ew->blocking_identifiers);
     edgex_device_autoevents_free (ew->autoevents);
     free (ew->profile);
     free (ew);

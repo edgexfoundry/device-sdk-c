@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -24,7 +24,6 @@ JSON_Value *edgex_wrap_request_single (const char *objName, JSON_Value *payload)
 const char *edgex_typecode_tostring (iot_typecode_t tc);
 devsdk_protocols *devsdk_protocols_dup (const devsdk_protocols *e);
 void devsdk_protocols_free (devsdk_protocols *e);
-edgex_deviceprofile *edgex_deviceprofile_read (iot_logger_t *lc, const char *json);
 devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p);
 edgex_deviceprofile *edgex_deviceprofile_dup (const edgex_deviceprofile *e);
 void edgex_deviceprofile_free (devsdk_service_t *svc, edgex_deviceprofile *e);
@@ -37,7 +36,6 @@ edgex_device *edgex_device_dup (const edgex_device *e);
 devsdk_devices *edgex_device_todevsdk (devsdk_service_t *svc, const edgex_device *e);
 void edgex_device_free (devsdk_service_t *svc, edgex_device *e);
 edgex_device *edgex_devices_read (iot_logger_t *lc, const char *json);
-edgex_watcher *edgex_watchers_read (const char *json);
 edgex_watcher *edgex_watcher_dup (const edgex_watcher *e);
 void edgex_watcher_free (edgex_watcher *e);
 
@@ -62,13 +60,9 @@ char *edgex_createDSreq_write (const edgex_deviceservice *ds);
 char *edgex_updateDSreq_write (const char *name, const char *baseaddr);
 edgex_deviceservice *edgex_getDSresponse_read (const char *json);
 
-edgex_deviceprofile *edgex_getprofileresponse_read (iot_logger_t *lc, const char *json);
-
 char *edgex_createdevicereq_write (const edgex_device *dev);
-edgex_device *edgex_createdevicereq_read (const char *json);
 char *edgex_updateDevOpreq_write (const char *name, edgex_device_operatingstate opstate);
 char *edgex_updateDevLCreq_write (const char *name, uint64_t lastconnected);
 
-edgex_watcher *edgex_createPWreq_read (const char *json);
 
 #endif
