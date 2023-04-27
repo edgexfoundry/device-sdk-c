@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -63,12 +63,14 @@ static edgex_watcher **find_locked (edgex_watcher **list, const char *name)
 static void add_locked (edgex_watchlist_t *wl, const edgex_watcher *w)
 {
   edgex_watcher *newelem = edgex_watcher_dup (w);
-  for (devsdk_nvpairs *ids = newelem->identifiers; ids; ids = ids->next)
+  iot_data_map_iter_t iter;
+  iot_data_map_iter (newelem->identifiers, &iter);
+  while (iot_data_map_iter_next (&iter))
   {
     edgex_watcher_regexes_t *r = malloc (sizeof (edgex_watcher_regexes_t));
-    if (regcomp (&r->preg, ids->value, REG_NOSUB) == 0)
+    if (regcomp (&r->preg, iot_data_map_iter_string_value (&iter), REG_NOSUB) == 0)
     {
-      r->name = ids->name;
+      r->name = iot_data_map_iter_string_key (&iter);
       r->next = newelem->regs;
       newelem->regs = r;
     }
@@ -191,27 +193,4 @@ edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const iot_dat
 
   pthread_rwlock_unlock ((pthread_rwlock_t *)&wl->lock);
   return result;
-}
-
-void edgex_watchlist_dump (const edgex_watchlist_t *wl, iot_logger_t *logger)
-{
-  pthread_rwlock_rdlock ((pthread_rwlock_t *)&wl->lock);
-
-  for (const edgex_watcher *w = wl->list; w; w = w->next)
-  {
-    iot_log_debug (logger, "PW: Name=%s Profile=%s", w->name, w->profile);
-    for (const devsdk_nvpairs *match = (const devsdk_nvpairs *)w->identifiers; match; match = match->next)
-    {
-      iot_log_debug (logger, "PW: Match %s = %s", match->name, match->value);
-    }
-    for (const edgex_blocklist *bl = w->blocking_identifiers; bl; bl = bl->next)
-    {
-      for (devsdk_strings *s = bl->values; s; s = s->next)
-      {
-        iot_log_debug (logger, "PW: Block %s = %s", bl->name, s->str);
-      }
-    }
-  }
-
-  pthread_rwlock_unlock ((pthread_rwlock_t *)&wl->lock);
 }

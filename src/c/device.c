@@ -135,7 +135,7 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
   result->nreqs = n;
   result->reqs = calloc (n, sizeof (devsdk_commandrequest));
   result->pvals = calloc (n, sizeof (edgex_propertyvalue *));
-  result->maps = calloc (n, sizeof (devsdk_nvpairs *));
+  result->maps = calloc (n, sizeof (iot_data_t *));
   result->dfls = calloc (n, sizeof (char *));
   for (n = 0, ro = cmd->resourceOperations; ro; n++, ro = ro->next)
   {
@@ -150,7 +150,7 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
       result->reqs[n].mask = ~devres->properties->mask.value.ival;
     }
     result->pvals[n] = devres->properties;
-    result->maps[n] = ro->mappings;
+    result->maps[n] = iot_data_add_ref (ro->mappings);
     if (ro->defaultValue && *ro->defaultValue)
     {
       result->dfls[n] = ro->defaultValue;

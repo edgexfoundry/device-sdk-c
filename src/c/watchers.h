@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -31,7 +31,5 @@ extern bool edgex_watchlist_remove_watcher (edgex_watchlist_t *list, const char 
 extern void edgex_watchlist_update_watcher (edgex_watchlist_t *list, const edgex_watcher *updated);
 
 extern edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *list, const iot_data_t *ids);
-
-extern void edgex_watchlist_dump (const edgex_watchlist_t *list, iot_logger_t *logger);
 
 #endif

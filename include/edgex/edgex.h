@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020
+ * Copyright (c) 2018-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -38,7 +38,7 @@ typedef struct edgex_resourceoperation
 {
   char *deviceResource;
   char *defaultValue;
-  devsdk_nvpairs *mappings;
+  iot_data_t *mappings;
   struct edgex_resourceoperation *next;
 } edgex_resourceoperation;
 
@@ -87,9 +87,6 @@ typedef struct edgex_deviceprofile
 {
   char *name;
   char *description;
-  uint64_t created;
-  uint64_t modified;
-  uint64_t origin;
   char *manufacturer;
   char *model;
   devsdk_strings *labels;
@@ -109,12 +106,13 @@ typedef struct edgex_blocklist
 typedef struct edgex_watcher
 {
   char *name;
-  devsdk_nvpairs *identifiers;
+  iot_data_t *identifiers;
   struct edgex_watcher_regexes_t *regs;
-  edgex_blocklist *blocking_identifiers;
+  iot_data_t *blocking_identifiers;
   char *profile;
   edgex_device_adminstate adminstate;
   struct edgex_device_autoevents *autoevents;
+  bool enabled;
   struct edgex_watcher *next;
 } edgex_watcher;
 

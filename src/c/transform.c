@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022
+ * Copyright (c) 2019-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -85,8 +85,7 @@ static iot_data_t *setLLInt (long long int llival, iot_data_type_t t)
   }
 }
 
-void edgex_transform_outgoing
-  (devsdk_commandresult *cres, edgex_propertyvalue *props, devsdk_nvpairs *mappings)
+void edgex_transform_outgoing (devsdk_commandresult *cres, edgex_propertyvalue *props, const iot_data_t *mappings)
 {
   iot_data_type_t t = iot_data_type (cres->value);
   switch (t)
@@ -148,11 +147,11 @@ void edgex_transform_outgoing
     break;
     case IOT_DATA_STRING:
     {
-      const char *remap = devsdk_nvpairs_value (mappings, iot_data_string (cres->value));
+      const iot_data_t *remap = iot_data_map_get (mappings, cres->value);
       if (remap)
       {
         iot_data_free (cres->value);
-        cres->value = iot_data_alloc_string (remap, IOT_DATA_REF);
+        cres->value = iot_data_add_ref (remap);
       }
     }
     default:
@@ -160,7 +159,7 @@ void edgex_transform_outgoing
   }
 }
 
-void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, devsdk_nvpairs *mappings)
+void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, const iot_data_t *mappings)
 {
   switch (props->type.type)
   {
@@ -211,11 +210,16 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, de
     break;
     case IOT_DATA_STRING:
     {
-      const char *remap = devsdk_nvpairs_reverse_value (mappings, iot_data_string (*cres));
-      if (remap)
+      iot_data_map_iter_t iter;
+      iot_data_map_iter (mappings, &iter);
+      while (iot_data_map_iter_next (&iter))
       {
-        iot_data_free (*cres);
-        *cres = iot_data_alloc_string (remap, IOT_DATA_REF);
+        if (strcmp (iot_data_string (*cres), iot_data_map_iter_string_value (&iter)) == 0)
+        {
+          iot_data_free (*cres);
+          *cres = iot_data_add_ref (iot_data_map_iter_key (&iter));
+          break;
+        }
       }
     }
     default:

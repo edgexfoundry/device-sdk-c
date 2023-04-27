@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019
+ * Copyright (c) 2019-2023
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -20,7 +20,7 @@ typedef struct edgex_cmdinfo
   unsigned nreqs;
   devsdk_commandrequest *reqs;
   edgex_propertyvalue **pvals;
-  devsdk_nvpairs **maps;
+  iot_data_t **maps;
   char **dfls;
   struct edgex_cmdinfo *next;
 } edgex_cmdinfo;

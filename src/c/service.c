@@ -12,7 +12,7 @@
 #include "bus.h"
 #include "device.h"
 #include "discovery.h"
-#include "callback2.h"
+#include "callback3.h"
 #include "validate.h"
 #include "errorlist.h"
 #include "rest-server.h"
@@ -576,6 +576,7 @@ static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *er
 
 static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadline, devsdk_error *err)
 {
+  char *topic;
   svc->adminstate = UNLOCKED;
 
   svc->eventq = iot_threadpool_alloc (1, svc->config.device.eventqlen, IOT_THREAD_NO_PRIORITY, IOT_THREAD_NO_AFFINITY, svc->logger);
@@ -732,10 +733,13 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
     edgex_rest_server_enable_cors (svc->daemon, origin, methods, headers, expose, creds, maxage);
   }
 
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE, DevSDK_Put | DevSDK_Post, svc, edgex_device_handler_callback_device);
-  char *vpath = edgex_bus_mktopic (svc->msgbus, "", EDGEX_DEV_TOPIC_VALIDATE);
-  edgex_bus_register_handler (svc->msgbus, vpath, svc, edgex_device_handler_validate_addr_v3);
-  free (vpath);
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_ADD_DEV, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_add_device);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, "", EDGEX_DEV_TOPIC_VALIDATE);
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_device_handler_validate_addr_v3);
+  free (topic);
 
   /* Load Devices from files and register in metadata */
 
@@ -777,26 +781,39 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   /* Register MessageBus handlers */
 
-  char *dpath = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEVICE, "{device}/{op}/{cmd}");
-  edgex_bus_register_handler (svc->msgbus, dpath, svc, edgex_device_handler_devicev3);
-  free (dpath);
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEVICE, "{device}/{op}/{cmd}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_device_handler_devicev3);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEVICESERVICE, "");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_update_deviceservice);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEL_DEV, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_delete_device);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_UPDATE_DEV, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_update_device);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_ADD_PW, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_add_pw);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEL_PW, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_delete_pw);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_UPDATE_PW, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_update_pw);
+  free (topic);
+
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_UPDATE_PROFILE, "{profile}");
+  edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_callback_update_profile);
+  free (topic);
 
   /* Register REST handlers */
-
-  svc->callback_device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_device_name};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_DEVICE_NAME, DevSDK_Delete, &svc->callback_device_name_wrapper, http_auth_wrapper);
-
-  svc->callback_profile_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_profile};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_PROFILE, DevSDK_Put | DevSDK_Post, &svc->callback_profile_wrapper, http_auth_wrapper);
-
-  svc->callback_watcher_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_watcher};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER, DevSDK_Put | DevSDK_Post, &svc->callback_watcher_wrapper, http_auth_wrapper);
-
-  svc->callback_watcher_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_watcher_name};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_WATCHER_NAME, DevSDK_Delete, &svc->callback_watcher_name_wrapper, http_auth_wrapper);
-
-  svc->callback_service_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_callback_service};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CALLBACK_SERVICE, DevSDK_Put, &svc->callback_service_wrapper, http_auth_wrapper);
 
   svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);

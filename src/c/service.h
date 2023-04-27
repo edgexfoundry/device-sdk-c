@@ -74,13 +74,9 @@ struct devsdk_service_t
   iot_threadpool_t *eventq;
   iot_scheduler_t *scheduler;
 
-  auth_wrapper_t callback_device_wrapper;
-  auth_wrapper_t validate_addr_wrapper;
-  auth_wrapper_t callback_device_name_wrapper;
   auth_wrapper_t callback_profile_wrapper;
   auth_wrapper_t callback_watcher_wrapper;
   auth_wrapper_t callback_watcher_name_wrapper;
-  auth_wrapper_t callback_service_wrapper;
   auth_wrapper_t device_name_wrapper;
   auth_wrapper_t discovery_wrapper;
   auth_wrapper_t metrics_wrapper;

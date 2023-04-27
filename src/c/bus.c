@@ -183,13 +183,18 @@ char *edgex_bus_mktopic (edgex_bus_t *bus, const char *type, const char *param)
   char *result;
   size_t len = strlen (bus->prefix) + strlen (type) + strlen (bus->svcname) + strlen (param) + 4;
   result = malloc (len);
+  strcpy (result, bus->prefix);
+  strcat (result, "/");
   if (strlen (type))
   {
-    sprintf (result, "%s/%s/%s/%s", bus->prefix, type, bus->svcname, param);
+    strcat (result, type);
+    strcat (result, "/");
   }
-  else
+  strcat (result, bus->svcname);
+  if (strlen (param))
   {
-    sprintf (result, "%s/%s/%s", bus->prefix, bus->svcname, param);
+    strcat (result, "/");
+    strcat (result, param);
   }
   return result;
 }
