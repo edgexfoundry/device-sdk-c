@@ -9,7 +9,7 @@
 #ifndef _EDGEX_API_H_
 #define _EDGEX_API_H_ 1
 
-#define EDGEX_API_VERSION "v2"
+#define EDGEX_API_VERSION "v3"
 
 /* Endpoints */
 

@@ -9,6 +9,7 @@
 #include <curl/curl.h>
 #include <errno.h>
 
+#include "api.h"
 #include "metadata.h"
 #include "edgex-rest.h"
 #include "rest.h"
@@ -38,7 +39,7 @@ edgex_deviceprofile *edgex_metadata_client_get_deviceprofile
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/deviceprofile/name/%s",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/deviceprofile/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
     ename
@@ -81,7 +82,7 @@ void edgex_metadata_client_set_device_opstate
   memset (&ctx, 0, sizeof (edgex_ctx));
   char *json = edgex_updateDevOpreq_write (devicename, opstate);
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION" /device", endpoints->metadata.host, endpoints->metadata.port);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
@@ -111,7 +112,7 @@ void edgex_metadata_client_update_deviceservice
   memset (&ctx, 0, sizeof (edgex_ctx));
   char *json = edgex_updateDSreq_write (name, baseaddr);
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/deviceservice", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/deviceservice", endpoints->metadata.host, endpoints->metadata.port);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
@@ -140,7 +141,7 @@ void edgex_metadata_client_update_lastconnected
   memset (&ctx, 0, sizeof (edgex_ctx));
   char *json = edgex_updateDevLCreq_write (devicename, iot_time_msecs ());
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION" /device", endpoints->metadata.host, endpoints->metadata.port);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
@@ -171,7 +172,7 @@ char *edgex_metadata_client_create_deviceprofile_file
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/deviceprofile/uploadfile",
+    "http://%s:%u/api/" EDGEX_API_VERSION" /deviceprofile/uploadfile",
     endpoints->metadata.host,
     endpoints->metadata.port
   );
@@ -208,7 +209,7 @@ edgex_deviceservice *edgex_metadata_client_get_deviceservice
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/deviceservice/name/%s",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/deviceservice/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
     ename
@@ -257,7 +258,7 @@ void edgex_metadata_client_create_deviceservice
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/deviceservice",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/deviceservice",
     endpoints->metadata.host,
     endpoints->metadata.port
   );
@@ -295,7 +296,7 @@ edgex_device *edgex_metadata_client_get_devices
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/device/service/name/%s",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/device/service/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
     ename
@@ -382,7 +383,7 @@ char *edgex_metadata_client_add_device
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/device",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/device",
     endpoints->metadata.host,
     endpoints->metadata.port
   );
@@ -420,7 +421,7 @@ void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_end
 {
   if (!json_object_get_string (jobj, "apiVersion"))
   {
-    json_object_set_string (jobj, "apiVersion", "v2");
+    json_object_set_string (jobj, "apiVersion", EDGEX_API_VERSION);
   }
   JSON_Value *reqval = edgex_wrap_request ("Profile", json_object_get_wrapping_value (jobj));
   char *json = json_serialize_to_string (reqval);
@@ -430,7 +431,7 @@ void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_end
 
   memset (&ctx, 0, sizeof (edgex_ctx));
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/deviceprofile", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/deviceprofile", endpoints->metadata.host, endpoints->metadata.port);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
@@ -465,7 +466,7 @@ void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endp
   }
   if (!json_object_get_string (jobj, "apiVersion"))
   {
-    json_object_set_string (jobj, "apiVersion", "v2");
+    json_object_set_string (jobj, "apiVersion", EDGEX_API_VERSION);
   }
   JSON_Value *reqval = edgex_wrap_request ("Device", json_object_get_wrapping_value (jobj));
   char *json = json_serialize_to_string (reqval);
@@ -475,7 +476,7 @@ void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endp
 
   memset (&ctx, 0, sizeof (edgex_ctx));
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/device", endpoints->metadata.host, endpoints->metadata.port);
   
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
@@ -515,7 +516,7 @@ void edgex_metadata_client_add_or_modify_device
   memset (dev, 0, sizeof (edgex_device));
   memset (&ctx, 0, sizeof (edgex_ctx));
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/device", endpoints->metadata.host, endpoints->metadata.port);
 
   dev->name = (char *)name;
   dev->description = (char *)description;
@@ -570,7 +571,7 @@ bool edgex_metadata_client_check_device (iot_logger_t *lc, edgex_service_endpoin
   memset (&ctx, 0, sizeof (edgex_ctx));
   ename = curl_easy_escape (NULL, devicename, 0);
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/device/check/name/%s", endpoints->metadata.host, endpoints->metadata.port, ename);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/device/check/name/%s", endpoints->metadata.host, endpoints->metadata.port, ename);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
@@ -606,7 +607,7 @@ void edgex_metadata_client_update_device
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/device",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/device",
     endpoints->metadata.host,
     endpoints->metadata.port
   );
@@ -655,7 +656,7 @@ void edgex_metadata_client_delete_device_byname
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/device/name/%s",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/device/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
     ename
@@ -693,7 +694,7 @@ edgex_watcher *edgex_metadata_client_get_watchers
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/v2/provisionwatcher/service/name/%s",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/provisionwatcher/service/name/%s",
     endpoints->metadata.host,
     endpoints->metadata.port,
     ename

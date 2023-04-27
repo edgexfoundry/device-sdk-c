@@ -597,7 +597,7 @@ iot_data_t *edgex_v3_error_response (iot_logger_t *lc, char *msg, ...)
 
   iot_log_error (lc, buf);
   result = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (result, "ApiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
+  iot_data_string_map_add (result, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (result, "message", iot_data_alloc_string (msg, IOT_DATA_TAKE));
   return result;
 }
@@ -605,7 +605,7 @@ iot_data_t *edgex_v3_error_response (iot_logger_t *lc, char *msg, ...)
 iot_data_t *edgex_v3_base_response (const char *msg)
 {
   iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (result, "ApiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
+  iot_data_string_map_add (result, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (result, "message", iot_data_alloc_string (msg, IOT_DATA_REF));
   return result;
 }
