@@ -417,7 +417,7 @@ static bool ping_client (iot_logger_t *lc, const char *sname, edgex_device_servi
     return false;
   }
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v2/ping", ep->host, ep->port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v3/ping", ep->host, ep->port);
 
   while (true)
   {

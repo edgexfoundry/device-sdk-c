@@ -98,11 +98,11 @@ static char *edgex_data_to_b64 (const iot_data_t *src)
 void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *payload)
 {
   iot_data_t *envelope = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (envelope, "CorrelationID", iot_data_alloc_string (edgex_device_get_crlid (), IOT_DATA_REF));
+  iot_data_string_map_add (envelope, "correlationID", iot_data_alloc_string (edgex_device_get_crlid (), IOT_DATA_REF));
   iot_data_string_map_add (envelope, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
-  iot_data_string_map_add (envelope, "ErrorCode", iot_data_alloc_ui32 (0));
-  iot_data_string_map_add (envelope, "ContentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
-  iot_data_string_map_add (envelope, "Payload", iot_data_alloc_string (edgex_data_to_b64 (payload), IOT_DATA_TAKE));
+  iot_data_string_map_add (envelope, "errorCode", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (envelope, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
+  iot_data_string_map_add (envelope, "payload", iot_data_alloc_string (edgex_data_to_b64 (payload), IOT_DATA_TAKE));
 
   bus->postfn (bus->ctx, path, envelope);
   iot_data_free (envelope);
@@ -129,7 +129,7 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
     iot_data_t *req = NULL;
     iot_data_t *reply = NULL;
     iot_data_t *envdata = iot_data_from_json (envelope);
-    const char *payload = iot_data_string_map_get_string (envdata, "Payload");
+    const char *payload = iot_data_string_map_get_string (envdata, "payload");
     if (payload)
     {
       size_t sz = iot_b64_maxdecodesize (payload);
@@ -139,13 +139,13 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
       req = iot_data_from_json (json);
       free (json);
     }
-    crl = iot_data_string_map_get (envdata, "CorrelationID");
+    crl = iot_data_string_map_get (envdata, "correlationID");
     if (crl)
     {
       edgex_device_alloc_crlid (iot_data_string (crl));
     }
 
-    status = h (ctx, req, pathparams, iot_data_string_map_get (envdata, "QueryParams"), &reply);
+    status = h (ctx, req, pathparams, iot_data_string_map_get (envdata, "queryParams"), &reply);
 
     if (reply)
     {
@@ -153,16 +153,16 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
       const char *idstr;
       const iot_data_t *id;
       iot_data_t *renv = iot_data_alloc_map (IOT_DATA_STRING);
-      iot_data_string_map_add (renv, "ErrorCode", iot_data_alloc_i32 (status));
-      iot_data_string_map_add (renv, "ContentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
+      iot_data_string_map_add (renv, "errorCode", iot_data_alloc_i32 (status));
+      iot_data_string_map_add (renv, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
       // XXX and if it's CBOR? - metadata on the reply should say so
-      iot_data_string_map_add (renv, "Payload", iot_data_alloc_string (edgex_data_to_b64 (reply), IOT_DATA_TAKE));
+      iot_data_string_map_add (renv, "payload", iot_data_alloc_string (edgex_data_to_b64 (reply), IOT_DATA_TAKE));
       iot_data_free (reply);
-      iot_data_string_map_add (renv, "CorrelationID", iot_data_add_ref (crl));
+      iot_data_string_map_add (renv, "correlationID", iot_data_add_ref (crl));
       iot_data_string_map_add (renv, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
-      id = iot_data_string_map_get (envdata, "RequestID");
+      id = iot_data_string_map_get (envdata, "requestID");
       idstr = iot_data_string (id);
-      // iot_data_string_map_add (renv, "RequestID", iot_data_add_ref (id));
+      // iot_data_string_map_add (renv, "requestID", iot_data_add_ref (id));
       rpath = edgex_bus_mktopic (bus, EDGEX_DEV_TOPIC_RESPONSE, idstr);
       bus->postfn (bus->ctx, rpath, renv);
       free (rpath);
