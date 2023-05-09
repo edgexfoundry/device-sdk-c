@@ -49,7 +49,7 @@ void devsdk_usage ()
   printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
           "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
           "                             \tproblematic if those settings were edited by hand intentionally\n");
-  printf ("  -cf, --configFile          \tIndicates name of the local configuration file. Defaults to configuration.toml\n");
+  printf ("  -cf, --configFile          \tIndicates name of the local configuration file. Defaults to configuration.yaml\n");
   printf ("  -p,  --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -cd, --configDir=<dir>     \tSpecify local configuration directory\n");
   printf ("  -r,  --registry             \tIndicates service should use Registry.\n");
@@ -211,7 +211,7 @@ static char *devsdk_service_confpath (const char *dir, const char *fname, const 
   }
   else
   {
-    pathlen = strlen (dir) + 1 + strlen ("configuration.toml") + 1;
+    pathlen = strlen (dir) + 1 + strlen ("configuration.yaml") + 1;
     if (profile && *profile)
     {
       pathlen += (strlen (profile) + 1);
@@ -232,7 +232,7 @@ static char *devsdk_service_confpath (const char *dir, const char *fname, const 
       strcat (result, "-");
       strcat (result, profile);
     }
-    strcat (result, ".toml");
+    strcat (result, ".yaml");
   }
   return result;
 }
@@ -483,19 +483,6 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
   }
 }
 
-static void edgex_device_device_upload_table (devsdk_service_t *svc, toml_table_t *toml, devsdk_error *err)
-{
-  toml_array_t *devs = toml_array_in (toml, "DeviceList");
-  if (devs)
-  {
-    edgex_device_process_configured_devices (svc, devs, err);
-  }
-  else
-  {
-    iot_log_warn (svc->logger, "Device upload: No DeviceList in TOML file");
-  }
-}
-
 static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *err)
 {
   devsdk_strings *filenames = devsdk_scandir (svc->logger, svc->config.device.devicesdir, "json");
@@ -528,42 +515,6 @@ static void edgex_device_devices_upload (devsdk_service_t *svc, devsdk_error *er
     {
       iot_log_error (svc->logger, "File does not parse as JSON");
       *err = EDGEX_CONF_PARSE_ERROR;
-    }
-    if (err->code)
-    {
-      iot_log_error (svc->logger, "Error processing file %s", f->str);
-      break;
-    }
-  }
-  devsdk_strings_free (filenames);
-  filenames = devsdk_scandir (svc->logger, svc->config.device.devicesdir, "toml");
-  for (devsdk_strings *f = filenames; f; f = f->next)
-  {
-    if (strcmp (f->str, svc->confpath) == 0)
-    {
-      continue;
-    }
-    FILE *fp = fopen (f->str, "r");
-    if (fp)
-    {
-      char errbuf[ERRBUFSZ];
-      toml_table_t *toml = toml_parse_file (fp, errbuf, ERRBUFSZ);
-      fclose (fp);
-      if (toml)
-      {
-        edgex_device_device_upload_table (svc, toml, err);
-        toml_free (toml);
-      }
-      else
-      {
-        iot_log_error (svc->logger, "File does not parse as TOML");
-        *err = EDGEX_CONF_PARSE_ERROR;
-      }
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Cant open file: %s", strerror (errno));
-      *err = EDGEX_NO_CONF_FILE;
     }
     if (err->code)
     {
@@ -866,7 +817,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
 void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk_error *err)
 {
-  toml_table_t *configtoml = NULL;
+  iot_data_t *config_file = NULL;
   bool uploadConfig = false;
   iot_data_t *configmap;
 
@@ -884,21 +835,21 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   iot_threadpool_start (svc->thpool);
 
-  configtoml = edgex_device_loadConfig (svc->logger, svc->confpath, err);
+  config_file = edgex_device_loadConfig (svc->logger, svc->confpath, err);
   if (err->code)
   {
     iot_log_error (svc->logger, "Unable to load config file: %s", err->reason);
     return;
   }
   configmap = edgex_config_defaults (driverdfls, svc->name);
-  edgex_device_overrideConfig_toml (configmap, configtoml);
+  edgex_device_overrideConfig_map (configmap, config_file);
   edgex_device_overrideConfig_env (svc->logger, configmap);
 
   if (svc->regURL)
   {
     if (*svc->regURL == '\0')
     {
-      svc->regURL = edgex_device_getRegURL (configtoml);
+      svc->regURL = edgex_device_getRegURL (config_file);
     }
     if (svc->regURL)
     {
@@ -1005,7 +956,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     if (err->code)
     {
       iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
-      toml_free (configtoml);
+      iot_data_free (config_file);
       return;
     }
   }
@@ -1015,17 +966,17 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     devsdk_registry_query_service (svc->registry, "core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &deadline, err);
     if (err->code)
     {
-      toml_free (configtoml);
+      iot_data_free (config_file);
       *svc->stopconfig = true;
       return;
     }
   }
   else
   {
-    edgex_device_parseTomlClients (svc->logger, toml_table_in (configtoml, "Clients"), &svc->config.endpoints, err);
+    edgex_device_parseClients (svc->logger, iot_data_string_map_get (config_file, "Clients"), &svc->config.endpoints);
   }
 
-  toml_free (configtoml);
+  iot_data_free (config_file);
 
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
   iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);

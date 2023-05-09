@@ -36,6 +36,8 @@
 #include <errno.h>
 #include <sys/utsname.h>
 
+#include <iot/file.h>
+
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
 #define DEFAULTSECPATH "%s/"
@@ -84,7 +86,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Service/CORSConfiguration/CORSExposeHeaders", iot_data_alloc_string ("Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified, Pragma, X-Correlation-ID", IOT_DATA_REF));
   iot_data_string_map_add (result, "Service/CORSConfiguration/CORSMaxAge", iot_data_alloc_ui32 (3600));
 
-  iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_typed_vector (0, IOT_DATA_STRING));
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
@@ -129,29 +131,27 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   return result;
 }
 
-toml_table_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err)
+iot_data_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err)
 {
-  toml_table_t *result = NULL;
-  FILE *fp;
-  char errbuf[ERRBUFSZ];
-
-  fp = fopen (path, "r");
-  if (fp)
+  iot_data_t *result = NULL;
+  char *conf = iot_file_read (path);
+  if (conf)
   {
-    result = toml_parse_file (fp, errbuf, ERRBUFSZ);
-    fclose (fp);
+    iot_data_t *ex;
+    result = iot_data_from_yaml (conf, &ex);
     if (result == NULL)
     {
-      iot_log_error (lc, "Configuration file parse error: %s", errbuf);
+      iot_log_error (lc, "Configuration file parse error: %s", iot_data_string (ex));
       *err = EDGEX_CONF_PARSE_ERROR;
     }
   }
   else
   {
-    iot_log_error (lc, "Cant open file %s : %s", path, strerror (errno));
+    iot_log_error (lc, "Cant open file %s", path);
     *err = EDGEX_NO_CONF_FILE;
   }
 
+  free (conf);
   return result;
 }
 
@@ -174,76 +174,28 @@ static void edgex_config_setloglevel (iot_logger_t *lc, const char *lstr, iot_lo
   }
 }
 
-/* As toml_rtos but return null instead of a zero-length string */
-
-static void toml_rtos2 (const char *s, char **ret)
+char *edgex_device_getRegURL (const iot_data_t *config)
 {
-  if (s)
-  {
-    toml_rtos (s, ret);
-    if (*ret && (**ret == 0))
-    {
-      free (*ret);
-      *ret = NULL;
-    }
-  }
-}
-
-/* As toml_rtob but return a bool */
-
-static void toml_rtob2 (const char *raw, bool *ret)
-{
-  if (raw)
-  {
-    int dummy;
-    toml_rtob (raw, &dummy);
-    *ret = dummy;
-  }
-}
-
-/* As toml_rtoi but return uint16 */
-
-static void toml_rtoui16
-  (const char *raw, uint16_t *ret, iot_logger_t *lc, devsdk_error *err)
-{
-  if (raw)
-  {
-    int64_t dummy;
-    if (toml_rtoi (raw, &dummy) == 0 && dummy >= 0 && dummy <= UINT16_MAX)
-    {
-      *ret = dummy;
-    }
-    else
-    {
-      iot_log_error (lc, "Unable to parse %s as uint16", raw);
-      *err = EDGEX_BAD_CONFIG;
-    }
-  }
-}
-
-char *edgex_device_getRegURL (toml_table_t *config)
-{
-  toml_table_t *table = NULL;
-  char *rtype = NULL;
-  char *rhost = NULL;
+  const iot_data_t *table = NULL;
+  const char *rtype = NULL;
+  const char *rhost = NULL;
   int64_t rport = 0;
   char *result = NULL;
-  int n;
 
   if (config)
   {
-    table = toml_table_in (config, "Registry");
+    table = iot_data_string_map_get (config, "Registry");
   }
   if (table)
   {
-    toml_rtos (toml_raw_in (table, "Type"), &rtype);
-    toml_rtos (toml_raw_in (table, "Host"), &rhost);
-    toml_rtoi (toml_raw_in (table, "Port"), &rport);
+    rtype = iot_data_string_map_get_string (table, "Type");
+    rhost = iot_data_string_map_get_string (table, "Host");
+    rport = iot_data_string_map_get_i64  (table, "Port", 0);
   }
 
   if (rtype && *rtype && rhost && *rhost && rport)
   {
-    n = snprintf (NULL, 0, "%s://%s:%" PRIi64, rtype, rhost, rport) + 1;
+    int n = snprintf (NULL, 0, "%s://%s:%" PRIi64, rtype, rhost, rport) + 1;
     result = malloc (n);
     snprintf (result, n, "%s://%s:%" PRIi64, rtype, rhost, rport);
   }
@@ -252,18 +204,15 @@ char *edgex_device_getRegURL (toml_table_t *config)
     result = DEFAULTREG;
   }
 
-  free (rtype);
-  free (rhost);
   return result;
 }
 
-static void parseClient
-  (iot_logger_t *lc, toml_table_t *client, edgex_device_service_endpoint *endpoint, devsdk_error *err)
+static void parseClient (const iot_data_t *client, edgex_device_service_endpoint *endpoint)
 {
   if (client)
   {
-    toml_rtos2 (toml_raw_in (client, "Host"), &endpoint->host);
-    toml_rtoui16 (toml_raw_in (client, "Port"), &endpoint->port, lc, err);
+    endpoint->host = strdup (iot_data_string_map_get_string (client, "Host"));
+    endpoint->port = iot_data_string_map_get_i64 (client, "Port", 0);
   }
 }
 
@@ -303,69 +252,57 @@ static void checkClientOverride (iot_logger_t *lc, char *name, edgex_device_serv
   free (qstr);
 }
 
-void edgex_device_parseTomlClients
-  (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err)
+void edgex_device_parseClients (iot_logger_t *lc, const iot_data_t *clients, edgex_service_endpoints *endpoints)
 {
   if (clients)
   {
-    parseClient (lc, toml_table_in (clients, "core-metadata"), &endpoints->metadata, err);
+    parseClient (iot_data_string_map_get (clients, "core-metadata"), &endpoints->metadata);
   }
   checkClientOverride (lc, "CORE_METADATA", &endpoints->metadata);
 }
 
-static void addInsecureSecretsToml (iot_data_t *confmap, toml_table_t *config)
+static void addInsecureSecretsMap (iot_data_t *confmap, const iot_data_t *config)
 {
-  toml_table_t *sub = toml_table_in (config, DYN_NAME);
+  const iot_data_t *sub = iot_data_string_map_get (config, DYN_NAME);
   if (sub)
   {
-    sub = toml_table_in (sub, INSECURE_NAME);
+    sub = iot_data_string_map_get (sub, INSECURE_NAME);
   }
   if (sub)
   {
-    const char *key;
-    toml_table_t *tab;
-    for (unsigned i = 0; (key = toml_key_in (sub, i)); i++)
+    iot_data_map_iter_t iter;
+    iot_data_map_iter (sub, &iter);
+    while (iot_data_map_iter_next (&iter))
     {
-      if ((tab = toml_table_in (sub, key)))
+      const iot_data_t *tab = iot_data_map_iter_value (&iter);
+      const iot_data_t *sname = iot_data_string_map_get (tab, "SecretName");
+      if (sname)
       {
-        const char *raw = toml_raw_in (tab, "path");
-        if (raw)
+        const iot_data_t *secrets = iot_data_string_map_get (tab, "SecretData");
+        if (secrets)
         {
-          char *path = NULL;
-          toml_rtos2 (raw, &path);
-          if (path)
+          char *cpath;
+          const char *key = iot_data_map_iter_string_key (&iter);
+          iot_data_map_iter_t elem;
+          iot_data_map_iter (secrets, &elem);
+          while (iot_data_map_iter_next (&elem))
           {
-            toml_table_t *secrets = toml_table_in (tab, "Secrets");
-            if (secrets)
-            {
-              const char *name;
-              char *value;
-              char *cpath;
-              for (unsigned j = 0; (name = toml_key_in (secrets, j)); j++)
-              {
-                raw = toml_raw_in (secrets, name);
-                toml_rtos2 (raw, &value);
-                if (value)
-                {
-                  cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/Secrets/") + strlen (name));
-                  strcpy (cpath, DYN_PREFIX);
-                  strcat (cpath, INSECURE_NAME);
-                  strcat (cpath, "/");
-                  strcat (cpath, key);
-                  strcat (cpath, "/Secrets/");
-                  strcat (cpath, name);
-                  iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_alloc_string (value, IOT_DATA_TAKE));
-                }
-              }
-              cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + sizeof ("/path/") + strlen (key));
-              strcpy (cpath, DYN_PREFIX);
-              strcat (cpath, INSECURE_NAME);
-              strcat (cpath, "/");
-              strcat (cpath, key);
-              strcat (cpath, "/path");
-              iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_alloc_string (path, IOT_DATA_TAKE));
-            }
+            cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/SecretData/") + strlen (iot_data_map_iter_string_key (&elem)));
+            strcpy (cpath, DYN_PREFIX);
+            strcat (cpath, INSECURE_NAME);
+            strcat (cpath, "/");
+            strcat (cpath, key);
+            strcat (cpath, "/SecretData/");
+            strcat (cpath, iot_data_map_iter_string_key (&elem));
+            iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_add_ref (iot_data_map_iter_value (&elem)));
           }
+          cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/SecretName/"));
+          strcpy (cpath, DYN_PREFIX);
+          strcat (cpath, INSECURE_NAME);
+          strcat (cpath, "/");
+          strcat (cpath, key);
+          strcat (cpath, "/SecretName");
+          iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_add_ref (sname));
         }
       }
     }
@@ -389,60 +326,47 @@ static char *checkOverride (char *qstr)
   return getenv (qstr);
 }
 
-static const char *findEntry (char *key, toml_table_t *table)
+static const iot_data_t *findEntry (const iot_data_t *map, const char *key_in)
 {
-  const char *result = NULL;
-  if (table)
+  char *key = strdup (key_in);
+  const iot_data_t *result = NULL;
+  if (map)
   {
     char *slash = strchr (key, '/');
     if (slash)
     {
       *slash = '\0';
-      result = findEntry (slash + 1, toml_table_in (table, key));
+      result = findEntry (iot_data_string_map_get (map, key), slash + 1);
       *slash = '/';
     }
     else
     {
-      result = toml_raw_in (table, key);
+      result = iot_data_string_map_get (map, key);
     }
   }
+  free (key);
   return result;
 }
 
-void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml)
+void edgex_device_overrideConfig_map (iot_data_t *config, const iot_data_t *map)
 {
-  char *key;
-  const char *raw;
+  const iot_data_t *replace;
   iot_data_map_iter_t iter;
 
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
   {
-    key = strdup (iot_data_map_iter_string_key (&iter));
-    raw = findEntry (key, toml);
-    if (raw)
+    replace = findEntry (map, iot_data_map_iter_string_key (&iter));
+    if (replace)
     {
-      iot_data_t *newval = NULL;
-      if (iot_data_type (iot_data_map_iter_value (&iter)) == IOT_DATA_STRING)
-      {
-        char *newtxt;
-        if (toml_rtos (raw, &newtxt) != -1)
-        {
-          newval = iot_data_alloc_string (newtxt, IOT_DATA_TAKE);
-        }
-      }
-      else
-      {
-        newval = iot_data_alloc_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
-      }
+      iot_data_t *newval = iot_data_transform (replace, iot_data_type (iot_data_map_iter_value (&iter)));
       if (newval)
       {
         iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
       }
     }
-    free (key);
   }
-  addInsecureSecretsToml (config, toml);
+  addInsecureSecretsMap (config, map);
 }
 
 void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
@@ -528,27 +452,16 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
     free (config->service.labels);
   }
 
-  const char *lstr = iot_data_string_map_get_string (map, "Device/Labels");
-  if (lstr && *lstr)
+  const iot_data_t *labs = iot_data_string_map_get_vector (map, "Device/Labels");
+  if (labs && iot_data_vector_type (labs) == IOT_DATA_STRING)
   {
-    const char *iter = lstr;
-    int n = 1;
-    while ((iter = strchr (iter, ',')))
+    uint32_t i;
+    config->service.labels = malloc (sizeof (char *) * (iot_data_vector_size (labs) + 1));
+    for (i = 0; i < iot_data_vector_size (labs); i++)
     {
-      iter++;
-      n++;
+      config->service.labels[i] = strdup (iot_data_string (iot_data_vector_get (labs, i)));
     }
-    config->service.labels = malloc (sizeof (char *) * (n + 1));
-
-    iter = lstr;
-    const char *next;
-    n = 0;
-    while ((next = strchr (iter, ',')))
-    {
-      config->service.labels[n++] = strndup (iter, next - iter);
-    }
-    config->service.labels[n++] = strdup (iter);
-    config->service.labels[n] = NULL;
+    config->service.labels[i] = NULL;
   }
   else
   {
@@ -830,145 +743,4 @@ void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, d
 
   edgex_configresponse_write (cr, reply);
   edgex_configresponse_free (cr);
-}
-
-void edgex_device_process_configured_devices
-  (devsdk_service_t *svc, toml_array_t *devs, devsdk_error *err)
-{
-  if (devs)
-  {
-    char *devname;
-    const char *raw;
-    edgex_device *existing;
-    char *profile_name;
-    char *description;
-    devsdk_protocols *protocols;
-    edgex_device_autoevents *autos;
-    devsdk_strings *labels;
-    toml_table_t *table;
-    toml_table_t *aetable;
-    toml_table_t *pptable;
-    toml_array_t *arr;
-    int n = 0;
-
-    while ((table = toml_table_at (devs, n++)))
-    {
-      raw = toml_raw_in (table, "Name");
-      toml_rtos2 (raw, &devname);
-      existing = edgex_devmap_device_byname (svc->devices, devname);
-      if (existing)
-      {
-        edgex_device_release (svc, existing);
-        iot_log_info (svc->logger, "Device %s already exists: skipped", devname);
-      }
-      else
-      {
-        /* Protocols */
-
-        pptable = toml_table_in (table, "Protocols");
-        if (pptable)
-        {
-          const char *key;
-          protocols = NULL;
-          for (int i = 0; 0 != (key = toml_key_in (pptable, i)); i++)
-          {
-            toml_table_t *pprops = toml_table_in (pptable, key);
-            if (pprops)
-            {
-              iot_data_t *props = iot_data_alloc_map (IOT_DATA_STRING);
-              const char *pkey;
-              for (int j = 0; 0 != (pkey = toml_key_in (pprops, j)); j++)
-              {
-                raw = toml_raw_in (pprops, pkey);
-                if (raw)
-                {
-                  char *val;
-                  if (toml_rtos (raw, &val) == -1)
-                  {
-                    val = strdup (raw);
-                  }
-                  iot_data_map_add (props, iot_data_alloc_string (pkey, IOT_DATA_COPY), iot_data_alloc_string (val, IOT_DATA_TAKE));
-                }
-              }
-              protocols = devsdk_protocols_new (key, props, protocols);
-              iot_data_free (props);
-            }
-            else
-            {
-              iot_log_error (svc->logger, "Arrays and subtables not supported in Protocol");
-              *err = EDGEX_BAD_CONFIG;
-              return;
-            }
-          }
-
-          /* AutoEvents */
-
-          autos = NULL;
-          arr = toml_array_in (table, "AutoEvents");
-          if (arr)
-          {
-            int i = 0;
-            while ((aetable = toml_table_at (arr, i++)))
-            {
-              edgex_device_autoevents *newauto =
-                calloc (1, sizeof (edgex_device_autoevents));
-              toml_rtos2
-                (toml_raw_in (aetable, "Resource"), &newauto->resource);
-              toml_rtos2
-                (toml_raw_in (aetable, "Interval"), &newauto->interval);
-              toml_rtob2
-                (toml_raw_in (aetable, "OnChange"), &newauto->onChange);
-              newauto->next = autos;
-              autos = newauto;
-            }
-          }
-
-          /* The rest of the device */
-
-          labels = NULL;
-          profile_name = NULL;
-          description = NULL;
-          raw = toml_raw_in (table, "Profile");
-          toml_rtos2 (raw, &profile_name);
-          raw = toml_raw_in (table, "Description");
-          toml_rtos2 (raw, &description);
-          arr = toml_array_in (table, "Labels");
-          if (arr)
-          {
-            for (int n = 0; (raw = toml_raw_at (arr, n)); n++)
-            {
-              char *l = NULL;
-              toml_rtos2 (raw, &l);
-              labels = devsdk_strings_new (l, labels);
-            }
-          }
-
-          *err = EDGEX_OK;
-          edgex_add_device (svc, devname, description, labels, profile_name, protocols, false, autos, err);
-
-          devsdk_strings_free (labels);
-          devsdk_protocols_free (protocols);
-          edgex_device_autoevents_free (autos);
-          free (profile_name);
-          free (description);
-
-          if (err->code)
-          {
-            iot_log_error (svc->logger, "Error registering device %s", devname);
-            free (devname);
-            break;
-          }
-        }
-        else
-        {
-          iot_log_error
-            (svc->logger, "No Protocols section for device %s", devname);
-          *err = EDGEX_BAD_CONFIG;
-          free (devname);
-          break;
-        }
-      }
-      free (devname);
-    }
-  }
 }

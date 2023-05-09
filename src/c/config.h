@@ -11,7 +11,6 @@
 
 #include "devsdk/devsdk.h"
 #include "rest-server.h"
-#include "toml.h"
 #include "map.h"
 
 #include <stdatomic.h>
@@ -87,17 +86,17 @@ typedef struct edgex_device_config
   edgex_map_device_watcherinfo watchers;
 } edgex_device_config;
 
-toml_table_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err);
+iot_data_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err);
 
 iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svcname);
 
-char *edgex_device_getRegURL (toml_table_t *config);
+char *edgex_device_getRegURL (const iot_data_t *config);
 
-void edgex_device_parseTomlClients (iot_logger_t *lc, toml_table_t *clients, edgex_service_endpoints *endpoints, devsdk_error *err);
+void edgex_device_parseClients (iot_logger_t *lc, const iot_data_t *clients, edgex_service_endpoints *endpoints);
 
 void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config);
 
-void edgex_device_overrideConfig_toml (iot_data_t *config, toml_table_t *toml);
+void edgex_device_overrideConfig_map (iot_data_t *config, const iot_data_t *map);
 
 void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config);
 
@@ -110,8 +109,6 @@ void edgex_device_processDriverConfig (iot_data_t *driverconf, const iot_data_t 
 void edgex_device_dumpConfig (iot_logger_t *lc, iot_data_t *config);
 
 void edgex_device_freeConfig (devsdk_service_t *svc);
-
-void edgex_device_process_configured_devices (devsdk_service_t *svc, toml_array_t *devs, devsdk_error *err);
 
 void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 

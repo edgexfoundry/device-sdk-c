@@ -1,0 +1,29 @@
+Writable:
+  LogLevel: DEBUG
+  Device:
+    Discovery:
+      Enabled: true
+      Interval: 10
+
+Service:
+  Port: 59999
+  StartupMsg: Example device service with discovery started
+
+Clients:
+  core-metadata:
+    Host: localhost
+    Port: 59881
+
+Device:
+  ProfilesDir: ./res/profiles
+  DevicesDir: ./res/devices
+
+MessageBus:
+  Protocol: redis
+  Host: localhost
+  Port: 6379
+  Type: redis
+  AuthMode: usernamepassword
+  SecretName: redisdb
+  Optional:
+    ClientId: device-discovery
