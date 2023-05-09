@@ -5,9 +5,6 @@ CPPCHECK=false
 DOCGEN=false
 CMAKEOPTS=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-TOMLVER=SDK-0.2
-CUTILVER=1.4
-
 # Process arguments
 
 while [ $# -gt 0 ]
@@ -35,19 +32,6 @@ done
 
 ROOT=$(dirname $(dirname $(readlink -f $0)))
 cd $ROOT
-
-# Dependencies
-
-if [ ! -d deps ]
-then
-  mkdir deps
-
-  # TOML Parser
-
-  wget -O - https://github.com/IOTechSystems/tomlc99/archive/$TOMLVER.tar.gz | tar -C deps -z -x -f -
-  cp deps/tomlc99-$TOMLVER/toml.* src/c
-
-fi
 
 # Cmake release build
 

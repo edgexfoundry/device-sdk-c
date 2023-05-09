@@ -1,0 +1,32 @@
+Writable:
+  LogLevel: DEBUG
+  Driver:
+    TestParam2: World
+    TestParam3: Goodbye
+
+Service:
+  Port: 59999
+  StartupMsg: Template device started
+
+Clients:
+  core-metadata:
+    Host: "localhost"
+    Port: 59881
+
+Driver:
+  TestParam1: "Hello"
+
+Device:
+  Labels: [ "Template" ]
+  ProfilesDir: "./res/profiles"
+  DevicesDir: "./res/devices"
+
+MessageBus:
+  Protocol: redis
+  Host: localhost
+  Port: 6379
+  Type: redis
+  AuthMode: "usernamepassword"  # required for redis messagebus (secure or insecure)
+  SecretName: redisdb
+  Optional:
+    ClientId: device-template
