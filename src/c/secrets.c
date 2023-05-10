@@ -9,6 +9,7 @@
 #include "secrets.h"
 #include "secrets-insecure.h"
 #include "secrets-vault.h"
+#include "api.h"
 #include "edgex2.h"
 #include "edgex-rest.h"
 #include "service.h"
@@ -136,11 +137,11 @@ void edgex_device_handler_secret (void *ctx, const devsdk_http_request *req, dev
     atomic_fetch_add (&svc->metrics.secsto, 1);
     iot_data_free (secrets);
     iot_data_free (data);
-    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_CREATED, "Secrets populated successfully");
+    edgex_baseresponse_populate (&br, EDGEX_API_VERSION, MHD_HTTP_CREATED, "Secrets populated successfully");
   }
   else
   {
-    edgex_baseresponse_populate (&br, "v2", MHD_HTTP_BAD_REQUEST, "Unable to parse secrets");
+    edgex_baseresponse_populate (&br, EDGEX_API_VERSION, MHD_HTTP_BAD_REQUEST, "Unable to parse secrets");
   }
 
   edgex_baseresponse_write (&br, reply);

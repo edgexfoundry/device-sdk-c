@@ -20,6 +20,7 @@
 #define DYN_DRV_PREFIXLEN (sizeof (DYN_DRV_PREFIX) - 1)
 
 #include "config.h"
+#include "api.h"
 #include "service.h"
 #include "errorlist.h"
 #include "edgex-rest.h"
@@ -737,7 +738,7 @@ void edgex_device_handler_configv2 (void *ctx, const devsdk_http_request *req, d
   devsdk_service_t *svc = (devsdk_service_t *)ctx;
   edgex_configresponse *cr = malloc (sizeof (edgex_configresponse));
 
-  edgex_baseresponse_populate ((edgex_baseresponse *)cr, "v2", MHD_HTTP_OK, NULL);
+  edgex_baseresponse_populate ((edgex_baseresponse *)cr, EDGEX_API_VERSION, MHD_HTTP_OK, NULL);
   cr->config = edgex_device_config_toJson ((devsdk_service_t *)ctx);
   cr->svcname = svc->name;
 
