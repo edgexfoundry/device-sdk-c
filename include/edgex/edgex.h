@@ -96,13 +96,6 @@ typedef struct edgex_deviceprofile
   struct edgex_deviceprofile *next;
 } edgex_deviceprofile;
 
-typedef struct edgex_blocklist
-{
-  char *name;
-  devsdk_strings *values;
-  struct edgex_blocklist *next;
-} edgex_blocklist;
-
 typedef struct edgex_watcher
 {
   char *name;
