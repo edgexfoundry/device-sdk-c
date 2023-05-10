@@ -7,6 +7,7 @@
  */
 
 #include "edgex-rest.h"
+#include "api.h"
 #include "devutil.h"
 #include "cmdinfo.h"
 #include "autoevent.h"
@@ -526,7 +527,7 @@ static JSON_Value *deviceservice_write (const edgex_deviceservice *e)
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
 
-  json_object_set_string (obj, "apiVersion", "v2");
+  json_object_set_string (obj, "apiVersion", EDGEX_API_VERSION);
   json_object_set_string (obj, "baseaddress", e->baseaddress);
   json_object_set_string
     (obj, "adminState", edgex_adminstate_tostring (e->adminState));
@@ -630,7 +631,7 @@ JSON_Value *edgex_wrap_request_single (const char *objName, JSON_Value *payload)
   JSON_Value *val = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (val);
 
-  json_object_set_string (obj, "apiVersion", "v2");
+  json_object_set_string (obj, "apiVersion", EDGEX_API_VERSION);
   json_object_set_value (obj, objName, payload);
 
   return val;
@@ -658,7 +659,7 @@ char *edgex_updateDSreq_write (const char *name, const char *baseaddr)
   JSON_Value *dsval = json_value_init_object ();
   JSON_Object *dsobj = json_value_get_object (dsval);
 
-  json_object_set_string (dsobj, "apiVersion", "v2");
+  json_object_set_string (dsobj, "apiVersion", EDGEX_API_VERSION);
   json_object_set_string (dsobj, "name", name);
   json_object_set_string (dsobj, "baseAddress", baseaddr);
 
@@ -706,7 +707,7 @@ static JSON_Value *device_write (const edgex_device *e)
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
 
-  json_object_set_string (obj, "apiVersion", "v2");
+  json_object_set_string (obj, "apiVersion", EDGEX_API_VERSION);
   json_object_set_string (obj, "profileName", e->profile->name);
   json_object_set_string (obj, "serviceName", e->servicename);
   json_object_set_value (obj, "protocols", protocols_write (e->protocols));
@@ -1008,7 +1009,7 @@ edgex_errorresponse *edgex_errorresponse_create (uint64_t code, char *msg)
   res->statusCode = code;
   res->message = msg;
   res->requestId = "";
-  res->apiVersion = "v2";
+  res->apiVersion = EDGEX_API_VERSION;
   return res;
 }
 

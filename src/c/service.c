@@ -319,7 +319,7 @@ static void ping2_handler (void *ctx, const devsdk_http_request *req, devsdk_htt
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   edgex_pingresponse pr;
 
-  edgex_baseresponse_populate ((edgex_baseresponse *)&pr, "v2", MHD_HTTP_OK, NULL);
+  edgex_baseresponse_populate ((edgex_baseresponse *)&pr, EDGEX_API_VERSION, MHD_HTTP_OK, NULL);
   pr.timestamp = iot_time_secs ();
   pr.svcname = svc->name;
   edgex_pingresponse_write (&pr, reply);
@@ -353,7 +353,7 @@ static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uin
   fields = iot_data_alloc_vector (1);
   iot_data_vector_add (fields, 0, field);
   metric = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (metric, "apiVersion", iot_data_alloc_string ("v2", IOT_DATA_REF));
+  iot_data_string_map_add (metric, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (metric, "name", iot_data_alloc_string (mname, IOT_DATA_REF));
   iot_data_string_map_add (metric, "fields", fields);
   iot_data_string_map_add (metric, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
@@ -767,22 +767,22 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   /* Register REST handlers */
 
   svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);
 
   svc->discovery_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_discoveryv2};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_DISCOVERY, DevSDK_Post, &svc->discovery_wrapper, http_auth_wrapper);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY, DevSDK_Post, &svc->discovery_wrapper, http_auth_wrapper);
 
   svc->config_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_configv2};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_CONFIG, DevSDK_Get, &svc->config_wrapper, http_auth_wrapper);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_CONFIG, DevSDK_Get, &svc->config_wrapper, http_auth_wrapper);
 
   svc->secret_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_secret};
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_SECRET, DevSDK_Post, &svc->secret_wrapper, http_auth_wrapper);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_SECRET, DevSDK_Post, &svc->secret_wrapper, http_auth_wrapper);
 
   svc->version_wrapper = (auth_wrapper_t){ svc, svc->secretstore, version_handler};
   edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API_VERSION, DevSDK_Get, &svc->version_wrapper, http_auth_wrapper);
 
   // No auth wrapper for ping (required for health check)
-  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API2_PING, DevSDK_Get, svc, ping2_handler);
+  edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_PING, DevSDK_Get, svc, ping2_handler);
 
   /* Ready. Register ourselves and log that we have started. */
 

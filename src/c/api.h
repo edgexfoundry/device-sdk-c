@@ -15,19 +15,12 @@
 
 #define EDGEX_DEV_API_VERSION "/api/version"
 
-#define EDGEX_DEV_API2_PING "/api/v2/ping"
-#define EDGEX_DEV_API2_DISCOVERY "/api/v2/discovery"
-#define EDGEX_DEV_API2_CONFIG "/api/v2/config"
-#define EDGEX_DEV_API2_METRICS "/api/v2/metrics"
-#define EDGEX_DEV_API2_SECRET "/api/v2/secret"
-#define EDGEX_DEV_API2_DEVICE_NAME "/api/v2/device/name/{name}/{cmd}"
-#define EDGEX_DEV_API2_CALLBACK_DEVICE "/api/v2/callback/device"
-#define EDGEX_DEV_API2_CALLBACK_DEVICE_NAME "/api/v2/callback/device/name/{name}"
-#define EDGEX_DEV_API2_CALLBACK_PROFILE "/api/v2/callback/profile"
-#define EDGEX_DEV_API2_CALLBACK_WATCHER "/api/v2/callback/watcher"
-#define EDGEX_DEV_API2_CALLBACK_WATCHER_NAME "/api/v2/callback/watcher/name/{name}"
-#define EDGEX_DEV_API2_CALLBACK_SERVICE "/api/v2/callback/service"
-#define EDGEX_DEV_API2_VALIDATE_ADDR "/api/v2/validate/device"
+#define EDGEX_DEV_API3_PING "/api/v3/ping"
+#define EDGEX_DEV_API3_DISCOVERY "/api/v3/discovery"
+#define EDGEX_DEV_API3_CONFIG "/api/v3/config"
+#define EDGEX_DEV_API3_METRICS "/api/v3/metrics"
+#define EDGEX_DEV_API3_SECRET "/api/v3/secret"
+#define EDGEX_DEV_API3_DEVICE_NAME "/api/v3/device/name/{name}/{cmd}"
 
 /* Topics */
 

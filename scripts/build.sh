@@ -18,10 +18,6 @@ do
       DOCGEN=true
       shift 1
     ;;
-    -legacyv2)
-      CMAKEOPTS="$CMAKEOPTS -DCSDK_LEGACY_ARRAYS=ON"
-      shift 1
-    ;;
     *)
       shift 1
     ;;
