@@ -143,7 +143,6 @@ unsigned edgex_watchlist_populate (edgex_watchlist_t *wl, const edgex_watcher *n
 
 static bool matchpw (const edgex_watcher *pw, const iot_data_t *ids)
 {
-  const edgex_blocklist *blocked = NULL;
   edgex_watcher_regexes_t *match = NULL;
 
   for (match = pw->regs; match; match = match->next)
@@ -156,17 +155,16 @@ static bool matchpw (const edgex_watcher *pw, const iot_data_t *ids)
   }
 
 
-  for (blocked = (const edgex_blocklist *)pw->blocking_identifiers; blocked; blocked = blocked->next)
+  iot_data_map_iter_t blocked;
+  iot_data_map_iter (pw->blocking_identifiers, &blocked);
+  while (iot_data_map_iter_next (&blocked))
   {
-    const char *checkval = iot_data_string_map_get_string (ids, blocked->name);
+    const iot_data_t *checkval = iot_data_map_get (ids, iot_data_map_iter_key (&blocked));
     if (checkval)
     {
-      for (devsdk_strings *bv = blocked->values; bv; bv = bv->next)
+      if (iot_data_vector_find (iot_data_map_iter_value (&blocked), (iot_data_cmp_fn)iot_data_equal, checkval))
       {
-        if (strcmp (bv->str, checkval) == 0)
-        {
-          return false;
-        }
+        return false;
       }
     }
   }

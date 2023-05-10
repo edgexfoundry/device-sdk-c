@@ -147,11 +147,14 @@ void edgex_transform_outgoing (devsdk_commandresult *cres, edgex_propertyvalue *
     break;
     case IOT_DATA_STRING:
     {
-      const iot_data_t *remap = iot_data_map_get (mappings, cres->value);
-      if (remap)
+      if (mappings)
       {
-        iot_data_free (cres->value);
-        cres->value = iot_data_add_ref (remap);
+        const iot_data_t *remap = iot_data_map_get (mappings, cres->value);
+        if (remap)
+        {
+          iot_data_free (cres->value);
+          cres->value = iot_data_add_ref (remap);
+        }
       }
     }
     default:
@@ -210,15 +213,18 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, co
     break;
     case IOT_DATA_STRING:
     {
-      iot_data_map_iter_t iter;
-      iot_data_map_iter (mappings, &iter);
-      while (iot_data_map_iter_next (&iter))
+      if (mappings)
       {
-        if (strcmp (iot_data_string (*cres), iot_data_map_iter_string_value (&iter)) == 0)
+        iot_data_map_iter_t iter;
+        iot_data_map_iter (mappings, &iter);
+        while (iot_data_map_iter_next (&iter))
         {
-          iot_data_free (*cres);
-          *cres = iot_data_add_ref (iot_data_map_iter_key (&iter));
-          break;
+          if (strcmp (iot_data_string (*cres), iot_data_map_iter_string_value (&iter)) == 0)
+          {
+            iot_data_free (*cres);
+            *cres = iot_data_add_ref (iot_data_map_iter_key (&iter));
+            break;
+          }
         }
       }
     }
