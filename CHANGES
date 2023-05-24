@@ -3,7 +3,17 @@ This is the C SDK for EdgeX device services.
 Changes for 3.0.0 "Minnesota":
 
 - Support EdgeX v3 API
+  - Flatten config layout in Consul
+  - Changed commandline flags and env variables
+  - MessageBus configuration changes
+  - Query parameters ds-pushevent, ds-returnevent now booleans (true/false)
+  - See v3 migration guide for details
 - SDK API updates: see README.v3.md
+- YAML replaces TOML for configuration file
+- REST callbacks from core-metadata replaced by system events
+- Implementation of token-based security
+- Events always publish to MessageBus (not core-data)
+- Legacy metrics API removed
 - MQTT support for all message bus operations (not just event push)
 
 Changes for 2.3.0 "Levski":
