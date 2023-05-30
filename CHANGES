@@ -1,5 +1,9 @@
 This is the C SDK for EdgeX device services.
 
+Changes for 3.0.1:
+
+- Fix secret loading in insecure mode
+
 Changes for 3.0.0 "Minnesota":
 
 - Support EdgeX v3 API

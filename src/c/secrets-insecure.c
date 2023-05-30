@@ -12,7 +12,8 @@
 #define SEC_PREFIX "Writable/InsecureSecrets/"
 #define SEC_PREFIXLEN (sizeof (SEC_PREFIX) - 1)
 
-#define SEC_PATH "/Secrets/"
+#define SEC_SUFFIX "/SecretName"
+#define SEC_SUFFIXLEN (sizeof (SEC_SUFFIX) - 1)
 
 typedef struct insecure_impl_t
 {
@@ -34,12 +35,12 @@ static iot_data_t *insecure_parse_config (iot_data_t *config)
     if (strncmp (key, SEC_PREFIX, SEC_PREFIXLEN) == 0)
     {
       size_t l = strlen (key);
-      if (strcmp (key + l - 5, "/path") == 0)
+      if (strcmp (key + l - SEC_SUFFIXLEN, SEC_SUFFIX) == 0)
       {
         iot_data_map_iter_t iter2;
-        char *prefix = malloc (l + sizeof ("Secrets"));
+        char *prefix = malloc (l + sizeof ("SecretData"));
         strcpy (prefix, key);
-        strcpy (prefix + l -4, "Secrets/");
+        strcpy (prefix + l + 1 - SEC_SUFFIXLEN, "SecretData/");
         iot_data_t *map = iot_data_alloc_map (IOT_DATA_STRING);
         iot_data_map_iter (config, &iter2);
         while (iot_data_map_iter_next (&iter2))
