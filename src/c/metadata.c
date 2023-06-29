@@ -178,7 +178,7 @@ char *edgex_metadata_client_create_deviceprofile_file
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/" EDGEX_API_VERSION" /deviceprofile/uploadfile",
+    "http://%s:%u/api/" EDGEX_API_VERSION"/deviceprofile/uploadfile",
     endpoints->metadata.host,
     endpoints->metadata.port
   );
