@@ -87,7 +87,7 @@ static void edgex_bus_endpoint_free (void *p)
 static char *edgex_data_to_b64 (const iot_data_t *src)
 {
   char *json = iot_data_to_json (src);
-  size_t sz = strlen (json) + 1;
+  size_t sz = strlen (json); // ignore the last null character, which causes an unmarshal error in core-data
   size_t encsz = iot_b64_encodesize (sz);
   char *result = malloc (encsz);
   iot_b64_encode (json, sz, result, encsz);
