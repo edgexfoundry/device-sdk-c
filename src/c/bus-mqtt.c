@@ -129,20 +129,25 @@ static int edgex_bus_mqtt_msgarrvd (void *context, char *topicName, int topicLen
 
   if (topicLen != 0) // Indicates topic string not terminated
   {
-    topic = realloc (topic, topicLen + 1);
-    topic[topicLen] = '\0';
+    topic = strndup (topicName, topicLen);
   }
   if (msg[message->payloadlen - 1] != '\0')
   {
-    message->payload = realloc (message->payload, message->payloadlen + 1);
-    msg = message->payload;
-    msg[message->payloadlen] = '\0';
+    msg = strndup (message->payload, message->payloadlen);
   }
 
   edgex_bus_handle_request (bus, topic, msg);
 
+  if (topic != topicName)
+  {
+    free(topic);
+  }
+  if (msg != message->payload)
+  {
+    free(msg);
+  }
   MQTTAsync_freeMessage (&message);
-  MQTTAsync_free (topic);
+  MQTTAsync_free (topicName);
   return 1;
 }
 
