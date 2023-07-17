@@ -1047,6 +1047,7 @@ void devsdk_post_readings
 
     if (event)
     {
+      edgex_device_alloc_crlid (NULL);
       if (svc->config.device.maxeventsize && edgex_event_cooked_size (event) > svc->config.device.maxeventsize * 1024)
       {
         iot_log_error (svc->logger, "Post readings: Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
@@ -1062,6 +1063,7 @@ void devsdk_post_readings
         devsdk_error err = EDGEX_OK;
         edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, devname, &err);
       }
+      edgex_device_free_crlid();
     }
   }
   else
