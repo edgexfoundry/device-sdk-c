@@ -10,12 +10,12 @@ provisioning of devices.
 The environment variable CSDK_DIR should be set to a directory containing the
 C SDK include files and libraries.
 
-Set LD_LIBRARY_PATH to $CSDK_DIR/lib
+Set LD_LIBRARY_PATH to $CSDK_DIR/lib:/opt/iotech/iot/1.5/lib
 
 ### Building
 
 ```
-gcc -I$CSDK_DIR/include -L$CSDK_DIR/lib -o device-template template.c -lcsdk
+gcc -I$CSDK_DIR/include -I/opt/iotech/iot/1.5/include -L$CSDK_DIR/lib -L/opt/iotech/iot/1.5/lib -o device-template template.c -lcsdk -liot
 ```
 
 ### Device Profile
@@ -39,7 +39,7 @@ Discovery/Interval to 0), discovery may be forced by calling the discovery
 endpoint manually:
 
 ```
-curl -X POST 0:59999/api/v2/discovery
+curl -X POST 0:59999/api/v3/discovery
 ```
 
 Initially, none of the discovered devices will be added to EdgeX, but by
@@ -47,8 +47,8 @@ using appropriate Provision Watchers they can be accepted. To upload the
 supplied Provision Watchers to core-metadata:
 
 ```
-curl -X POST -d@watcher1.json 0:59881/api/v2/provisionwatcher
-curl -X POST -d@watcher2.json 0:59881/api/v2/provisionwatcher
+curl -X POST -d@watcher1.json 0:59881/api/v3/provisionwatcher
+curl -X POST -d@watcher2.json 0:59881/api/v3/provisionwatcher
 ```
 
 The Provision Watchers each match one of the discovered devices. They work by

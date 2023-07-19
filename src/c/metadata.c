@@ -540,7 +540,21 @@ void edgex_metadata_client_add_or_modify_device
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);
 
-  if (edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, &err) == 409)
+  edgex_http_post (lc, &ctx, url, json, edgex_http_write_cb, &err);
+
+  uint statusCode = 0;
+  JSON_Value *val = json_parse_string(ctx.buff);
+  JSON_Array *resps = json_value_get_array (val);
+  size_t nresps = json_array_get_count (resps);
+  if (nresps)
+  {
+    JSON_Object *obj = json_array_get_object (resps, 0);
+    statusCode = json_object_get_uint (obj, "statusCode");
+
+  }
+  json_value_free(val);
+
+  if (statusCode == 409)
   {
     if (edgex_metadata_client_check_device (lc, endpoints, secretprovider, name))
     {

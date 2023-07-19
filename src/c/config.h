@@ -13,8 +13,6 @@
 #include "rest-server.h"
 #include "map.h"
 
-#include <stdatomic.h>
-
 #define EX_METRIC_EVSENT 0x1
 #define EX_METRIC_RDGSENT 0x2
 #define EX_METRIC_RDCMDS 0x4
