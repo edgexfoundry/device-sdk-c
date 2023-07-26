@@ -25,12 +25,12 @@ template.c shows a device service in outline. All requests for get and set opera
 The environment variable CSDK_DIR should be set to a directory containing the
 C SDK include files and libraries.
 
-Set LD_LIBRARY_PATH to $CSDK_DIR/lib
+Set LD_LIBRARY_PATH to `$CSDK_DIR/lib:/opt/iotech/iot/1.5/lib`
 
 ### Building
 
 ```
-gcc -I$CSDK_DIR/include -L$CSDK_DIR/lib -o template template.c -lcsdk
+gcc -I$CSDK_DIR/include -I/opt/iotech/iot/1.5/include -L$CSDK_DIR/lib -L/opt/iotech/iot/1.5/lib -o template template.c -lcsdk -liot
 ```
 
 ### Device Profile
@@ -52,7 +52,7 @@ An EdgeX system containing at least a database and the core-data and core-metada
 Once the service is running it will begin to send a sequence of Events every ten seconds. It will also respond to the REST API for device services. To obtain a reading manually,
 
 ```
-curl 0:59999/api/v2/device/name/Device1/SensorOne
+curl 0:59999/api/v3/device/name/Device1/SensorOne
 ```
 
 Note that the template device service returns a constant String reading regardless of the requested operation.

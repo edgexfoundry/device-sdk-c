@@ -12,12 +12,12 @@ profile to aggregate device resources.
 The environment variable CSDK_DIR should be set to a directory containing the
 C SDK include files and libraries.
 
-Set LD_LIBRARY_PATH to $CSDK_DIR/lib
+Set LD_LIBRARY_PATH to `$CSDK_DIR/lib:/opt/iotech/iot/1.5/lib`
 
 ### Building
 
 ```
-gcc -I$CSDK_DIR/include -L$CSDK_DIR/lib -o device-gyro device-gyro.c -lcsdk
+gcc -I$CSDK_DIR/include -I/opt/iotech/iot/1.5/include -L$CSDK_DIR/lib -L/opt/iotech/iot/1.5/lib -o device-gyro device-gyro.c -lcsdk -liot
 ```
 
 ### Device Profile
@@ -33,13 +33,13 @@ The supplied configuration file `res/configuration.toml` includes a definition f
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-gyro -c res
+./device-gyro
 ```
 
 To take a set of readings from the gyro:
 
 ```
-curl 0:59999/api/v2/device/name/Gyro/rotation
+curl 0:59999/api/v3/device/name/Gyro/rotation
 ```
 
 This returns an Event containing three Readings representing the three axes of measurement.

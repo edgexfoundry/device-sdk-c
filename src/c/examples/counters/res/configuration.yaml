@@ -2,6 +2,7 @@ Writable:
   LogLevel: DEBUG
 
 Service:
+  Host: localhost
   Port: 59999
   StartupMsg: Example counting device service started
 

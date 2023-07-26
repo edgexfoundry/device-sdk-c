@@ -5,6 +5,7 @@ Writable:
     TestParam3: Goodbye
 
 Service:
+  Host: "localhost"
   Port: 59999
   StartupMsg: Template device started
 
