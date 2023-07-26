@@ -4,7 +4,7 @@
   "model": "IoT0",
   "description": "Template Sensor",
   "labels": ["sensor"],
-  "apiVersion": "v2",
+  "apiVersion": "v3",
 
   "deviceResources":
   [

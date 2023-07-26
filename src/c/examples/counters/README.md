@@ -12,12 +12,12 @@ operation which resets the count.
 The environment variable CSDK_DIR should be set to a directory containing the
 C SDK include files and libraries.
 
-Set LD_LIBRARY_PATH to $CSDK_DIR/lib
+Set LD_LIBRARY_PATH to `$CSDK_DIR/lib:/opt/iotech/iot/1.5/lib`
 
 ### Building
 
 ```
-gcc -I$CSDK_DIR/include -L$CSDK_DIR/lib -o device-counter device-counter.c -lcsdk
+gcc -I$CSDK_DIR/include -I/opt/iotech/iot/1.5/include -L$CSDK_DIR/lib -L/opt/iotech/iot/1.5/lib -o device-counter device-counter.c -lcsdk -liot
 ```
 
 ### Device Profile
@@ -39,13 +39,13 @@ An EdgeX system containing at least a database and the core-data and core-metada
 Once the service is running it will begin to send Events from the Counter1 device every ten seconds. To manually generate an Event,
 
 ```
-curl 0:59999/api/v2/device/name/Counter2/Counter
+curl 0:59999/api/v3/device/name/Counter2/Counter
 ```
 
 To reset one of the counters,
 
 ```
-curl -X PUT -d '{"Counter":"0"}' 0:59999/api/v2/device/name/Counter1/Counter
+curl -X PUT -d '{"Counter":"0"}' 0:59999/api/v3/device/name/Counter1/Counter
 ```
 
 ### Device details

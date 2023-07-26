@@ -33,7 +33,7 @@ The supplied configuration file `res/configuration.toml` includes a definition f
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-file -c res
+./device-file
 ```
 
 To trigger a file upload:

@@ -10,7 +10,7 @@ provisioning of devices.
 The environment variable CSDK_DIR should be set to a directory containing the
 C SDK include files and libraries.
 
-Set LD_LIBRARY_PATH to $CSDK_DIR/lib:/opt/iotech/iot/1.5/lib
+Set LD_LIBRARY_PATH to `$CSDK_DIR/lib:/opt/iotech/iot/1.5/lib`
 
 ### Building
 

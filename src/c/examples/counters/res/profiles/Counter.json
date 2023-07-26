@@ -1,5 +1,5 @@
 {
-  "apiVersion": "v2",
+  "apiVersion": "v3",
   "name": "Example-Counter",
   "manufacturer": "IoTechSystems",
   "model": "IoT2",
