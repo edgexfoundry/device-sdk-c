@@ -11,22 +11,22 @@
     {
       "name": "A",
       "description": "Byte 0 (LSB)",
-      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF", "units": "things" }
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": 255, "units": "things" }
     },
     {
       "name": "B",
       "description": "Byte 1",
-      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF00", "shift": "8", "units": "things" }
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": 65280, "shift": 8, "units": "things" }
     },
     {
       "name": "C",
       "description": "Byte 2",
-      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF0000", "shift": "16", "units": "things" }
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": 16711680, "shift": 16, "units": "things" }
     },
     {
       "name": "D",
       "description": "Byte 3 (MSB)",
-      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": "0xFF000000", "shift": "24", "units": "things" }
+      "properties": { "valueType": "Uint32", "readWrite": "RW", "mask": 4278190080, "shift": 24, "units": "things" }
     }
   ]
 }
