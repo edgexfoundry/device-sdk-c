@@ -18,12 +18,12 @@ of these four values.
 The environment variable CSDK_DIR should be set to a directory containing the
 C SDK include files and libraries.
 
-Set LD_LIBRARY_PATH to $CSDK_DIR/lib
+Set LD_LIBRARY_PATH to `$CSDK_DIR/lib:/opt/iotech/iot/1.5/lib`
 
 ### Building
 
 ```
-gcc -I$CSDK_DIR/include -L$CSDK_DIR/lib -o device-bitfields device-bitfields.c -lcsdk
+gcc -I$CSDK_DIR/include -I/opt/iotech/iot/1.5/include -L$CSDK_DIR/lib -L/opt/iotech/iot/1.5/lib -o device-bitfields device-bitfields.c -lcsdk -liot
 ```
 
 ### Device Profile
@@ -54,17 +54,17 @@ The supplied configuration file `res/configuration.toml` includes a definition f
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-bitfields -c res
+./device-bitfields
 ```
 
 To read value "B" (bits 8-15):
 
 ```
-curl 0:59999/api/v2/device/name/Bitfields/B
+curl 0:59999/api/v3/device/name/Bitfields/B
 ```
 
 To write a value into "B":
 
 ```
-curl -X PUT -d '{"B":"221"}' 0:59999/api/v2/device/name/Bitfields/B
+curl -X PUT -d '{"B":"221"}' 0:59999/api/v3/device/name/Bitfields/B
 ```

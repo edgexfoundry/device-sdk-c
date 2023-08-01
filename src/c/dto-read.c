@@ -146,30 +146,23 @@ static void edgex_get_readwrite (const iot_data_t *object, bool *read, bool *wri
 
 static void edgex_get_transformArg (const iot_data_t *obj, const char *name, iot_typecode_t type, edgex_transformArg *res)
 {
-  const char *str;
-  char *end = NULL;
-
   res->enabled = false;
-  str = iot_data_string_map_get_string (obj, name);
-  if (str && *str)
+  if (type.type >= IOT_DATA_INT8 && type.type <= IOT_DATA_UINT64)
   {
-    if (type.type >= IOT_DATA_INT8 && type.type <= IOT_DATA_UINT64)
+    int64_t i = 0;
+    if (iot_data_string_map_get_number(obj, name, IOT_DATA_INT64, &i))
     {
-      int64_t i = strtol (str, &end, 0);
-      if (*end == '\0')
-      {
-        res->enabled = true;
-        res->value.ival = i;
-      }
+      res->enabled = true;
+      res->value.ival = i;
     }
-    else if (type.type == IOT_DATA_FLOAT32 || type.type == IOT_DATA_FLOAT64)
+  }
+  else if (type.type == IOT_DATA_FLOAT32 || type.type == IOT_DATA_FLOAT64)
+  {
+    double d = 0;
+    if (iot_data_string_map_get_number(obj, name, IOT_DATA_FLOAT64, &d))
     {
-      double d = strtod (str, &end);
-      if (*end == '\0')
-      {
-        res->enabled = true;
-        res->value.dval = d;
-      }
+      res->enabled = true;
+      res->value.dval = d;
     }
   }
 }
