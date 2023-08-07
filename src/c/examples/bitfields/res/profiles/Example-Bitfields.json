@@ -4,7 +4,7 @@
   "model": "IoT4",
   "description": "Virtual Bitfields Device for CSDK Example",
   "labels": ["sensor"],
-  "apiVersion": "v2",
+  "apiVersion": "v3",
 
   "deviceResources":
   [
