@@ -1,5 +1,16 @@
 This is the C SDK for EdgeX device services.
 
+Changes for 3.0.2:
+
+- Update examples to v3
+- Remove space character from the URL for uploading device profile
+- Update edgex_data_to_b64 to remove the trailing null character from JSON data
+- Fix invalid pointer manipulation in edgex_bus_mqtt_msgarrvd
+- Update devsdk_post_readings to alloc and free correction id
+- Update edgex_metadata_client_add_or_modify_device to read status code from Multi-Status response
+- Update edgex_get_transformArg to reflect data type changes in ResourceProperties
+- Bypass JWT check in insecure mode
+
 Changes for 3.0.1:
 
 - Fix secret loading in insecure mode
