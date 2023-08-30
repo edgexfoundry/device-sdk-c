@@ -102,7 +102,10 @@ extern const char *edgex_reqdata_get (const edgex_reqdata_t *data, const char *n
   const char *result = NULL;
   if (data->json)
   {
-    result = json_object_get_string (data->json, name);
+    JSON_Value *value = json_object_get_value(data->json, name);
+    if (value) {
+      result = json_serialize_to_string(value);
+    }
   }
   else
   {
