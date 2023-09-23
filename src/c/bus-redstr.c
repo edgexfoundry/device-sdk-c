@@ -127,7 +127,7 @@ static bool edgex_bus_redstr_auth (iot_logger_t *lc, redisContext *ctx, const ch
   return result;
 }
 
-edgex_bus_t *edgex_bus_create_redstr (iot_logger_t *lc, const char *svcname, const iot_data_t *cfg, edgex_secret_provider_t *secstore, iot_threadpool_t *queue, const devsdk_timeout *tm)
+edgex_bus_t *edgex_bus_create_redstr (iot_logger_t *lc, const char *svcname, const iot_data_t *cfg, edgex_secret_provider_t *secstore, iot_threadpool_t *queue, const devsdk_timeout *tm, char *secure)
 {
   struct timeval tv;
   edgex_bus_t *result = NULL;
@@ -175,7 +175,7 @@ edgex_bus_t *edgex_bus_create_redstr (iot_logger_t *lc, const char *svcname, con
     return NULL;
   }
 
-  if (strcmp (iot_data_string_map_get_string (cfg, EX_BUS_AUTHMODE), "usernamepassword") == 0)
+  if (secure && strcmp (secure, "true") == 0 && strcmp (iot_data_string_map_get_string (cfg, EX_BUS_AUTHMODE), "usernamepassword") == 0)
   {
     bool auth = true;
     iot_data_t *secrets = edgex_secrets_get (secstore, iot_data_string_map_get_string (cfg, EX_BUS_SECRETNAME));

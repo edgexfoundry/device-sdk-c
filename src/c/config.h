@@ -12,6 +12,7 @@
 #include "devsdk/devsdk.h"
 #include "rest-server.h"
 #include "map.h"
+#include "registry.h"
 
 #define EX_METRIC_EVSENT 0x1
 #define EX_METRIC_RDGSENT 0x2
@@ -86,7 +87,9 @@ typedef struct edgex_device_config
 
 iot_data_t *edgex_device_loadConfig (iot_logger_t *lc, const char *path, devsdk_error *err);
 
-iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svcname);
+iot_data_t *edgex_common_config_defaults (const char *svcname);
+
+iot_data_t *edgex_private_config_defaults (const iot_data_t *driverconf);
 
 char *edgex_device_getRegURL (const iot_data_t *config);
 
@@ -99,6 +102,8 @@ void edgex_device_overrideConfig_map (iot_data_t *config, const iot_data_t *map)
 void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config);
 
 void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpairs *pairs);
+
+void edgex_device_updateCommonConf (void *svc, const devsdk_nvpairs *config);
 
 void edgex_device_updateConf (void *svc, const devsdk_nvpairs *config);
 

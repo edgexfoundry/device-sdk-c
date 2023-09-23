@@ -534,7 +534,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   iot_threadpool_start (svc->eventq);
 
   // Initialize MessageBus client
-
+  char *secure = getenv (SECUREENV);
   const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
   if (strcmp (bustype, "mqtt") == 0)
   {
@@ -542,7 +542,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   }
   else if (strcmp (bustype, "redis") == 0)
   {
-    svc->msgbus = edgex_bus_create_redstr (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline);
+    svc->msgbus = edgex_bus_create_redstr (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline, secure);
   }
   else
   {
@@ -765,7 +765,6 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   free (topic);
 
   /* Register REST handlers */
-  char *secure = getenv (SECUREENV);
   if (secure && strcmp (secure, "true") == 0)
   {
     svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
@@ -834,7 +833,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 {
   iot_data_t *config_file = NULL;
   bool uploadConfig = false;
-  iot_data_t *configmap;
+  iot_data_t *common_config_map, *private_config_map, *configmap;
 
   if (svc->starttime)
   {
@@ -856,9 +855,34 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     iot_log_error (svc->logger, "Unable to load config file: %s", err->reason);
     return;
   }
-  configmap = edgex_config_defaults (driverdfls, svc->name);
-  edgex_device_overrideConfig_map (configmap, config_file);
-  edgex_device_overrideConfig_env (svc->logger, configmap);
+  common_config_map = edgex_common_config_defaults (svc->name);
+  private_config_map = edgex_private_config_defaults(driverdfls);
+  edgex_device_overrideConfig_map (common_config_map, config_file);
+  edgex_device_overrideConfig_map (private_config_map, config_file);
+  edgex_device_overrideConfig_env (svc->logger, common_config_map);
+  edgex_device_overrideConfig_env (svc->logger, private_config_map);
+
+  configmap = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_map_merge(configmap, common_config_map);
+  iot_data_map_merge(configmap, private_config_map);
+  iot_data_free(common_config_map);
+
+  /* Set up SecretStore */
+
+  char *secure = getenv (SECUREENV);
+  if (secure && strcmp (secure, "false") == 0)
+  {
+    svc->secretstore = edgex_secrets_get_insecure ();
+  }
+  else
+  {
+    svc->secretstore = edgex_secrets_get_vault ();
+  }
+  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->scheduler, svc->thpool, svc->name, configmap, &svc->metrics))
+  {
+    *err = EDGEX_BAD_CONFIG;
+    return;
+  }
 
   if (svc->regURL)
   {
@@ -890,33 +914,6 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
   }
 
-  /* Set up SecretStore */
-
-  char *secure = getenv (SECUREENV);
-  if (secure && strcmp (secure, "false") == 0)
-  {
-    svc->secretstore = edgex_secrets_get_insecure ();
-  }
-  else
-  {
-    const char *sectype = iot_data_string_map_get_string (configmap, "SecretStore/Type");
-    if (strcmp (sectype, "vault") == 0)
-    {
-      svc->secretstore = edgex_secrets_get_vault ();
-    }
-    else
-    {
-      iot_log_error (svc->logger, "Unknown Secret Store type %s", sectype);
-      *err = EDGEX_BAD_CONFIG;
-      return;
-    }
-  }
-  if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->scheduler, svc->thpool, svc->name, configmap, &svc->metrics))
-  {
-    *err = EDGEX_BAD_CONFIG;
-    return;
-  }
-
   if (svc->registry)
   {
     if (!devsdk_registry_init (svc->registry, svc->logger, svc->thpool, svc->secretstore, svc->regURL))
@@ -944,11 +941,25 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     else
     {
       devsdk_error e;
+
+      // get common configuration from registry
+      devsdk_nvpairs *commonconf = devsdk_registry_get_common_config (svc->registry, edgex_device_updateCommonConf, svc, svc->stopconfig, &e, &deadline);
+      if (commonconf)
+      {
+        edgex_device_overrideConfig_nvpairs (configmap, commonconf);
+        edgex_device_overrideConfig_env (svc->logger, configmap);
+        devsdk_nvpairs_free (commonconf);
+      }
+      else
+      {
+        iot_log_error (svc->logger, "Unable to get common configuration from registry.");
+        iot_data_free (config_file);
+        return;
+      }
+
       devsdk_nvpairs *regconf = devsdk_registry_get_config (svc->registry, svc->name, edgex_device_updateConf, svc, svc->stopconfig, &e);
       if (regconf)
       {
-        iot_data_free (configmap);
-        configmap = edgex_config_defaults (driverdfls, svc->name);
         edgex_device_overrideConfig_nvpairs (configmap, regconf);
         edgex_device_overrideConfig_env (svc->logger, configmap);
         devsdk_nvpairs_free (regconf);
@@ -967,7 +978,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   if (uploadConfig)
   {
     iot_log_info (svc->logger, "Uploading configuration to registry.");
-    devsdk_registry_put_config (svc->registry, svc->name, configmap, err);
+    devsdk_registry_put_config (svc->registry, svc->name, private_config_map, err);
     if (err->code)
     {
       iot_log_error (svc->logger, "Unable to upload config: %s", err->reason);
@@ -992,6 +1003,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
 
   iot_data_free (config_file);
+  iot_data_free(private_config_map);
 
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
   iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);

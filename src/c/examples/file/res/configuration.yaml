@@ -6,21 +6,16 @@ Service:
   Port: 59999
   StartupMsg: Example file device service started
 
-Clients:
-  core-metadata:
-    Host: localhost
-    Port: 59881
+# uncomment when running from command-line in hybrid mode without Config Provider
+#Clients:
+#  core-metadata:
+#    Host: localhost
+#    Port: 59881
 
 Device:
   ProfilesDir: ./res/profiles
   DevicesDir: ./res/devices
 
 MessageBus:
-  Protocol: redis
-  Host: localhost
-  Port: 6379
-  Type: redis
-  AuthMode: usernamepassword
-  SecretName: redisdb
   Optional:
     ClientId: device-file

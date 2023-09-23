@@ -62,6 +62,19 @@ bool devsdk_registry_waitfor (devsdk_registry_t *registry, const devsdk_timeout 
   }
 }
 
+devsdk_nvpairs *devsdk_registry_get_common_config
+(
+  devsdk_registry_t *registry,
+  devsdk_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
+  devsdk_error *err,
+  const devsdk_timeout *timeout
+)
+{
+  return registry->fns.get_common_config (registry->state, updater, updatectx, updatedone, err, timeout);
+}
+
 devsdk_nvpairs *devsdk_registry_get_config
 (
   devsdk_registry_t *registry,
