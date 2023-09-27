@@ -18,9 +18,6 @@
 
 #define CONF_PREFIX "edgex/v3/"
 
-#define ALL_SVCS_NODE "all-services"
-#define DEV_SVCS_NODE "device-services"
-
 typedef struct consul_impl_t
 {
   iot_logger_t *lc;

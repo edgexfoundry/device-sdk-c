@@ -47,4 +47,9 @@
 
 #define DS_PARAMLIST { DS_PUSH, DS_RETURN }
 
+/* Path segments */
+
+#define ALL_SVCS_NODE "all-services"
+#define DEV_SVCS_NODE "device-services"
+
 #endif
