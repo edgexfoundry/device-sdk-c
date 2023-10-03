@@ -534,7 +534,6 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   iot_threadpool_start (svc->eventq);
 
   // Initialize MessageBus client
-  char *secure = getenv (SECUREENV);
   const char *bustype = iot_data_string_map_get_string (svc->config.sdkconf, EX_BUS_TYPE);
   if (strcmp (bustype, "mqtt") == 0)
   {
@@ -542,7 +541,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   }
   else if (strcmp (bustype, "redis") == 0)
   {
-    svc->msgbus = edgex_bus_create_redstr (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline, secure);
+    svc->msgbus = edgex_bus_create_redstr (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline, svc->secureMode);
   }
   else
   {
@@ -765,7 +764,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   free (topic);
 
   /* Register REST handlers */
-  if (secure && strcmp (secure, "true") == 0)
+  if (svc->secureMode)
   {
     svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);
@@ -876,6 +875,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
   else
   {
+    svc->secureMode = true;
     svc->secretstore = edgex_secrets_get_vault ();
   }
   if (!edgex_secrets_init (svc->secretstore, svc->logger, svc->scheduler, svc->thpool, svc->name, configmap, &svc->metrics))

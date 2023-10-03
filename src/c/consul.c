@@ -18,6 +18,9 @@
 
 #define CONF_PREFIX "edgex/v3/"
 
+#define ALL_SVCS_NODE "all-services"
+#define DEV_SVCS_NODE "device-services"
+
 typedef struct consul_impl_t
 {
   iot_logger_t *lc;
@@ -252,7 +255,7 @@ static devsdk_nvpairs *edgex_consul_client_get_common_config
 
   free (ctx.buff);
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/all-services");
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" ALL_SVCS_NODE);
   edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
   edgex_secrets_releaseregtoken (consul->sp);
   if (err->code == 0)
@@ -271,17 +274,17 @@ static devsdk_nvpairs *edgex_consul_client_get_common_config
   while (result)
   {
     char *name = result->name;
-    char *pos = strstr(name, "all-services/");
+    char *pos = strstr(name, ALL_SVCS_NODE "/");
     if (pos)
     {
-      result->name = strdup(pos + strlen("all-services/"));
+      result->name = strdup(pos + strlen(ALL_SVCS_NODE "/"));
       free(name);
     }
     result = result->next;
   }
   result = originalResult;
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/device-services");
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" DEV_SVCS_NODE);
   edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
   edgex_secrets_releaseregtoken (consul->sp);
   if (err->code == 0)
@@ -294,10 +297,10 @@ static devsdk_nvpairs *edgex_consul_client_get_common_config
   while (privateConfig)
   {
     char *name = privateConfig->name;
-    char *pos = strstr(name, "device-services/");
+    char *pos = strstr(name, DEV_SVCS_NODE "/");
     if (pos)
     {
-      result = devsdk_nvpairs_new((pos + strlen("device-services/")), privateConfig->value, result);
+      result = devsdk_nvpairs_new((pos + strlen(DEV_SVCS_NODE "/")), privateConfig->value, result);
     }
       privateConfig = privateConfig->next;
   }
@@ -305,7 +308,7 @@ static devsdk_nvpairs *edgex_consul_client_get_common_config
 
   struct updatejob *job_all_service = malloc (sizeof (struct updatejob));
   job_all_service->url = malloc (URL_BUF_SIZE);
-  snprintf (job_all_service->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/all-services");
+  snprintf (job_all_service->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" ALL_SVCS_NODE);
   job_all_service->lc = consul->lc;
   job_all_service->updater = updater;
   job_all_service->updatectx = updatectx;
@@ -315,7 +318,7 @@ static devsdk_nvpairs *edgex_consul_client_get_common_config
 
   struct updatejob *job_device_service = malloc (sizeof (struct updatejob));
   job_device_service->url = malloc (URL_BUF_SIZE);
-  snprintf (job_device_service->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/device-services");
+  snprintf (job_device_service->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" DEV_SVCS_NODE);
   job_device_service->lc = consul->lc;
   job_device_service->updater = updater;
   job_device_service->updatectx = updatectx;

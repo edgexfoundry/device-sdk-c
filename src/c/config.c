@@ -38,7 +38,7 @@
 
 #include <iot/data.h>
 
-#include "iot/time.h"
+#include <iot/time.h>
 
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
@@ -552,12 +552,8 @@ void edgex_device_updateCommonConf (void *p, const devsdk_nvpairs *config)
   timeout->deadline = iot_time_secs () + 10;
   timeout->interval = 1;
   t1 = iot_time_secs ();
-  while (true)
+  while (svc->config.sdkconf == NULL)
   {
-    if (svc->config.sdkconf)
-    {
-      break;
-    }
     t2 = iot_time_secs ();
     if (t2 > timeout->deadline - timeout->interval)
     {
