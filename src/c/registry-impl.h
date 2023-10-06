@@ -17,6 +17,9 @@ typedef bool (*devsdk_registry_init_impl) (void *impl, iot_logger_t *logger, iot
 
 typedef bool (*devsdk_registry_ping_impl) (void *impl);
 
+typedef devsdk_nvpairs *(*devsdk_registry_get_common_config_impl)
+  (void *impl, devsdk_registry_updatefn updater, void *updatectx, atomic_bool *updatedone, devsdk_error *err, const devsdk_timeout *timeout);
+
 typedef devsdk_nvpairs *(*devsdk_registry_get_config_impl)
   (void *impl, const char *servicename, devsdk_registry_updatefn updater, void *updatectx, atomic_bool *updatedone, devsdk_error *err);
 
@@ -36,6 +39,7 @@ typedef struct devsdk_registry_impls
 {
   devsdk_registry_init_impl init;
   devsdk_registry_ping_impl ping;
+  devsdk_registry_get_common_config_impl get_common_config;
   devsdk_registry_get_config_impl get_config;
   devsdk_registry_put_config_impl put_config;
   devsdk_registry_register_service_impl register_service;

@@ -9,10 +9,11 @@ Service:
   Port: 59999
   StartupMsg: Template device started
 
-Clients:
-  core-metadata:
-    Host: "localhost"
-    Port: 59881
+# uncomment when running from command-line in hybrid mode without Config Provider
+#Clients:
+#  core-metadata:
+#    Host: localhost
+#    Port: 59881
 
 Driver:
   TestParam1: "Hello"
@@ -23,11 +24,5 @@ Device:
   DevicesDir: "./res/devices"
 
 MessageBus:
-  Protocol: redis
-  Host: localhost
-  Port: 6379
-  Type: redis
-  AuthMode: "usernamepassword"  # required for redis messagebus (secure or insecure)
-  SecretName: redisdb
   Optional:
     ClientId: device-template
