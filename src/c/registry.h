@@ -33,6 +33,28 @@ bool devsdk_registry_init (devsdk_registry_t *registry, iot_logger_t *lc, iot_th
 bool devsdk_registry_waitfor (devsdk_registry_t *registry, const devsdk_timeout *deadline);
 
 /**
+ * @brief Retrieve common configuration values from the registry.
+ * @param registry The registry instance.
+ * @param updater A function to be called when the configuration in the registry
+ *                is updated (may be NULL).
+ * @param updatectx A parameter to be passed to the updater function.
+ * @param updatedone The registry will stop checking for updates when this flag is set.
+ * @param err Nonzero reason codes will be set here in the event of errors.
+ * @param timeout The maximum time to wait for the registry to respond.
+ * @returns Configuration retrieved for the registry.
+ */
+
+devsdk_nvpairs *devsdk_registry_get_common_config
+(
+  devsdk_registry_t *registry,
+  devsdk_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
+  devsdk_error *err,
+  const devsdk_timeout *timeout
+);
+
+/**
  * @brief Retrieve configuration values from the registry.
  * @param registry The registry instance.
  * @param servicename The name of this device service.

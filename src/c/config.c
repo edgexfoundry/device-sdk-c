@@ -26,18 +26,19 @@
 #include "edgex-rest.h"
 #include "edgex-logging.h"
 #include "devutil.h"
-#include "autoevent.h"
 #include "device.h"
-#include "edgex/devices.h"
 
 #include <microhttpd.h>
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <sys/utsname.h>
 
 #include <iot/file.h>
+
+#include <iot/data.h>
+
+#include <iot/time.h>
 
 #define ERRBUFSZ 1024
 #define DEFAULTREG "consul.http://localhost:8500"
@@ -45,7 +46,7 @@
 #define DEFAULTSECCAFILE "/tmp/edgex/secrets/%s/secrets-token.json"
 #define DEFAULTMETRICSTOPIC "edgex/telemetry"
 
-iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svcname)
+iot_data_t *edgex_common_config_defaults (const char *svcname)
 {
   struct utsname utsbuffer;
   uname (&utsbuffer);
@@ -56,19 +57,14 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
 
   iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
 
-  iot_data_string_map_add (result, DYN_PREFIX "LogLevel", iot_data_alloc_string ("WARNING", IOT_DATA_REF));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/DataTransform", iot_data_alloc_bool (true));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/Discovery/Enabled", iot_data_alloc_bool (true));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/Discovery/Interval", iot_data_alloc_ui32 (0));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/UpdateLastConnected", iot_data_alloc_bool (false));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/MaxCmdOps", iot_data_alloc_ui32 (0));
-  iot_data_string_map_add (result, DYN_PREFIX "Device/MaxEventSize", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Device/DataTransform", iot_data_alloc_bool (true));
+  iot_data_string_map_add (result, "Device/Discovery/Enabled", iot_data_alloc_bool (true));
+  iot_data_string_map_add (result, "Device/Discovery/Interval", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Device/MaxCmdOps", iot_data_alloc_ui32 (0));
 
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Interval", iot_data_alloc_string ("30s", IOT_DATA_REF));
-  iot_data_string_map_add (result, DYN_PREFIX "Telemetry/PublishTopicPrefix", iot_data_alloc_string (DEFAULTMETRICSTOPIC, IOT_DATA_REF));
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/EventsSent", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/ReadingsSent", iot_data_alloc_bool (false));
-  iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/ReadCommandsExecuted", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/SecuritySecretsRequested", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/SecuritySecretsStored", iot_data_alloc_bool (false));
 
@@ -92,7 +88,7 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
-  iot_data_string_map_add (result, EX_BUS_TYPE, iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, EX_BUS_TYPE, iot_data_alloc_string ("redis", IOT_DATA_REF));
   edgex_bus_config_defaults (result, svcname);
 
   iot_data_string_map_add (result, "SecretStore/Type", iot_data_alloc_string ("vault", IOT_DATA_REF));
@@ -106,6 +102,27 @@ iot_data_t *edgex_config_defaults (const iot_data_t *driverconf, const char *svc
   iot_data_string_map_add (result, "SecretStore/Authentication/AuthType", iot_data_alloc_string ("X-Vault-Token", IOT_DATA_REF));
   iot_data_string_map_add (result, "SecretStore/SecretsFile", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "SecretStore/DisableScrubSecretsFile", iot_data_alloc_bool (false));
+
+  return result;
+}
+
+iot_data_t *edgex_private_config_defaults (const iot_data_t *driverconf)
+{
+  struct utsname utsbuffer;
+  uname (&utsbuffer);
+  iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
+
+  iot_data_string_map_add (result, DYN_PREFIX "LogLevel", iot_data_alloc_string ("WARNING", IOT_DATA_REF));
+
+  iot_data_string_map_add (result, "Device/UpdateLastConnected", iot_data_alloc_bool (false));
+  iot_data_string_map_add (result, "MaxEventSize", iot_data_alloc_ui32 (0));
+
+  iot_data_string_map_add (result, DYN_PREFIX "Telemetry/PublishTopicPrefix", iot_data_alloc_string (DEFAULTMETRICSTOPIC, IOT_DATA_REF));
+  iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/ReadCommandsExecuted", iot_data_alloc_bool (false));
+
+  iot_data_string_map_add (result, "Service/Host", iot_data_alloc_string (utsbuffer.nodename, IOT_DATA_COPY));
+  iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (59999));
+  iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
 
   if (driverconf)
   {
@@ -434,12 +451,9 @@ void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpai
   addInsecureSecretsPairs (config, pairs);
 }
 
-static void edgex_device_populateConfigFromMap (edgex_device_config *config, const iot_data_t *map)
+static void edgex_device_populateCommonConfigFromMap (edgex_device_config *config, const iot_data_t *map)
 {
-  config->service.host = iot_data_string_map_get_string (map, "Service/Host");
-  config->service.port = iot_data_ui16 (iot_data_string_map_get (map, "Service/Port"));
   config->service.timeout = edgex_parsetime (iot_data_string_map_get_string (map, "Service/RequestTimeout"));
-  config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
   config->service.checkinterval = iot_data_string_map_get_string (map, "Service/HealthCheckInterval");
   config->service.bindaddr = iot_data_string_map_get_string (map, "Service/ServerBindAddr");
   config->service.maxreqsz = iot_data_ui64 (iot_data_string_map_get (map, "Service/MaxRequestSize"));
@@ -470,23 +484,32 @@ static void edgex_device_populateConfigFromMap (edgex_device_config *config, con
     config->service.labels[0] = NULL;
   }
 
-  config->device.datatransform = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Device/DataTransform"));
-  config->device.discovery_enabled = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Device/Discovery/Enabled"));
-  config->device.discovery_interval = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/Discovery/Interval"));
-  config->device.maxcmdops = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxCmdOps"));
-  config->device.maxeventsize = iot_data_ui32 (iot_data_string_map_get (map, DYN_PREFIX "Device/MaxEventSize"));
+  config->device.datatransform = iot_data_bool (iot_data_string_map_get (map, "Device/DataTransform"));
+  config->device.discovery_enabled = iot_data_bool (iot_data_string_map_get (map, "Device/Discovery/Enabled"));
+  config->device.discovery_interval = iot_data_ui32 (iot_data_string_map_get (map, "Device/Discovery/Interval"));
+  config->device.maxcmdops = iot_data_ui32 (iot_data_string_map_get (map, "Device/MaxCmdOps"));
+  config->device.maxeventsize = iot_data_ui32 (iot_data_string_map_get (map, "MaxEventSize"));
   config->device.profilesdir = iot_data_string_map_get_string (map, "Device/ProfilesDir");
   config->device.devicesdir = iot_data_string_map_get_string (map, "Device/DevicesDir");
-  config->device.updatelastconnected = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Device/UpdateLastConnected"));
-  config->device.eventqlen = iot_data_ui32 (iot_data_string_map_get (map, "Device/EventQLength"));
 
   config->metrics.interval = iot_data_string_map_get_string (map, DYN_PREFIX "Telemetry/Interval");
-  config->metrics.topic = iot_data_string_map_get_string (map, DYN_PREFIX "Telemetry/PublishTopicPrefix");
   config->metrics.flags = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/EventsSent")) ? EX_METRIC_EVSENT : 0;
   if (iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/ReadingsSent"))) config->metrics.flags |= EX_METRIC_RDGSENT;
-  if (iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/ReadCommandsExecuted"))) config->metrics.flags |= EX_METRIC_RDCMDS;
   if (iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/SecuritySecretsRequested"))) config->metrics.flags |= EX_METRIC_SECREQ;
   if (iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/SecuritySecretsStored"))) config->metrics.flags |= EX_METRIC_SECSTO;
+}
+
+static void edgex_device_populateConfigFromMap (edgex_device_config *config, const iot_data_t *map)
+{
+  config->service.host = iot_data_string_map_get_string (map, "Service/Host");
+  config->service.port = iot_data_ui16 (iot_data_string_map_get (map, "Service/Port"));
+  config->service.startupmsg = iot_data_string_map_get_string (map, "Service/StartupMsg");
+
+  config->device.updatelastconnected = iot_data_bool (iot_data_string_map_get (map, "Device/UpdateLastConnected"));
+  config->device.eventqlen = iot_data_ui32 (iot_data_string_map_get (map, "Device/EventQLength"));
+
+  config->metrics.topic = iot_data_string_map_get_string (map, DYN_PREFIX "Telemetry/PublishTopicPrefix");
+  if (iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/ReadCommandsExecuted"))) config->metrics.flags |= EX_METRIC_RDCMDS;
 }
 
 void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config)
@@ -513,22 +536,60 @@ void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config)
     }
   }
 
+  edgex_device_populateCommonConfigFromMap (&svc->config, config);
   edgex_device_populateConfigFromMap (&svc->config, config);
 
   edgex_config_setloglevel (svc->logger, iot_data_string_map_get_string (config, DYN_PREFIX "LogLevel"), &svc->config.loglevel);
+}
+
+void edgex_device_updateCommonConf (void *p, const devsdk_nvpairs *config)
+{
+  bool updatemetrics = false;
+  devsdk_service_t *svc = (devsdk_service_t *)p;
+
+  devsdk_timeout *timeout = (devsdk_timeout *)malloc(sizeof(devsdk_timeout));
+  uint64_t t1, t2;
+  timeout->deadline = iot_time_secs () + 10;
+  timeout->interval = 1;
+  t1 = iot_time_secs ();
+  while (svc->config.sdkconf == NULL)
+  {
+    t2 = iot_time_secs ();
+    if (t2 > timeout->deadline - timeout->interval)
+    {
+      iot_log_error (svc->logger, "SDK configuration is not ready");
+      return;
+    }
+    if (timeout->interval > t2 - t1)
+    {
+      iot_log_warn(svc->logger, "waiting for SDK configuration to be available.");
+      iot_wait_secs (timeout->interval - (t2 - t1));
+    }
+    t1 = iot_time_secs ();
+  }
+  free (timeout);
+
+  iot_log_info (svc->logger, "Reconfiguring");
+
+  edgex_device_overrideConfig_nvpairs (svc->config.sdkconf, config);
+  updatemetrics = strcmp (svc->config.metrics.interval, iot_data_string_map_get_string (svc->config.sdkconf, DYN_PREFIX "Telemetry/Interval"));
+  edgex_device_populateCommonConfigFromMap (&svc->config, svc->config.sdkconf);
+
+  if (updatemetrics)
+  {
+    devsdk_schedule_metrics (svc);
+  }
 }
 
 void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
 {
   iot_data_map_iter_t iter;
   bool updatedriver = false;
-  bool updatemetrics = false;
   devsdk_service_t *svc = (devsdk_service_t *)p;
 
   iot_log_info (svc->logger, "Reconfiguring");
 
   edgex_device_overrideConfig_nvpairs (svc->config.sdkconf, config);
-  updatemetrics = strcmp (svc->config.metrics.interval, iot_data_string_map_get_string (svc->config.sdkconf, DYN_PREFIX "Telemetry/Interval"));
   edgex_device_populateConfigFromMap (&svc->config, svc->config.sdkconf);
 
   const char *lname = devsdk_nvpairs_value (config, DYN_PREFIX "LogLevel");
@@ -538,11 +599,6 @@ void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
   }
 
   edgex_device_periodic_discovery_configure (svc->discovery, svc->config.device.discovery_enabled, svc->config.device.discovery_interval);
-
-  if (updatemetrics)
-  {
-    devsdk_schedule_metrics (svc);
-  }
 
   if (svc->secretstore)
   {

@@ -11,12 +11,15 @@
 #include "edgex-rest.h"
 #include "rest.h"
 #include "errorlist.h"
-#include "config.h"
 #include "parson.h"
 #include "api.h"
 #include "iot/base64.h"
+#include "iot/time.h"
 
 #define CONF_PREFIX "edgex/v3/"
+
+#define ALL_SVCS_NODE "all-services"
+#define DEV_SVCS_NODE "device-services"
 
 typedef struct consul_impl_t
 {
@@ -196,6 +199,134 @@ static void *poll_consul (void *p)
   free (job->url);
   free (job);
   return NULL;
+}
+
+static devsdk_nvpairs *edgex_consul_client_get_common_config
+(
+  void *impl,
+  devsdk_registry_updatefn updater,
+  void *updatectx,
+  atomic_bool *updatedone,
+  devsdk_error *err,
+  const devsdk_timeout *timeout
+)
+{
+  consul_impl_t *consul = (consul_impl_t *)impl;
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+  devsdk_nvpairs *result, *privateConfig, *ccReady = NULL;
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  edgex_secrets_getregtoken (consul->sp, &ctx);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s", consul->host, consul->port, "core-common-config-bootstrapper/IsCommonConfigReady");
+
+  uint64_t t1, t2;
+  while (true)
+  {
+    t1 = iot_time_msecs ();
+    *err = EDGEX_OK;
+    edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
+    edgex_secrets_releaseregtoken (consul->sp);
+    if (err->code == 0)
+    {
+      ccReady = read_pairs (consul->lc, ctx.buff, err);
+      const char *isCommonConfigReady = devsdk_nvpairs_value(ccReady, "IsCommonConfigReady");
+      if (isCommonConfigReady && strcmp(isCommonConfigReady, "true") == 0)
+      {
+        devsdk_nvpairs_free (ccReady);
+        break;
+      }
+    }
+    t2 = iot_time_msecs ();
+    if (t2 > timeout->deadline - timeout->interval)
+    {
+      *err = EDGEX_REMOTE_SERVER_DOWN;
+      devsdk_nvpairs_free (ccReady);
+      break;
+    }
+    if (timeout->interval > t2 - t1)
+    {
+      // waiting for Common Configuration to be available from config provider
+      iot_log_warn(consul->lc, "waiting for Common Configuration to be available from config provider.");
+      iot_wait_msecs (timeout->interval - (t2 - t1));
+    }
+    devsdk_nvpairs_free (ccReady);
+  }
+
+  free (ctx.buff);
+
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" ALL_SVCS_NODE);
+  edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
+  if (err->code == 0)
+  {
+    result = read_pairs (consul->lc, ctx.buff, err);
+    if (err->code)
+    {
+      devsdk_nvpairs_free (result);
+      result = NULL;
+    }
+  }
+
+  free (ctx.buff);
+
+  devsdk_nvpairs *originalResult = result;
+  while (result)
+  {
+    char *name = result->name;
+    char *pos = strstr(name, ALL_SVCS_NODE "/");
+    if (pos)
+    {
+      result->name = strdup(pos + strlen(ALL_SVCS_NODE "/"));
+      free(name);
+    }
+    result = result->next;
+  }
+  result = originalResult;
+
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" DEV_SVCS_NODE);
+  edgex_http_get (consul->lc, &ctx, url, edgex_http_write_cb, err);
+  edgex_secrets_releaseregtoken (consul->sp);
+  if (err->code == 0)
+  {
+      privateConfig = read_pairs (consul->lc, ctx.buff, err);
+    free (ctx.buff);
+  }
+
+  devsdk_nvpairs *originalPrivateResult = privateConfig;
+  while (privateConfig)
+  {
+    char *name = privateConfig->name;
+    char *pos = strstr(name, DEV_SVCS_NODE "/");
+    if (pos)
+    {
+      result = devsdk_nvpairs_new((pos + strlen(DEV_SVCS_NODE "/")), privateConfig->value, result);
+    }
+      privateConfig = privateConfig->next;
+  }
+  devsdk_nvpairs_free(originalPrivateResult);
+
+  struct updatejob *job_all_service = malloc (sizeof (struct updatejob));
+  job_all_service->url = malloc (URL_BUF_SIZE);
+  snprintf (job_all_service->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" ALL_SVCS_NODE);
+  job_all_service->lc = consul->lc;
+  job_all_service->updater = updater;
+  job_all_service->updatectx = updatectx;
+  job_all_service->updatedone = updatedone;
+  job_all_service->sp = consul->sp;
+  iot_threadpool_add_work (consul->pool, poll_consul, job_all_service, -1);
+
+  struct updatejob *job_device_service = malloc (sizeof (struct updatejob));
+  job_device_service->url = malloc (URL_BUF_SIZE);
+  snprintf (job_device_service->url, URL_BUF_SIZE - 1, "http://%s:%u/v1/kv/" CONF_PREFIX "%s/Writable?recurse=true", consul->host, consul->port, "core-common-config-bootstrapper/" DEV_SVCS_NODE);
+  job_device_service->lc = consul->lc;
+  job_device_service->updater = updater;
+  job_device_service->updatectx = updatectx;
+  job_device_service->updatedone = updatedone;
+  job_device_service->sp = consul->sp;
+  iot_threadpool_add_work (consul->pool, poll_consul, job_device_service, -1);
+
+  return result;
 }
 
 static devsdk_nvpairs *edgex_consul_client_get_config
@@ -496,6 +627,7 @@ const devsdk_registry_impls devsdk_registry_consul_fns =
 {
   edgex_consul_client_init,
   edgex_consul_client_ping,
+  edgex_consul_client_get_common_config,
   edgex_consul_client_get_config,
   edgex_consul_client_write_config,
   edgex_consul_client_register_service,

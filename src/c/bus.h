@@ -42,7 +42,7 @@ JSON_Value *edgex_bus_config_json (const iot_data_t *allconf);
 edgex_bus_t *edgex_bus_create_mqtt
   (iot_logger_t *lc, const char *svcname, const iot_data_t *cfg, edgex_secret_provider_t *secstore, iot_threadpool_t *queue, const devsdk_timeout *tm);
 edgex_bus_t *edgex_bus_create_redstr
-  (iot_logger_t *lc, const char *svcname, const iot_data_t *cfg, edgex_secret_provider_t *secstore, iot_threadpool_t *queue, const devsdk_timeout *tm);
+  (iot_logger_t *lc, const char *svcname, const iot_data_t *cfg, edgex_secret_provider_t *secstore, iot_threadpool_t *queue, const devsdk_timeout *tm, bool secureMode);
 
 void edgex_bus_register_handler (edgex_bus_t *bus, const char *path, void *ctx, edgex_handler_fn handler);
 char *edgex_bus_mktopic (edgex_bus_t *bus, const char *type, const char *param);
