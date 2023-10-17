@@ -51,6 +51,7 @@ struct devsdk_service_t
   const char *profile;
   const char *confdir;
   const char *conffile;
+  const char *commonconffile;
   char *confpath;
   void *userdata;
   devsdk_callbacks userfns;
