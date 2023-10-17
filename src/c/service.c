@@ -46,6 +46,7 @@ void devsdk_usage ()
 {
   printf ("  -cp, --configProvider=<url>\tIndicates to use Configuration Provider service at specified URL.\n"
           "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: consul.http://localhost:8500\n");
+  printf ("  -cc, --commonConfig        \tTakes the location where the common configuration is loaded from when not using the Configuration Provider\n");
   printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
           "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
           "                             \tproblematic if those settings were edited by hand intentionally\n");
@@ -148,6 +149,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     if
     (
       testArg (arg, val, "-cp", "--configProvider", &svc->regURL, &result) ||
+      testArg (arg, val, "-cc", "--commonConfig", &svc->commonconffile, &result) ||
       testArg (arg, val, "-i", "--instance", (const char **)&svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
       testArg (arg, val, "-cd", "--configDir", &svc->confdir, &result) ||
@@ -176,6 +178,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   *argc_p = argc;
 
   checkEnv (&svc->regURL, "EDGEX_CONFIG_PROVIDER");
+  checkEnv (&svc->commonconffile, "EDGEX_COMMON_CONFIG");
   checkEnv (&svc->profile, "EDGEX_PROFILE");
   checkEnv (&svc->confdir, "EDGEX_CONFIG_DIR");
   checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE");
@@ -830,9 +833,9 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
 void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk_error *err)
 {
-  iot_data_t *config_file = NULL;
+  iot_data_t *config_file, *common_config_file = NULL;
   bool uploadConfig = false;
-  iot_data_t *common_config_map, *private_config_map, *configmap;
+  iot_data_t *common_config_map, *private_config_map, *configmap, *deviceservices_config;
 
   if (svc->starttime)
   {
@@ -854,7 +857,29 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     iot_log_error (svc->logger, "Unable to load config file: %s", err->reason);
     return;
   }
+
   common_config_map = edgex_common_config_defaults (svc->name);
+
+  if (!svc->regURL)
+  {
+    common_config_file = edgex_device_loadConfig (svc->logger, svc->commonconffile, err);
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Unable to load common config file: %s", err->reason);
+      return;
+    }
+    iot_data_t *allservices_config = iot_data_string_map_get_map(common_config_file, ALL_SVCS_NODE);
+    deviceservices_config = iot_data_string_map_get_map(common_config_file, DEV_SVCS_NODE);
+    if (allservices_config)
+    {
+      edgex_device_overrideConfig_map(common_config_map, allservices_config);
+    }
+    if (deviceservices_config)
+    {
+      edgex_device_overrideConfig_map(common_config_map, deviceservices_config);
+    }
+  }
+
   private_config_map = edgex_private_config_defaults(driverdfls);
   edgex_device_overrideConfig_map (common_config_map, config_file);
   edgex_device_overrideConfig_map (private_config_map, config_file);
@@ -864,7 +889,6 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   configmap = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_map_merge(configmap, common_config_map);
   iot_data_map_merge(configmap, private_config_map);
-  iot_data_free(common_config_map);
 
   /* Set up SecretStore */
 
@@ -999,11 +1023,13 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
   else
   {
-    edgex_device_parseClients (svc->logger, iot_data_string_map_get (config_file, "Clients"), &svc->config.endpoints);
+    edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
   }
 
   iot_data_free (config_file);
-  iot_data_free(private_config_map);
+  iot_data_free (common_config_file);
+  iot_data_free (common_config_map);
+  iot_data_free (private_config_map);
 
   iot_log_info (svc->logger, "Starting %s device service, version %s", svc->name, svc->version);
   iot_log_info (svc->logger, "EdgeX device SDK for C, version " CSDK_VERSION_STR);
