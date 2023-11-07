@@ -104,7 +104,13 @@ extern const char *edgex_reqdata_get (const edgex_reqdata_t *data, const char *n
   {
     JSON_Value *value = json_object_get_value(data->json, name);
     if (value) {
-      result = json_serialize_to_string(value);
+      if(json_value_get_type(value) == JSONString){
+        //The slash of a string cannot be removed using json_serialize_to_string
+        result = json_object_get_string(data->json, name);
+      }
+      else{
+        result = json_serialize_to_string(value);
+      }
     }
   }
   else
