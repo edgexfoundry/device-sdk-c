@@ -1,4 +1,35 @@
-This is the C SDK for EdgeX device services.
+<a name="EdgeX Device SDK C (found in device-sdk-c) Changelog"></a>
+## EdgeX Device SDK C
+[Github repository](https://github.com/edgexfoundry/device-sdk-c)
+
+## [v3.1.0] Napa - 2023-11-15 (Only compatible with the 3.x releases)
+
+### ✨  Features
+
+- Add command line/environment flag for commonConfig ([#486](https://github.com/edgexfoundry/device-sdk-c/issues/486)) ([753c0e6…](https://github.com/edgexfoundry/device-sdk-c/commit/753c0e66273d645c82de476ca0a438ee98891f55))
+- Load common configuration from config provider ([#484](https://github.com/edgexfoundry/device-sdk-c/issues/484)) ([4c52de3…](https://github.com/edgexfoundry/device-sdk-c/commit/4c52de37db7d3bd0277fba2739b75d0a1bd475b3))
+```text
+
+BREAKING CHANGE: load common configuration from config provider ([#484](https://github.com/edgexfoundry/device-sdk-c/issues/484))
+
+```
+- Update examples to v3 ([75d9ea2…](https://github.com/edgexfoundry/device-sdk-c/commit/75d9ea246e864e615ecdca3b0f3acd24537be31e))
+
+
+### 🐛 Bug Fixes
+
+- Support for any JSON data type in device command value ([34c657e…](https://github.com/edgexfoundry/device-sdk-c/commit/34c657e38ec517a99e13edaa49f10ff67381ac75))
+- Update edgex_get_transformArg to reflect data type changes in ResourceProperties ([3139641…](https://github.com/edgexfoundry/device-sdk-c/commit/3139641de59f77553c7e4c591b1edec7a5540cea))
+- Bypass JWT check in non-secure mode ([0aa84d6…](https://github.com/edgexfoundry/device-sdk-c/commit/0aa84d6e2362150f2a7fe76af15db12a3a58aab4))
+- Update devsdk_post_readings to alloc and free correction id ([4f8820a…](https://github.com/edgexfoundry/device-sdk-c/commit/4f8820ad03012f3493f4efc0712d2a639770311b))
+- Read actual status code after a POST device API call ([c449cd6…](https://github.com/edgexfoundry/device-sdk-c/commit/c449cd6a2c57881ffa1c10c806da9f662413e186))
+- Invalid pointer operation in edgex_bus_mqtt_msgarrvd ([ba5e076…](https://github.com/edgexfoundry/device-sdk-c/commit/ba5e0764dcf3c1a727d0662f352e94cf5bde288b))
+- Update edgex_data_to_b64 to ignore the last null character ([4504df9…](https://github.com/edgexfoundry/device-sdk-c/commit/4504df9bdc42e67 B
+
+### 🤖 Continuous Integration
+
+- Add automated release workflow on tag creation ([18b6c29…](https://github.com/edgexfoundry/device-sdk-c/commit/18b6c29ec549221dfc69d991ca1228da44bcacc1))
+
 
 Changes for 3.0.2:
 
