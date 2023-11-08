@@ -8,11 +8,6 @@
 
 - Add command line/environment flag for commonConfig ([#486](https://github.com/edgexfoundry/device-sdk-c/issues/486)) ([753c0e6…](https://github.com/edgexfoundry/device-sdk-c/commit/753c0e66273d645c82de476ca0a438ee98891f55))
 - Load common configuration from config provider ([#484](https://github.com/edgexfoundry/device-sdk-c/issues/484)) ([4c52de3…](https://github.com/edgexfoundry/device-sdk-c/commit/4c52de37db7d3bd0277fba2739b75d0a1bd475b3))
-```text
-
-BREAKING CHANGE: load common configuration from config provider ([#484](https://github.com/edgexfoundry/device-sdk-c/issues/484))
-
-```
 - Update examples to v3 ([75d9ea2…](https://github.com/edgexfoundry/device-sdk-c/commit/75d9ea246e864e615ecdca3b0f3acd24537be31e))
 
 
