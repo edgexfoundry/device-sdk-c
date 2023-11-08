@@ -65,6 +65,7 @@ void edgex_devmap_clear (edgex_devmap_t *map)
     edgex_map_remove (&map->devices, key);
     key = next;
   }
+  clear_ae_signals ();
   pthread_rwlock_unlock (&map->lock);
 }
 
@@ -348,7 +349,7 @@ void edgex_devmap_update_profile (devsdk_service_t *svc, edgex_deviceprofile *dp
       edgex_device **dev = edgex_map_get (&svc->devices->devices, key);
       if ((*dev)->profile == old)
       {
-        edgex_device_autoevent_stop (*dev);
+        edgex_device_autoevent_stop_to_update (*dev);
         (*dev)->profile = dp;
         edgex_device_autoevent_start (svc, *dev);
       }
