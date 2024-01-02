@@ -156,7 +156,7 @@ edgex_event_cooked *edgex_data_process_event
         iot_data_string_map_add (rmap, "objectValue", iot_data_copy (values[i].value));
         break;
       case IOT_DATA_STRING:
-        iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_string (values[i].value), IOT_DATA_REF));
+        iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_string (values[i].value), IOT_DATA_COPY));
         break;
       default:
         iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_to_json (values[i].value), IOT_DATA_TAKE));
