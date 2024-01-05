@@ -28,25 +28,21 @@ typedef struct edgex_autoimpl
   char *device;
   devsdk_protocols *protocols;
   void *handle;
-  atomic_uint_fast32_t refs;
   bool onChange;
 } edgex_autoimpl;
 
-static void edgex_autoimpl_release (edgex_autoimpl *ai)
+static void edgex_autoimpl_release (void *p)
 {
-  if (atomic_fetch_add (&ai->refs, -1) == 1)
-  {
-    free (ai->device);
-    devsdk_protocols_free (ai->protocols);
-    devsdk_commandresult_free (ai->last, ai->resource->nreqs);
-    free (ai);
-  }
+  edgex_autoimpl *ai = (edgex_autoimpl *)p;
+  free (ai->device);
+  devsdk_protocols_free (ai->protocols);
+  devsdk_commandresult_free (ai->last, ai->resource->nreqs);
+  free (ai);
 }
 
 static void *ae_runner (void *p)
 {
   edgex_autoimpl *ai = (edgex_autoimpl *)p;
-  atomic_fetch_add (&ai->refs, 1);
 
   edgex_device *dev = edgex_devmap_device_byname (ai->svc->devices, ai->device);
   if (dev)
@@ -54,7 +50,6 @@ static void *ae_runner (void *p)
     if (ai->svc->adminstate == LOCKED || dev->adminState == LOCKED || dev->operatingState == DOWN)
     {
       edgex_device_release (ai->svc, dev);
-      edgex_autoimpl_release (ai);
       return NULL;
     }
     edgex_device_alloc_crlid (NULL);
@@ -137,7 +132,6 @@ static void *ae_runner (void *p)
       iot_schedule_remove (ai->svc->scheduler, ai->handle);
     }
   }
-  edgex_autoimpl_release (ai);
   return NULL;
 }
 
@@ -188,7 +182,6 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
       ae->impl->device = strdup (dev->name);
       ae->impl->protocols = devsdk_protocols_dup ((const devsdk_protocols *)dev->protocols);
       ae->impl->handle = NULL;
-      atomic_store (&ae->impl->refs, 1);
       ae->impl->onChange = ae->onChange;
     }
     if (ae->impl->svc->userfns.ae_starter)
@@ -198,7 +191,7 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
     else
     {
       ae->impl->handle = iot_schedule_create
-        (svc->scheduler, ae_runner, NULL, ae->impl, IOT_MS_TO_NS(ae->impl->interval), 0, 0, svc->thpool, -1);
+        (svc->scheduler, ae_runner, edgex_autoimpl_release, ae->impl, IOT_MS_TO_NS(ae->impl->interval), 0, 0, svc->thpool, -1);
       iot_schedule_add (ae->impl->svc->scheduler, ae->impl->handle);
     }
   }
@@ -211,12 +204,12 @@ static void stopper (edgex_autoimpl *ai)
   if (ai->svc->userfns.ae_stopper)
   {
     ai->svc->userfns.ae_stopper (ai->svc->userdata, handle);
+    edgex_autoimpl_release (ai);
   }
   else
   {
     iot_schedule_delete (ai->svc->scheduler, handle);
   }
-  edgex_autoimpl_release (ai);
 }
 
 void edgex_device_autoevent_stop (edgex_device *dev)
