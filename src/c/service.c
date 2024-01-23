@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023
+ * Copyright (c) 2018-2024
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -1104,7 +1104,6 @@ void devsdk_post_readings
       if (svc->config.device.maxeventsize && edgex_event_cooked_size (event) > svc->config.device.maxeventsize * 1024)
       {
         iot_log_error (svc->logger, "Post readings: Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
-        edgex_event_cooked_free (event);
       }
       else
       {
@@ -1117,6 +1116,7 @@ void devsdk_post_readings
         edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, devname, &err);
       }
       edgex_device_free_crlid();
+      edgex_event_cooked_free (event);
     }
   }
   else
