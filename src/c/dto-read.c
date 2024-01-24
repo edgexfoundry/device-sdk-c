@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023
+ * Copyright (c) 2023-2024
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -92,6 +92,7 @@ edgex_device *edgex_device_read (const iot_data_t *obj)
   result->autos = edgex_autoevents_read (obj);
   result->devimpl = calloc (1, sizeof (devsdk_device_t));
   result->devimpl->name = result->name;
+  result->labels = edgex_labels_read(obj);
 
   return result;
 }
@@ -296,4 +297,20 @@ edgex_deviceprofile *edgex_profile_read (const iot_data_t *obj)
     last_ptr2 = &(temp->next);
   }
   return result;
+}
+
+devsdk_strings *edgex_labels_read(const iot_data_t *obj)
+{
+  devsdk_strings *labels = NULL;
+  const iot_data_t *ldata = iot_data_string_map_get (obj, "labels");
+  if (ldata)
+  {
+    iot_data_vector_iter_t iter;
+    iot_data_vector_iter (ldata, &iter);
+    while (iot_data_vector_iter_prev (&iter))
+    {
+      labels = devsdk_strings_new (iot_data_vector_iter_string (&iter), labels);
+    }
+  }
+  return labels;
 }
