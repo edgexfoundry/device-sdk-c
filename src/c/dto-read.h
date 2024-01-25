@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023
+ * Copyright (c) 2023-2024
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -18,5 +18,6 @@ edgex_device *edgex_device_read (const iot_data_t *obj);
 edgex_watcher *edgex_pw_read (const iot_data_t *obj);
 edgex_watcher *edgex_pws_read (const iot_data_t *obj);
 edgex_deviceprofile *edgex_profile_read (const iot_data_t *obj);
+devsdk_strings *edgex_labels_read(const iot_data_t *obj);
 
 #endif
