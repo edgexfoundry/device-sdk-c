@@ -159,11 +159,14 @@ static JSON_Value *string_map_write (const iot_data_t *map)
   JSON_Value *result = json_value_init_object ();
   JSON_Object *obj = json_value_get_object (result);
 
-  iot_data_map_iter_t iter;
-  iot_data_map_iter (map, &iter);
-  while (iot_data_map_iter_next (&iter))
-  {
-    json_object_set_string (obj, iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+  if (map && (iot_data_type(map) == IOT_DATA_MAP))
+  {  
+    iot_data_map_iter_t iter;
+    iot_data_map_iter (map, &iter);
+    while (iot_data_map_iter_next (&iter))
+    {
+      json_object_set_string (obj, iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+    }
   }
   return result;
 }

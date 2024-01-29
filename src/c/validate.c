@@ -17,14 +17,17 @@ static devsdk_protocols *protocols_convert (const iot_data_t *obj)
 
   devsdk_protocols *result = NULL;
   iot_data_map_iter_t iter;
-  iot_data_map_iter (obj, &iter);
-  while (iot_data_map_iter_has_next (&iter))
+  if (obj && (iot_data_type(obj) == IOT_DATA_MAP))
   {
-    devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
-    prot->name = strdup (iot_data_map_iter_string_key (&iter));
-    prot->properties = iot_data_add_ref (iot_data_map_iter_value (&iter));
-    prot->next = result;
-    result = prot;
+    iot_data_map_iter (obj, &iter);
+    while (iot_data_map_iter_has_next (&iter))
+    {
+      devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
+      prot->name = strdup (iot_data_map_iter_string_key (&iter));
+      prot->properties = iot_data_add_ref (iot_data_map_iter_value (&iter));
+      prot->next = result;
+      result = prot;
+    }
   }
   return result;
 }

@@ -35,7 +35,7 @@ static edgex_device_operatingstate edgex_operatingstate_read (const iot_data_t *
 static devsdk_protocols *edgex_protocols_read (const iot_data_t *obj)
 {
   devsdk_protocols *result = NULL;
-  if (obj)
+  if (obj && (iot_data_type(obj) == IOT_DATA_MAP))
   {
     iot_data_map_iter_t iter;
     iot_data_map_iter (obj, &iter);

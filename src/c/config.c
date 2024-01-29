@@ -124,7 +124,7 @@ iot_data_t *edgex_private_config_defaults (const iot_data_t *driverconf)
   iot_data_string_map_add (result, "Service/Port", iot_data_alloc_ui16 (59999));
   iot_data_string_map_add (result, "Service/StartupMsg", iot_data_alloc_string ("", IOT_DATA_REF));
 
-  if (driverconf)
+  if (driverconf && (iot_data_type(driverconf) == IOT_DATA_MAP))
   {
     iot_data_map_iter_t iter;
     iot_data_map_iter (driverconf, &iter);
@@ -281,39 +281,46 @@ void edgex_device_parseClients (iot_logger_t *lc, const iot_data_t *clients, edg
 
 static void addInsecureSecretsMap (iot_data_t *confmap, const iot_data_t *config)
 {
+  if ((!config) || (iot_data_type(config) != IOT_DATA_MAP))
+  {
+    return;
+  }
   const iot_data_t *sub = iot_data_string_map_get (config, DYN_NAME);
-  if (sub)
+  if (sub && (iot_data_type(sub) == IOT_DATA_MAP))
   {
     sub = iot_data_string_map_get (sub, INSECURE_NAME);
   }
-  if (sub)
+  if (sub && (iot_data_type(sub) == IOT_DATA_MAP))
   {
     iot_data_map_iter_t iter;
     iot_data_map_iter (sub, &iter);
     while (iot_data_map_iter_next (&iter))
     {
       const iot_data_t *tab = iot_data_map_iter_value (&iter);
-      const iot_data_t *sname = iot_data_string_map_get (tab, "SecretName");
-      if (sname)
-      {
-        const iot_data_t *secrets = iot_data_string_map_get (tab, "SecretData");
-        if (secrets)
-        {
-          char *cpath;
-          const char *key = iot_data_map_iter_string_key (&iter);
-          iot_data_map_iter_t elem;
-          iot_data_map_iter (secrets, &elem);
-          while (iot_data_map_iter_next (&elem))
+      if (tab && (iot_data_type(tab) == IOT_DATA_MAP))
+      {	
+        const iot_data_t *sname = iot_data_string_map_get (tab, "SecretName");
+	if (sname)
+	{
+	  const iot_data_t *secrets = iot_data_string_map_get (tab, "SecretData");
+	  char *cpath;
+	  const char *key = iot_data_map_iter_string_key (&iter);
+	  iot_data_map_iter_t elem;
+	  if (secrets && (iot_data_type(secrets) == IOT_DATA_MAP))
           {
-            cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/SecretData/") + strlen (iot_data_map_iter_string_key (&elem)));
-            strcpy (cpath, DYN_PREFIX);
-            strcat (cpath, INSECURE_NAME);
-            strcat (cpath, "/");
-            strcat (cpath, key);
-            strcat (cpath, "/SecretData/");
-            strcat (cpath, iot_data_map_iter_string_key (&elem));
-            iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_add_ref (iot_data_map_iter_value (&elem)));
-          }
+	    iot_data_map_iter (secrets, &elem);
+	    while (iot_data_map_iter_next (&elem))
+            {
+	      cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/SecretData/") + strlen (iot_data_map_iter_string_key (&elem)));
+	      strcpy (cpath, DYN_PREFIX);
+	      strcat (cpath, INSECURE_NAME);
+	      strcat (cpath, "/");
+	      strcat (cpath, key);
+	      strcat (cpath, "/SecretData/");
+	      strcat (cpath, iot_data_map_iter_string_key (&elem));
+	      iot_data_map_add (confmap, iot_data_alloc_string (cpath, IOT_DATA_TAKE), iot_data_add_ref (iot_data_map_iter_value (&elem)));
+	    }
+	  }
           cpath = malloc (sizeof (DYN_PREFIX) + sizeof (INSECURE_NAME) + strlen (key) + sizeof ("/SecretName/"));
           strcpy (cpath, DYN_PREFIX);
           strcat (cpath, INSECURE_NAME);
@@ -371,16 +378,19 @@ void edgex_device_overrideConfig_map (iot_data_t *config, const iot_data_t *map)
   const iot_data_t *replace;
   iot_data_map_iter_t iter;
 
-  iot_data_map_iter (config, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (config && (iot_data_type(config) == IOT_DATA_MAP))
   {
-    replace = findEntry (map, iot_data_map_iter_string_key (&iter));
-    if (replace)
+    iot_data_map_iter (config, &iter);
+    while (iot_data_map_iter_next (&iter))
     {
-      iot_data_t *newval = iot_data_transform (replace, iot_data_type (iot_data_map_iter_value (&iter)));
-      if (newval)
+      replace = findEntry (map, iot_data_map_iter_string_key (&iter));
+      if (replace)
       {
-        iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
+	iot_data_t *newval = iot_data_transform (replace, iot_data_type (iot_data_map_iter_value (&iter)));
+	if (newval)
+        {
+	  iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
+	}
       }
     }
   }
@@ -394,6 +404,10 @@ void edgex_device_overrideConfig_env (iot_logger_t *lc, iot_data_t *config)
   const char *key;
   iot_data_map_iter_t iter;
 
+  if ((!config) || (iot_data_type(config) != IOT_DATA_MAP))
+  {
+    return;
+  }
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
   {
@@ -435,16 +449,19 @@ void edgex_device_overrideConfig_nvpairs (iot_data_t *config, const devsdk_nvpai
   const char *raw;
   iot_data_map_iter_t iter;
 
-  iot_data_map_iter (config, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (config && (iot_data_type(config) == IOT_DATA_MAP))
   {
-    raw = devsdk_nvpairs_value (pairs, iot_data_map_iter_string_key (&iter));
-    if (raw)
+    iot_data_map_iter (config, &iter);
+    while (iot_data_map_iter_next (&iter))
     {
-      iot_data_t *newval = iot_data_alloc_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
-      if (newval)
+      raw = devsdk_nvpairs_value (pairs, iot_data_map_iter_string_key (&iter));
+      if (raw)
       {
-        iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
+	iot_data_t *newval = iot_data_alloc_from_string (iot_data_type (iot_data_map_iter_value (&iter)), raw);
+	if (newval)
+	{
+	  iot_data_free (iot_data_map_iter_replace_value (&iter, newval));
+	}
       }
     }
   }
@@ -519,20 +536,23 @@ void edgex_device_populateConfig (devsdk_service_t *svc, iot_data_t *config)
   svc->config.sdkconf = config;
   svc->config.driverconf = iot_data_alloc_map (IOT_DATA_STRING);
 
-  iot_data_map_iter (config, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (config && (iot_data_type(config) == IOT_DATA_MAP))
   {
-    const char *key = iot_data_map_iter_string_key (&iter);
-    if (strncmp (key, DRV_PREFIX, DRV_PREFIXLEN) == 0)
+    iot_data_map_iter (config, &iter);
+    while (iot_data_map_iter_next (&iter))
     {
-      iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (key + DRV_PREFIXLEN, IOT_DATA_COPY), iot_data_copy (iot_data_map_iter_value (&iter)));
-    }
-    else if (strncmp (key, DYN_DRV_PREFIX, DYN_DRV_PREFIXLEN) == 0)
-    {
-      char *nkey = malloc (strlen (key) - DRV_PREFIXLEN + 1);
-      strcpy (nkey, DYN_PREFIX);
-      strcat (nkey, key + DYN_DRV_PREFIXLEN);
-      iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (nkey, IOT_DATA_TAKE), iot_data_copy (iot_data_map_iter_value (&iter)));
+      const char *key = iot_data_map_iter_string_key (&iter);
+      if (strncmp (key, DRV_PREFIX, DRV_PREFIXLEN) == 0)
+      {
+	iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (key + DRV_PREFIXLEN, IOT_DATA_COPY), iot_data_copy (iot_data_map_iter_value (&iter)));
+      }
+      else if (strncmp (key, DYN_DRV_PREFIX, DYN_DRV_PREFIXLEN) == 0)
+      {
+	char *nkey = malloc (strlen (key) - DRV_PREFIXLEN + 1);
+	strcpy (nkey, DYN_PREFIX);
+	strcat (nkey, key + DYN_DRV_PREFIXLEN);
+	iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (nkey, IOT_DATA_TAKE), iot_data_copy (iot_data_map_iter_value (&iter)));
+      }
     }
   }
 
@@ -605,24 +625,27 @@ void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
     edgex_secrets_reconfigure (svc->secretstore, svc->config.sdkconf);
   }
 
-  iot_data_map_iter (svc->config.sdkconf, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (svc->config.sdkconf && (iot_data_type(svc->config.sdkconf) == IOT_DATA_MAP))
   {
-    const char *key = iot_data_map_iter_string_key (&iter);
-    if (strncmp (key, DYN_DRV_PREFIX, DYN_DRV_PREFIXLEN) == 0)
+    iot_data_map_iter (svc->config.sdkconf, &iter);
+    while (iot_data_map_iter_next (&iter))
     {
-      char *nkey = malloc (strlen (key) - DRV_PREFIXLEN + 1);
-      strcpy (nkey, DYN_PREFIX);
-      strcat (nkey, key + DYN_DRV_PREFIXLEN);
-      const iot_data_t *driverval = iot_data_string_map_get (svc->config.driverconf, nkey);
-      if (driverval && !iot_data_equal (driverval, iot_data_map_iter_value (&iter)))
+      const char *key = iot_data_map_iter_string_key (&iter);
+      if (strncmp (key, DYN_DRV_PREFIX, DYN_DRV_PREFIXLEN) == 0)
       {
-        updatedriver = true;
-        iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (nkey, IOT_DATA_TAKE), iot_data_copy (iot_data_map_iter_value (&iter)));
-      }
-      else
-      {
-        free (nkey);
+	char *nkey = malloc (strlen (key) - DRV_PREFIXLEN + 1);
+	strcpy (nkey, DYN_PREFIX);
+	strcat (nkey, key + DYN_DRV_PREFIXLEN);
+	const iot_data_t *driverval = iot_data_string_map_get (svc->config.driverconf, nkey);
+	if (driverval && !iot_data_equal (driverval, iot_data_map_iter_value (&iter)))
+        {
+	  updatedriver = true;
+	  iot_data_map_add (svc->config.driverconf, iot_data_alloc_string (nkey, IOT_DATA_TAKE), iot_data_copy (iot_data_map_iter_value (&iter)));
+        }
+	else
+        {
+	  free (nkey);
+	}
       }
     }
   }
@@ -636,6 +659,10 @@ void edgex_device_dumpConfig (iot_logger_t *lc, iot_data_t *config)
 {
   char *val;
   iot_data_map_iter_t iter;
+  if ((!config) || (iot_data_type(config) != IOT_DATA_MAP))
+  {
+    return;
+  }
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
   {
@@ -773,7 +800,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
 
   json_object_set_value (obj, "Service", sval);
 
-  if (svc->config.driverconf)
+  if (svc->config.driverconf && (iot_data_type(svc->config.driverconf) == IOT_DATA_MAP))
   {
     iot_data_map_iter_t iter;
     iot_data_map_iter (svc->config.driverconf, &iter);

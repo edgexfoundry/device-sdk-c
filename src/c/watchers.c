@@ -62,6 +62,10 @@ static edgex_watcher **find_locked (edgex_watcher **list, const char *name)
 
 static void add_locked (edgex_watchlist_t *wl, const edgex_watcher *w)
 {
+  if ((!w) || (!w->identifiers) || (iot_data_type(w->identifiers) != IOT_DATA_MAP))
+  {
+    return;
+  }
   edgex_watcher *newelem = edgex_watcher_dup (w);
   iot_data_map_iter_t iter;
   iot_data_map_iter (newelem->identifiers, &iter);
@@ -155,16 +159,19 @@ static bool matchpw (const edgex_watcher *pw, const iot_data_t *ids)
   }
 
 
-  iot_data_map_iter_t blocked;
-  iot_data_map_iter (pw->blocking_identifiers, &blocked);
-  while (iot_data_map_iter_next (&blocked))
+  if ((pw->blocking_identifiers) && (iot_data_type(pw->blocking_identifiers) == IOT_DATA_MAP))
   {
-    const iot_data_t *checkval = iot_data_map_get (ids, iot_data_map_iter_key (&blocked));
-    if (checkval)
+    iot_data_map_iter_t blocked;
+    iot_data_map_iter (pw->blocking_identifiers, &blocked);
+    while (iot_data_map_iter_next (&blocked))
     {
-      if (iot_data_vector_find (iot_data_map_iter_value (&blocked), (iot_data_cmp_fn)iot_data_equal, checkval))
+      const iot_data_t *checkval = iot_data_map_get (ids, iot_data_map_iter_key (&blocked));
+      if (checkval)
       {
-        return false;
+	if (iot_data_vector_find (iot_data_map_iter_value (&blocked), (iot_data_cmp_fn)iot_data_equal, checkval))
+	{
+	  return false;
+	}
       }
     }
   }

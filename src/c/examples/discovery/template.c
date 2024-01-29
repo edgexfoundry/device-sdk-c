@@ -25,7 +25,12 @@ static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
 {
   iot_data_map_iter_t iter;
   iot_log_debug (lc, " [Other] protocol:");
-  iot_data_map_iter (devsdk_protocols_properties (prots, "Other"), &iter);
+  const iot_data_t *others = devsdk_protocols_properties(prots, "Other");
+  if ((!others) || (iot_data_type(others) != IOT_DATA_MAP))
+  {
+    return;
+  }
+  iot_data_map_iter (others, &iter);
   while (iot_data_map_iter_next (&iter))
   {
     iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
@@ -35,6 +40,10 @@ static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
 static void dump_attributes (iot_logger_t *lc, devsdk_resource_attr_t attrs)
 {
   iot_data_map_iter_t iter;
+  if ((!attrs) || (iot_data_type((iot_data_t *)attrs) != IOT_DATA_MAP))
+  {
+    return;
+  }
   iot_data_map_iter ((iot_data_t *)attrs, &iter);
   while (iot_data_map_iter_next (&iter))
   {
@@ -55,7 +64,7 @@ static bool template_init
 {
   template_driver *driver = (template_driver *) impl;
   iot_log_debug (lc, "Template Init. Driver Config follows:");
-  if (config)
+  if (config && (iot_data_type(config) == IOT_DATA_MAP))
   {
     iot_data_map_iter_t iter;
     iot_data_map_iter (config, &iter);
@@ -81,10 +90,13 @@ static void template_reconfigure
   iot_data_map_iter_t iter;
   template_driver *driver = (template_driver *) impl;
   iot_log_debug (driver->lc, "Template Reconfiguration. New Config follows:");
-  iot_data_map_iter (config, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (config && (iot_data_type(config) == IOT_DATA_MAP))
   {
-    iot_log_debug (driver->lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+    iot_data_map_iter (config, &iter);
+    while (iot_data_map_iter_next (&iter))
+    {
+      iot_log_debug (driver->lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
+    }
   }
 }
 
