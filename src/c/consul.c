@@ -398,38 +398,41 @@ static void edgex_consul_client_write_config (void *impl, const char *servicenam
   JSON_Array *jarray = json_value_get_array (jresult);
 
   iot_data_map_iter_t iter;
-  iot_data_map_iter (config, &iter);
-  while (iot_data_map_iter_next (&iter))
+  if (config && (iot_data_type(config) == IOT_DATA_MAP))
   {
-    char *base64val;
-    const iot_data_t *val = iot_data_map_iter_value (&iter);
-    if (iot_data_type (val) == IOT_DATA_STRING)
+    iot_data_map_iter (config, &iter);
+    while (iot_data_map_iter_next (&iter))
     {
-      base64val = value_to_b64 (iot_data_string (val));
+      char *base64val;
+      const iot_data_t *val = iot_data_map_iter_value (&iter);
+      if (iot_data_type (val) == IOT_DATA_STRING)
+      {
+	base64val = value_to_b64 (iot_data_string (val));
+      }
+      else
+      {
+	char *json = iot_data_to_json (val);
+	base64val = value_to_b64 (json);
+	free (json);
+      }
+
+      const char *k = iot_data_map_iter_string_key (&iter);
+      char *keystr = malloc (strlen (CONF_PREFIX) + strlen (servicename) + strlen (k) + 2);
+      sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, k);
+      
+      JSON_Value *kvfields = json_value_init_object ();
+      JSON_Object *obj = json_value_get_object (kvfields);
+      json_object_set_string (obj, "Verb", "set");
+      json_object_set_string (obj, "Key", keystr);
+      json_object_set_string (obj, "Value", base64val);
+      
+      JSON_Value *kvcmd = json_value_init_object ();
+      json_object_set_value (json_value_get_object (kvcmd), "KV", kvfields);
+      json_array_append_value (jarray, kvcmd);
+      
+      free (base64val);
+      free (keystr);
     }
-    else
-    {
-      char *json = iot_data_to_json (val);
-      base64val = value_to_b64 (json);
-      free (json);
-    }
-
-    const char *k = iot_data_map_iter_string_key (&iter);
-    char *keystr = malloc (strlen (CONF_PREFIX) + strlen (servicename) + strlen (k) + 2);
-    sprintf (keystr, "%s%s/%s", CONF_PREFIX, servicename, k);
-
-    JSON_Value *kvfields = json_value_init_object ();
-    JSON_Object *obj = json_value_get_object (kvfields);
-    json_object_set_string (obj, "Verb", "set");
-    json_object_set_string (obj, "Key", keystr);
-    json_object_set_string (obj, "Value", base64val);
-
-    JSON_Value *kvcmd = json_value_init_object ();
-    json_object_set_value (json_value_get_object (kvcmd), "KV", kvfields);
-    json_array_append_value (jarray, kvcmd);
-
-    free (base64val);
-    free (keystr);
   }
 
   char *json = json_serialize_to_string (jresult);

@@ -147,7 +147,7 @@ void edgex_transform_outgoing (devsdk_commandresult *cres, edgex_propertyvalue *
     break;
     case IOT_DATA_STRING:
     {
-      if (mappings)
+      if (mappings && (iot_data_type(mappings) == IOT_DATA_MAP))
       {
         const iot_data_t *remap = iot_data_map_get (mappings, cres->value);
         if (remap)
@@ -213,7 +213,7 @@ void edgex_transform_incoming (iot_data_t **cres, edgex_propertyvalue *props, co
     break;
     case IOT_DATA_STRING:
     {
-      if (mappings)
+      if (mappings && (iot_data_type(mappings) == IOT_DATA_MAP))
       {
         iot_data_map_iter_t iter;
         iot_data_map_iter (mappings, &iter);

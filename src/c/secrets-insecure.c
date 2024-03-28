@@ -27,6 +27,10 @@ static iot_data_t *insecure_parse_config (iot_data_t *config)
 {
   iot_data_t *result = iot_data_alloc_map (IOT_DATA_STRING);
 
+  if ((!config) || (iot_data_type(config) != IOT_DATA_MAP))
+  {
+    return result;
+  }
   iot_data_map_iter_t iter;
   iot_data_map_iter (config, &iter);
   while (iot_data_map_iter_next (&iter))
