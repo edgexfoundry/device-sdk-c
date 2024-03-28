@@ -19,7 +19,11 @@ FROM ${BASE}
 LABEL maintainer="IOTech <support@iotechsys.com>"
 RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
 RUN echo 'https://iotech.jfrog.io/artifactory/alpine-release/v3.18/main' >> /etc/apk/repositories
-RUN apk add --update --no-cache binutils gcc libc-dev make git cmake yaml-dev curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev libcbor-dev iotech-paho-mqtt-c-dev-1.3 hiredis-dev iotech-iot-1.5-dev && mkdir -p /edgex-c-sdk/build
+
+RUN apk add --update --no-cache binutils gcc libc-dev make git cmake yaml-dev curl-dev libmicrohttpd-dev util-linux-dev ncurses-dev libcbor-dev iotech-paho-mqtt-c-dev-1.3 hiredis-dev iotech-iot-1.5-dev dumb-init && mkdir -p /edgex-c-sdk/build
+# Ensure using latest versions of all installed packages to avoid any recent CVEs
+RUN apk --no-cache upgrade
+
 COPY VERSION /edgex-c-sdk/
 COPY src /edgex-c-sdk/src/
 COPY include /edgex-c-sdk/include/
