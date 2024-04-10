@@ -127,6 +127,7 @@ typedef struct edgex_device
   char *description;
   devsdk_strings *labels;
   char *name;
+  char *parent;
   edgex_device_operatingstate operatingState;
   uint64_t origin;
   edgex_device_autoevents *autos;

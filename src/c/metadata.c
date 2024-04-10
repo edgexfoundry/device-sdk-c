@@ -367,6 +367,7 @@ char *edgex_metadata_client_add_device
   edgex_service_endpoints *endpoints,
   edgex_secret_provider_t * secretprovider,
   const char *name,
+  const char *parent,
   const char *description,
   const devsdk_strings *labels,
   edgex_device_adminstate adminstate,
@@ -394,6 +395,7 @@ char *edgex_metadata_client_add_device
     endpoints->metadata.port
   );
   dev->name = (char *)name;
+  dev->parent = (char *)parent;
   dev->description = (char *)description;
   dev->adminState = adminstate;
   dev->operatingState = UP;
@@ -504,6 +506,7 @@ void edgex_metadata_client_add_or_modify_device
   edgex_service_endpoints * endpoints,
   edgex_secret_provider_t * secretprovider,
   const char * name,
+  const char *parent,
   const char * description,
   const devsdk_strings * labels,
   edgex_device_adminstate adminstate,
@@ -525,6 +528,7 @@ void edgex_metadata_client_add_or_modify_device
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/device", endpoints->metadata.host, endpoints->metadata.port);
 
   dev->name = (char *)name;
+  dev->parent = (char *)parent;
   dev->description = (char *)description;
   dev->adminState = adminstate;
   dev->operatingState = UP;
@@ -612,6 +616,7 @@ void edgex_metadata_client_update_device
   edgex_service_endpoints * endpoints,
   edgex_secret_provider_t * secretprovider,
   const char * name,
+  const char *parent,
   const char * description,
   const devsdk_strings * labels,
   const char * profile_name,
@@ -633,7 +638,7 @@ void edgex_metadata_client_update_device
   );
 
   json = edgex_device_write_sparse
-    (name, description, labels, profile_name);
+    (name, parent, description, labels, profile_name);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);

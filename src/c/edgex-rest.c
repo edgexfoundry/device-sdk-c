@@ -676,6 +676,14 @@ static edgex_device *device_read (const JSON_Object *obj)
 {
   edgex_device *result = malloc (sizeof (edgex_device));
   result->name = get_string (obj, "name");
+  result->parent = get_string (obj, "parent");
+  // If the parent is empty, set it to NULL, helps avoid breakage if core-metadata support
+  // for the field is not yet in place
+  if (result->parent && *result->parent == '\0')
+  {
+    free (result->parent);
+    result->parent = NULL;
+  }  
   result->profile = calloc (1, sizeof (edgex_deviceprofile));
   result->profile->name = get_string (obj, "profileName");
   result->servicename = get_string (obj, "serviceName");
@@ -718,6 +726,10 @@ static JSON_Value *device_write (const edgex_device *e)
   json_object_set_string (obj, "adminState", edgex_adminstate_tostring (e->adminState));
   json_object_set_string (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
   json_object_set_string (obj, "name", e->name);
+  if (e->parent) // omit-if-empty
+  {
+    json_object_set_string (obj, "parent", e->parent);
+  }
   json_object_set_string (obj, "description", e->description);
   json_object_set_value (obj, "labels", strings_to_array (e->labels));
   json_object_set_uint (obj, "origin", e->origin);
@@ -729,6 +741,14 @@ edgex_device *edgex_device_dup (const edgex_device *e)
 {
   edgex_device *result = malloc (sizeof (edgex_device));
   result->name = strdup (e->name);
+  if (e->parent)
+  {
+    result->parent = strdup (e->parent);
+  }
+  else
+  {
+    result->parent = NULL;
+  }
   result->description = strdup (e->description);
   result->labels = devsdk_strings_dup (e->labels);
   result->protocols = devsdk_protocols_dup (e->protocols);
@@ -804,6 +824,10 @@ void edgex_device_free (devsdk_service_t *svc, edgex_device *e)
       svc->userfns.free_addr (svc->userdata, e->devimpl->address);
     }
     free (e->devimpl);
+    if (e->parent)
+    {
+      free (e->parent);
+    }
     e = e->next;
     free (current);
   }
@@ -823,6 +847,7 @@ char *edgex_device_write (const edgex_device *e)
 char *edgex_device_write_sparse
 (
   const char * name,
+  const char * parent,
   const char * description,
   const devsdk_strings * labels,
   const char * profile_name
@@ -834,6 +859,7 @@ char *edgex_device_write_sparse
   JSON_Object *obj = json_value_get_object (jval);
 
   json_object_set_string (obj, "name", name);
+  if (parent) { json_object_set_string (obj, "parent", parent); }
   if (description) { json_object_set_string (obj, "description", description); }
   if (profile_name) { json_object_set_string (obj, "profileName", profile_name); }
   if (labels)

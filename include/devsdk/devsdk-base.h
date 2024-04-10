@@ -75,6 +75,7 @@ typedef struct devsdk_commandresult
 typedef struct devsdk_discovered_device
 {
   const char *name;
+  const char *parent;
   devsdk_protocols *protocols;
   const char *description;
   iot_data_t *properties;
