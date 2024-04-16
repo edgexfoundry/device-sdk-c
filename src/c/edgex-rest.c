@@ -741,14 +741,7 @@ edgex_device *edgex_device_dup (const edgex_device *e)
 {
   edgex_device *result = malloc (sizeof (edgex_device));
   result->name = strdup (e->name);
-  if (e->parent)
-  {
-    result->parent = strdup (e->parent);
-  }
-  else
-  {
-    result->parent = NULL;
-  }
+result->parent = e->parent ? strdup(e->parent) : NULL;
   result->description = strdup (e->description);
   result->labels = devsdk_strings_dup (e->labels);
   result->protocols = devsdk_protocols_dup (e->protocols);
