@@ -22,6 +22,7 @@
  *        response to a request for device discovery.
  * @param svc The device service.
  * @param name The name of the new device.
+ * @param parent The name of the new device's parent, if any.
  * @param description Optional description of the new device.
  * @param labels Optional labels for the new device.
  * @param profile_name Name of the device profile to be used with this device.
@@ -38,6 +39,7 @@ void edgex_add_device
 (
   devsdk_service_t *svc,
   const char *name,
+  const char *parent,
   const char *description,
   const devsdk_strings *labels,
   const char *profile_name,
@@ -60,6 +62,7 @@ void edgex_remove_device_byname (devsdk_service_t *svc, const char *name, devsdk
  * @brief Update a device's details.
  * @param svc The device service.
  * @param name The name of the device to be updated.
+ * @param parent If set, the name of a new parent for the device.
  * @param description If set, a new description for the device.
  * @param labels If set, a new set of labels for the device.
  * @param profilename If set, a new device profile for the device.
@@ -70,6 +73,7 @@ void edgex_update_device
 (
   devsdk_service_t *svc,
   const char *name,
+  const char *parent,
   const char *description,
   const devsdk_strings *labels,
   const char *profilename,

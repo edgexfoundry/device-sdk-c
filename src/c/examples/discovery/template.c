@@ -127,10 +127,10 @@ static void template_discover (void *impl)
 
   devsdk_discovered_device devs[] =
   {
-    { "DiscoveredOne", p1, "First discovered device", NULL },
-    { "DiscoveredTwo", p2, "Second discovered device", NULL },
-    { "DiscoveredThree", p3, "Third discovered device", NULL },
-    { "DiscoveredFour", p4, "Fourth discovered device", NULL }
+    { "DiscoveredOne", NULL, p1, "First discovered device", NULL },
+    { "DiscoveredTwo", NULL, p2, "Second discovered device", NULL },
+    { "DiscoveredThree", NULL, p3, "Third discovered device", NULL },
+    { "DiscoveredFour", NULL, p4, "Fourth discovered device", NULL }
   };
 
   devsdk_add_discovered_devices (driver->svc, 4, devs);
