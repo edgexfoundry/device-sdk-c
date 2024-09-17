@@ -344,6 +344,28 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
+// USer provides a map of details to be published
+//TODO: Change literals into defines
+// details is a vector containing the fields required to be published on the event details, should include request_id
+extern void devsdk_publish_discovery_event (devsdk_service_t *svc, iot_data_t * details)
+{
+  iot_data_t *event;
+
+  event = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (event, "type", iot_data_alloc_string ("device", IOT_DATA_COPY));
+  iot_data_string_map_add (event, "action", iot_data_alloc_string ("discovery", IOT_DATA_COPY));
+  iot_data_string_map_add (event, "source", iot_data_alloc_string (svc->name, IOT_DATA_COPY));
+  iot_data_string_map_add (event, "owner", iot_data_alloc_string (svc->name, IOT_DATA_COPY));
+  iot_data_string_map_add (event, "details", details);
+  iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
+
+  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DISCOVERY, "discovery"); //TODO: need to check the format of this function
+  edgex_bus_post (svc->msgbus, topic, event);
+  free (topic);
+
+  iot_data_free (event);
+}
+
 static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uint64_t val)
 {
   iot_data_t *field;
