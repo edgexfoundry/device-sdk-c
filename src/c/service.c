@@ -344,9 +344,8 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
-// USer provides a map of details to be published
 //TODO: Change literals into defines
-// details is a vector containing the fields required to be published on the event details, should include request_id
+// details is a map containing the fields required to be published on the event details, should include request_id
 extern void devsdk_publish_discovery_event (devsdk_service_t *svc, iot_data_t * details)
 {
   iot_data_t *event;
