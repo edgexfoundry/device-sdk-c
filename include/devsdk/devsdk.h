@@ -377,7 +377,7 @@ void devsdk_service_free (devsdk_service_t *svc);
 /**
  * @brief Publish a discovery event
  * @param svc The device service.
- * @param detail A vector containing information to publish in the message details
+ * @param detail A map containing parameters to publish in the message details
  */
 
 extern void devsdk_publish_discovery_event (devsdk_service_t *svc, iot_data_t * details);
