@@ -344,8 +344,6 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
-//TODO: Change literals into defines
-// details is a map containing the fields required to be published on the event details, should include request_id
 extern void devsdk_publish_discovery_event (devsdk_service_t *svc, iot_data_t * details)
 {
   iot_data_t *event;
@@ -358,7 +356,7 @@ extern void devsdk_publish_discovery_event (devsdk_service_t *svc, iot_data_t * 
   iot_data_string_map_add (event, "details", details);
   iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
-  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DISCOVERY, "discovery"); //TODO: need to check the format of this function
+  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DISCOVERY, "event");
   edgex_bus_post (svc->msgbus, topic, event);
   free (topic);
 
