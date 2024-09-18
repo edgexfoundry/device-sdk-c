@@ -51,6 +51,7 @@ typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
  * @brief Optional callback for dynamic discovery of devices. The implementation should detect devices and register them using
  *        the devsdk_add_discovered_devices API call.
  * @param impl The context data passed in when the service was created.
+ * @param request_id The discovery request ID
  */
 
 typedef void (*devsdk_discover) (void *impl, const char * request_id);
