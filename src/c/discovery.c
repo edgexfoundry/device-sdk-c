@@ -148,7 +148,7 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
   {
     if (pthread_mutex_trylock (&svc->discovery->lock) == 0)
     {
-      if (svc->discovery->request_id) free (svc->discovery->request_id);
+      free (svc->discovery->request_id);
       svc->discovery->request_id = strdup (edgex_device_get_crlid());
       iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc->discovery, -1);
       pthread_mutex_unlock (&svc->discovery->lock);

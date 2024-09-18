@@ -374,13 +374,14 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err);
 
 void devsdk_service_free (devsdk_service_t *svc);
 
-/**
+ /**
  * @brief Publish a discovery event
- * @param svc The device service.
- * @param detail A map containing parameters to publish in the message details
+ * @param svc The device service
+ * @param request_id The discovery request ID
+ * @param details_in A map containing parameters to publish in the message details
  */
 
-extern void devsdk_publish_discovery_event (devsdk_service_t *svc, iot_data_t * details);
+extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * request_id, iot_data_t * details);
 
 #ifdef __cplusplus
 }
