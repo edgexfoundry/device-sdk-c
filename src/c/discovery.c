@@ -11,6 +11,7 @@
 #include "profiles.h"
 #include "metadata.h"
 #include "edgex-rest.h"
+#include "correlation.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -27,6 +28,7 @@ typedef struct edgex_device_periodic_discovery_t
   void *userdata;
   pthread_mutex_t lock;
   uint64_t interval;
+  char * request_id;
 } edgex_device_periodic_discovery_t;
 
 static void *edgex_device_handler_do_discovery (void *p)
@@ -34,7 +36,7 @@ static void *edgex_device_handler_do_discovery (void *p)
   edgex_device_periodic_discovery_t *disc = (edgex_device_periodic_discovery_t *) p;
 
   pthread_mutex_lock (&disc->lock);
-  disc->discfn (disc->userdata);
+  disc->discfn (disc->userdata, disc->request_id);
   pthread_mutex_unlock (&disc->lock);
   return NULL;
 }
@@ -46,7 +48,7 @@ static void *edgex_device_periodic_discovery (void *p)
   if (pthread_mutex_trylock (&disc->lock) == 0)
   {
     iot_log_info (disc->logger, "Running periodic discovery");
-    disc->discfn (disc->userdata);
+    disc->discfn (disc->userdata, disc->request_id);
     pthread_mutex_unlock (&disc->lock);
   }
   else
@@ -146,9 +148,11 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
   {
     if (pthread_mutex_trylock (&svc->discovery->lock) == 0)
     {
+      free (svc->discovery->request_id);
+      svc->discovery->request_id = strdup (edgex_device_get_crlid());
       iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery, svc->discovery, -1);
       pthread_mutex_unlock (&svc->discovery->lock);
-      reply->data.bytes = strdup ("Running discovery\n");
+      reply->data.bytes = strdup (svc->discovery->request_id);
     }
     else
     {

@@ -98,7 +98,10 @@ static char *edgex_data_to_b64 (const iot_data_t *src)
 void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *payload)
 {
   iot_data_t *envelope = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (envelope, "correlationID", iot_data_alloc_string (edgex_device_get_crlid (), IOT_DATA_REF));
+  if (edgex_device_get_crlid ())
+  {
+    iot_data_string_map_add (envelope, "correlationID", iot_data_alloc_string (edgex_device_get_crlid (), IOT_DATA_REF));
+  }
   iot_data_string_map_add (envelope, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (envelope, "errorCode", iot_data_alloc_ui32 (0));
   iot_data_string_map_add (envelope, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));

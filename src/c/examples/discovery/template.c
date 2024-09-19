@@ -106,7 +106,7 @@ static void template_reconfigure
  * device service's discovery REST endpoint. New devices should be added using
  * the devsdk_add_discovered_devices() method
  */
-static void template_discover (void *impl)
+static void template_discover (void *impl, const char *request_id)
 {
   template_driver *driver = (template_driver *) impl;
 
@@ -132,6 +132,9 @@ static void template_discover (void *impl)
     { "DiscoveredThree", NULL, p3, "Third discovered device", NULL },
     { "DiscoveredFour", NULL, p4, "Fourth discovered device", NULL }
   };
+  
+  // Publish event
+  devsdk_publish_discovery_event (driver->svc, request_id, 100, 4);
 
   devsdk_add_discovered_devices (driver->svc, 4, devs);
 
@@ -337,3 +340,4 @@ int main (int argc, char *argv[])
   iot_data_free (confparams);
   return 0;
 }
+

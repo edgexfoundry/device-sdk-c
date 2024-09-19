@@ -309,7 +309,6 @@ static EDGEX_MHD_RESULT http_handler
   *context = 0;
 
   /* Last call with no data handles request */
-
   edgex_device_alloc_crlid
     (MHD_lookup_connection_value (conn, MHD_HEADER_KIND, EDGEX_CRLID_HDR));
 

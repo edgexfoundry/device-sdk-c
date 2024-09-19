@@ -51,9 +51,10 @@ typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
  * @brief Optional callback for dynamic discovery of devices. The implementation should detect devices and register them using
  *        the devsdk_add_discovered_devices API call.
  * @param impl The context data passed in when the service was created.
+ * @param request_id The discovery request ID
  */
 
-typedef void (*devsdk_discover) (void *impl);
+typedef void (*devsdk_discover) (void *impl, const char * request_id);
 
 /**
  * @brief Optional callback for dynamic discovery of device resources.
@@ -373,6 +374,23 @@ void devsdk_service_stop (devsdk_service_t *svc, bool force, devsdk_error *err);
  */
 
 void devsdk_service_free (devsdk_service_t *svc);
+
+ /**
+  * Publish a discovery event
+  * @param svc The device service
+  * @param request_id The discovery request ID
+  * @param progress Progress number between 0 and 100. -1 for error.
+  * @param discovered_devices The number of discovered devices
+  */
+extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * request_id, const int8_t progress, const uint64_t discovered_devices);
+
+/**
+ * Publish a system event
+ * @param svc The device services
+ * @param action The action being published
+ * @param details Parameters to be published
+ */
+extern void devsdk_publish_system_event (devsdk_service_t *svc, const char *action, iot_data_t * details);
 
 #ifdef __cplusplus
 }
