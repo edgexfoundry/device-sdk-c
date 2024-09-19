@@ -134,9 +134,7 @@ static void template_discover (void *impl, const char *request_id)
   };
   
   // Publish event
-  iot_data_t * details_map = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_string_map_add (details_map, "progress", iot_data_alloc_ui8 (100));
-  devsdk_publish_discovery_event (driver->svc, request_id, details_map);
+  devsdk_publish_discovery_event (driver->svc, request_id, 100, 4);
 
   devsdk_add_discovered_devices (driver->svc, 4, devs);
 

@@ -344,18 +344,40 @@ static void version_handler (void *ctx, const devsdk_http_request *req, devsdk_h
   reply->code = MHD_HTTP_OK;
 }
 
-extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * request_id, iot_data_t * details_in)
+extern void devsdk_publish_system_event (devsdk_service_t *svc, const char *action, iot_data_t * details)
 {
   iot_data_t *event;
 
   event = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_t *details = details_in ? details_in : iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (event, "type", iot_data_alloc_string ("device", IOT_DATA_REF));
+  iot_data_string_map_add (event, "action", iot_data_alloc_string (action, IOT_DATA_REF));
+  iot_data_string_map_add (event, "source", iot_data_alloc_string (svc->name, IOT_DATA_REF));
+  iot_data_string_map_add (event, "owner", iot_data_alloc_string (svc->name, IOT_DATA_REF));
+  iot_data_string_map_add (event, "details", details);
+  iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
+
+  char *t = malloc (strlen (action) + sizeof ("device/"));
+  strcpy (t, "device/");
+  strcat (t, action);
+  char *topic = edgex_bus_mktopic (svc->msgbus, "system-event", t);
+  edgex_bus_post (svc->msgbus, topic, event);
+  free (t);
+  free (topic);
+}
+
+extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * request_id,  const int8_t progress, const uint64_t discovered_devices)
+{
+  iot_data_t * details = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (details, "progress", iot_data_alloc_i8 (progress));
+  if(discovered_devices) iot_data_string_map_add (details, "discoveredDeviceCount", iot_data_alloc_ui64 (discovered_devices));
+  iot_data_string_map_add (details, "requestId", iot_data_alloc_string (request_id, IOT_DATA_REF));
+
+  iot_data_t *event = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (event, "type", iot_data_alloc_string ("device", IOT_DATA_REF));
   iot_data_string_map_add (event, "action", iot_data_alloc_string ("discovery", IOT_DATA_REF));
   iot_data_string_map_add (event, "source", iot_data_alloc_string (svc->name, IOT_DATA_REF));
   iot_data_string_map_add (event, "owner", iot_data_alloc_string (svc->name, IOT_DATA_REF));
-  iot_data_string_map_add (details, "requestId", iot_data_alloc_string (request_id, IOT_DATA_REF));
-  iot_data_string_map_add (event, "details", details_in);
+  iot_data_string_map_add (event, "details", details);
   iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DISCOVERY, "event");
