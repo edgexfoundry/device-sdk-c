@@ -359,7 +359,7 @@ extern void devsdk_publish_system_event (devsdk_service_t *svc, const char *acti
   char *t = malloc (strlen (action) + sizeof ("device/"));
   strcpy (t, "device/");
   strcat (t, action);
-  char *topic = edgex_bus_mktopic (svc->msgbus, "system-event", t);
+  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_SYSTEM_EVENT, t);
   edgex_bus_post (svc->msgbus, topic, event);
   free (t);
   free (topic);
