@@ -18,15 +18,15 @@
 typedef struct template_driver
 {
   iot_logger_t * lc;
-  devsdk_service_t *svc;
+  devsdk_service_t * svc;
 } template_driver;
 
-static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
+static void dump_protocols (iot_logger_t * lc, const devsdk_protocols * prots)
 {
   iot_data_map_iter_t iter;
   iot_log_debug (lc, " [Other] protocol:");
-  const iot_data_t *others = devsdk_protocols_properties(prots, "Other");
-  if ((!others) || (iot_data_type(others) != IOT_DATA_MAP))
+  const iot_data_t * others = devsdk_protocols_properties (prots, "Other");
+  if ((!others) || (iot_data_type (others) != IOT_DATA_MAP))
   {
     return;
   }
@@ -37,14 +37,14 @@ static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
   }
 }
 
-static void dump_attributes (iot_logger_t *lc, devsdk_resource_attr_t attrs)
+static void dump_attributes (iot_logger_t * lc, devsdk_resource_attr_t attrs)
 {
   iot_data_map_iter_t iter;
-  if ((!attrs) || (iot_data_type((iot_data_t *)attrs) != IOT_DATA_MAP))
+  if ((!attrs) || (iot_data_type ((iot_data_t *) attrs) != IOT_DATA_MAP))
   {
     return;
   }
-  iot_data_map_iter ((iot_data_t *)attrs, &iter);
+  iot_data_map_iter ((iot_data_t *) attrs, &iter);
   while (iot_data_map_iter_next (&iter))
   {
     iot_log_debug (lc, "    %s = %s", iot_data_map_iter_string_key (&iter), iot_data_map_iter_string_value (&iter));
@@ -56,15 +56,15 @@ static void dump_attributes (iot_logger_t *lc, devsdk_resource_attr_t attrs)
  * service.
  */
 static bool template_init
-(
-  void *impl,
-  struct iot_logger_t *lc,
-  const iot_data_t *config
-)
+  (
+    void * impl,
+    struct iot_logger_t * lc,
+    const iot_data_t * config
+  )
 {
-  template_driver *driver = (template_driver *) impl;
+  template_driver * driver = (template_driver *) impl;
   iot_log_debug (lc, "Template Init. Driver Config follows:");
-  if (config && (iot_data_type(config) == IOT_DATA_MAP))
+  if (config && (iot_data_type (config) == IOT_DATA_MAP))
   {
     iot_data_map_iter_t iter;
     iot_data_map_iter (config, &iter);
@@ -82,15 +82,15 @@ static bool template_init
 /* Reconfigure is called if the driver configuration is updated.
  */
 static void template_reconfigure
-(
-  void *impl,
-  const iot_data_t *config
-)
+  (
+    void * impl,
+    const iot_data_t * config
+  )
 {
   iot_data_map_iter_t iter;
-  template_driver *driver = (template_driver *) impl;
+  template_driver * driver = (template_driver *) impl;
   iot_log_debug (driver->lc, "Template Reconfiguration. New Config follows:");
-  if (config && (iot_data_type(config) == IOT_DATA_MAP))
+  if (config && (iot_data_type (config) == IOT_DATA_MAP))
   {
     iot_data_map_iter (config, &iter);
     while (iot_data_map_iter_next (&iter))
@@ -106,32 +106,37 @@ static void template_reconfigure
  * device service's discovery REST endpoint. New devices should be added using
  * the devsdk_add_discovered_devices() method
  */
-static void template_discover (void *impl)
+static void template_discover (void * impl, const char * request_id)
 {
-  template_driver *driver = (template_driver *) impl;
+  template_driver * driver = (template_driver *) impl;
 
-  iot_data_t *map1 = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_t *map2 = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_t *map3 = iot_data_alloc_map (IOT_DATA_STRING);
-  iot_data_t *map4 = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_t * map1 = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_t * map2 = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_t * map3 = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_t * map4 = iot_data_alloc_map (IOT_DATA_STRING);
 
   iot_data_string_map_add (map1, "MAC", iot_data_alloc_string ("00-05-1B-A1-99-00", IOT_DATA_REF));
   iot_data_string_map_add (map2, "MAC", iot_data_alloc_string ("00-05-1B-A1-99-99", IOT_DATA_REF));
   iot_data_string_map_add (map3, "HTTP", iot_data_alloc_string ("10.0.0.254", IOT_DATA_REF));
   iot_data_string_map_add (map4, "HTTP", iot_data_alloc_string ("10.0.0.255", IOT_DATA_REF));
 
-  devsdk_protocols *p1 = devsdk_protocols_new ("MAC Address", map1, NULL);
-  devsdk_protocols *p2 = devsdk_protocols_new ("MAC Address", map2, NULL);
-  devsdk_protocols *p3 = devsdk_protocols_new ("IP Address", map3, NULL);
-  devsdk_protocols *p4 = devsdk_protocols_new ("IP Address", map4, NULL);
+  devsdk_protocols * p1 = devsdk_protocols_new ("MAC Address", map1, NULL);
+  devsdk_protocols * p2 = devsdk_protocols_new ("MAC Address", map2, NULL);
+  devsdk_protocols * p3 = devsdk_protocols_new ("IP Address", map3, NULL);
+  devsdk_protocols * p4 = devsdk_protocols_new ("IP Address", map4, NULL);
 
   devsdk_discovered_device devs[] =
-  {
-    { "DiscoveredOne", NULL, p1, "First discovered device", NULL },
-    { "DiscoveredTwo", NULL, p2, "Second discovered device", NULL },
-    { "DiscoveredThree", NULL, p3, "Third discovered device", NULL },
-    { "DiscoveredFour", NULL, p4, "Fourth discovered device", NULL }
-  };
+    {
+      {"DiscoveredOne",   NULL, p1, "First discovered device",  NULL},
+      {"DiscoveredTwo",   NULL, p2, "Second discovered device", NULL},
+      {"DiscoveredThree", NULL, p3, "Third discovered device",  NULL},
+      {"DiscoveredFour",  NULL, p4, "Fourth discovered device", NULL}
+    };
+
+  // Publish event
+  iot_data_t * details_map = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_string_map_add (details_map, "progress", iot_data_alloc_ui8 (100));
+  devsdk_publish_discovery_event (driver->svc, request_id, details_map);
 
   devsdk_add_discovered_devices (driver->svc, 4, devs);
 
@@ -158,21 +163,21 @@ static void template_discover (void *impl)
  * which is defined in the device profile.
 */
 static bool template_get_handler
-(
-  void *impl,
-  const devsdk_device_t *device,
-  uint32_t nreadings,
-  const devsdk_commandrequest *requests,
-  devsdk_commandresult *readings,
-  const iot_data_t *options,
-  iot_data_t **exception
-)
+  (
+    void * impl,
+    const devsdk_device_t * device,
+    uint32_t nreadings,
+    const devsdk_commandrequest * requests,
+    devsdk_commandresult * readings,
+    const iot_data_t * options,
+    iot_data_t ** exception
+  )
 {
-  template_driver *driver = (template_driver *) impl;
+  template_driver * driver = (template_driver *) impl;
 
   /* Access the location of the device to be accessed and log it */
   iot_log_debug(driver->lc, "GET on device:");
-  dump_protocols (driver->lc, (devsdk_protocols *)device->address);
+  dump_protocols (driver->lc, (devsdk_protocols *) device->address);
 
   for (uint32_t i = 0; i < nreadings; i++)
   {
@@ -198,20 +203,20 @@ static bool template_get_handler
  * which is defined in the device profile.
 */
 static bool template_put_handler
-(
-  void *impl,
-  const devsdk_device_t *device,
-  uint32_t nvalues,
-  const devsdk_commandrequest *requests,
-  const iot_data_t *values[],
-  const iot_data_t *options,
-  iot_data_t **exception
-)
+  (
+    void * impl,
+    const devsdk_device_t * device,
+    uint32_t nvalues,
+    const devsdk_commandrequest * requests,
+    const iot_data_t * values[],
+    const iot_data_t * options,
+    iot_data_t ** exception
+  )
 {
-  template_driver *driver = (template_driver *) impl;
+  template_driver * driver = (template_driver *) impl;
   /* Access the location of the device to be accessed and log it */
   iot_log_debug (driver->lc, "PUT on device:");
-  dump_protocols (driver->lc, (devsdk_protocols *)device->address);
+  dump_protocols (driver->lc, (devsdk_protocols *) device->address);
 
   for (uint32_t i = 0; i < nvalues; i++)
   {
@@ -230,7 +235,7 @@ static bool template_put_handler
       case IOT_DATA_BOOL:
         iot_log_debug (driver->lc, "  Value: %s", iot_data_bool (values[i]) ? "true" : "false");
         break;
-      /* etc etc */
+        /* etc etc */
       default:
         iot_log_debug (driver->lc, "  Value has unexpected type %s: %s", iot_data_type_name (values[i]), iot_data_to_json (values[i]));
     }
@@ -240,30 +245,32 @@ static bool template_put_handler
 
 /* ---- Stop ---- */
 /* Stop performs any final actions before the device service is terminated */
-static void template_stop (void *impl, bool force) {}
+static void template_stop (void * impl, bool force)
+{
+}
 
 /* ---- Attribute and Protocols --- */
 
-static devsdk_address_t template_create_addr (void *impl, const devsdk_protocols *protocols, iot_data_t **exception)
+static devsdk_address_t template_create_addr (void * impl, const devsdk_protocols * protocols, iot_data_t ** exception)
 {
-  return (devsdk_address_t)protocols;
+  return (devsdk_address_t) protocols;
 }
 
-static void template_free_addr (void *impl, devsdk_address_t address)
+static void template_free_addr (void * impl, devsdk_address_t address)
 {
 }
 
-static devsdk_resource_attr_t template_create_resource_attr (void *impl, const iot_data_t *attributes, iot_data_t **exception)
+static devsdk_resource_attr_t template_create_resource_attr (void * impl, const iot_data_t * attributes, iot_data_t ** exception)
 {
   return iot_data_copy (attributes);
 }
 
-static void template_free_resource_attr (void *impl, devsdk_resource_attr_t resource)
+static void template_free_resource_attr (void * impl, devsdk_resource_attr_t resource)
 {
-  iot_data_free ((iot_data_t *)resource);
+  iot_data_free ((iot_data_t *) resource);
 }
 
-int main (int argc, char *argv[])
+int main (int argc, char * argv[])
 {
   sigset_t set;
   int sigret;
@@ -275,22 +282,22 @@ int main (int argc, char *argv[])
   e.code = 0;
 
   /* Device Callbacks */
-  devsdk_callbacks *templateImpls = devsdk_callbacks_init
-  (
-    template_init,
-    template_get_handler,
-    template_put_handler,
-    template_stop,
-    template_create_addr,
-    template_free_addr,
-    template_create_resource_attr,
-    template_free_resource_attr
-  );
+  devsdk_callbacks * templateImpls = devsdk_callbacks_init
+    (
+      template_init,
+      template_get_handler,
+      template_put_handler,
+      template_stop,
+      template_create_addr,
+      template_free_addr,
+      template_create_resource_attr,
+      template_free_resource_attr
+    );
   devsdk_callbacks_set_discovery (templateImpls, template_discover, NULL);
   devsdk_callbacks_set_reconfiguration (templateImpls, template_reconfigure);
 
   /* Initalise a new device service */
-  devsdk_service_t *service = devsdk_service_new
+  devsdk_service_t * service = devsdk_service_new
     ("device-template", "1.0", impl, templateImpls, &argc, argv, &e);
   ERR_CHECK (e);
 
@@ -312,7 +319,7 @@ int main (int argc, char *argv[])
   }
 
   impl->svc = service;
-  iot_data_t *confparams = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_t * confparams = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (confparams, "TestParam1", iot_data_alloc_string ("X", IOT_DATA_REF));
   iot_data_string_map_add (confparams, "TestParam2", iot_data_alloc_string ("Y", IOT_DATA_REF));
 
