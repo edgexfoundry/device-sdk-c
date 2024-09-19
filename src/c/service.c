@@ -380,7 +380,7 @@ extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * 
   iot_data_string_map_add (event, "details", details);
   iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
-  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DISCOVERY, "event");
+  char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_SYSTEM_EVENT, "device/discovery");
   edgex_bus_post (svc->msgbus, topic, event);
   free (topic);
 

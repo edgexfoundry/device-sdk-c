@@ -29,7 +29,7 @@
 #define EDGEX_DEV_TOPIC_RESPONSE "response"
 #define EDGEX_DEV_TOPIC_EVENT "events/device"
 #define EDGEX_DEV_TOPIC_METRIC "telemetry"
-#define EDGEX_DEV_TOPIC_DISCOVERY "discovery"
+#define EDGEX_DEV_TOPIC_SYSTEM_EVENT "system-event"
 #define EDGEX_DEV_TOPIC_ADD_DEV "system-events/core-metadata/device/add"
 #define EDGEX_DEV_TOPIC_DEL_DEV "system-events/core-metadata/device/delete"
 #define EDGEX_DEV_TOPIC_UPDATE_DEV "system-events/core-metadata/device/update"
