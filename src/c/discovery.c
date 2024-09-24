@@ -25,8 +25,9 @@ typedef struct edgex_device_periodic_discovery_t
   iot_schedule_t *schedule;
   iot_threadpool_t *pool;
   devsdk_discover discfn;
+  devsdk_discovery_cancel disc_cancel_fn;
   void *userdata;
-  pthread_mutex_t lock;
+  pthread_mutex_t lock; //TODO: Do we need a cancel lock?
   uint64_t interval;
   char * request_id;
 } edgex_device_periodic_discovery_t;
@@ -38,6 +39,14 @@ static void *edgex_device_handler_do_discovery (void *p)
   pthread_mutex_lock (&disc->lock);
   disc->discfn (disc->userdata, disc->request_id);
   pthread_mutex_unlock (&disc->lock);
+  return NULL;
+}
+
+static void *edgex_device_handler_do_discovery_cancel (void *p)
+{
+  edgex_device_periodic_discovery_t *disc = (edgex_device_periodic_discovery_t *) p;
+  //TODO: Add in locking if required
+  disc->disc_cancel_fn (disc->userdata, disc->request_id);
   return NULL;
 }
 
@@ -59,13 +68,14 @@ static void *edgex_device_periodic_discovery (void *p)
 }
 
 edgex_device_periodic_discovery_t *edgex_device_periodic_discovery_alloc
-  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, void *userdata)
+  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, devsdk_discovery_cancel disc_cacnel_fn, void *userdata)
 {
   edgex_device_periodic_discovery_t *result = calloc (1, sizeof (edgex_device_periodic_discovery_t));
   result->logger = logger;
   result->scheduler = sched;
   result->pool = pool;
   result->discfn = discfn;
+  result->disc_cancel_fn = disc_cacnel_fn;
   result->userdata = userdata;
   pthread_mutex_init (&result->lock, NULL);
   return result;
@@ -159,6 +169,36 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
       reply->data.bytes = strdup ("Discovery already running; ignoring new request\n");
     }
 
+    reply->code = MHD_HTTP_ACCEPTED;
+    reply->data.size = strlen (reply->data.bytes);
+    reply->content_type = CONTENT_PLAINTEXT;
+  }
+}
+
+void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+
+  if (svc->userfns.discovery_cancel == NULL)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_IMPLEMENTED, "Discovery Cancel is not implemented in this device service");
+  }
+  else if (svc->adminstate == LOCKED)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device service is administratively locked");
+  }
+  else if (!svc->config.device.discovery_enabled)
+  {
+    edgex_error_response (svc->logger, reply, MHD_HTTP_SERVICE_UNAVAILABLE, "Discovery disabled by configuration");
+  }
+  else
+  {
+    char *reqId = devsdk_nvpairs_value (req->params, "requestId");
+    if (reqId) iot_log_info(svc->logger, "The Request ID param is [%s]", reqId);
+    //TODO: Add in locking if required
+    iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery_cancel, svc->discovery, -1);
+
+    reply->data.bytes = strdup ("Discovery Cancel Received\n");
     reply->code = MHD_HTTP_ACCEPTED;
     reply->data.size = strlen (reply->data.bytes);
     reply->content_type = CONTENT_PLAINTEXT;

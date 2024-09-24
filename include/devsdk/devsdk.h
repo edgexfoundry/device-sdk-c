@@ -57,6 +57,14 @@ typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
 typedef void (*devsdk_discover) (void *impl, const char * request_id);
 
 /**
+ * @brief Optional callback for cancelling a discovery request that is in progress.
+ * @param impl The context data passed in when the service was created
+ * @param request_id The request ID of the discovery request to cancel
+ */
+typedef void (*devsdk_discovery_cancel) (void *impl, const char * request_id);
+
+
+/**
  * @brief Optional callback for dynamic discovery of device resources.
  * @param impl The context data passed in when the service was created.
  * @param dev The details of the device to be queried.
@@ -255,6 +263,12 @@ devsdk_callbacks *devsdk_callbacks_init
  */
 
 void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover discover, devsdk_describe describe);
+
+/**
+ * @brief Populate optional discovery cancel function
+ */
+
+void devsdk_callbacks_set_discovery_cancel (devsdk_callbacks *cb, devsdk_discovery_cancel discovery_cancel, devsdk_describe describe);
 
 /**
  * @brief Populate optional reconfiguration function
