@@ -27,7 +27,8 @@ typedef struct edgex_device_periodic_discovery_t
   devsdk_discover discfn;
   devsdk_discovery_cancel disc_cancel_fn;
   void *userdata;
-  pthread_mutex_t lock; //TODO: Do we need a cancel lock?
+  pthread_mutex_t lock;
+  pthread_mutex_t cancel_lock;
   uint64_t interval;
   char * request_id;
 } edgex_device_periodic_discovery_t;
@@ -45,8 +46,10 @@ static void *edgex_device_handler_do_discovery (void *p)
 static void *edgex_device_handler_do_discovery_cancel (void *p)
 {
   edgex_device_periodic_discovery_t *disc = (edgex_device_periodic_discovery_t *) p;
-  //TODO: Add in locking if required
+
+  pthread_mutex_lock (&disc->cancel_lock);
   disc->disc_cancel_fn (disc->userdata, disc->request_id);
+  pthread_mutex_unlock (&disc->cancel_lock);
   return NULL;
 }
 
@@ -78,6 +81,7 @@ edgex_device_periodic_discovery_t *edgex_device_periodic_discovery_alloc
   result->disc_cancel_fn = disc_cacnel_fn;
   result->userdata = userdata;
   pthread_mutex_init (&result->lock, NULL);
+  pthread_mutex_init (&result->cancel_lock, NULL);
   return result;
 }
 
@@ -134,6 +138,7 @@ void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *di
   {
     edgex_device_periodic_discovery_stop (disc);
     pthread_mutex_destroy (&disc->lock);
+    pthread_mutex_destroy (&disc->cancel_lock);
     free (disc);
   }
 }
@@ -193,12 +198,17 @@ void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request
   }
   else
   {
-    char *reqId = devsdk_nvpairs_value (req->params, "requestId");
-    if (reqId) iot_log_info(svc->logger, "The Request ID param is [%s]", reqId);
-    //TODO: Add in locking if required
-    iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery_cancel, svc->discovery, -1);
+    if (pthread_mutex_trylock (&svc->discovery->cancel_lock) == 0)
+    {
+      iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery_cancel, svc->discovery, -1);
+      pthread_mutex_unlock (&svc->discovery->cancel_lock);
+      reply->data.bytes = strdup ("Discovery Cancel Received\n");
+    }
+    else
+    {
+      reply->data.bytes = strdup ("Discovery cancel already running; ignoring new request\n");
+    }
 
-    reply->data.bytes = strdup ("Discovery Cancel Received\n");
     reply->code = MHD_HTTP_ACCEPTED;
     reply->data.size = strlen (reply->data.bytes);
     reply->content_type = CONTENT_PLAINTEXT;
