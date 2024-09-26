@@ -308,7 +308,7 @@ devsdk_service_t *devsdk_service_new
   result->watchlist = edgex_watchlist_alloc ();
   result->thpool = iot_threadpool_alloc (POOL_THREADS, 0, -1, -1, result->logger);
   result->scheduler = iot_scheduler_alloc (-1, -1, result->logger);
-  result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns->discover, implfns->discovery_cancel, impldata);
+  result->discovery = edgex_device_periodic_discovery_alloc (result->logger, result->scheduler, result->thpool, implfns->discover, implfns->discovery_delete, impldata);
   atomic_store (&result->metrics.esent, 0);
   atomic_store (&result->metrics.rsent, 0);
   atomic_store (&result->metrics.rcexe, 0);

@@ -34,7 +34,7 @@ struct devsdk_callbacks
   devsdk_create_resource_attr create_res;
   devsdk_free_resource_attr free_res;
   devsdk_discover discover;
-  devsdk_discovery_cancel discovery_cancel;
+  devsdk_discovery_delete discovery_delete;
   devsdk_describe describe;
   devsdk_add_device_callback device_added;
   devsdk_update_device_callback device_updated;

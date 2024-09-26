@@ -61,7 +61,7 @@ typedef void (*devsdk_discover) (void *impl, const char * request_id);
  * @param impl The context data passed in when the service was created
  * @param request_id The request ID of the discovery request to cancel
  */
-typedef bool (*devsdk_discovery_cancel) (void *impl, const char * request_id);
+typedef bool (*devsdk_discovery_delete) (void *impl, const char * request_id);
 
 
 /**
@@ -268,7 +268,7 @@ void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover disco
  * @brief Populate optional discovery cancel function
  */
 
-void devsdk_callbacks_set_discovery_cancel (devsdk_callbacks *cb, devsdk_discovery_cancel discovery_cancel, devsdk_describe describe);
+void devsdk_callbacks_set_discovery_delete (devsdk_callbacks *cb, devsdk_discovery_delete discovery_delete, devsdk_describe describe);
 
 /**
  * @brief Populate optional reconfiguration function

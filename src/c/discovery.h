@@ -18,7 +18,7 @@
 typedef struct edgex_device_periodic_discovery_t edgex_device_periodic_discovery_t;
 
 extern edgex_device_periodic_discovery_t *edgex_device_periodic_discovery_alloc
-  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, devsdk_discovery_cancel disc_cacnel_fn, void *userdata);
+  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, devsdk_discovery_delete disc_cacnel_fn, void *userdata);
 
 extern void edgex_device_periodic_discovery_configure (edgex_device_periodic_discovery_t *disc, bool enabled, uint64_t interval);
 

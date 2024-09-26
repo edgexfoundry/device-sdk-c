@@ -25,7 +25,7 @@ typedef struct edgex_device_periodic_discovery_t
   iot_schedule_t *schedule;
   iot_threadpool_t *pool;
   devsdk_discover discfn;
-  devsdk_discovery_cancel disc_cancel_fn;
+  devsdk_discovery_delete disc_delete_fn;
   void *userdata;
   pthread_mutex_t lock;
   uint64_t interval;
@@ -60,14 +60,14 @@ static void *edgex_device_periodic_discovery (void *p)
 }
 
 edgex_device_periodic_discovery_t *edgex_device_periodic_discovery_alloc
-  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, devsdk_discovery_cancel disc_cacnel_fn, void *userdata)
+  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, devsdk_discovery_delete disc_delete_fn, void *userdata)
 {
   edgex_device_periodic_discovery_t *result = calloc (1, sizeof (edgex_device_periodic_discovery_t));
   result->logger = logger;
   result->scheduler = sched;
   result->pool = pool;
   result->discfn = discfn;
-  result->disc_cancel_fn = disc_cacnel_fn;
+  result->disc_delete_fn = disc_delete_fn;
   result->userdata = userdata;
   pthread_mutex_init (&result->lock, NULL);
   return result;
@@ -167,7 +167,7 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
   }
 }
 
-static edgex_baseresponse *edgex_disc_cancel_response_create (uint64_t code, char *msg, const char * req_id)
+static edgex_baseresponse *edgex_disc_delete_response_create (uint64_t code, char *msg, const char * req_id)
 {
   edgex_baseresponse *res = malloc (sizeof (edgex_baseresponse));
   res->statusCode = code;
@@ -186,34 +186,34 @@ void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request
 
   if(!svc->discovery->request_id || !req_id ||strcmp (req_id, svc->discovery->request_id) != 0)
   {
-    resp = edgex_disc_cancel_response_create (MHD_HTTP_NOT_FOUND,"Not Found", req_id);
+    resp = edgex_disc_delete_response_create (MHD_HTTP_NOT_FOUND, "Not Found", req_id);
     err = true;
   }
-  else if (svc->userfns.discovery_cancel == NULL)
+  else if (svc->userfns.discovery_delete == NULL)
   {
-    resp = edgex_disc_cancel_response_create(MHD_HTTP_NOT_IMPLEMENTED,"Discovery Cancel is not implemented in this device service", req_id);
+    resp = edgex_disc_delete_response_create (MHD_HTTP_NOT_IMPLEMENTED, "Discovery Cancel is not implemented in this device service", req_id);
     err = true;
   }
   else if (svc->adminstate == LOCKED)
   {
-    resp = edgex_disc_cancel_response_create(MHD_HTTP_LOCKED,"Device service is administratively locked", req_id);
+    resp = edgex_disc_delete_response_create (MHD_HTTP_LOCKED, "Device service is administratively locked", req_id);
     err = true;
   }
   else if (!svc->config.device.discovery_enabled)
   {
-    resp = edgex_disc_cancel_response_create(MHD_HTTP_SERVICE_UNAVAILABLE,"Discovery disabled by configuration", req_id);
+    resp = edgex_disc_delete_response_create (MHD_HTTP_SERVICE_UNAVAILABLE, "Discovery disabled by configuration", req_id);
     err = true;
   }
   else
   {
-    if (!svc->discovery->disc_cancel_fn (svc->discovery->userdata, req_id))
+    if (!svc->discovery->disc_delete_fn (svc->discovery->userdata, req_id))
     {
-      resp = edgex_disc_cancel_response_create(MHD_HTTP_INTERNAL_SERVER_ERROR,"Internal Server Error", req_id);
+      resp = edgex_disc_delete_response_create (MHD_HTTP_INTERNAL_SERVER_ERROR, "Internal Server Error", req_id);
       err = true;
     }
     else
     {
-      resp = edgex_disc_cancel_response_create(MHD_HTTP_OK,NULL, req_id);
+      resp = edgex_disc_delete_response_create (MHD_HTTP_OK, NULL, req_id);
     }
   }
 

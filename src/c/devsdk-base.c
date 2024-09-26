@@ -172,9 +172,9 @@ void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover disco
   cb->describe = describe;
 }
 
-void devsdk_callbacks_set_discovery_cancel (devsdk_callbacks *cb, devsdk_discovery_cancel discovery_cancel, devsdk_describe describe)
+void devsdk_callbacks_set_discovery_delete (devsdk_callbacks *cb, devsdk_discovery_delete discovery_delete, devsdk_describe describe)
 {
-  cb->discovery_cancel = discovery_cancel;
+  cb->discovery_delete = discovery_delete;
   cb->describe = describe;
 }
 
