@@ -61,7 +61,7 @@ typedef void (*devsdk_discover) (void *impl, const char * request_id);
  * @param impl The context data passed in when the service was created
  * @param request_id The request ID of the discovery request to cancel
  */
-typedef void (*devsdk_discovery_cancel) (void *impl, const char * request_id);
+typedef bool (*devsdk_discovery_cancel) (void *impl, const char * request_id);
 
 
 /**

@@ -28,7 +28,6 @@ typedef struct edgex_device_periodic_discovery_t
   devsdk_discovery_cancel disc_cancel_fn;
   void *userdata;
   pthread_mutex_t lock;
-  pthread_mutex_t cancel_lock;
   uint64_t interval;
   char * request_id;
 } edgex_device_periodic_discovery_t;
@@ -40,16 +39,6 @@ static void *edgex_device_handler_do_discovery (void *p)
   pthread_mutex_lock (&disc->lock);
   disc->discfn (disc->userdata, disc->request_id);
   pthread_mutex_unlock (&disc->lock);
-  return NULL;
-}
-
-static void *edgex_device_handler_do_discovery_cancel (void *p)
-{
-  edgex_device_periodic_discovery_t *disc = (edgex_device_periodic_discovery_t *) p;
-
-  pthread_mutex_lock (&disc->cancel_lock);
-  disc->disc_cancel_fn (disc->userdata, disc->request_id);
-  pthread_mutex_unlock (&disc->cancel_lock);
   return NULL;
 }
 
@@ -81,7 +70,6 @@ edgex_device_periodic_discovery_t *edgex_device_periodic_discovery_alloc
   result->disc_cancel_fn = disc_cacnel_fn;
   result->userdata = userdata;
   pthread_mutex_init (&result->lock, NULL);
-  pthread_mutex_init (&result->cancel_lock, NULL);
   return result;
 }
 
@@ -138,7 +126,6 @@ void edgex_device_periodic_discovery_free (edgex_device_periodic_discovery_t *di
   {
     edgex_device_periodic_discovery_stop (disc);
     pthread_mutex_destroy (&disc->lock);
-    pthread_mutex_destroy (&disc->cancel_lock);
     free (disc);
   }
 }
@@ -180,37 +167,63 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
   }
 }
 
+static edgex_baseresponse *edgex_disc_cancel_response_create (uint64_t code, char *msg, const char * req_id)
+{
+  edgex_baseresponse *res = malloc (sizeof (edgex_baseresponse));
+  res->statusCode = code;
+  if (msg) res->message = msg;
+  res->requestId = req_id;
+  res->apiVersion = "v3";
+  return res;
+}
+
 void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char * req_id = devsdk_nvpairs_value (req->params, "requestId");
+  edgex_baseresponse * resp = NULL;
+  int err = false;
 
-  if (svc->userfns.discovery_cancel == NULL)
+  if(!svc->discovery->request_id || !req_id ||strcmp (req_id, svc->discovery->request_id) != 0)
   {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_NOT_IMPLEMENTED, "Discovery Cancel is not implemented in this device service");
+    resp = edgex_disc_cancel_response_create (MHD_HTTP_NOT_FOUND,"Not Found", req_id);
+    err = true;
+  }
+  else if (svc->userfns.discovery_cancel == NULL)
+  {
+    resp = edgex_disc_cancel_response_create(MHD_HTTP_NOT_IMPLEMENTED,"Discovery Cancel is not implemented in this device service", req_id);
+    err = true;
   }
   else if (svc->adminstate == LOCKED)
   {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_LOCKED, "Device service is administratively locked");
+    resp = edgex_disc_cancel_response_create(MHD_HTTP_LOCKED,"Device service is administratively locked", req_id);
+    err = true;
   }
   else if (!svc->config.device.discovery_enabled)
   {
-    edgex_error_response (svc->logger, reply, MHD_HTTP_SERVICE_UNAVAILABLE, "Discovery disabled by configuration");
+    resp = edgex_disc_cancel_response_create(MHD_HTTP_SERVICE_UNAVAILABLE,"Discovery disabled by configuration", req_id);
+    err = true;
   }
   else
   {
-    if (pthread_mutex_trylock (&svc->discovery->cancel_lock) == 0)
+    if (!svc->discovery->disc_cancel_fn (svc->discovery->userdata, req_id))
     {
-      iot_threadpool_add_work (svc->thpool, edgex_device_handler_do_discovery_cancel, svc->discovery, -1);
-      pthread_mutex_unlock (&svc->discovery->cancel_lock);
-      reply->data.bytes = strdup ("Discovery Cancel Received\n");
+      resp = edgex_disc_cancel_response_create(MHD_HTTP_INTERNAL_SERVER_ERROR,"Internal Server Error", req_id);
+      err = true;
     }
     else
     {
-      reply->data.bytes = strdup ("Discovery cancel already running; ignoring new request\n");
+      resp = edgex_disc_cancel_response_create(MHD_HTTP_OK,NULL, req_id);
     }
-
-    reply->code = MHD_HTTP_ACCEPTED;
-    reply->data.size = strlen (reply->data.bytes);
-    reply->content_type = CONTENT_PLAINTEXT;
   }
+
+  if (err)
+  {
+    edgex_errorresponse_write (resp, reply);
+  }
+  else
+  {
+    edgex_baseresponse_write(resp, reply);
+  }
+  free (resp);
 }
