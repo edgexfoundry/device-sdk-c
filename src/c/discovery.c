@@ -25,7 +25,6 @@ typedef struct edgex_device_periodic_discovery_t
   iot_schedule_t *schedule;
   iot_threadpool_t *pool;
   devsdk_discover discfn;
-  devsdk_discovery_delete disc_delete_fn;
   void *userdata;
   pthread_mutex_t lock;
   uint64_t interval;
@@ -60,14 +59,13 @@ static void *edgex_device_periodic_discovery (void *p)
 }
 
 edgex_device_periodic_discovery_t *edgex_device_periodic_discovery_alloc
-  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, devsdk_discovery_delete disc_delete_fn, void *userdata)
+  (iot_logger_t *logger, iot_scheduler_t *sched, iot_threadpool_t *pool, devsdk_discover discfn, void *userdata)
 {
   edgex_device_periodic_discovery_t *result = calloc (1, sizeof (edgex_device_periodic_discovery_t));
   result->logger = logger;
   result->scheduler = sched;
   result->pool = pool;
   result->discfn = discfn;
-  result->disc_delete_fn = disc_delete_fn;
   result->userdata = userdata;
   pthread_mutex_init (&result->lock, NULL);
   return result;
@@ -171,7 +169,7 @@ static edgex_baseresponse *edgex_disc_delete_response_create (uint64_t code, cha
 {
   edgex_baseresponse *res = malloc (sizeof (edgex_baseresponse));
   res->statusCode = code;
-  if (msg) res->message = msg;
+  res->message = msg;
   res->requestId = req_id;
   res->apiVersion = "v3";
   return res;
@@ -206,7 +204,7 @@ void edgex_device_handler_discovery_delete (void *ctx, const devsdk_http_request
   }
   else
   {
-    if (!svc->discovery->disc_delete_fn (svc->discovery->userdata, req_id))
+    if (!svc->userfns.discovery_delete (svc->discovery->userdata, req_id))
     {
       resp = edgex_disc_delete_response_create (MHD_HTTP_INTERNAL_SERVER_ERROR, "Internal Server Error", req_id);
       err = true;

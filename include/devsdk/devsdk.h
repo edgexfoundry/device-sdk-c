@@ -268,7 +268,7 @@ void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover disco
  * @brief Populate optional discovery delete function
  */
 
-void devsdk_callbacks_set_discovery_delete (devsdk_callbacks *cb, devsdk_discovery_delete discovery_delete, devsdk_describe describe);
+void devsdk_callbacks_set_discovery_delete (devsdk_callbacks *cb, devsdk_discovery_delete discovery_delete);
 
 /**
  * @brief Populate optional reconfiguration function

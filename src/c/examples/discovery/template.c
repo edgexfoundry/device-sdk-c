@@ -141,6 +141,7 @@ static void template_discover (void *impl, const char *request_id)
 
   for (int i = 0; i < 10; i++)
   {
+    iot_log_debug(driver->lc, "Waiting for discovery delete");
     if (!driver->disc_run)
     {
       iot_log_warn(driver->lc, "Discovery Delete request received");
@@ -324,7 +325,7 @@ int main (int argc, char *argv[])
   devsdk_callbacks_set_discovery (templateImpls, template_discover, NULL);
   devsdk_callbacks_set_reconfiguration (templateImpls, template_reconfigure);
 
-  devsdk_callbacks_set_discovery_delete (templateImpls, template_discovery_delete, NULL);
+  devsdk_callbacks_set_discovery_delete (templateImpls, template_discovery_delete);
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
     ("device-template", "1.0", impl, templateImpls, &argc, argv, &e);
