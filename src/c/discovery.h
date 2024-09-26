@@ -28,6 +28,6 @@ extern void edgex_device_periodic_discovery_free (edgex_device_periodic_discover
 
 extern void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
-extern void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
+extern void edgex_device_handler_discovery_delete (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply);
 
 #endif

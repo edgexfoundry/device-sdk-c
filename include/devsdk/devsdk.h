@@ -57,9 +57,9 @@ typedef void (*devsdk_reconfigure) (void *impl, const iot_data_t *config);
 typedef void (*devsdk_discover) (void *impl, const char * request_id);
 
 /**
- * @brief Optional callback for cancelling a discovery request that is in progress.
+ * @brief Optional callback for deleting a discovery request that is in progress.
  * @param impl The context data passed in when the service was created
- * @param request_id The request ID of the discovery request to cancel
+ * @param request_id The request ID of the discovery request to delete
  */
 typedef bool (*devsdk_discovery_delete) (void *impl, const char * request_id);
 

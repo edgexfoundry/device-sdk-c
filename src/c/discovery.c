@@ -177,7 +177,7 @@ static edgex_baseresponse *edgex_disc_delete_response_create (uint64_t code, cha
   return res;
 }
 
-void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+void edgex_device_handler_discovery_delete (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   const char * req_id = devsdk_nvpairs_value (req->params, "requestId");
@@ -191,7 +191,7 @@ void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request
   }
   else if (svc->userfns.discovery_delete == NULL)
   {
-    resp = edgex_disc_delete_response_create (MHD_HTTP_NOT_IMPLEMENTED, "Discovery Cancel is not implemented in this device service", req_id);
+    resp = edgex_disc_delete_response_create (MHD_HTTP_NOT_IMPLEMENTED, "Discovery Delete is not implemented in this device service", req_id);
     err = true;
   }
   else if (svc->adminstate == LOCKED)

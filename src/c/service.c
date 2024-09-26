@@ -814,7 +814,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   {
     svc->device_name_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_device_namev2};
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DEVICE_NAME, DevSDK_Get | DevSDK_Put, &svc->device_name_wrapper, http_auth_wrapper);
-    //TODO: Add in discovery cancel
+
     svc->discovery_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_discoveryv2};
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY, DevSDK_Post, &svc->discovery_wrapper, http_auth_wrapper);
 
@@ -833,7 +833,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
 
-    edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY_CANCEL, DevSDK_Delete, svc, edgex_device_handler_discovery_cancel);
+    edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY_DELETE, DevSDK_Delete, svc, edgex_device_handler_discovery_delete);
 
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 
