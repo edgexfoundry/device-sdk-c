@@ -72,4 +72,6 @@ If the Registry is in use, then dynamic updates to configuration are possible. I
 
 An implementation may also implement the discover callback. When this is called, the implementation should perform a scan for reachable devices, and register them using the devsdk_add_discovered_devices function. Events can be published during discovery to provide feedback.
 
+An implementation may also implement the discovery delete callback. When this is called, the implementation function registered should perform logic that cancels a currently in progress discovery request. The discovery delete function should return a bool signifying the outcome of the discovery delete function.
+
 An implementation may also implement the validate_address callback. This is called when a device is added to the system. The function should check that the protocol properties given for a device are valid, and if not, return an exception (in which case the device addition will be aborted).

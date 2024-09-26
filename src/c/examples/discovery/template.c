@@ -132,7 +132,7 @@ static void template_discover (void *impl, const char *request_id)
     { "DiscoveredThree", NULL, p3, "Third discovered device", NULL },
     { "DiscoveredFour", NULL, p4, "Fourth discovered device", NULL }
   };
-  
+
   // Publish event
   devsdk_publish_discovery_event (driver->svc, request_id, 100, 4);
 
@@ -146,6 +146,12 @@ static void template_discover (void *impl, const char *request_id)
   devsdk_protocols_free (p2);
   devsdk_protocols_free (p3);
   devsdk_protocols_free (p4);
+}
+
+static bool template_discovery_delete (void *impl, const char *request_id)
+{
+  //Implement functionality to cancel a Discovery Request here
+  return true;
 }
 
 /* ---- Get ---- */
@@ -292,6 +298,7 @@ int main (int argc, char *argv[])
   devsdk_callbacks_set_discovery (templateImpls, template_discover, NULL);
   devsdk_callbacks_set_reconfiguration (templateImpls, template_reconfigure);
 
+  devsdk_callbacks_set_discovery_delete (templateImpls, template_discovery_delete, NULL);
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
     ("device-template", "1.0", impl, templateImpls, &argc, argv, &e);
