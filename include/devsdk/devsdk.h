@@ -265,7 +265,7 @@ devsdk_callbacks *devsdk_callbacks_init
 void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover discover, devsdk_describe describe);
 
 /**
- * @brief Populate optional discovery cancel function
+ * @brief Populate optional discovery delete function
  */
 
 void devsdk_callbacks_set_discovery_delete (devsdk_callbacks *cb, devsdk_discovery_delete discovery_delete, devsdk_describe describe);
