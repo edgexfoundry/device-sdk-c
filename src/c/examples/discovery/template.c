@@ -19,6 +19,7 @@ typedef struct template_driver
 {
   iot_logger_t * lc;
   devsdk_service_t *svc;
+  bool disc_run;
 } template_driver;
 
 static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
@@ -132,12 +133,24 @@ static void template_discover (void *impl, const char *request_id)
     { "DiscoveredThree", NULL, p3, "Third discovered device", NULL },
     { "DiscoveredFour", NULL, p4, "Fourth discovered device", NULL }
   };
-  
+
   // Publish event
   devsdk_publish_discovery_event (driver->svc, request_id, 100, 4);
 
   devsdk_add_discovered_devices (driver->svc, 4, devs);
 
+  for (int i = 0; i < 10; i++)
+  {
+    iot_log_debug(driver->lc, "Waiting for discovery delete");
+    if (!driver->disc_run)
+    {
+      iot_log_warn(driver->lc, "Discovery Delete request received");
+      break;
+    }
+    sleep (1);
+  }
+
+  driver->disc_run = true;
   iot_data_free (map1);
   iot_data_free (map2);
   iot_data_free (map3);
@@ -146,6 +159,25 @@ static void template_discover (void *impl, const char *request_id)
   devsdk_protocols_free (p2);
   devsdk_protocols_free (p3);
   devsdk_protocols_free (p4);
+}
+
+static bool template_discovery_delete (void *impl, const char *request_id)
+{
+  //Implement functionality to cancel a Discovery Request here
+  template_driver *driver = (template_driver *) impl;
+  driver->disc_run = false;
+
+  for (int i = 0; i < 10; i++)
+  {
+    if (driver->disc_run)
+    {
+      iot_log_warn(driver->lc, "Discovery Delete request successful");
+      return true;
+    }
+    sleep (1);
+  }
+
+  return false;
 }
 
 /* ---- Get ---- */
@@ -274,6 +306,7 @@ int main (int argc, char *argv[])
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
 
+  impl->disc_run = true;
   devsdk_error e;
   e.code = 0;
 
@@ -292,6 +325,7 @@ int main (int argc, char *argv[])
   devsdk_callbacks_set_discovery (templateImpls, template_discover, NULL);
   devsdk_callbacks_set_reconfiguration (templateImpls, template_reconfigure);
 
+  devsdk_callbacks_set_discovery_delete (templateImpls, template_discovery_delete);
   /* Initalise a new device service */
   devsdk_service_t *service = devsdk_service_new
     ("device-template", "1.0", impl, templateImpls, &argc, argv, &e);

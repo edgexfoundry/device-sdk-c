@@ -172,6 +172,11 @@ void devsdk_callbacks_set_discovery (devsdk_callbacks *cb, devsdk_discover disco
   cb->describe = describe;
 }
 
+void devsdk_callbacks_set_discovery_delete (devsdk_callbacks *cb, devsdk_discovery_delete discovery_delete)
+{
+  cb->discovery_delete = discovery_delete;
+}
+
 void devsdk_callbacks_set_reconfiguration (devsdk_callbacks *cb, devsdk_reconfigure reconf)
 {
   cb->reconfigure = reconf;

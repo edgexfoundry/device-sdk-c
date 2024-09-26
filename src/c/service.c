@@ -833,6 +833,8 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY, DevSDK_Post, svc, edgex_device_handler_discoveryv2);
 
+    edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY_DELETE, DevSDK_Delete, svc, edgex_device_handler_discovery_delete);
+
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_CONFIG, DevSDK_Get, svc, edgex_device_handler_configv2);
 
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_SECRET, DevSDK_Post, svc, edgex_device_handler_secret);

@@ -164,3 +164,65 @@ void edgex_device_handler_discoveryv2 (void *ctx, const devsdk_http_request *req
     reply->content_type = CONTENT_PLAINTEXT;
   }
 }
+
+static edgex_baseresponse *edgex_disc_delete_response_create (uint64_t code, char *msg, const char * req_id)
+{
+  edgex_baseresponse *res = malloc (sizeof (edgex_baseresponse));
+  res->statusCode = code;
+  res->message = msg;
+  res->requestId = req_id;
+  res->apiVersion = "v3";
+  return res;
+}
+
+void edgex_device_handler_discovery_delete (void *ctx, const devsdk_http_request *req, devsdk_http_reply *reply)
+{
+  devsdk_service_t *svc = (devsdk_service_t *) ctx;
+  const char * req_id = devsdk_nvpairs_value (req->params, "requestId");
+  edgex_baseresponse * resp = NULL;
+  int err = false;
+
+  if(!svc->discovery->request_id || !req_id ||strcmp (req_id, svc->discovery->request_id) != 0)
+  {
+    resp = edgex_disc_delete_response_create (MHD_HTTP_NOT_FOUND, "Not Found", req_id);
+    err = true;
+  }
+  else if (svc->userfns.discovery_delete == NULL)
+  {
+    resp = edgex_disc_delete_response_create (MHD_HTTP_NOT_IMPLEMENTED, "Discovery Delete is not implemented in this device service", req_id);
+    err = true;
+  }
+  else if (svc->adminstate == LOCKED)
+  {
+    resp = edgex_disc_delete_response_create (MHD_HTTP_LOCKED, "Device service is administratively locked", req_id);
+    err = true;
+  }
+  else if (!svc->config.device.discovery_enabled)
+  {
+    resp = edgex_disc_delete_response_create (MHD_HTTP_SERVICE_UNAVAILABLE, "Discovery disabled by configuration", req_id);
+    err = true;
+  }
+  else
+  {
+    if (!svc->userfns.discovery_delete (svc->discovery->userdata, req_id))
+    {
+      resp = edgex_disc_delete_response_create (MHD_HTTP_INTERNAL_SERVER_ERROR, "Internal Server Error", req_id);
+      err = true;
+    }
+    else
+    {
+      resp = edgex_disc_delete_response_create (MHD_HTTP_OK, NULL, req_id);
+      err = false;
+    }
+  }
+
+  if (err)
+  {
+    edgex_errorresponse_write (resp, reply);
+  }
+  else
+  {
+    edgex_baseresponse_write(resp, reply);
+  }
+  free (resp);
+}

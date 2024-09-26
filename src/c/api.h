@@ -17,6 +17,7 @@
 
 #define EDGEX_DEV_API3_PING "/api/v3/ping"
 #define EDGEX_DEV_API3_DISCOVERY "/api/v3/discovery"
+#define EDGEX_DEV_API3_DISCOVERY_DELETE "/api/v3/discovery/requestId/{requestId}"
 #define EDGEX_DEV_API3_CONFIG "/api/v3/config"
 #define EDGEX_DEV_API3_METRICS "/api/v3/metrics"
 #define EDGEX_DEV_API3_SECRET "/api/v3/secret"
