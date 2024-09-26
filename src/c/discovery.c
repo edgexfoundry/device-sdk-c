@@ -214,6 +214,7 @@ void edgex_device_handler_discovery_cancel (void *ctx, const devsdk_http_request
     else
     {
       resp = edgex_disc_delete_response_create (MHD_HTTP_OK, NULL, req_id);
+      err = false;
     }
   }
 
