@@ -19,6 +19,7 @@ typedef struct template_driver
 {
   iot_logger_t * lc;
   devsdk_service_t *svc;
+  bool disc_run;
 } template_driver;
 
 static void dump_protocols (iot_logger_t *lc, const devsdk_protocols *prots)
@@ -138,6 +139,17 @@ static void template_discover (void *impl, const char *request_id)
 
   devsdk_add_discovered_devices (driver->svc, 4, devs);
 
+  for (int i = 0; i < 10; i++)
+  {
+    if (!driver->disc_run)
+    {
+      iot_log_warn(driver->lc, "Discovery Delete request received");
+      break;
+    }
+    sleep (1);
+  }
+
+  driver->disc_run = true;
   iot_data_free (map1);
   iot_data_free (map2);
   iot_data_free (map3);
@@ -151,7 +163,20 @@ static void template_discover (void *impl, const char *request_id)
 static bool template_discovery_delete (void *impl, const char *request_id)
 {
   //Implement functionality to cancel a Discovery Request here
-  return true;
+  template_driver *driver = (template_driver *) impl;
+  driver->disc_run = false;
+
+  for (int i = 0; i < 10; i++)
+  {
+    if (driver->disc_run)
+    {
+      iot_log_warn(driver->lc, "Discovery Delete request successful");
+      return true;
+    }
+    sleep (1);
+  }
+
+  return false;
 }
 
 /* ---- Get ---- */
@@ -280,6 +305,7 @@ int main (int argc, char *argv[])
   template_driver * impl = malloc (sizeof (template_driver));
   memset (impl, 0, sizeof (template_driver));
 
+  impl->disc_run = true;
   devsdk_error e;
   e.code = 0;
 
