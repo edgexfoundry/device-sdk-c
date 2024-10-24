@@ -302,7 +302,7 @@ edgex_device *edgex_metadata_client_get_devices
   (
     url,
     URL_BUF_SIZE - 1,
-    "http://%s:%u/api/" EDGEX_API_VERSION "/device/service/name/%s",
+    "http://%s:%u/api/" EDGEX_API_VERSION "/device/service/name/%s?offset=0&limit=-1",
     endpoints->metadata.host,
     endpoints->metadata.port,
     ename
