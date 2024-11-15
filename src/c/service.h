@@ -82,6 +82,7 @@ struct devsdk_service_t
   auth_wrapper_t callback_watcher_name_wrapper;
   auth_wrapper_t device_name_wrapper;
   auth_wrapper_t discovery_wrapper;
+  auth_wrapper_t discovery_delete_wrapper;
   auth_wrapper_t metrics_wrapper;
   auth_wrapper_t config_wrapper;
   auth_wrapper_t secret_wrapper;
