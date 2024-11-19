@@ -28,6 +28,8 @@ typedef struct devsdk_registry_t devsdk_registry_t;
 
 devsdk_registry_t *devsdk_registry_get_consul (void);
 
+devsdk_registry_t *devsdk_registry_get_keeper (devsdk_service_t *service);
+
 bool devsdk_registry_init (devsdk_registry_t *registry, iot_logger_t *lc, iot_threadpool_t *thpool, edgex_secret_provider_t *sp, const char *url);
 
 bool devsdk_registry_waitfor (devsdk_registry_t *registry, const devsdk_timeout *deadline);
