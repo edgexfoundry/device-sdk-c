@@ -818,6 +818,9 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
     svc->discovery_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_discoveryv2};
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY, DevSDK_Post, &svc->discovery_wrapper, http_auth_wrapper);
 
+    svc->discovery_delete_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_discovery_delete};
+    edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_DISCOVERY_DELETE, DevSDK_Delete, &svc->discovery_delete_wrapper, http_auth_wrapper);
+
     svc->config_wrapper = (auth_wrapper_t){ svc, svc->secretstore, edgex_device_handler_configv2};
     edgex_rest_server_register_handler (svc->daemon, EDGEX_DEV_API3_CONFIG, DevSDK_Get, &svc->config_wrapper, http_auth_wrapper);
 
