@@ -73,6 +73,10 @@ static void edgex_bus_mqtt_subscribe (void *ctx, const char *topic)
   {
     iot_log_error (cinfo->lc, "mqtt: unable to subscribe to %s, error code %d", topic, rc);
   }
+  else
+  {
+    MQTTAsync_waitForCompletion(cinfo->client, opts.token, 1000);
+  }
 }
 
 static void edgex_bus_mqtt_post (void *ctx, const char *topic, const iot_data_t *envelope)
