@@ -75,7 +75,11 @@ static void edgex_bus_mqtt_subscribe (void *ctx, const char *topic)
   }
   else
   {
-    MQTTAsync_waitForCompletion(cinfo->client, opts.token, 1000);
+    rc = MQTTAsync_waitForCompletion(cinfo->client, opts.token, 1000);
+    if (rc != MQTTASYNC_SUCCESS)
+    {
+      iot_log_error(cinfo->lc, "mqtt: subscribe to %s failed, error code %d", topic, rc);
+    }
   }
 }
 
