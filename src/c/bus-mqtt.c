@@ -170,10 +170,23 @@ edgex_bus_t *edgex_bus_create_mqtt (iot_logger_t *lc, const char *svcname, const
   const char *certfile = iot_data_string_map_get_string (cfg, EX_BUS_CERTFILE);
   const char *keyfile = iot_data_string_map_get_string (cfg, EX_BUS_KEYFILE);
   uint16_t port = iot_data_ui16 (iot_data_string_map_get (cfg, EX_BUS_PORT));
-  if (*prot == '\0')
+  if (*prot == '\0' || strcmp (prot, "mqtt") == 0 || strcmp (prot, "tcp") == 0)
   {
     prot = "tcp";
   }
+  else if (strcmp (prot, "ssl") == 0 || strcmp (prot, "tls") == 0 ||
+           strcmp (prot, "mqtts") == 0 || strcmp (prot, "mqtt+ssl") == 0 ||
+           strcmp (prot, "tcps") == 0)
+  {
+    prot = "ssl";
+  }
+  else
+  {
+    iot_log_error (lc, "mqtt: unsupported protocol: %s", prot);
+    free (cinfo);
+    return NULL;
+  }
+
   if (port == 0)
   {
     if (strcmp (prot, "ssl") == 0)
