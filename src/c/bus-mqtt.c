@@ -174,9 +174,26 @@ edgex_bus_t *edgex_bus_create_mqtt (iot_logger_t *lc, const char *svcname, const
   {
     prot = "tcp";
   }
+  if (strcmp(prot, "mqtt") == 0 || strcmp(prot, "tcp") == 0)
+  {
+    prot = "tcp";
+  }
+  else if (strcmp(prot, "ssl") == 0 || strcmp(prot, "tls") == 0 ||
+           strcmp(prot, "mqtts") == 0 || strcmp(prot, "mqtt+ssl") == 0 ||
+           strcmp(prot, "tcps") == 0)
+  {
+    prot = "ssl";
+  }
+  else
+  {
+    iot_log_error(lc, "mqtt: unsupported protocol: %s", prot);
+    free (cinfo);
+    return NULL;
+  }
+
   if (port == 0)
   {
-    if (strcmp (prot, "ssl") == 0)
+    if (strcmp(prot, "ssl") == 0)
     {
       port = 8883;
     }
