@@ -585,10 +585,6 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
   {
     svc->msgbus = edgex_bus_create_mqtt (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline);
   }
-  else if (strcmp (bustype, "redis") == 0)
-  {
-    svc->msgbus = edgex_bus_create_redstr (svc->logger, svc->name, svc->config.sdkconf, svc->secretstore, svc->eventq, deadline, svc->secureMode);
-  }
   else
   {
     iot_log_error (svc->logger, "Unknown Message Bus type %s", bustype);
