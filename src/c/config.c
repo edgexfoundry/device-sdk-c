@@ -88,7 +88,7 @@ iot_data_t *edgex_common_config_defaults (const char *svcname)
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
 
-  iot_data_string_map_add (result, EX_BUS_TYPE, iot_data_alloc_string ("redis", IOT_DATA_REF));
+  iot_data_string_map_add (result, EX_BUS_TYPE, iot_data_alloc_string ("mqtt", IOT_DATA_REF));
   edgex_bus_config_defaults (result, svcname);
 
   iot_data_string_map_add (result, "SecretStore/Type", iot_data_alloc_string ("vault", IOT_DATA_REF));
