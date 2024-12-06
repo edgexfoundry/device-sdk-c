@@ -78,7 +78,7 @@ static void *ae_runner (void *p)
           {
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)
             {
-              iot_log_error (ai->svc->logger, "Auto Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
+              iot_log_error (ai->svc->logger, "Auto Event size (%zu KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
             }
             else
             {
@@ -116,8 +116,10 @@ static void *ae_runner (void *p)
     }
     if (exc)
     {
-      iot_log_error (ai->svc->logger, iot_data_to_json (exc));
+      char *errstr = iot_data_to_json (exc);
+      iot_log_error (ai->svc->logger, "%s", errstr);
       iot_data_free (exc);
+      free (errstr);
     }
     devsdk_commandresult_free (results, ai->resource->nreqs);
     edgex_device_free_crlid ();

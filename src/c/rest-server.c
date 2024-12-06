@@ -579,7 +579,7 @@ void edgex_error_response (iot_logger_t *lc, devsdk_http_reply *reply, int code,
   vsnprintf (buf, EDGEX_ERRBUFSZ, msg, args);
   va_end (args);
 
-  iot_log_error (lc, buf);
+  iot_log_error (lc, "%s", buf);
   edgex_errorresponse *err = edgex_errorresponse_create (code, buf);
   edgex_errorresponse_write (err, reply);
   edgex_errorresponse_free (err);
@@ -594,7 +594,7 @@ iot_data_t *edgex_v3_error_response (iot_logger_t *lc, char *msg, ...)
   vsnprintf (buf, EDGEX_ERRBUFSZ, msg, args);
   va_end (args);
 
-  iot_log_error (lc, buf);
+  iot_log_error (lc, "%s", buf);
   result = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (result, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (result, "message", iot_data_alloc_string (msg, IOT_DATA_TAKE));

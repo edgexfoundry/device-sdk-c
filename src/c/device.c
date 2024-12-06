@@ -647,17 +647,17 @@ static int32_t edgex_device_runput3
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on PUT: %s", dev->name, exstr);
-      if (e) free (exstr);
+      char *exstr = e ? iot_data_to_json (e) : NULL;
+      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on PUT: %s", dev->name, exstr ? exstr : "(unknown)");
+      free (exstr);
       result = MHD_HTTP_INTERNAL_SERVER_ERROR;
     }
   }
   else
   {
-    char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr);
-    if (e) free (exstr);
+    char *exstr = e ? iot_data_to_json (e) : NULL;
+    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr ? exstr : "(unknown)");
+    free (exstr);
     result = MHD_HTTP_INTERNAL_SERVER_ERROR;
   }
   iot_data_free (e);
@@ -716,17 +716,17 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on GET: ", dev->name, exstr);
-      if (e) free (exstr);
+      char *exstr = e ? iot_data_to_json (e) : NULL;
+      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on GET: %s", dev->name, exstr ? exstr : "(unknown)");
+      free (exstr);
     }
     atomic_fetch_add (&svc->metrics.rcexe, 1);
   }
   else
   {
-    char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr);
-    if (e) free (exstr);
+    char *exstr = e ? iot_data_to_json (e) : NULL;
+    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr ? exstr : "(unknown)");
+    free (exstr);
   }
   iot_data_free (e);
   devsdk_commandresult_free (results, cmdinfo->nreqs);
