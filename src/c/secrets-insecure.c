@@ -102,14 +102,6 @@ static void insecure_set (void *impl, const char *path, const iot_data_t *secret
   iot_log_error (insec->lc, "Storing secrets is not supported when running in insecure mode");
 }
 
-static void insecure_getregtoken (void *impl, edgex_ctx *ctx)
-{
-}
-
-static void insecure_releaseregtoken (void *impl)
-{
-}
-
 static iot_data_t * insecure_requestjwt (void *impl)
 {
   // "" will cause no Authorization header to be sent in rest.c
@@ -135,4 +127,4 @@ void *edgex_secrets_insecure_alloc ()
   return calloc (1, sizeof (insecure_impl_t));
 }
 
-const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_getregtoken, insecure_releaseregtoken, insecure_requestjwt, insecure_isjwtvalid, insecure_fini };
+const edgex_secret_impls edgex_secrets_insecure_fns = { insecure_init, insecure_reconfigure, insecure_get, insecure_set, insecure_requestjwt, insecure_isjwtvalid, insecure_fini };
