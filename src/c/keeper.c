@@ -9,7 +9,7 @@
 
 
 /* Our "impl" structure for global state. */
-typedef struct keeper_impl_t 
+typedef struct keeper_impl_t
 {
     devsdk_service_t *service;
     iot_threadpool_t *pool;
@@ -23,7 +23,6 @@ typedef struct keeper_impl_t
 } keeper_impl_t;
 
 static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply);
-#define CONF_PREFIX "edgex/v3/"
 
 void *devsdk_registry_keeper_alloc(devsdk_service_t *service)
 {
@@ -50,10 +49,7 @@ static void edgex_keeper_client_free (void *impl)
     {
         free(keeper->topic_root);
     }
-    if (impl)
-    {
-        free (impl);
-    }
+    free (impl);
   }
 }
 
@@ -131,7 +127,7 @@ static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_thre
 
     // iot_log_info(logger, "At key-root alloc, service->name %p", keeper->service->name);
     keeper->key_root = calloc(URL_BUF_SIZE, 1);
-    snprintf(keeper->key_root, URL_BUF_SIZE-1, "edgex/v3/%s", keeper->service->name);
+    snprintf(keeper->key_root, URL_BUF_SIZE-1, "edgex/v4/%s", keeper->service->name);
     keeper->key_root[URL_BUF_SIZE-1] = '\0';
     keeper->topic_root = calloc(URL_BUF_SIZE, 1);
     snprintf(keeper->topic_root, URL_BUF_SIZE-1, KEEPER_PUBLISH_PREFIX "%s", keeper->key_root);
@@ -229,11 +225,13 @@ static devsdk_nvpairs *edgex_keeper_get_tree(void *impl, const char *keyroot, de
                             else
                             {
                                 err_msg = "'key' or 'value' member not found in object";
+                                break;
                             }
                         }
                         else
                         {
                             err_msg = "An element of 'response' is not a JSON object";
+                            break;
                         }
                     } /* End loop over responses */
                 }
@@ -312,7 +310,7 @@ static devsdk_nvpairs *edgex_keeper_client_get_common_config
   {
     t1 = iot_time_msecs ();
     *err = EDGEX_OK;
-    ccReady = edgex_keeper_get_tree(impl, "edgex/v3/core-common-config-bootstrapper", err);
+    ccReady = edgex_keeper_get_tree(impl, "edgex/v4/core-common-config-bootstrapper", err);
     if (err->code == 0)
     {
       const char *isCommonConfigReady = devsdk_nvpairs_value(ccReady, "IsCommonConfigReady");
@@ -338,13 +336,12 @@ static devsdk_nvpairs *edgex_keeper_client_get_common_config
     devsdk_nvpairs_free (ccReady);
   }
 
-  result = edgex_keeper_get_tree(impl, "edgex/v3/core-common-config-bootstrapper/all-services", err);
+  result = edgex_keeper_get_tree(impl, "edgex/v4/core-common-config-bootstrapper/all-services", err);
   if (err->code)
   {
     devsdk_nvpairs_free (result);
     result = NULL;
   }
-  
   devsdk_nvpairs *originalResult = result;
   while (result)
   {
@@ -360,7 +357,7 @@ static devsdk_nvpairs *edgex_keeper_client_get_common_config
   result = originalResult;
 
   devsdk_nvpairs *privateConfig = NULL;
-  privateConfig = edgex_keeper_get_tree(impl, "edgex/v3/core-common-config-bootstrapper/device-services", err);
+  privateConfig = edgex_keeper_get_tree(impl, "edgex/v4/core-common-config-bootstrapper/device-services", err);
 
   devsdk_nvpairs *originalPrivateResult = privateConfig;
   while (privateConfig)
@@ -383,7 +380,6 @@ static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request,
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
   devsdk_nvpairs *result = NULL;
-  
   if ((!keeper) || (!request) || (iot_data_type(request) != IOT_DATA_MAP))
   {
     iot_log_warn(keeper->lc, "Received notification from Keeper but request is not a map, ignoring");
@@ -731,7 +727,7 @@ static void edgex_keeper_client_query_service
   if (err->code == 0)
   {
     JSON_Value *val = json_parse_string (ctx.buff);
-    if (val) 
+    if (val)
     {
         JSON_Object *obj = json_value_get_object(val);
         if (obj)
