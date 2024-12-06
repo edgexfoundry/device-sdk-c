@@ -18,11 +18,18 @@ typedef struct edgex_bus_endpoint_t
   iot_data_t *params;
   edgex_handler_fn handler;
   void *ctx;
+  size_t base_len;
+  bool ignore_tail;
 } edgex_bus_endpoint_t;
 
-static iot_data_t *edgex_bus_parse_tail (const char *tail)
+static iot_data_t *edgex_bus_parse_tail (const char *tail, const edgex_bus_endpoint_t *ep)
 {
-  iot_data_t *result = iot_data_alloc_list ();
+  iot_data_t *result = iot_data_alloc_list();
+  if (ep->ignore_tail)
+  {
+    return result;
+  }
+  tail += ep->base_len;
   while (*tail)
   {
     char *element;
@@ -42,7 +49,7 @@ static iot_data_t *edgex_bus_parse_tail (const char *tail)
   return result;
 }
 
-static edgex_handler_fn edgex_bus_match_handler (edgex_bus_t *bus, const char *path, iot_data_t *params, void **ctx)
+static edgex_handler_fn edgex_bus_match_handler(edgex_bus_t *bus, const char *path, iot_data_t *params, void **ctx)
 {
   edgex_handler_fn h = NULL;
   iot_data_list_iter_t iter;
@@ -51,9 +58,9 @@ static edgex_handler_fn edgex_bus_match_handler (edgex_bus_t *bus, const char *p
   while (iot_data_list_iter_next (&iter))
   {
     const edgex_bus_endpoint_t *ep = iot_data_address (iot_data_list_iter_value (&iter));
-    if (strncmp (path, ep->base, strlen (ep->base)) == 0)
+    if (strncmp (path, ep->base, ep->base_len) == 0)
     {
-      iot_data_t *tail = edgex_bus_parse_tail (path + strlen (ep->base));
+      iot_data_t *tail = edgex_bus_parse_tail (path, ep);
       if (iot_data_list_length (tail) == iot_data_list_length (ep->params))
       {
         iot_data_list_iter_t keys;
@@ -70,6 +77,7 @@ static edgex_handler_fn edgex_bus_match_handler (edgex_bus_t *bus, const char *p
         iot_data_free (tail);
         break;
       }
+      iot_data_free (tail);
     }
   }
   pthread_mutex_unlock (&bus->mtx);
@@ -227,12 +235,14 @@ void edgex_bus_register_handler (edgex_bus_t *bus, const char *path, void *ctx, 
 {
   char *sub;
   edgex_bus_endpoint_t *entry = malloc (sizeof (edgex_bus_endpoint_t));
+  entry->ignore_tail = false;
   entry->params = iot_data_alloc_list ();
   const char *param = strchr (path, '{');
   if (param)
   {
     size_t plen = param - path;
     entry->base = strndup (path, plen);
+    entry->base_len = plen;
     sub = strndup (path, plen + 1);
     sub[plen] = '#';
     while (param)
@@ -244,8 +254,15 @@ void edgex_bus_register_handler (edgex_bus_t *bus, const char *path, void *ctx, 
   }
   else
   {
+    size_t path_len = strlen (path);
+    if (path_len >= 2 && strcmp (path + path_len - 2, "/#") == 0)
+    {
+      path_len -= 2;
+      entry->ignore_tail = true;
+    }
     sub = strdup (path);
     entry->base = strdup (path);
+    entry->base_len = path_len;
   }
   entry->handler = handler;
   entry->ctx = ctx;
