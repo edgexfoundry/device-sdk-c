@@ -871,7 +871,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   if (svc->config.service.startupmsg)
   {
-    iot_log_info (svc->logger, svc->config.service.startupmsg);
+    iot_log_info (svc->logger, "%s", svc->config.service.startupmsg);
   }
 }
 
@@ -879,7 +879,8 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 {
   iot_data_t *config_file, *common_config_file = NULL;
   bool uploadConfig = false;
-  iot_data_t *common_config_map, *private_config_map, *configmap, *deviceservices_config;
+  iot_data_t *common_config_map, *private_config_map, *configmap;
+  const iot_data_t *deviceservices_config;
 
   if (svc->starttime)
   {
@@ -912,7 +913,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       iot_log_error (svc->logger, "Unable to load common config file: %s", err->reason);
       return;
     }
-    iot_data_t *allservices_config = iot_data_string_map_get_map(common_config_file, ALL_SVCS_NODE);
+    const iot_data_t *allservices_config = iot_data_string_map_get_map(common_config_file, ALL_SVCS_NODE);
     deviceservices_config = iot_data_string_map_get_map(common_config_file, DEV_SVCS_NODE);
     if (allservices_config)
     {
@@ -1092,7 +1093,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   if (err->code == 0)
   {
-    iot_log_info (svc->logger, "Service started in: %dms", iot_time_msecs() - svc->starttime);
+    iot_log_info (svc->logger, "Service started in: %" PRIu64 "ms", iot_time_msecs() - svc->starttime);
     iot_log_info (svc->logger, "Listening on port: %d", svc->config.service.port);
   }
 }
@@ -1155,7 +1156,7 @@ void devsdk_post_readings
       edgex_device_alloc_crlid (NULL);
       if (svc->config.device.maxeventsize && edgex_event_cooked_size (event) > svc->config.device.maxeventsize * 1024)
       {
-        iot_log_error (svc->logger, "Post readings: Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
+        iot_log_error (svc->logger, "Post readings: Event size (%zu KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
       }
       else
       {

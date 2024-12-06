@@ -370,7 +370,7 @@ void devsdk_free_devices (devsdk_service_t *svc, devsdk_devices *d);
  * @param err Nonzero reason codes will be set here in the event of errors.
  */
 
-void devsdk_set_device_opstate (devsdk_service_t *svc, char *devname, bool operational, devsdk_error *err);
+void devsdk_set_device_opstate (devsdk_service_t *svc, const char *devname, bool operational, devsdk_error *err);
 
 
 /**

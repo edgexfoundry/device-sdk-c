@@ -19,7 +19,7 @@
 typedef struct bitfield_driver
 {
   iot_logger_t * lc;
-  atomic_uint_fast32_t data;
+  _Atomic(uint32_t) data;
 } bitfield_driver;
 
 static bool bitfield_init
@@ -78,8 +78,8 @@ static bool bitfield_put_handler
     if (requests[i].mask)
     {
       // driver->data = (driver->data & requests[i].mask) | iot_data_ui32 (values[i]);  but do so atomically
-      uint_fast32_t d;
-      uint_fast32_t result;
+      uint32_t d;
+      uint32_t result;
       do
       {
         d = driver->data;

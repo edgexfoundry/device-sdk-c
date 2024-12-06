@@ -87,6 +87,8 @@ iot_data_t *edgex_common_config_defaults (const char *svcname)
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
+  iot_data_string_map_add (result, "Device/AllowedFails", iot_data_alloc_i32 (0));
+  iot_data_string_map_add (result, "Device/DeviceDownTimeout", iot_data_alloc_ui64 (0));
 
   iot_data_string_map_add (result, EX_BUS_TYPE, iot_data_alloc_string ("mqtt", IOT_DATA_REF));
   edgex_bus_config_defaults (result, svcname);
@@ -508,6 +510,8 @@ static void edgex_device_populateCommonConfigFromMap (edgex_device_config *confi
   config->device.maxeventsize = iot_data_ui32 (iot_data_string_map_get (map, "MaxEventSize"));
   config->device.profilesdir = iot_data_string_map_get_string (map, "Device/ProfilesDir");
   config->device.devicesdir = iot_data_string_map_get_string (map, "Device/DevicesDir");
+  config->device.allowed_fails = iot_data_ui32 (iot_data_string_map_get (map, "Device/AllowedFails"));
+  config->device.dev_downtime = iot_data_ui64 (iot_data_string_map_get (map, "Device/DeviceDownTimeout"));
 
   config->metrics.interval = iot_data_string_map_get_string (map, DYN_PREFIX "Telemetry/Interval");
   config->metrics.flags = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/EventsSent")) ? EX_METRIC_EVSENT : 0;
@@ -735,6 +739,8 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
+  json_object_set_uint (dobj, "AllowedFails", svc->config.device.allowed_fails);
+  json_object_set_uint (dobj, "DeviceDownTimeout", svc->config.device.dev_downtime);
 
   JSON_Value *lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);
