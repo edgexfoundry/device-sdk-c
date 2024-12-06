@@ -61,6 +61,8 @@ typedef struct edgex_device_deviceinfo
   const char *devicesdir;
   atomic_bool updatelastconnected;
   uint32_t eventqlen;
+  uint32_t allowed_fails;
+  uint64_t dev_downtime;
 } edgex_device_deviceinfo;
 
 typedef struct edgex_device_watcherinfo
