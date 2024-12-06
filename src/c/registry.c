@@ -8,6 +8,7 @@
 
 #include "registry-impl.h"
 #include "consul.h"
+#include "keeper.h"
 #include "errorlist.h"
 #include "iot/time.h"
 
@@ -22,6 +23,14 @@ devsdk_registry_t *devsdk_registry_get_consul ()
   devsdk_registry_t *result = malloc (sizeof (devsdk_registry_t));
   result->state = devsdk_registry_consul_alloc ();
   result->fns = devsdk_registry_consul_fns;
+  return result;
+}
+
+devsdk_registry_t *devsdk_registry_get_keeper (devsdk_service_t *service)
+{
+  devsdk_registry_t *result = malloc (sizeof (devsdk_registry_t));
+  result->state = devsdk_registry_keeper_alloc (service);
+  result->fns = devsdk_registry_keeper_fns;
   return result;
 }
 

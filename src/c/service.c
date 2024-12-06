@@ -972,6 +972,14 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
         {
           svc->registry = devsdk_registry_get_consul ();
         }
+        else if (len == strlen ("keeper") && strncmp (svc->regURL, "keeper", len) == 0)
+        {
+          svc->registry = devsdk_registry_get_keeper( svc );
+        }
+        else if (len == strlen ("keeper.http") && strncmp (svc->regURL, "keeper.http", len) == 0)
+        {
+          svc->registry = devsdk_registry_get_keeper( svc );
+        }
       }
     }
     if (svc->registry == NULL)
