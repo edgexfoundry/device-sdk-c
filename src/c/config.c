@@ -41,7 +41,7 @@
 #include <iot/time.h>
 
 #define ERRBUFSZ 1024
-#define DEFAULTREG "consul.http://localhost:8500"
+#define DEFAULTREG "keeper.http://localhost:59890"
 #define DEFAULTSECPATH "%s/"
 #define DEFAULTSECCAFILE "/tmp/edgex/secrets/%s/secrets-token.json"
 #define DEFAULTMETRICSTOPIC "edgex/telemetry"

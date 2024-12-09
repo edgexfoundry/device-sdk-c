@@ -4,7 +4,7 @@ Certain aspects of a device service's operation are controlled by command-line o
 
 ## Registry
 
-If configuration is to be obtained from the Registry, its location may be specified as a URL. The `scheme` part of the URL indicates the registry implementation to use. Currently the only supported implentation in the SDK is `consul.http`, where the URL takes the form `consul.http://hostname:port`.
+If configuration is to be obtained from the Registry, its location may be specified as a URL. The `scheme` part of the URL indicates the registry implementation to use. Currently the only supported implentation in the SDK is `keeper.http`, where the URL takes the form `keeper.http://hostname:port`.
 
 |Long option | Short option|Environment ||
 |-|-|-|-|
@@ -20,7 +20,7 @@ Typically a device service will have a default service name, eg device-modbus or
 
 ## Profile
 
-A service has a default configuration profile, but other profiles may be selected using this option. In file-based configuration, additional profiles may be defined in files named `configuration-<profilename>.toml`. In Consul, they are stored in KV-store folders named `<servicename>;<profilename>`.
+A service has a default configuration profile, but other profiles may be selected using this option. In file-based configuration, additional profiles may be defined in files named `configuration-<profilename>.yaml`. In Core Keeper, they are stored in KV-store named `edgex/v4/<servicename>`.
 
 |Long option | Short option|Environment ||
 |-|-|-|-|

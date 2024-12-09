@@ -26,7 +26,6 @@ typedef struct vault_impl_t
   char *jwtissueurl;
   char *jwtvalidateurl;
   char *capath;
-  devsdk_nvpairs *regtoken;
   bool bearer;
   devsdk_metrics_t *metrics;
   pthread_mutex_t mtx;
@@ -107,8 +106,6 @@ static void *vault_perform_renewal (void *v)
 
   pthread_mutex_lock (&vault->mtx);
   edgex_http_put (vault->lc, &ctx, vault->tokrenewurl, "", edgex_http_write_cb, &err);
-  devsdk_nvpairs_free (vault->regtoken);
-  vault->regtoken = NULL;
   pthread_mutex_unlock (&vault->mtx);
 
   if (err.code == 0)
@@ -183,8 +180,6 @@ static bool vault_init
   const char *path = iot_data_string_map_get_string (config, "SecretStore/Path");
   vault->baseurl = malloc (URL_BUF_SIZE);
   snprintf (vault->baseurl, URL_BUF_SIZE, "%s/v1/secret/edgex%s%s%s", host, path[0] == '/' ? "" : "/", path, path[strlen (path) - 1] == '/' ? "" : "/");
-  vault->regurl = malloc (URL_BUF_SIZE);
-  snprintf (vault->regurl, URL_BUF_SIZE, "%s/v1/consul/creds/%s", host, svcname);
   vault->tokinfourl = malloc (URL_BUF_SIZE);
   snprintf (vault->tokinfourl, URL_BUF_SIZE, "%s/v1/auth/token/lookup-self", host);
   vault->tokrenewurl = malloc (URL_BUF_SIZE);
@@ -291,45 +286,6 @@ static void vault_set (void *impl, const char *path, const iot_data_t *secrets)
   vault_freectx (&ctx);
 }
 
-static void vault_fetchregtoken (vault_impl_t *vault)
-{
-  iot_data_t *reply = vault_rest_get (vault, vault->regurl);
-  if (reply)
-  {
-    const iot_data_t *d = iot_data_string_map_get (reply, "data");
-    if (d)
-    {
-      const iot_data_t *t = iot_data_string_map_get (d, "token");
-      if (t)
-      {
-        vault->regtoken = devsdk_nvpairs_new ("X-Consul-Token", iot_data_string (t), NULL);
-      }
-    }
-    iot_data_free (reply);
-  }
-  if (vault->regtoken == NULL)
-  {
-    iot_log_error (vault->lc, "vault: no consul token found");
-  }
-}
-
-static void vault_getregtoken (void *impl, edgex_ctx *ctx)
-{
-  vault_impl_t *vault = (vault_impl_t *)impl;
-  pthread_mutex_lock (&vault->mtx);
-  if (!vault->regtoken)
-  {
-    vault_fetchregtoken (vault);
-  }
-  ctx->reqhdrs = vault->regtoken;
-}
-
-static void vault_releaseregtoken (void *impl)
-{
-  vault_impl_t *vault = (vault_impl_t *)impl;
-  pthread_mutex_unlock (&vault->mtx);
-}
-
 static iot_data_t * vault_requestjwt (void *impl)
 {
   iot_data_t *result = NULL;
@@ -391,7 +347,6 @@ static void vault_fini (void *impl)
   free (vault->tokrenewurl);
   free (vault->token);
   free (vault->capath);
-  devsdk_nvpairs_free (vault->regtoken);
   free (impl);
 }
 
@@ -402,4 +357,4 @@ void *edgex_secrets_vault_alloc ()
   return vault;
 }
 
-const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_getregtoken, vault_releaseregtoken, vault_requestjwt, vault_isjwtvalid, vault_fini };
+const edgex_secret_impls edgex_secrets_vault_fns = { vault_init, vault_reconfigure, vault_get, vault_set, vault_requestjwt, vault_isjwtvalid, vault_fini };
