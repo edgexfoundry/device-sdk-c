@@ -135,6 +135,7 @@ typedef struct edgex_device
   edgex_deviceprofile *profile;
   struct edgex_device *next;
   atomic_uint_fast32_t refs;
+  atomic_int_fast32_t retries;
   bool ownprofile;
 } edgex_device;
 

@@ -88,7 +88,7 @@ void edgex_metadata_client_set_device_opstate
   memset (&ctx, 0, sizeof (edgex_ctx));
   char *json = edgex_updateDevOpreq_write (devicename, opstate);
 
-  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION" /device", endpoints->metadata.host, endpoints->metadata.port);
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/device", endpoints->metadata.host, endpoints->metadata.port);
 
   iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);  
   ctx.jwt_token = iot_data_string(jwt_data);

@@ -20,6 +20,7 @@
 #include "transform.h"
 #include "reqdata.h"
 #include "request_auth.h"
+#include "opstate.h"
 
 #include <inttypes.h>
 #include <string.h>
@@ -644,20 +645,22 @@ static int32_t edgex_device_runput3
         devsdk_error err;
         edgex_metadata_client_update_lastconnected (svc->logger, &svc->config.endpoints, svc->secretstore, dev->name, &err);
       }
+      devsdk_device_request_succeeded (svc, dev);
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on PUT: %s", dev->name, exstr);
-      if (e) free (exstr);
+      char *exstr = e ? iot_data_to_json (e) : NULL;
+      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on PUT: %s", dev->name, exstr ? exstr : "(unknown)");
+      free (exstr);
       result = MHD_HTTP_INTERNAL_SERVER_ERROR;
+      devsdk_device_request_failed (svc, dev);
     }
   }
   else
   {
-    char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr);
-    if (e) free (exstr);
+    char *exstr = e ? iot_data_to_json (e) : NULL;
+    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr ? exstr : "(unknown)");
+    free (exstr);
     result = MHD_HTTP_INTERNAL_SERVER_ERROR;
   }
   iot_data_free (e);
@@ -707,6 +710,7 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
           edgex_event_cooked_free (result);
           result = NULL;
         }
+        devsdk_device_request_succeeded (svc, dev);
       }
       else
       {
@@ -716,17 +720,18 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on GET: ", dev->name, exstr);
-      if (e) free (exstr);
+      char *exstr = e ? iot_data_to_json (e) : NULL;
+      *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on GET: %s", dev->name, exstr ? exstr : "(unknown)");
+      free (exstr);
+      devsdk_device_request_failed (svc, dev);
     }
     atomic_fetch_add (&svc->metrics.rcexe, 1);
   }
   else
   {
-    char *exstr = e ? iot_data_to_json (e) : "(unknown)";
-    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr);
-    if (e) free (exstr);
+    char *exstr = e ? iot_data_to_json (e) : NULL;
+    *reply = edgex_v3_error_response (svc->logger, "Address parsing failed for device %s: %s", dev->name, exstr ? exstr : "(unknown)");
+    free (exstr);
   }
   iot_data_free (e);
   devsdk_commandresult_free (results, cmdinfo->nreqs);

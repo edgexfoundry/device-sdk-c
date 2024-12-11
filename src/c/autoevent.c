@@ -16,6 +16,7 @@
 #include "correlation.h"
 #include "metadata.h"
 #include "data.h"
+#include "opstate.h"
 
 #include <microhttpd.h>
 
@@ -78,7 +79,7 @@ static void *ae_runner (void *p)
           {
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)
             {
-              iot_log_error (ai->svc->logger, "Auto Event size (%d KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
+              iot_log_error (ai->svc->logger, "Auto Event size (%zu KiB) exceeds configured MaxEventSize", edgex_event_cooked_size (event) / 1024);
             }
             else
             {
@@ -95,6 +96,7 @@ static void *ae_runner (void *p)
             {
               edgex_metadata_client_update_lastconnected (ai->svc->logger, &ai->svc->config.endpoints, ai->svc->secretstore, dev->name, &err);
             }
+            devsdk_device_request_succeeded (ai->svc, dev);
           }
           else
           {
@@ -103,11 +105,16 @@ static void *ae_runner (void *p)
               (ai->svc->logger, &ai->svc->config.endpoints, ai->svc->secretstore, dev->name, DOWN, &err);
           }
         }
+        else
+        {
+          devsdk_device_request_succeeded (ai->svc, dev);
+        }
         devsdk_commandresult_free (resdup, ai->resource->nreqs);
       }
       else
       {
         iot_log_error (ai->svc->logger, "AutoEvent: Driver for %s failed on GET", dev->name);
+        devsdk_device_request_failed (ai->svc, dev);
       }
     }
     else
@@ -116,8 +123,10 @@ static void *ae_runner (void *p)
     }
     if (exc)
     {
-      iot_log_error (ai->svc->logger, iot_data_to_json (exc));
+      char *errstr = iot_data_to_json (exc);
+      iot_log_error (ai->svc->logger, "%s", errstr);
       iot_data_free (exc);
+      free (errstr);
     }
     devsdk_commandresult_free (results, ai->resource->nreqs);
     edgex_device_free_crlid ();

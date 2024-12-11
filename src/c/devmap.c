@@ -83,10 +83,11 @@ void edgex_devmap_free (edgex_devmap_t *map)
   free (map);
 }
 
-static void add_locked (edgex_devmap_t *map, const edgex_device *newdev)
+static void add_locked (edgex_devmap_t *map, const edgex_device *newdev, int32_t retries)
 {
   edgex_device *dup = edgex_device_dup (newdev);
   atomic_store (&dup->refs, 1);
+  atomic_store (&dup->retries, retries);
   dup->ownprofile = false;
   edgex_deviceprofile **pp = edgex_map_get (&map->profiles, dup->profile->name);
   if (pp)
@@ -110,7 +111,7 @@ void edgex_devmap_populate_devices
   {
     if (edgex_map_get (&map->devices, d->name) == NULL)
     {
-      add_locked (map, d);
+      add_locked (map, d, map->svc->config.device.allowed_fails);
     }
   }
   pthread_rwlock_unlock (&map->lock);
@@ -252,7 +253,7 @@ edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const e
   od = edgex_map_get (&map->devices, dev->name);
   if (od == NULL)
   {
-    add_locked (map, dev);
+    add_locked (map, dev, map->svc->config.device.allowed_fails);
     result = CREATED;
   }
   else
@@ -261,7 +262,7 @@ edgex_devmap_outcome_t edgex_devmap_replace_device (edgex_devmap_t *map, const e
     if (!update_in_place (olddev, dev, &result))
     {
       remove_locked (map, olddev);
-      add_locked (map, dev);
+      add_locked (map, dev, olddev->retries);
       release = true;
       if (strcmp (olddev->profile->name, dev->profile->name))
       {
