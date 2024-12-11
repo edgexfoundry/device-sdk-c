@@ -258,6 +258,7 @@ static devsdk_nvpairs *edgex_keeper_get_tree(void *impl, const char *keyroot, de
     if (err_msg)
     {
         iot_log_error(keeper->lc, "Error processing response(%s): %s", ctx.buff ? ctx.buff : "(null)", err_msg);
+        *err = EDGEX_REGISTRY_RESPONSE;
     }
   }
   else
