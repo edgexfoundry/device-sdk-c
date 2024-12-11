@@ -26,8 +26,6 @@ typedef void (*devsdk_registry_updatefn) (void *updatectx, const devsdk_nvpairs 
 
 typedef struct devsdk_registry_t devsdk_registry_t;
 
-devsdk_registry_t *devsdk_registry_get_consul (void);
-
 devsdk_registry_t *devsdk_registry_get_keeper (devsdk_service_t *service);
 
 bool devsdk_registry_init (devsdk_registry_t *registry, iot_logger_t *lc, iot_threadpool_t *thpool, edgex_secret_provider_t *sp, const char *url);

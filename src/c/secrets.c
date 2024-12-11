@@ -57,16 +57,6 @@ static void edgex_secrets_set (edgex_secret_provider_t *sp, const char *path, co
   sp->fns.set (sp->impl, path, secrets);
 }
 
-void edgex_secrets_getregtoken (edgex_secret_provider_t *sp, edgex_ctx *ctx)
-{
-  return sp->fns.getregtoken (sp->impl, ctx);
-}
-
-void edgex_secrets_releaseregtoken (edgex_secret_provider_t *sp)
-{
-  return sp->fns.releaseregtoken (sp->impl);
-}
-
 iot_data_t *edgex_secrets_request_jwt (edgex_secret_provider_t *sp)
 {
   return sp->fns.requestjwt (sp->impl);

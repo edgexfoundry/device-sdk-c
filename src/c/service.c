@@ -45,7 +45,7 @@
 void devsdk_usage ()
 {
   printf ("  -cp, --configProvider=<url>\tIndicates to use Configuration Provider service at specified URL.\n"
-          "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: consul.http://localhost:8500\n");
+          "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: keeper.http://localhost:59890\n");
   printf ("  -cc, --commonConfig        \tTakes the location where the common configuration is loaded from when not using the Configuration Provider\n");
   printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
           "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
@@ -965,15 +965,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
       if (delim)
       {
         int len = delim - svc->regURL;
-        if (len == strlen ("consul") && strncmp (svc->regURL, "consul", len) == 0)
-        {
-          svc->registry = devsdk_registry_get_consul ();
-        }
-        else if (len == strlen ("consul.http") && strncmp (svc->regURL, "consul.http", len) == 0)
-        {
-          svc->registry = devsdk_registry_get_consul ();
-        }
-        else if (len == strlen ("keeper") && strncmp (svc->regURL, "keeper", len) == 0)
+        if (len == strlen ("keeper") && strncmp (svc->regURL, "keeper", len) == 0)
         {
           svc->registry = devsdk_registry_get_keeper( svc );
         }

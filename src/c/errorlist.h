@@ -24,7 +24,7 @@
 #define EDGEX_REMOTE_SERVER_DOWN (devsdk_error){ .code = 15, .reason = "Remote server unresponsive" }
 #define EDGEX_PROFILE_PARSE_ERROR (devsdk_error){ .code = 16, .reason = "Error while parsing device profile" }
 #define EDGEX_HTTP_CONFLICT (devsdk_error){ .code = 17, .reason = "HTTP 409 Conflict" }
-#define EDGEX_CONSUL_RESPONSE (devsdk_error){ .code = 18, .reason = "Unable to process response from consul" }
+#define EDGEX_REGISTRY_RESPONSE (devsdk_error){ .code = 18, .reason = "Unable to process response from registry provider" }
 #define EDGEX_PROFILES_DIRECTORY (devsdk_error){ .code = 19, .reason = "Problem scanning profiles directory" }
 #define EDGEX_ASSERT_FAIL (devsdk_error){ .code = 20, .reason = "A reading did not match a specified assertion string" }
 #define EDGEX_HTTP_ERROR (devsdk_error){ .code = 21, .reason = "HTTP request failed" }

@@ -23,8 +23,6 @@ bool edgex_secrets_init
   (edgex_secret_provider_t *sp, iot_logger_t *lc, iot_scheduler_t *sched, iot_threadpool_t *pool, const char *svcname, iot_data_t *config, devsdk_metrics_t *m);
 void edgex_secrets_reconfigure (edgex_secret_provider_t *sp, iot_data_t *config);
 iot_data_t *edgex_secrets_get (edgex_secret_provider_t *sp, const char *path);
-void edgex_secrets_getregtoken (edgex_secret_provider_t *sp, edgex_ctx *ctx);
-void edgex_secrets_releaseregtoken (edgex_secret_provider_t *sp);
 iot_data_t *edgex_secrets_request_jwt (edgex_secret_provider_t *sp);
 bool edgex_secrets_is_jwt_valid (edgex_secret_provider_t *sp, const char *jwt);
 void edgex_secrets_fini (edgex_secret_provider_t *sp);

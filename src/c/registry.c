@@ -7,7 +7,6 @@
  */
 
 #include "registry-impl.h"
-#include "consul.h"
 #include "keeper.h"
 #include "errorlist.h"
 #include "iot/time.h"
@@ -17,14 +16,6 @@ typedef struct devsdk_registry_t
   void *state;
   devsdk_registry_impls fns;
 } devsdk_registry_t;
-
-devsdk_registry_t *devsdk_registry_get_consul ()
-{
-  devsdk_registry_t *result = malloc (sizeof (devsdk_registry_t));
-  result->state = devsdk_registry_consul_alloc ();
-  result->fns = devsdk_registry_consul_fns;
-  return result;
-}
 
 devsdk_registry_t *devsdk_registry_get_keeper (devsdk_service_t *service)
 {
