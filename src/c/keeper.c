@@ -173,7 +173,15 @@ static devsdk_nvpairs *edgex_keeper_get_tree(void *impl, const char *keyroot, de
   memset (&ctx, 0, sizeof (edgex_ctx));
   snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/v3/kvs/key/%s?plaintext=true&keyOnly=false", keeper->host, keeper->port, keyroot);
   url[URL_BUF_SIZE-1] = '\0';
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (keeper->service->secretstore);
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_get (keeper->lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   if (err->code == 0)
   {
     // Unlike the event, this will give us a list of single keys and their values.
@@ -535,7 +543,15 @@ static void edgex_keeper_client_write_config (void *impl, const char *servicenam
   iot_log_trace(keeper->lc, "PUT '%s' to Keeper at key %s", put_request_string, keeper->key_root);
   memset (&ctx, 0, sizeof (edgex_ctx));
   devsdk_error e;
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (keeper->service->secretstore);
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_put (keeper->lc, &ctx, url, put_request_string, edgex_http_write_cb, &e);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
   json_free_serialized_string (put_request_string);
   free (ctx.buff);
   if (err && (e.code != 0))
@@ -559,7 +575,15 @@ static void edgex_keeper_client_write_config (void *impl, const char *servicenam
       req[val_size] = '\0';
       memset (&ctx, 0, sizeof (edgex_ctx));
       devsdk_error e;
+
+      iot_data_t *jwt_data = edgex_secrets_request_jwt (keeper->service->secretstore);
+      ctx.jwt_token = iot_data_string(jwt_data);
+
       edgex_http_put (keeper->lc, &ctx, post_url, req, edgex_http_write_cb, &e);
+
+      iot_data_free(jwt_data);
+      ctx.jwt_token = NULL;
+
       free(post_url);
       free(req);
       free (ctx.buff);
@@ -594,6 +618,12 @@ static void edgex_keeper_client_register_service
 
   memset (&postput_ctx, 0, sizeof (edgex_ctx));
   memset (&get_ctx, 0, sizeof (edgex_ctx));
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (keeper->service->secretstore);
+  const char *jwt_str = iot_data_string(jwt_data);
+  postput_ctx.jwt_token = jwt_str;
+  get_ctx.jwt_token = jwt_str;
+
   snprintf
   (
     post_url, URL_BUF_SIZE - 1, "http://%s:%u/api/v3/registry",
@@ -654,6 +684,11 @@ static void edgex_keeper_client_register_service
   {
     iot_log_info(keeper->lc, "Registered service %s at %s:%u to Keeper with check interval %s", servicename, host, port, checkInterval);
   }
+
+  iot_data_free(jwt_data);
+  get_ctx.jwt_token = NULL;
+  postput_ctx.jwt_token = NULL;
+
   json_free_serialized_string (json);
   free (get_ctx.buff);
   free (postput_ctx.buff);
@@ -677,7 +712,14 @@ static void edgex_keeper_client_deregister_service
     keeper->host, keeper->port, servicename
   );
   url[URL_BUF_SIZE-1] = '\0';
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (keeper->service->secretstore);
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   edgex_http_delete (keeper->lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   if (err->code)
   {
@@ -722,7 +764,13 @@ static void edgex_keeper_client_query_service
   url[URL_BUF_SIZE-1] = '\0';
   *err = EDGEX_OK;
 
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (keeper->service->secretstore);
+  ctx.jwt_token = iot_data_string(jwt_data);
+
   long http_code = edgex_http_get (keeper->lc, &ctx, url, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
 
   if (err->code == 0)
   {
