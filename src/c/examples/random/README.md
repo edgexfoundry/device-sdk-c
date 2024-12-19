@@ -23,14 +23,14 @@ A device profile for the simulated device is provided in the `res` directory. Th
 
 ### Provisioning
 
-The supplied configuration file `res/configuration.toml` includes definitions for a single "random" device, and two AutoEvents which causes readings to be generated at intervals. On first run of the device service, this device will be created in metadata. The example emulates only a single device.
+The supplied configuration file `res/configuration.yaml` includes definitions for a single "random" device, and two AutoEvents which causes readings to be generated at intervals. On first run of the device service, this device will be created in metadata. The example emulates only a single device.
 
 ### Running the service
 
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-random
+./device-random -cp=keeper.http://localhost:59890
 ```
 
 Once the service is running it will begin to send one sequence of Events every ten seconds, and another every fifteen. To obtain a reading manually,
