@@ -39,14 +39,14 @@ An example device profile for the simulated device is provided in the `res` dire
 
 ### Provisioning
 
-The supplied configuration file `res/configuration.toml` includes definitions for a single device, including an AutoEvent which causes readings to be generated at ten-second intervals. On first run of the device service, this device will be created in metadata.
+The supplied configuration file `res/configuration.yaml` includes definitions for a single device, including an AutoEvent which causes readings to be generated at ten-second intervals. On first run of the device service, this device will be created in metadata.
 
 ### Running the service
 
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./template -c res
+./template -cp=keeper.http://localhost:59890
 ```
 
 Once the service is running it will begin to send a sequence of Events every ten seconds. It will also respond to the REST API for device services. To obtain a reading manually,
