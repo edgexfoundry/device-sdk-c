@@ -192,14 +192,6 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       svc->regURL = "";
     }
   }
-  else
-  {
-    if (svc->regURL)
-    {
-      iot_log_warn (svc->logger, "Configuration provider was specified but registry not enabled");
-      svc->regURL = NULL;
-    }
-  }
   return result;
 }
 
