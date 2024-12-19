@@ -1,3 +1,6 @@
+#define _COMMON_CONFIG_KEY_ROOT "edgex/v4/core-common-config-bootstrapper/"
+#define _COMMON_CONFIG_TOPIC_ROOT KEEPER_PUBLISH_PREFIX "edgex/v4/core-common-config-bootstrapper/"
+
 #include "keeper.h"
 #include "service.h"
 #include "errorlist.h"
@@ -18,8 +21,6 @@ typedef struct keeper_impl_t
     uint16_t port;
     char *key_root;
     char *topic_root;
-    char *common_config_key_root;
-    char *common_config_topic_root;
     devsdk_registry_updatefn private_config_updater;
     devsdk_registry_updatefn common_config_updater;
     void *updatectx;
@@ -40,26 +41,9 @@ static void edgex_keeper_client_free (void *impl)
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
   if (keeper)
   {
-    if (keeper->host)
-    {
-        free (keeper->host);
-    }
-    if (keeper->key_root)
-    {
-        free(keeper->key_root);
-    }
-    if (keeper->topic_root)
-    {
-        free (keeper->topic_root);
-    }
-    if (keeper->common_config_key_root)
-    {
-        free (keeper->common_config_key_root);
-    }
-    if (keeper->common_config_topic_root)
-    {
-        free (keeper->common_config_topic_root);
-    }
+    free (keeper->host);
+    free (keeper->key_root);
+    free (keeper->topic_root);
     free (impl);
   }
 }
@@ -73,26 +57,18 @@ static void *delayed_message_bus_connect(void *impl)
   {
     if (keeper->service && keeper->service->msgbus)
     {
-      char *all_svcs_topic = malloc (strlen (keeper->common_config_topic_root) + strlen (ALL_SVCS_NODE) + 1);
-      char *dev_svcs_topic = malloc (strlen (keeper->common_config_topic_root) + strlen (DEV_SVCS_NODE) + 1);
-      sprintf (all_svcs_topic, "%s%s", keeper->common_config_topic_root, ALL_SVCS_NODE);
-      sprintf (dev_svcs_topic, "%s%s", keeper->common_config_topic_root, DEV_SVCS_NODE);
-      const char *topics[] = { keeper->topic_root, all_svcs_topic, dev_svcs_topic };
-      for (int i = 0; i < 3; i++)
+      char *tree = malloc (strlen (keeper->topic_root) + 3);
+      strcpy (tree, keeper->topic_root);
+      if (tree [strlen (tree) - 1] == '/')
       {
-        char *tree = malloc (strlen (topics[i]) + 3);
-        strcpy (tree, topics[i]);
-        if (tree [strlen (tree) - 1] == '/')
-        {
-          tree [strlen (tree) - 1] = '\0';
-        }
-        strcat (tree, "/#");
-        iot_log_info (keeper->lc, "Subscribing to Keeper notifications on message bus at %s", tree);
-        edgex_bus_register_handler (keeper->service->msgbus, tree, impl, edgex_keeper_client_notify);
-        free(tree);
+        tree [strlen (tree) - 1] = '\0';
       }
-      free (all_svcs_topic);
-      free (dev_svcs_topic);
+      strcat (tree, "/#");
+      iot_log_info (keeper->lc, "Subscribing to Keeper notifications on message bus at %s", tree);
+      edgex_bus_register_handler (keeper->service->msgbus, tree, impl, edgex_keeper_client_notify);
+      edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT ALL_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
+      edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT DEV_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
+      free(tree);
       break;
     }
     if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
@@ -152,12 +128,6 @@ static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_thre
     keeper->topic_root = calloc(URL_BUF_SIZE, 1);
     snprintf(keeper->topic_root, URL_BUF_SIZE-1, KEEPER_PUBLISH_PREFIX "%s", keeper->key_root);
     keeper->topic_root[URL_BUF_SIZE-1] = '\0';
-    keeper->common_config_key_root = calloc(URL_BUF_SIZE, 1);
-    snprintf(keeper->common_config_key_root, URL_BUF_SIZE-1, "edgex/v4/core-common-config-bootstrapper/");
-    keeper->common_config_key_root[URL_BUF_SIZE-1] = '\0';
-    keeper->common_config_topic_root = calloc(URL_BUF_SIZE, 1);
-    snprintf(keeper->common_config_topic_root, URL_BUF_SIZE-1, KEEPER_PUBLISH_PREFIX "edgex/v4/core-common-config-bootstrapper/");
-    keeper->common_config_topic_root[URL_BUF_SIZE-1] = '\0';
 
     // Can't yet subscribe to the message bus because it's not set up yet, because we
     // don't have its config yet, because we might be reading config from Keeper.
@@ -466,14 +436,14 @@ static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request,
   {
     process_notification (keeper, request, key, keeper->key_root, keeper->private_config_updater);
   }
-  else if (strstr (key, keeper->common_config_key_root) == key)
+  else if (strstr (key, _COMMON_CONFIG_KEY_ROOT) == key)
   {
-    process_notification (keeper, request, key, keeper->common_config_key_root, keeper->common_config_updater);
+    process_notification (keeper, request, key, _COMMON_CONFIG_KEY_ROOT, keeper->common_config_updater);
   }
   else
   {
     iot_log_warn (keeper->lc, "Received key %s does not begin with our prefix %s or common config prefix %s, ignoring",
-                  key, keeper->key_root, keeper->common_config_key_root);
+                  key, keeper->key_root, _COMMON_CONFIG_KEY_ROOT);
   }
   return 0;
 }
