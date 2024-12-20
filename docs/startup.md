@@ -28,7 +28,7 @@ A service has a default configuration profile, but other profiles may be selecte
 
 ## Configuration directory
 
-For file-based configuration, this is the directory containing TOML files. The default value is `res` (note that this is a relative path).
+For file-based configuration, this is the directory containing YAML files. The default value is `res` (note that this is a relative path).
 
 |Long option | Short option|Environment ||
 |-|-|-|-|
@@ -36,7 +36,7 @@ For file-based configuration, this is the directory containing TOML files. The d
 
 ## Configuration file
 
-For file-based configuration, this is the filename of the TOML configuration file. If this option is used, the `--profile` option will be ineffective.
+For file-based configuration, this is the filename of the YAML configuration file. If this option is used, the `--profile` option will be ineffective.
 
 |Long option | Short option|Environment ||
 |-|-|-|-|

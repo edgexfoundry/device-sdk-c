@@ -26,14 +26,14 @@ A device profile for the simulated devices is provided in the `res` directory. T
 
 ### Provisioning
 
-The supplied configuration file `res/configuration.toml` includes definitions for two counter devices, one of which has an AutoEvent configured which causes counts to be generated every ten seconds. On first run of the device service, these devices will be created in metadata. Other devices may be created if required.
+The supplied configuration file `res/configuration.yaml` includes definitions for two counter devices, one of which has an AutoEvent configured which causes counts to be generated every ten seconds. On first run of the device service, these devices will be created in metadata. Other devices may be created if required.
 
 ### Running the service
 
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-counter -c res
+./device-counter -cp=keeper.http://localhost:59890
 ```
 
 Once the service is running it will begin to send Events from the Counter1 device every ten seconds. To manually generate an Event,

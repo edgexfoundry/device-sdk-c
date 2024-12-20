@@ -1,12 +1,12 @@
 # Device service configuration options
 
-The device service configuration is held in TOML format. By default the SDK will load configuration from a file named `configuration.toml` in the `res` directory, but this may be changed using the --confdir, --file and --profile options.
+The device service configuration is held in YAML format. By default the SDK will load configuration from a file named `configuration.yaml` in the `res` directory, but this may be changed using the --confdir, --file and --profile options.
 
-Configuration parameters are organized within a number of sections. A section is represented by a TOML table, eg `[Service]`.
+Configuration parameters are organized within a number of sections. A section is represented by a YAML table, eg `[Service]`.
 
 If the Registry is in use, configuration is contained in subfolders of `edgex/core/1.0/<service-name>`. The "Clients" section is not present in this scenario, as the Registry provides a specific mechanism for maintaining service information.
 
-When a device service is run for the first time with Registry enabled, it reads its configuration from a TOML file and uploads it to the Registry.
+When a device service is run for the first time with Registry enabled, it reads its configuration from a YAML file and uploads it to the Registry.
 
 The value of any configuration element can be over-ridden with a value from a corresponding environment variable. The service looks for an environment variable whose name is of the form
 
@@ -67,8 +67,8 @@ UpdateLastConnected | Bool | If true, update the LastConnected attribute of a de
 
 Option | Type | Notes
 :--- | :--- | :---
-ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
-DevicesDir | String | A directory which the service will scan at startup for Device definitions in `.json` or `/toml` files. Any such devices which do not already exist in EdgeX will be uploaded to core-metadata.
+ProfilesDir | String | A directory which the service will scan at startup for Device Profile definitions in `.yaml` or `.json` files. Any such profiles which do not already exist in EdgeX will be uploaded to core-metadata.
+DevicesDir | String | A directory which the service will scan at startup for Device definitions in `.json` files. Any such devices which do not already exist in EdgeX will be uploaded to core-metadata.
 EventQLength | Int | Sets the maximum number of events to be queued for transmission to core-data before blocking. Zero (default) results in no limit.
 
 ## Driver section

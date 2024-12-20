@@ -33,14 +33,14 @@ A device profile for the simulated device is provided in the `res` directory. Th
 
 ### Provisioning
 
-The supplied configuration file `res/configuration.toml` includes definitions for a single terminal device. No protocol properties are defined for the device - the example runs on the basis of one device per service instance.
+The supplied configuration file `res/configuration.yaml` includes definitions for a single terminal device. No protocol properties are defined for the device - the example runs on the basis of one device per service instance.
 
 ### Running the service
 
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-terminal -c res
+./device-terminal -cp=keeper.http://localhost:59890
 ```
 
 Note that for this example the logging level is set to WARNING to keep the display clear in normal operation. To display a message on the terminal,

@@ -27,7 +27,7 @@ A device profile for the simulated device is provided in the `res` directory. Th
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-template -c res
+./device-template -cp=keeper.http://localhost:59890
 ```
 
 ### Dynamic Provisioning via Discovery

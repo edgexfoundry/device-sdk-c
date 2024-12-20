@@ -26,14 +26,14 @@ A device profile for the simulated device is provided in the `res` directory. Th
 
 ### Provisioning
 
-The supplied configuration file `res/configuration.toml` includes a definition for a single gyro device. No protocol properties are defined for the device - the example runs on the basis of one device per service instance.
+The supplied configuration file `res/configuration.yaml` includes a definition for a single gyro device. No protocol properties are defined for the device - the example runs on the basis of one device per service instance.
 
 ### Running the service
 
 An EdgeX system containing at least a database and the core-data and core-metadata services must be running. The configuration file must be edited to reflect the locations of the core-data and core-metadata services.
 
 ```
-./device-gyro
+./device-gyro -cp=keeper.http://localhost:59890
 ```
 
 To take a set of readings from the gyro:
