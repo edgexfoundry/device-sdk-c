@@ -1,3 +1,6 @@
+#define _COMMON_CONFIG_KEY_ROOT "edgex/v4/core-common-config-bootstrapper/"
+#define _COMMON_CONFIG_TOPIC_ROOT KEEPER_PUBLISH_PREFIX "edgex/v4/core-common-config-bootstrapper/"
+
 #include "keeper.h"
 #include "service.h"
 #include "errorlist.h"
@@ -18,7 +21,8 @@ typedef struct keeper_impl_t
     uint16_t port;
     char *key_root;
     char *topic_root;
-    devsdk_registry_updatefn updater;
+    devsdk_registry_updatefn private_config_updater;
+    devsdk_registry_updatefn common_config_updater;
     void *updatectx;
 } keeper_impl_t;
 
@@ -37,50 +41,43 @@ static void edgex_keeper_client_free (void *impl)
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
   if (keeper)
   {
-    if (keeper->host)
-    {
-        free (keeper->host);
-    }
-    if (keeper->key_root)
-    {
-        free(keeper->key_root);
-    }
-    if (keeper->topic_root)
-    {
-        free(keeper->topic_root);
-    }
+    free (keeper->host);
+    free (keeper->key_root);
+    free (keeper->topic_root);
     free (impl);
   }
 }
 
 static void *delayed_message_bus_connect(void *impl)
 {
-    keeper_impl_t *keeper = (keeper_impl_t *)impl;
+  keeper_impl_t *keeper = (keeper_impl_t *)impl;
 
-    iot_log_debug(keeper->lc, "Message bus wait thread starting");
-    while (true)
+  iot_log_debug (keeper->lc, "Message bus wait thread starting");
+  while (true)
+  {
+    if (keeper->service && keeper->service->msgbus)
     {
-        if (keeper->service && keeper->service->msgbus)
-        {
-            char *tree = malloc(strlen(keeper->topic_root) + 3);
-            strcpy(tree, keeper->topic_root);
-            if (tree[strlen(tree) - 1] == '/')
-            {
-                tree[strlen(tree) - 1] = '\0';
-            }
-            strcat(tree, "/#");
-            iot_log_info(keeper->lc, "Subscribing to Keeper notifications on message bus at %s", tree);
-            edgex_bus_register_handler(keeper->service->msgbus, tree, impl, edgex_keeper_client_notify);
-            free(tree);
-            break;
-        }
-        if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
-        {
-            break;
-        }
-        sleep(1);
+      char *tree = malloc (strlen (keeper->topic_root) + 3);
+      strcpy (tree, keeper->topic_root);
+      if (tree [strlen (tree) - 1] == '/')
+      {
+        tree [strlen (tree) - 1] = '\0';
+      }
+      strcat (tree, "/#");
+      iot_log_info (keeper->lc, "Subscribing to Keeper notifications on message bus at %s", tree);
+      edgex_bus_register_handler (keeper->service->msgbus, tree, impl, edgex_keeper_client_notify);
+      edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT ALL_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
+      edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT DEV_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
+      free(tree);
+      break;
     }
-    return NULL;
+    if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
+    {
+      break;
+    }
+    sleep (1);
+  }
+  return NULL;
 }
 
 static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_threadpool_t *pool, edgex_secret_provider_t *sp, const char *url)
@@ -125,7 +122,6 @@ static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_thre
         return false;
     }
 
-    // iot_log_info(logger, "At key-root alloc, service->name %p", keeper->service->name);
     keeper->key_root = calloc(URL_BUF_SIZE, 1);
     snprintf(keeper->key_root, URL_BUF_SIZE-1, "edgex/v4/%s", keeper->service->name);
     keeper->key_root[URL_BUF_SIZE-1] = '\0';
@@ -291,7 +287,7 @@ static devsdk_nvpairs *edgex_keeper_client_get_config
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
   /* updatedone not used, only kept for prototype compatibility */
   (void) updatedone;
-  keeper->updater = updater;
+  keeper->private_config_updater = updater;
   keeper->updatectx = updatectx;
   return edgex_keeper_get_tree(impl, keeper->key_root, err);
 }
@@ -311,7 +307,7 @@ static devsdk_nvpairs *edgex_keeper_client_get_common_config
   devsdk_nvpairs *ccReady = NULL;
   /* updatedone not used, only kept for prototype compatibility */
   (void) updatedone;
-  keeper->updater = updater;
+  keeper->common_config_updater = updater;
   keeper->updatectx = updatectx;
 
   uint64_t t1, t2;
@@ -384,54 +380,70 @@ static devsdk_nvpairs *edgex_keeper_client_get_common_config
   return result;
 }
 
+static void process_notification(keeper_impl_t *keeper, const iot_data_t *request, const char *key, const char *key_root, devsdk_registry_updatefn updater)
+{
+  const char *key_suffix = key + strlen (key_root);
+  if (*key_suffix == '/')
+  {
+    key_suffix++;
+  }
+  const char *str_val = iot_data_string_map_get_string (request, "value");
+  if (!str_val)
+  {
+    iot_log_warn (keeper->lc, "Notified of change but object missing 'value' member");
+    return;
+  }
+  iot_log_info (keeper->lc, "Notified of config change at key '%s' to value '%s'", key_suffix, str_val);
+  const char *prefix_all_svcs = "all-services/";
+  const char *prefix_dev_svcs = "device-services/";
+  if (strncmp (key_suffix, prefix_all_svcs, strlen (prefix_all_svcs)) == 0)
+  {
+    key_suffix += strlen(prefix_all_svcs);
+  }
+  else if (strncmp(key_suffix, prefix_dev_svcs, strlen (prefix_dev_svcs)) == 0)
+  {
+    key_suffix += strlen (prefix_dev_svcs);
+  }
+  devsdk_nvpairs *result = devsdk_nvpairs_new (key_suffix, str_val, NULL);
+  if (result)
+  {
+    updater (keeper->updatectx, result);
+    devsdk_nvpairs_free (result);
+  }
+}
 
 static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
-  devsdk_nvpairs *result = NULL;
   if ((!keeper) || (!request) || (iot_data_type(request) != IOT_DATA_MAP))
   {
-    iot_log_warn(keeper->lc, "Received notification from Keeper but request is not a map, ignoring");
+    iot_log_warn (keeper->lc, "Received notification from Keeper but request is not a map, ignoring");
     return 0;
   }
-  if (!keeper->updater)
+  if (!keeper->private_config_updater || !keeper->common_config_updater)
   {
-    iot_log_info(keeper->lc, "Notified of config change but this service has not registered for these, ignoring");
+    iot_log_info (keeper->lc, "Notified of config change but this service has not registered for these, ignoring");
     return 0;
   }
-  const iot_data_t *raw_key = iot_data_string_map_get(request, "key");
+  const iot_data_t *raw_key = iot_data_string_map_get (request, "key");
   if (!raw_key)
   {
-    iot_log_warn(keeper->lc, "Notified of change but object missing 'key' member");
+    iot_log_warn (keeper->lc, "Notified of change but object missing 'key' member");
     return 0;
   }
   const char *key = iot_data_string(raw_key);
-  const char *prefix = strstr(key, keeper->key_root);
-  if (prefix != key)
+  if (strstr (key, keeper->key_root) == key)
   {
-    iot_log_warn(keeper->lc, "Received key %s does not begin with our prefix %s, ignoring", key, keeper->key_root);
-    return 0;
+    process_notification (keeper, request, key, keeper->key_root, keeper->private_config_updater);
+  }
+  else if (strstr (key, _COMMON_CONFIG_KEY_ROOT) == key)
+  {
+    process_notification (keeper, request, key, _COMMON_CONFIG_KEY_ROOT, keeper->common_config_updater);
   }
   else
   {
-    const char *key_suffix = key + strlen(keeper->key_root);
-    if (*key_suffix == '/')
-    {
-        key_suffix++;
-    }
-    const char *str_val = iot_data_string_map_get_string(request, "value");
-    if (!str_val)
-    {
-        iot_log_warn(keeper->lc, "Notified of change but object missing 'value' member");
-        return 0;
-    }
-    iot_log_info(keeper->lc, "Notified of config change at key '%s' to value '%s'", key_suffix, str_val);
-    result = devsdk_nvpairs_new(key_suffix, str_val, NULL);
-    if (result)
-    {
-        (keeper->updater)(keeper->updatectx, result);
-        devsdk_nvpairs_free(result);
-    }
+    iot_log_warn (keeper->lc, "Received key %s does not begin with our prefix %s or common config prefix %s, ignoring",
+                  key, keeper->key_root, _COMMON_CONFIG_KEY_ROOT);
   }
   return 0;
 }
