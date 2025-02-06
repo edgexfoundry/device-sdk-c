@@ -26,6 +26,7 @@ struct edgex_bus_t
   char *prefix;
   char *svcname;
   pthread_mutex_t mtx;
+  bool msgb64payload;
 };
 
 void edgex_bus_init (edgex_bus_t *bus, const char *svcname, const iot_data_t *cfg);
