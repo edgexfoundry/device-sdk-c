@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023
+ * Copyright (c) 2023-2025
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -20,7 +20,7 @@ static devsdk_protocols *protocols_convert (const iot_data_t *obj)
   if (obj && (iot_data_type(obj) == IOT_DATA_MAP))
   {
     iot_data_map_iter (obj, &iter);
-    while (iot_data_map_iter_has_next (&iter))
+    while (iot_data_map_iter_next (&iter))
     {
       devsdk_protocols *prot = malloc (sizeof (devsdk_protocols));
       prot->name = strdup (iot_data_map_iter_string_key (&iter));
