@@ -121,7 +121,9 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
       {
         if (exception)
         {
-          iot_log_error (svc->logger, iot_data_to_json (exception));
+          char *exstr = iot_data_to_json (exception);
+          iot_log_error (svc->logger, exstr);
+          free (exstr);
           iot_data_free (exception);
         }
         iot_log_error (svc->logger, "Unable to parse attributes for device resource %s: device command %s will not be available", devres->name, cmd->name);
@@ -176,7 +178,9 @@ static edgex_cmdinfo *infoForDevRes (devsdk_service_t *svc, edgex_deviceprofile 
     {
       if (exception)
       {
-        iot_log_error (svc->logger, iot_data_to_json (exception));
+        char *exstr = iot_data_to_json (exception);
+        iot_log_error (svc->logger, exstr);
+        free (exstr);
         iot_data_free (exception);
       }
       iot_log_error (svc->logger, "Unable to parse attributes for device resource %s: it will not be available", devres->name);
@@ -358,14 +362,18 @@ static void edgex_device_runput2
       }
       else
       {
+        char *exstr = e ? iot_data_to_json (e) : NULL;
         edgex_error_response
-          (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on PUT: %s", dev->name, e ? iot_data_to_json (e) : "(unknown)");
+                (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on PUT: %s", dev->name, e ? exstr : "(unknown)");
+        free (exstr);
       }
     }
     else
     {
+      char *exstr = e ? iot_data_to_json (e) : NULL;
       edgex_error_response
-        (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Address parsing failed for device %s: %s", dev->name, e ? iot_data_to_json (e) : "(unknown)");
+              (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Address parsing failed for device %s: %s", dev->name, e ? exstr : "(unknown)");
+      free (exstr);
     }
     iot_data_free (e);
   }
@@ -425,15 +433,19 @@ static edgex_event_cooked *edgex_device_runget2
     }
     else
     {
+      char *exstr = e ? iot_data_to_json (e) : NULL;
       edgex_error_response
-        (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on GET: ", dev->name, e ? iot_data_to_json (e) : "(unknown)");
+              (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on GET: ", dev->name, e ? exstr : "(unknown)");
+      free(exstr);
     }
     atomic_fetch_add (&svc->metrics.rcexe, 1);
   }
   else
   {
+    char *exstr = e ? iot_data_to_json (e) : NULL;
     edgex_error_response
-      (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Address parsing failed for device %s: %s", dev->name, e ? iot_data_to_json (e) : "(unknown)");
+            (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Address parsing failed for device %s: %s", dev->name, e ? exstr : "(unknown)");
+    free(exstr);
   }
   iot_data_free (e);
   devsdk_commandresult_free (results, cmdinfo->nreqs);
