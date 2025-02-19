@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023
+ * Copyright (c) 2018-2025
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -510,7 +510,6 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
         {
           if (retv)
           {
-            edgex_event_cooked_add_ref (event);
             edgex_data_client_add_event (svc->msgbus, event, &svc->metrics);
             edgex_event_cooked_write (event, reply);
           }
@@ -520,6 +519,7 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
             edgex_baseresponse_populate (&br, EDGEX_API_VERSION, MHD_HTTP_OK, "Event generated successfully");
             edgex_baseresponse_write (&br, reply);
           }
+          edgex_event_cooked_free (event);
         }
         else
         {
@@ -529,10 +529,10 @@ static void edgex_device_v2impl (devsdk_service_t *svc, edgex_device *dev, const
           }
           else
           {
-            edgex_event_cooked_free (event);
             edgex_baseresponse_populate (&br, EDGEX_API_VERSION, MHD_HTTP_OK, "Reading performed successfully");
             edgex_baseresponse_write (&br, reply);
           }
+          edgex_event_cooked_free (event);
         }
       }
     }

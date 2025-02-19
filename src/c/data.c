@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023
+ * Copyright (c) 2018-2025
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -118,7 +118,6 @@ edgex_event_cooked *edgex_data_process_event
 
   eventId = edgex_device_genuuid ();
   result = malloc (sizeof (edgex_event_cooked));
-  atomic_store (&result->refs, 1);
   result->nrdgs = commandinfo->nreqs;
 
   result->path = malloc (strlen (commandinfo->profile->name) + strlen (device_name) + strlen (commandinfo->name) + 3);
@@ -191,11 +190,6 @@ void edgex_data_client_add_event (edgex_bus_t *client, edgex_event_cooked *ev, d
   free (topic);
 }
 
-void edgex_event_cooked_add_ref (edgex_event_cooked *e)
-{
-  atomic_fetch_add (&e->refs, 1);
-}
-
 size_t edgex_event_cooked_size (edgex_event_cooked *e)
 {
   size_t result;
@@ -238,13 +232,11 @@ void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *reply)
     }
   }
   reply->code = MHD_HTTP_OK;
-  free (e->path);
-  free (e);
 }
 
 void edgex_event_cooked_free (edgex_event_cooked *e)
 {
-  if (e && (atomic_fetch_add (&e->refs, -1) == 1))
+  if (e)
   {
     iot_data_free (e->value);
     free (e->path);

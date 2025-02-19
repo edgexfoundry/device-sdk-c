@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2023
+ * Copyright (c) 2018-2025
  * IoTech Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -22,14 +22,12 @@ typedef enum { JSON, CBOR} edgex_event_encoding;
 
 typedef struct edgex_event_cooked
 {
-  atomic_uint_fast32_t refs;
   unsigned nrdgs;
   char *path;
   edgex_event_encoding encoding;
   iot_data_t *value;
 } edgex_event_cooked;
 
-void edgex_event_cooked_add_ref (edgex_event_cooked *e);
 size_t edgex_event_cooked_size (edgex_event_cooked *e);
 void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *rep);
 void edgex_event_cooked_free (edgex_event_cooked *e);
