@@ -122,7 +122,7 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
         if (exception)
         {
           char *exstr = iot_data_to_json (exception);
-          iot_log_error (svc->logger, exstr);
+          iot_log_error (svc->logger, "%s", exstr ? exstr : "Error: exstr reported NULL");
           free (exstr);
           iot_data_free (exception);
         }
@@ -179,7 +179,7 @@ static edgex_cmdinfo *infoForDevRes (devsdk_service_t *svc, edgex_deviceprofile 
       if (exception)
       {
         char *exstr = iot_data_to_json (exception);
-        iot_log_error (svc->logger, exstr);
+        iot_log_error (svc->logger, "%s", exstr ? exstr : "Error: exstr reported NULL");
         free (exstr);
         iot_data_free (exception);
       }
