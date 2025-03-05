@@ -2,6 +2,61 @@
 ## EdgeX Device SDK C
 [Github repository](https://github.com/edgexfoundry/device-sdk-c)
 
+## [4.0.0] Odessa - 2025-03-12 (Only compatible with the 4.x releases)
+
+### ✨  Features
+
+- Use JSON object in message envelope payload instead of base64 string ([9f9740a…](https://github.com/edgexfoundry/device-sdk-c/commit/9f9740ab4a238d4cf3fc7521d89eb1913d297b2a))
+```text
+
+BREAKING CHANGE: Change MessageEnvelope payload from a byte array to a generic type
+
+```
+- Add support for listening to common config changes from core-keeper ([#534](https://github.com/edgexfoundry/device-sdk-c/issues/534)) ([0fa1e20…](https://github.com/edgexfoundry/device-sdk-c/commit/0fa1e200a1b4c9bd2451810fc76dfba979199818))
+- Drop support for Consul ([#530](https://github.com/edgexfoundry/device-sdk-c/issues/530)) ([84c8015…](https://github.com/edgexfoundry/device-sdk-c/commit/84c80157ffc4713fcbabd445ae8f8e4d09b4c1ca))
+```text
+
+BREAKING CHANGE: Drop support for Consul
+
+```
+- Add device up/down detection ([#532](https://github.com/edgexfoundry/device-sdk-c/issues/532)) ([7abe510…](https://github.com/edgexfoundry/device-sdk-c/commit/7abe510cbd0ecbc788545c64ca7f1b281e5aa337))
+- Support core-keeper for registry and config ([#520](https://github.com/edgexfoundry/device-sdk-c/issues/520)) ([62fc64c…](https://github.com/edgexfoundry/device-sdk-c/commit/62fc64c90db9bc421ef18031b23432b09bce4dbe))
+- Remove Redis Pub/Sub feature and dependency ([#527](https://github.com/edgexfoundry/device-sdk-c/issues/527)) ([8c5e39f…](https://github.com/edgexfoundry/device-sdk-c/commit/8c5e39fa7b5b04e520d4bb53faca14d55facea43))
+```text
+
+BREAKING CHANGE: Remove Redis Pub/Sub feature and dependency
+
+```
+- Implemented a discovery delete API ([#514](https://github.com/edgexfoundry/device-sdk-c/issues/514)) ([de2f7dd…](https://github.com/edgexfoundry/device-sdk-c/commit/de2f7dd484aed31b8929cc3252062c81ad15313f))
+- Publish System Events for device discovery and add discovery request ID ([#513](https://github.com/edgexfoundry/device-sdk-c/issues/513)) ([30a24dd…](https://github.com/edgexfoundry/device-sdk-c/commit/30a24dda2410b85b52167bc1398eb9d9a2b4959b))
+```text
+
+BREAKING CHANGE: Publish System Events for device discovery and add discovery request ID 
+
+```
+- Add optional Parent field to Device objects ([#512](https://github.com/edgexfoundry/device-sdk-c/issues/512)) ([6abec0d…](https://github.com/edgexfoundry/device-sdk-c/commit/6abec0de53f1544e48264173dbee0aea1a2aa14a))
+```text
+
+BREAKING CHANGE: Add Parent field to Device objects
+
+```
+
+### 🐛 Bug Fixes
+
+- Correct map iteration in protocols_convert function ([#544](https://github.com/edgexfoundry/device-sdk-c/issues/544)) ([eb8e2ff…](https://github.com/edgexfoundry/device-sdk-c/commit/eb8e2ff18f0ad6c69de4cfb237d4ad036326ba8e))
+- Release `iot_data_to_json` results after use ([#545](https://github.com/edgexfoundry/device-sdk-c/issues/545)) ([f77cf90…](https://github.com/edgexfoundry/device-sdk-c/commit/f77cf90271422167f9817fc2f645f2c019bc5257))
+- Allow `-cp` flag to work without `-r` flag ([#535](https://github.com/edgexfoundry/device-sdk-c/issues/535)) ([02ffd3a…](https://github.com/edgexfoundry/device-sdk-c/commit/02ffd3a41c4b218657de9ceac7ee305f7bb09d80))
+- Add support for additional MQTT protocol aliases ([#524](https://github.com/edgexfoundry/device-sdk-c/issues/524)) ([1dcfe63…](https://github.com/edgexfoundry/device-sdk-c/commit/1dcfe63ad036bf8d78932132d5dcad6aabcde801))
+- Missing discovery delete wrapper for secure mode ([#521](https://github.com/edgexfoundry/device-sdk-c/issues/521)) ([b4a60c1…](https://github.com/edgexfoundry/device-sdk-c/commit/b4a60c126f741d84c14ee104c3263f3235d33930))
+- Only 20 devices end up in devmap ([#555](https://github.com/edgexfoundry/device-sdk-c/issues/555)) ([#518](https://github.com/edgexfoundry/device-sdk-c/issues/518)) ([6bae00d…](https://github.com/edgexfoundry/device-sdk-c/commit/6bae00d1ebd04fbf3bb2a120a46a31d42b2bc678))
+- Address CVE in Alpine base image ([#496](https://github.com/edgexfoundry/device-sdk-c/issues/496)) ([b5fd43a…](https://github.com/edgexfoundry/device-sdk-c/commit/b5fd43aa6b4e8069e65248caa2e7d6db03f961ef))
+- Assert failures on null/empty maps ([#504](https://github.com/edgexfoundry/device-sdk-c/issues/504)) ([c55c6a0…](https://github.com/edgexfoundry/device-sdk-c/commit/c55c6a0709e44599dc9784425fcb0f18c72b9bf5))
+- Edgex_device_read does not read labels ([#508](https://github.com/edgexfoundry/device-sdk-c/issues/508)) ([9db6249…](https://github.com/edgexfoundry/device-sdk-c/commit/9db6249cb5b64beed6f22149c866398dbcee266e))
+- Memory leaks in devsdk_post_readings function ([#507](https://github.com/edgexfoundry/device-sdk-c/issues/507)) ([6bdae90…](https://github.com/edgexfoundry/device-sdk-c/commit/6bdae90b977cdeecb957260a94da902cfcf10c29))
+- When reading's value is string type, it will be released prematurely ([#506](https://github.com/edgexfoundry/device-sdk-c/issues/506)) ([c533cd2…](https://github.com/edgexfoundry/device-sdk-c/commit/c533cd2e0d9c0aa79f18f2e3eeb4447a32e46d6c))
+- Remove the refcount from the autoevent impl structure ([#502](https://github.com/edgexfoundry/device-sdk-c/issues/502)) ([cc49468…](https://github.com/edgexfoundry/device-sdk-c/commit/cc49468877935c119f35277098ef123672d1c8b2))
+- The slash of a string cannot be removed using json_serialize_to_string ([#505](https://github.com/edgexfoundry/device-sdk-c/issues/505)) ([0864ff1…](https://github.com/edgexfoundry/device-sdk-c/commit/0864ff1b436a7a9e42f7c9629cf36a2dea6c3a02))
+
 ## [v3.1.0] Napa - 2023-11-15 (Only compatible with the 3.x releases)
 
 ### ✨  Features
@@ -9,7 +64,6 @@
 - Add command line/environment flag for commonConfig ([#486](https://github.com/edgexfoundry/device-sdk-c/issues/486)) ([753c0e6…](https://github.com/edgexfoundry/device-sdk-c/commit/753c0e66273d645c82de476ca0a438ee98891f55))
 - Load common configuration from config provider ([#484](https://github.com/edgexfoundry/device-sdk-c/issues/484)) ([4c52de3…](https://github.com/edgexfoundry/device-sdk-c/commit/4c52de37db7d3bd0277fba2739b75d0a1bd475b3))
 - Update examples to v3 ([75d9ea2…](https://github.com/edgexfoundry/device-sdk-c/commit/75d9ea246e864e615ecdca3b0f3acd24537be31e))
-
 
 ### 🐛 Bug Fixes
 
