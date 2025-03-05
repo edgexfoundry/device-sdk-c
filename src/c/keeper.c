@@ -118,7 +118,7 @@ static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_thre
     }
     else
     {
-        iot_log_error(logger, "Could not parse URL \"%s\" as a core-keeper config/registry URL");
+        iot_log_error(logger, "Could not parse URL \"%s\" as a core-keeper config/registry URL", url);
         return false;
     }
 
