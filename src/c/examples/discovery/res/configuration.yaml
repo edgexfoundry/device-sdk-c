@@ -8,7 +8,8 @@ Writable:
 Service:
   Port: 59999
   StartupMsg: Example device service with discovery started
-
+  HealthCheckInterval: 10s
+  
 # uncomment when running from command-line in hybrid mode without Config Provider
 #Clients:
 #  core-metadata:

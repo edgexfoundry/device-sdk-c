@@ -5,7 +5,8 @@ Service:
   Host: localhost
   Port: 59999
   StartupMsg: Example gyro device service started
-
+  HealthCheckInterval: 10s
+  
 # uncomment when running from command-line in hybrid mode without Config Provider
 #Clients:
 #  core-metadata:
