@@ -174,15 +174,12 @@ static edgex_cmdinfo *infoForDevRes (devsdk_service_t *svc, edgex_deviceprofile 
   if (devres->parsed_attrs == NULL)
   {
     devres->parsed_attrs = svc->userfns.create_res (svc->userdata, devres->attributes, &exception);
-    if (devres->parsed_attrs == NULL)
+    if (exception)
     {
-      if (exception)
-      {
-        char *exstr = iot_data_to_json (exception);
-        iot_log_error (svc->logger, "%s", exstr ? exstr : "Error: exstr reported NULL");
-        free (exstr);
-        iot_data_free (exception);
-      }
+      char *exstr = iot_data_to_json (exception);
+      iot_log_error (svc->logger, "%s", exstr ? exstr : "Error: exstr reported NULL");
+      free (exstr);
+      iot_data_free (exception);
       iot_log_error (svc->logger, "Unable to parse attributes for device resource %s: it will not be available", devres->name);
       return NULL;
     }
