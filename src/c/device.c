@@ -317,17 +317,17 @@ static void edgex_device_runput2
 
       if (svc->config.device.datatransform)
       {
+        if (!edgex_transform_validate (results[i], cmdinfo->pvals[i]))
+        {
+          edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s out of range specified in profile", value, resname);
+          break;
+        }
         edgex_transform_incoming (&results[i], cmdinfo->pvals[i], cmdinfo->maps[i]);
         if (!results[i])
         {
           edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s overflows after transformations", value, resname);
           break;
         }
-      }
-      if (!edgex_transform_validate (results[i], cmdinfo->pvals[i]))
-      {
-        edgex_error_response (svc->logger, reply, MHD_HTTP_BAD_REQUEST, "Value \"%s\" for %s out of range specified in profile", value, resname);
-        break;
       }
     }
     else
@@ -622,6 +622,12 @@ static int32_t edgex_device_runput3
 
     if (svc->config.device.datatransform)
     {
+      if (!edgex_transform_validate (results[i], cmdinfo->pvals[i]))
+      {
+        *reply = edgex_v3_error_response (svc->logger, "Value \"%s\" for %s out of range specified in profile", value, resname);
+        result = MHD_HTTP_BAD_REQUEST;
+        break;
+      }
       edgex_transform_incoming (&results[i], cmdinfo->pvals[i], cmdinfo->maps[i]);
       if (!results[i])
       {
@@ -629,12 +635,6 @@ static int32_t edgex_device_runput3
         result = MHD_HTTP_BAD_REQUEST;
         break;
       }
-    }
-    if (!edgex_transform_validate (results[i], cmdinfo->pvals[i]))
-    {
-      *reply = edgex_v3_error_response (svc->logger, "Value \"%s\" for %s out of range specified in profile", value, resname);
-      result = MHD_HTTP_BAD_REQUEST;
-      break;
     }
   }
 
