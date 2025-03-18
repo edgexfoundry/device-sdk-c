@@ -125,9 +125,9 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
           iot_log_error (svc->logger, "%s", exstr ? exstr : "Error: exstr reported NULL");
           free (exstr);
           iot_data_free (exception);
+          iot_log_error (svc->logger, "Unable to parse attributes for device resource %s: device command %s will not be available", devres->name, cmd->name);
+          return NULL;
         }
-        iot_log_error (svc->logger, "Unable to parse attributes for device resource %s: device command %s will not be available", devres->name, cmd->name);
-        return NULL;
       }
     }
   }
