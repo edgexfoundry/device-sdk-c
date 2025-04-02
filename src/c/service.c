@@ -872,7 +872,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   iot_data_t *config_file, *common_config_file = NULL;
   bool uploadConfig = false;
   iot_data_t *common_config_map, *private_config_map, *configmap;
-  const iot_data_t *deviceservices_config;
+  const iot_data_t *deviceservices_config = NULL;
 
   if (svc->starttime)
   {
