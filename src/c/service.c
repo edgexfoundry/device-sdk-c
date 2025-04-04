@@ -13,6 +13,8 @@
 #include "device.h"
 #include "discovery.h"
 #include "callback3.h"
+#include "iot/data.h"
+#include "iot/logger.h"
 #include "validate.h"
 #include "errorlist.h"
 #include "rest-server.h"
@@ -1060,7 +1062,12 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
   else
   {
-    edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
+    if(!(deviceservices_config ? iot_data_string_map_get (deviceservices_config, "Clients") : NULL)) 
+    {
+      iot_log_error(svc->logger, "device-service not defined in the provided configuration, exit");
+      _exit(1);
+    }
+   edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
   }
 
   iot_data_free (config_file);
