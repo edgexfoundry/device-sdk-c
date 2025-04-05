@@ -1062,12 +1062,15 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
   else
   {
-    if(!(deviceservices_config ? iot_data_string_map_get (deviceservices_config, "Clients") : NULL)) 
+    if(deviceservices_config)
+    { 
+      edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
+    }
+    else 
     {
       iot_log_error(svc->logger, "device-service not defined in the provided configuration, exit");
       _exit(1);
     }
-   edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
   }
 
   iot_data_free (config_file);
