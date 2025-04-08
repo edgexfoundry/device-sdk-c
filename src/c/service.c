@@ -1069,7 +1069,8 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     else 
     {
       iot_log_error(svc->logger, "device-service not defined in the provided configuration, exit");
-      _exit(1);
+      *err = EDGEX_BAD_CONFIG;
+      return;
     }
   }
 
