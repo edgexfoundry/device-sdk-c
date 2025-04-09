@@ -13,6 +13,8 @@
 #include "device.h"
 #include "discovery.h"
 #include "callback3.h"
+#include "iot/data.h"
+#include "iot/logger.h"
 #include "validate.h"
 #include "errorlist.h"
 #include "rest-server.h"
@@ -872,7 +874,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   iot_data_t *config_file, *common_config_file = NULL;
   bool uploadConfig = false;
   iot_data_t *common_config_map, *private_config_map, *configmap;
-  const iot_data_t *deviceservices_config;
+  const iot_data_t *deviceservices_config = NULL;
 
   if (svc->starttime)
   {
@@ -1060,7 +1062,16 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
   else
   {
-    edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
+    if(deviceservices_config)
+    { 
+      edgex_device_parseClients (svc->logger, iot_data_string_map_get (deviceservices_config, "Clients"), &svc->config.endpoints);
+    }
+    else 
+    {
+      iot_log_error(svc->logger, "device-service not defined in the provided configuration, exit");
+      *err = EDGEX_BAD_CONFIG;
+      return;
+    }
   }
 
   iot_data_free (config_file);
