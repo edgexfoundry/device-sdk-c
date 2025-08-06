@@ -310,6 +310,7 @@ edgex_bus_t *edgex_bus_create_mqtt (iot_logger_t *lc, const char *svcname, const
   }
   else
   {
+    MQTTAsync_destroy (&cinfo->client);
     free (cinfo->uri);
     free (cinfo);
     free (result);
