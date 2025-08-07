@@ -225,10 +225,12 @@ static bool update_in_place (edgex_device *dest, const edgex_device *src, edgex_
   }
   if (strcmp (dest->profile->name, src->profile->name))
   {
+    *outcome = UPDATED_DRIVER;
     return false;
   }
   if (!edgex_device_autoevents_equal (dest->autos, src->autos))
   {
+    *outcome = UPDATED_DRIVER;
     return false;
   }
   dest->operatingState = src->operatingState;
