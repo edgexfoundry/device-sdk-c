@@ -39,6 +39,7 @@ struct devsdk_callbacks
   devsdk_add_device_callback device_added;
   devsdk_update_device_callback device_updated;
   devsdk_remove_device_callback device_removed;
+  devsdk_update_profile_callback profile_updated;
   devsdk_autoevent_start_handler ae_starter;
   devsdk_autoevent_stop_handler ae_stopper;
   devsdk_validate_address validate_addr;
