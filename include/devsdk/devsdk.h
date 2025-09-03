@@ -240,6 +240,14 @@ typedef void (*devsdk_update_device_callback) (void *impl, const char *devname, 
 
 typedef void (*devsdk_remove_device_callback) (void *impl, const char *devname, const devsdk_protocols *protocols);
 
+/**
+ * @brief Callback function indicating that an associated device profile has been modified.
+ * @param impl The context data passed in when the service was created.
+ * @param profname The name of the updated device profile.
+ */
+
+typedef void (*devsdk_update_profile_callback) ( void *impl, const char *profname );
+
 typedef struct devsdk_callbacks devsdk_callbacks;
 
 /**
@@ -282,6 +290,11 @@ void devsdk_callbacks_set_reconfiguration (devsdk_callbacks *cb, devsdk_reconfig
 
 void devsdk_callbacks_set_listeners
   (devsdk_callbacks *cb, devsdk_add_device_callback device_added, devsdk_update_device_callback device_updated, devsdk_remove_device_callback device_removed);
+
+/**
+ * @brief Populate optional associated device profile update notification function
+ */
+void devsdk_callbacks_set_profile_listener( devsdk_callbacks *cb, devsdk_update_profile_callback profile_updated );
 
 /**
  * @brief Populate optional autoevent management functions

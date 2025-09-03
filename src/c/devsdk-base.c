@@ -190,6 +190,11 @@ void devsdk_callbacks_set_listeners
   cb->device_removed = device_removed;
 }
 
+void devsdk_callbacks_set_profile_listener( devsdk_callbacks *cb, devsdk_update_profile_callback profile_updated )
+{
+  cb->profile_updated = profile_updated;
+}
+
 void devsdk_callbacks_set_autoevent_handlers (devsdk_callbacks *cb, devsdk_autoevent_start_handler ae_starter, devsdk_autoevent_stop_handler ae_stopper)
 {
   cb->ae_starter = ae_starter;

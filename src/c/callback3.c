@@ -159,5 +159,12 @@ extern int32_t edgex_callback_update_profile (void *ctx, const iot_data_t *req, 
   edgex_deviceprofile *p = edgex_profile_read (iot_data_string_map_get (req, "details"));
   edgex_devmap_update_profile (svc, p);
   iot_log_info (svc->logger, "callback: Updated device profile %s", p->name);
+  // For now jst checking if listener defined, then call the listener
+  // To be improved: Check and call the listener only for specific conditions (device resource/command update) only
+  if ( svc->userfns.profile_updated )
+  {
+    iot_log_info( svc->logger, "service listener callback trigger: device profile %s", p->name );
+    svc->userfns.profile_updated( svc->userdata, p->name );
+  }
   return 0;
 }
