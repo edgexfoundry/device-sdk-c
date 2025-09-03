@@ -767,7 +767,7 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
 
   /* Register MessageBus handlers */
 
-  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEVICE, "{device}/{op}/{cmd}");
+  topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_DEVICE, "{device}/{cmd}/{op}");
   edgex_bus_register_handler (svc->msgbus, topic, svc, edgex_device_handler_devicev3);
   free (topic);
 
