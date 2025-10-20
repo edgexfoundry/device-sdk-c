@@ -93,6 +93,7 @@ edgex_device *edgex_device_read (const iot_data_t *obj)
   result->devimpl = calloc (1, sizeof (devsdk_device_t));
   result->devimpl->name = result->name;
   result->labels = edgex_labels_read(obj);
+  result->tags = iot_data_add_ref (iot_data_string_map_get (obj, "tags"));
 
   return result;
 }
@@ -230,9 +231,9 @@ static edgex_deviceresource *deviceresource_read (const iot_data_t *obj)
   edgex_deviceresource *result = malloc (sizeof (edgex_deviceresource));
   result->name = get_string (obj, "name");
   result->description = get_string (obj, "description");
-  result->tag = get_string (obj, "tag");
   result->properties = propertyvalue_read (iot_data_string_map_get (obj, "properties"));
   result->attributes = iot_data_add_ref (iot_data_string_map_get (obj, "attributes"));
+  result->tags = iot_data_add_ref (iot_data_string_map_get (obj, "tags"));
   result->parsed_attrs = NULL;
   result->next = NULL;
   return result;
@@ -255,6 +256,7 @@ static edgex_devicecommand *devicecommand_read (const iot_data_t *obj)
   edgex_resourceoperation **last_ptr = &result->resourceOperations;
 
   result->name = get_string (obj, "name");
+  result->tags = iot_data_add_ref (iot_data_string_map_get (obj, "tags"));
   edgex_get_readwrite (obj, &result->readable, &result->writable);
   ops = iot_data_string_map_get (obj, "resourceOperations");
   iot_data_vector_iter (ops, &iter);

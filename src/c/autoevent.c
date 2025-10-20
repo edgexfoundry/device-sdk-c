@@ -56,6 +56,7 @@ static void *ae_runner (void *p)
     edgex_device_alloc_crlid (NULL);
     iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
     devsdk_commandresult *results = calloc (ai->resource->nreqs, sizeof (devsdk_commandresult));
+    iot_data_t *tags = NULL;
     iot_data_t *exc = NULL;
     if (dev->devimpl->address == NULL)
     {
@@ -63,7 +64,7 @@ static void *ae_runner (void *p)
     }
     if (dev->devimpl->address)
     {
-      if (ai->svc->userfns.gethandler (ai->svc->userdata, dev->devimpl, ai->resource->nreqs, ai->resource->reqs, results, NULL, &exc))
+      if (ai->svc->userfns.gethandler (ai->svc->userdata, dev->devimpl, ai->resource->nreqs, ai->resource->reqs, results, &tags, NULL, &exc))
       {
         devsdk_commandresult *resdup = NULL;
         if (!(ai->onChange && ai->last && devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs)))
@@ -74,7 +75,7 @@ static void *ae_runner (void *p)
             resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
           }
           edgex_event_cooked *event =
-            edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
+            edgex_data_process_event (dev, ai->resource, results, tags, ai->svc->config.device.datatransform);
           if (event)
           {
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)

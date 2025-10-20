@@ -34,6 +34,7 @@ typedef struct devsdk_protocols devsdk_protocols;
 typedef void* devsdk_address_t;
 
 typedef void* devsdk_resource_attr_t;
+typedef void* devsdk_resource_tag_t;
 
 typedef struct devsdk_device_t
 {
@@ -45,6 +46,7 @@ typedef struct devsdk_resource_t
 {
   char *name;
   devsdk_resource_attr_t attrs;
+  iot_data_t *tags;
   iot_typecode_t type;
 } devsdk_resource_t;
 
@@ -91,6 +93,8 @@ typedef struct devsdk_device_resources
   char *resname;
   /** Attributes of the device resource */
   iot_data_t *attributes;
+  /** Tags of the device resource */
+  iot_data_t *tags;
   /** Type of the data that may be read or written */
   iot_typecode_t type;
   /** Whether the resource may be read */
