@@ -70,6 +70,7 @@ static bool file_get_handler
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
+  iot_data_t **tags,
   const iot_data_t *options,
   iot_data_t **exception
 )
@@ -251,7 +252,7 @@ int main (int argc, char *argv[])
                 results[0].value = iot_data_alloc_binary (data, size, IOT_DATA_TAKE);
 
                 /* Trigger an event */
-                devsdk_post_readings (service, dname, "File", results);
+                devsdk_post_readings (service, dname, "File", results, NULL);
 
                 /* Cleanup the value. Note that as we used IOT_DATA_TAKE, the buffer allocated in file_readfile is free'd here */
                 iot_data_free (results[0].value);
