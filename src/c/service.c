@@ -761,6 +761,17 @@ static void startConfigured (devsdk_service_t *svc, const devsdk_timeout *deadli
     edgex_watcher_free (w);
   }
 
+  /* Load Provision Watchers from files and register in metadata */
+  if (svc->config.device.provisionwatchersdir && strlen (svc->config.device.provisionwatchersdir))
+  {
+    edgex_device_watchers_upload (svc, err);
+    if (err->code)
+    {
+      iot_log_error (svc->logger, "Failed to upload provision watchers from directory");
+      return;
+    }
+  }
+
   /* Start scheduled events */
 
   iot_scheduler_start (svc->scheduler);

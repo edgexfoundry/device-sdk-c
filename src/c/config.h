@@ -59,6 +59,7 @@ typedef struct edgex_device_deviceinfo
   _Atomic(uint32_t) maxeventsize;
   const char *profilesdir;
   const char *devicesdir;
+  const char *provisionwatchersdir;
   atomic_bool updatelastconnected;
   uint32_t eventqlen;
   uint32_t allowed_fails;

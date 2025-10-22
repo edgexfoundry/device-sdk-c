@@ -86,6 +86,7 @@ iot_data_t *edgex_common_config_defaults (const char *svcname)
   iot_data_string_map_add (result, "Device/Labels", iot_data_alloc_typed_vector (0, IOT_DATA_STRING));
   iot_data_string_map_add (result, "Device/ProfilesDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/DevicesDir", iot_data_alloc_string ("", IOT_DATA_REF));
+  iot_data_string_map_add (result, "Device/ProvisionWatchersDir", iot_data_alloc_string ("", IOT_DATA_REF));
   iot_data_string_map_add (result, "Device/EventQLength", iot_data_alloc_ui32 (0));
   iot_data_string_map_add (result, "Device/AllowedFails", iot_data_alloc_i32 (0));
   iot_data_string_map_add (result, "Device/DeviceDownTimeout", iot_data_alloc_ui64 (0));
@@ -510,6 +511,7 @@ static void edgex_device_populateCommonConfigFromMap (edgex_device_config *confi
   config->device.maxeventsize = iot_data_ui32 (iot_data_string_map_get (map, "MaxEventSize"));
   config->device.profilesdir = iot_data_string_map_get_string (map, "Device/ProfilesDir");
   config->device.devicesdir = iot_data_string_map_get_string (map, "Device/DevicesDir");
+  config->device.provisionwatchersdir = iot_data_string_map_get_string (map, "Device/ProvisionWatchersDir");
   config->device.allowed_fails = iot_data_ui32 (iot_data_string_map_get (map, "Device/AllowedFails"));
   config->device.dev_downtime = iot_data_ui64 (iot_data_string_map_get (map, "Device/DeviceDownTimeout"));
 
@@ -736,6 +738,7 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_uint (dobj, "MaxEventSize", svc->config.device.maxeventsize);
   json_object_set_string (dobj, "ProfilesDir", svc->config.device.profilesdir);
   json_object_set_string (dobj, "DevicesDir", svc->config.device.devicesdir);
+  json_object_set_string (dobj, "ProvisionWatchersDir", svc->config.device.provisionwatchersdir);
   json_object_set_boolean
     (dobj, "UpdateLastConnected", svc->config.device.updatelastconnected);
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
