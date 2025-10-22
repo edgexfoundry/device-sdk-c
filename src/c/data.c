@@ -170,43 +170,10 @@ edgex_event_cooked *edgex_data_process_event
     iot_data_vector_add (rvec, i, rmap);
   }
 
-  if (commandinfo->tags)
-  {
-    if (!tags)
-    {
-      tags = iot_data_copy(commandinfo->tags); // only cmd tags if no other tags exist
-    }
-    else
-    {
-      // Merge command tags into existing tags
-      iot_data_map_iter_t iter;
-      iot_data_map_iter(commandinfo->tags, &iter);
-      while (iot_data_map_iter_next(&iter))
-      {
-        const char *key = iot_data_map_iter_string_key(&iter);
-        const iot_data_t *value = iot_data_map_iter_value(&iter);
-        iot_data_string_map_add(tags, key, iot_data_copy(value));
-      }
-    }
-  }
-
-  if (device->tags) {
-      if (!tags) {
-        tags = iot_data_copy(device->tags); // only device tags if no other tags exist
-      }
-      else
-      {
-        // Merge device tags into existing tags
-        iot_data_map_iter_t iter;
-        iot_data_map_iter(device->tags, &iter);
-        while (iot_data_map_iter_next(&iter))
-        {
-          const char *key = iot_data_map_iter_string_key(&iter);
-          const iot_data_t *value = iot_data_map_iter_value(&iter);
-          iot_data_string_map_add(tags, key, iot_data_copy(value));
-      }
-    }
-  }
+  iot_data_t *event_tags = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_map_merge(event_tags, tags);
+  iot_data_map_merge(event_tags,commandinfo->tags);
+  iot_data_map_merge(event_tags,device->tags);
 
   iot_data_t *evmap = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (evmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
@@ -217,8 +184,8 @@ edgex_event_cooked *edgex_data_process_event
   iot_data_string_map_add (evmap, "origin", iot_data_alloc_ui64 (timenow));
   iot_data_string_map_add (evmap, "readings", rvec);
 
-  if (tags) {
-    iot_data_string_map_add (evmap, "tags", tags);
+  if (iot_data_map_size(event_tags)) {
+    iot_data_string_map_add (evmap, "tags", event_tags);
   }
 
   iot_data_t *reqmap = iot_data_alloc_map (IOT_DATA_STRING);
