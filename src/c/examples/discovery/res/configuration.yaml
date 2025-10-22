@@ -18,6 +18,7 @@ Service:
 Device:
   ProfilesDir: ./res/profiles
   DevicesDir: ./res/devices
+  ProvisionWatchersDir: ./res/watchers
 
 MessageBus:
   Optional:
