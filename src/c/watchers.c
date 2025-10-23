@@ -261,11 +261,6 @@ void edgex_device_watchers_upload (devsdk_service_t *svc, devsdk_error *err)
 {
   *err = EDGEX_OK;
   
-  if (!svc->config.device.provisionwatchersdir || !strlen(svc->config.device.provisionwatchersdir))
-  {
-    return;  // No directory configured
-  }
-  
   iot_log_info (svc->logger, "Processing Provision Watchers from %s", svc->config.device.provisionwatchersdir);
 
   devsdk_strings *filenames = devsdk_scandir (svc->logger, svc->config.device.provisionwatchersdir, "json");
