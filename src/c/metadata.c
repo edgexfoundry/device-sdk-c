@@ -794,7 +794,7 @@ void edgex_metadata_client_add_watcher_jobj(iot_logger_t *lc, edgex_service_endp
   }
   else
   {
-    iot_log_info(lc, "edgex_metadata_client_add_watcher_jobj: %s: %s", err->reason, ctx.buff);
+    iot_log_error(lc, "edgex_metadata_client_add_watcher_jobj: %s: %s", err->reason, ctx.buff);
   }
 
   json_value_free (reqval);
