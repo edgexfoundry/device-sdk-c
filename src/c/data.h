@@ -34,9 +34,10 @@ void edgex_event_cooked_free (edgex_event_cooked *e);
 
 edgex_event_cooked *edgex_data_process_event
 (
-  const char *device_name,
+  const edgex_device *device,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
+  iot_data_t *tags,
   bool doTransforms
 );
 

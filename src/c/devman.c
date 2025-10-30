@@ -26,6 +26,7 @@ void devsdk_free_resources (devsdk_device_resources *r)
   {
     free (r->resname);
     iot_data_free (r->attributes);
+    iot_data_free (r->tags);
     devsdk_device_resources *nextr = r->next;
     free (r);
     r = nextr;
