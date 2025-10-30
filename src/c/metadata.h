@@ -151,4 +151,14 @@ edgex_watcher *edgex_metadata_client_get_watchers
   devsdk_error * err
 );
 
+void edgex_metadata_client_add_watcher_jobj
+(
+  iot_logger_t *lc,
+  edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t *secretprovider,
+  const char *servicename,
+  JSON_Object *obj,
+  devsdk_error *err
+);
+
 #endif

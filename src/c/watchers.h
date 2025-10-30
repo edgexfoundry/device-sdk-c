@@ -31,5 +31,6 @@ extern bool edgex_watchlist_remove_watcher (edgex_watchlist_t *list, const char 
 extern void edgex_watchlist_update_watcher (edgex_watchlist_t *list, const edgex_watcher *updated);
 
 extern edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *list, const iot_data_t *ids);
+extern void edgex_device_watchers_upload (devsdk_service_t *svc, devsdk_error *err);
 
 #endif
