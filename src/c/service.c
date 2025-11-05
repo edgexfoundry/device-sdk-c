@@ -52,8 +52,10 @@ void devsdk_usage ()
   printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
           "                             \t*** Use with caution *** Use will clobber existing settings in provider,\n"
           "                             \tproblematic if those settings were edited by hand intentionally\n");
-  printf ("  -od, --overwriteDevices    \tOverwrite service devices in core metadata with local configuration.\n");
-  printf ("  -op, --overwriteProfiles   \tOverwrite service profiles in core metadata with local configuration.\n");
+  printf ("  -od, --overwriteDevices    \tOverwrite service devices in core metadata with local configuration.\n"
+          "                             \t*** Use with caution *** Use will clobber existing devices with matching names in provider.\n");
+  printf ("  -op, --overwriteProfiles   \tOverwrite service profiles in core metadata with local configuration.\n"
+          "                             \t*** Use with caution *** Use will clobber existing profiles with matching names in provider.\n");
   printf ("  -cf, --configFile          \tIndicates name of the local configuration file. Defaults to configuration.yaml\n");
   printf ("  -p,  --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -cd, --configDir=<dir>     \tSpecify local configuration directory\n");

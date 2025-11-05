@@ -194,6 +194,39 @@ char *edgex_metadata_client_create_deviceprofile_file
   return ctx.buff;
 }
 
+char * edgex_metadata_client_update_deviceprofile_file
+(
+  iot_logger_t *lc,
+  edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
+  const char * filename,
+  devsdk_error *err
+)
+{
+  edgex_ctx ctx;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+  snprintf
+  (
+    url,
+    URL_BUF_SIZE - 1,
+    "http://%s:%u/api/" EDGEX_API_VERSION"/deviceprofile/uploadfile",
+    endpoints->metadata.host,
+    endpoints->metadata.port
+  );
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);
+  ctx.jwt_token = iot_data_string(jwt_data);
+
+  edgex_http_putfile(lc, &ctx, url, filename, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
+  return ctx.buff;
+}
+
 edgex_deviceservice *edgex_metadata_client_get_deviceservice
 (
   iot_logger_t *lc,
@@ -456,6 +489,43 @@ void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_end
   else
   {
     iot_log_info (lc, "edgex_metadata_client_add_profile_jobj: %s: %s", err->reason, ctx.buff);
+  }
+  json_value_free (reqval);
+  free (ctx.buff);
+  json_free_serialized_string (json);
+}
+
+void edgex_metadata_client_put_profile_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, JSON_Object *jobj, devsdk_error *err)
+{
+  if (!json_object_get_string (jobj, "apiVersion"))
+  {
+    json_object_set_string (jobj, "apiVersion", EDGEX_API_VERSION);
+  }
+  JSON_Value *reqval = edgex_wrap_request ("Profile", json_object_get_wrapping_value (jobj));
+  char *json = json_serialize_to_string (reqval);
+  edgex_ctx ctx;
+  *err = EDGEX_OK;
+  char url[URL_BUF_SIZE];
+
+  memset (&ctx, 0, sizeof (edgex_ctx));
+
+  snprintf (url, URL_BUF_SIZE - 1, "http://%s:%u/api/" EDGEX_API_VERSION "/deviceprofile", endpoints->metadata.host, endpoints->metadata.port);
+
+  iot_data_t *jwt_data = edgex_secrets_request_jwt (secretprovider);
+  ctx.jwt_token = iot_data_string(jwt_data);
+
+  edgex_http_put (lc, &ctx, url, json, edgex_http_write_cb, err);
+
+  iot_data_free(jwt_data);
+  ctx.jwt_token = NULL;
+
+  if (err->code == 0)
+  {
+    iot_log_info (lc, "Device profile %s updated", json_object_get_string (jobj, "name"));
+  }
+  else
+  {
+    iot_log_info (lc, "edgex_metadata_client_put_profile_jobj: %s: %s", err->reason, ctx.buff);
   }
   json_value_free (reqval);
   free (ctx.buff);
