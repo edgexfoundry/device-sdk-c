@@ -129,7 +129,8 @@ typedef void (*devsdk_free_resource_attr) (void *impl, devsdk_resource_attr_t re
  * @param nreadings The number of readings requested.
  * @param requests An array specifying the readings that have been requested.
  * @param readings An array in which to return the requested readings.
- * @param options Options which were set for this request.
+ * @param tags An optional map for tags associated with the event. May be NULL.
+ * @param options Options which were set for this request. May be NULL
  * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
  * @return true if the operation was successful, false otherwise.
  */
@@ -141,6 +142,7 @@ typedef bool (*devsdk_handle_get)
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   devsdk_commandresult *readings,
+  iot_data_t **tags,
   const iot_data_t *options,
   iot_data_t **exception
 );
@@ -337,10 +339,11 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
  * @param svc The device service.
  * @param device_name The name of the device that the readings have come from.
  * @param resource_name Name of the resource or command which defines the Event.
- * @param values An array of readings. These will be combined into an Event and submitted to core-data.
+ * @param values An array of readings. These will be combined into an Event and submitted to core-data. The caller is owner of the memory.
+ * @param tags Tags associated with the values. Tags is an optional field of the Event. May be NULL. The callee is owner of the memory.
  */
 
-void devsdk_post_readings (devsdk_service_t *svc, const char *device_name, const char *resource_name, devsdk_commandresult *values);
+void devsdk_post_readings (devsdk_service_t *svc, const char *device_name, const char *resource_name, devsdk_commandresult *values, iot_data_t *tags);
 
 void devsdk_add_discovered_devices (devsdk_service_t *svc, uint32_t ndevices, devsdk_discovered_device *devices);
 
