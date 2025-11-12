@@ -57,16 +57,19 @@ static void edgex_add_profile_json (devsdk_service_t *svc, const char *fname, de
     if (name)
     {
       iot_log_debug (svc->logger, "Checking existence of DeviceProfile %s", name);
-      if (edgex_deviceprofile_get_internal (svc, name, err) && !svc->overwriteprofiles)
+      if (edgex_deviceprofile_get_internal (svc, name, err))
       {
-        iot_log_info (svc->logger, "DeviceProfile %s already exists: skipped", name);
-      }
-      else if (edgex_deviceprofile_get_internal (svc, name, err) && svc->overwriteprofiles)
-      {
-        iot_log_info (svc->logger, "DeviceProfile %s already exists: over-writing", name);
-        JSON_Value *copy = json_value_deep_copy (jval);
-        JSON_Object *profobj = json_value_get_object (copy);
-        edgex_metadata_client_put_profile_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, profobj, err);
+        if (svc->overwriteprofiles)
+        {
+          iot_log_info (svc->logger, "DeviceProfile %s already exists: over-writing", name);
+          JSON_Value *copy = json_value_deep_copy (jval);
+          JSON_Object *profobj = json_value_get_object (copy);
+          edgex_metadata_client_put_profile_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, profobj, err);
+        }
+        else
+        {
+          iot_log_info (svc->logger, "DeviceProfile %s already exists: skipped", name);
+        }
       }
       else
       {
