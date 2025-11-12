@@ -437,6 +437,54 @@ long edgex_http_put
   return edgex_run_curl (lc, ctx, hnd, url, writefunc, slist, err);
 }
 
+long edgex_http_putfile
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err)
+{
+  long http_code = 0;
+  CURL *hnd;
+#ifdef USE_CURL_MIME
+  curl_mime *form = NULL;
+  curl_mimepart *field = NULL;
+#else
+  struct curl_httppost *form = NULL;
+  struct curl_httppost *lastptr = NULL;
+#endif
+
+  hnd = curl_easy_init ();
+
+  curl_easy_setopt(hnd, CURLOPT_CUSTOMREQUEST, "PUT");
+  curl_easy_setopt(hnd, CURLOPT_UPLOAD, 1L);
+
+#ifdef USE_CURL_MIME
+  form = curl_mime_init (hnd);
+  field = curl_mime_addpart (form);
+  curl_mime_name (field, "file");
+  curl_mime_filedata (field, data);
+  field = curl_mime_addpart (form);
+  curl_mime_name (field, "filename");
+  curl_mime_data (field, data, CURL_ZERO_TERMINATED);
+  field = curl_mime_addpart (form);
+  curl_mime_name (field, "submit");
+  curl_mime_data (field, "send", CURL_ZERO_TERMINATED);
+  curl_easy_setopt(hnd, CURLOPT_MIMEPOST, form);
+#else
+  curl_formadd (&form, &lastptr, CURLFORM_COPYNAME, "file", CURLFORM_FILE, fname, CURLFORM_END);
+  curl_formadd (&form, &lastptr, CURLFORM_COPYNAME, "filename", CURLFORM_COPYCONTENTS, fname, CURLFORM_END);
+  curl_formadd (&form, &lastptr, CURLFORM_COPYNAME, "submit", CURLFORM_COPYCONTENTS, "send", CURLFORM_END);
+  curl_easy_setopt(hnd, CURLOPT_HTTPPOST, form);
+#endif
+
+  http_code = edgex_run_curl (lc, ctx, hnd, url, writefunc, NULL, err);
+
+#ifdef USE_CURL_MIME
+  curl_mime_free (form);
+#else
+  curl_formfree(form);
+#endif
+
+  return http_code;
+}
+
 long edgex_http_patch
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err)
 {

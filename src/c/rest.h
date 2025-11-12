@@ -72,6 +72,9 @@ long edgex_http_postfile
 long edgex_http_put
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err);
 
+long edgex_http_putfile
+  (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *filename, void *writefunc, devsdk_error *err);
+
 long edgex_http_patch
   (iot_logger_t *lc, edgex_ctx *ctx, const char *url, const char *data, void *writefunc, devsdk_error *err);
 
