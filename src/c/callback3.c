@@ -12,6 +12,7 @@
 #include "profiles.h"
 #include "dto-read.h"
 #include "edgex-rest.h"
+#include "autoevent.h"
 #include <microhttpd.h>
 
 int32_t edgex_callback_add_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
@@ -88,6 +89,14 @@ int32_t edgex_callback_update_device (void *ctx, const iot_data_t *req, const io
   if (edgex_devmap_replace_device (svc->devices, d) == UPDATED_DRIVER && svc->userfns.device_updated)
   {
     svc->userfns.device_updated (svc->userdata, d->name, (const devsdk_protocols *)d->protocols, d->adminState);
+  }
+
+  bool has_autoevents = (d->autos != NULL);
+  if(has_autoevents){
+    edgex_device *updated_dev = edgex_devmap_device_byname(svc->devices, d->name);
+    edgex_device_autoevent_stop(updated_dev);
+    edgex_device_autoevent_start(svc, updated_dev);
+    edgex_device_release(svc, updated_dev);
   }
   edgex_device_free (svc, d);
 
