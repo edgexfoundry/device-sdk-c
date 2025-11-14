@@ -402,6 +402,7 @@ static edgex_device_autoevents *autoevent_read (const JSON_Object *obj)
   edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
   result->resource = get_string (obj, "sourceName");
   result->onChange = get_boolean (obj, "onChange", false);
+  result->onChangeThreshold = json_object_get_number (obj, "onChangeThreshold");
   result->interval = get_string  (obj, "interval");
   result->impl = NULL;
   result->next = NULL;
@@ -420,6 +421,7 @@ static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
     json_object_set_string (pobj, "sourceName", ae->resource);
     json_object_set_string (pobj, "interval", ae->interval);
     json_object_set_boolean (pobj, "onChange", ae->onChange);
+    json_object_set_number (pobj, "onChangeThreshold", ae->onChangeThreshold);
     json_array_append_value (arr, pval);
   }
   return result;
@@ -436,6 +438,7 @@ static edgex_device_autoevents *autoevents_dup
     elem->resource = strdup (e->resource);
     elem->interval = strdup (e->interval);
     elem->onChange = e->onChange;
+    elem->onChangeThreshold = e->onChangeThreshold;
     elem->impl = NULL;
     elem->next = NULL;
     *current = elem;
