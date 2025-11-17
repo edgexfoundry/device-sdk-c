@@ -47,7 +47,7 @@ static void edgex_autoimpl_release (void *p)
 static bool values_exceed_threshold (const devsdk_commandresult *newvals, const devsdk_commandresult *oldvals, int nvals, double threshold, iot_logger_t *logger)
 {
   iot_log_debug (logger, "Comparing values against threshold: %f", threshold);
-  if(!newvals || !oldvals || threshold == 0.0)
+  if(!newvals || !oldvals)
   {
     iot_log_debug (logger, "No threshold set or new/old values are null, publishing event.");
     return true;
@@ -77,7 +77,10 @@ static bool values_exceed_threshold (const devsdk_commandresult *newvals, const 
       }
       iot_data_free (curr_val_cast);
       iot_data_free (prev_val_cast);
-      return publish;
+      if(publish)
+      {
+        return true;
+      }
     }
   }
   iot_log_debug (logger, "No values exceeded threshold, not publishing event.");
