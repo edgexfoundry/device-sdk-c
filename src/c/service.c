@@ -50,8 +50,12 @@ void devsdk_usage ()
           "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: keeper.http://localhost:59890\n");
   printf ("  -cc, --commonConfig        \tTakes the location where the common configuration is loaded from when not using the Configuration Provider\n");
   printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
-          "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
+          "                             \t*** Use with caution *** Use will clobber existing settings in provider,\n"
           "                             \tproblematic if those settings were edited by hand intentionally\n");
+  printf ("  -od, --overwriteDevices    \tOverwrite service devices in core metadata with local configuration.\n"
+          "                             \t*** Use with caution *** Use will clobber existing devices with matching names in provider.\n");
+  printf ("  -op, --overwriteProfiles   \tOverwrite service profiles in core metadata with local configuration.\n"
+          "                             \t*** Use with caution *** Use will clobber existing profiles with matching names in provider.\n");
   printf ("  -cf, --configFile          \tIndicates name of the local configuration file. Defaults to configuration.yaml\n");
   printf ("  -p,  --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -cd, --configDir=<dir>     \tSpecify local configuration directory\n");
@@ -163,6 +167,8 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     else if
     (
       testBool (arg, val, "-o", "--overwrite", &svc->overwriteconfig, &result) ||
+      testBool (arg, val, "-od", "--overwriteDevices", &svc->overwritedevices, &result) ||
+      testBool (arg, val, "-op", "--overwriteProfiles", &svc->overwriteprofiles, &result) ||
       testBool (arg, val, "-r", "--registry", &usereg, &result)
     )
     {
@@ -498,28 +504,39 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
   const char *dname = json_object_get_string (jobj, "name");
   if (dname)
   {
-    if (!edgex_devmap_device_exists (svc->devices, dname))
+    iot_log_info (svc->logger, "From res/device, checking device %s ...", dname);
+    if (json_object_get_string (jobj, "profileName"))
     {
-      if (json_object_get_string (jobj, "profileName"))
+      if (edgex_devmap_device_exists (svc->devices, dname) && !svc->overwritedevices)
       {
+        iot_log_info (svc->logger, "Device %s already exists: skipped", dname);
+      }
+      else
+      {
+        if ((edgex_devmap_device_exists (svc->devices, dname) && svc->overwritedevices))
+        {
+          iot_log_info (svc->logger, "Device %s already exists, deleting and re-adding", dname);
+          edgex_metadata_client_delete_device_byname(svc->logger,&svc->config.endpoints,svc->secretstore,dname,err);
+          if (err->code!=0) {
+            iot_log_warn (svc->logger, "Device re-upload: failed to delete exising device");
+            return;
+          }
+        }
+        // device never existed, or has been deleted, the new definition can be uploaded
         JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
         JSON_Object *deviceobj = json_value_get_object (jval);
         json_object_set_string (deviceobj, "serviceName", svc->name);
         edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, deviceobj, err);
-      }
-      else
-      {
-        iot_log_warn (svc->logger, "Device upload: Missing device profileName definition");
+        if (err->code==0)
+        {
+          iot_log_info (svc->logger, "Device %s uploaded", dname);
+        }
       }
     }
     else
     {
-      iot_log_info (svc->logger, "Device %s already exists: skipped", dname);
+      iot_log_warn (svc->logger, "Device upload: Missing device profileName definition");
     }
-  }
-  else
-  {
-    iot_log_warn (svc->logger, "Device upload: Missing device name definition");
   }
 }
 
