@@ -147,6 +147,7 @@ static bool terminal_get_handler
   uint32_t nreadings,
   const devsdk_commandrequest * requests,
   devsdk_commandresult * readings,
+  iot_data_t **tags,
   const iot_data_t *options,
   iot_data_t ** exception
 )

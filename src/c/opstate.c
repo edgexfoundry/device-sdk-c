@@ -81,7 +81,7 @@ static void *devsdk_device_return (void *p)
       {
         iot_data_t *e = NULL;
         devsdk_commandresult result = { 0 };
-        if (param->svc->userfns.gethandler (param->svc->userdata, dev->devimpl, 1, cmd->reqs, &result, NULL, &e))
+        if (param->svc->userfns.gethandler (param->svc->userdata, dev->devimpl, 1, cmd->reqs, &result, NULL, NULL, &e))
         {
           devsdk_error err;
           iot_log_debug (param->svc->logger, "Device %s responsive: setting operational state to up", name);
