@@ -199,7 +199,8 @@ typedef void * (*devsdk_autoevent_start_handler)
   uint32_t nreadings,
   const devsdk_commandrequest *requests,
   uint64_t interval,
-  bool onChange
+  bool onChange,
+  double onChangeThreshold
 );
 
 /**
