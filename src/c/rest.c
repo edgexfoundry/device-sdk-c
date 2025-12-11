@@ -183,6 +183,7 @@ static long edgex_run_curl
   curl_easy_setopt(hnd, CURLOPT_URL, url);
   curl_easy_setopt(hnd, CURLOPT_USERAGENT, "edgex");
   curl_easy_setopt(hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+  curl_easy_setopt(hnd, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
 
   /* TLS options */
   if (ctx->verify_peer && ctx->cacerts_file)
