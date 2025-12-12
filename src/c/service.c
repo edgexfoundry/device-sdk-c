@@ -281,6 +281,11 @@ devsdk_service_t *devsdk_service_new
     return NULL;
   }
 
+  // Set to false in case checkEnvBool leaves it alone (the variable is not set,
+  // or its value is neither "true" nor "false").
+  result->reduced_events = false;
+  checkEnvBool (&result->reduced_events, "EDGEX_OPTIMIZE_EVENT_PAYLOAD");
+
   if (result->name)
   {
     const char *n = result->name;
@@ -1172,7 +1177,7 @@ void devsdk_post_readings
   if (command)
   {
     edgex_event_cooked *event = edgex_data_process_event
-      (devname, command, values, svc->config.device.datatransform);
+      (devname, command, values, svc->config.device.datatransform, svc->reduced_events);
 
     if (event)
     {

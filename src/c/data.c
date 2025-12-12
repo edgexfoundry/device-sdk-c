@@ -48,7 +48,6 @@ static char *edgex_value_tostring (const iot_data_t *value)
 /* Event data structure:
 
 Reading:
-  apiVersion: "v2"
   id: uuid (sdk to generate)
   origin: Timestamp (filled in by the implementation or the SDK)
   deviceName: String (name of the Device)
@@ -82,7 +81,8 @@ edgex_event_cooked *edgex_data_process_event
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
-  bool doTransforms
+  bool doTransforms,
+  bool reducedEvents
 )
 {
   char *eventId;
@@ -131,17 +131,28 @@ edgex_event_cooked *edgex_data_process_event
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
     iot_data_t *rmap = iot_data_alloc_map (IOT_DATA_STRING);
-    char *id = edgex_device_genuuid ();
     iot_typecode_t tc;
     iot_data_typecode (values[i].value, &tc);
 
-    iot_data_string_map_add (rmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
-    iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
+    if (!reducedEvents)
+    {
+      char *id = edgex_device_genuuid ();
+      iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
+      iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+    }
+    if ((!reducedEvents) || (commandinfo->nreqs > 1) || 
+        (strcmp (commandinfo->reqs[i].resource->name, commandinfo->name) != 0))
+    {
+      iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
+    }
     iot_data_string_map_add (rmap, "valueType", iot_data_alloc_string (edgex_typecode_tostring (tc), IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "origin", iot_data_alloc_ui64 (values[i].origin ? values[i].origin : timenow));
+    // Would check that reading and event origins are different.
+    // But event origin will be set to "timenow" below, so we check for that instead.
+    if ((!reducedEvents) || ((values[i].origin != 0) && (values[i].origin != timenow)))
+    {
+      iot_data_string_map_add (rmap, "origin", iot_data_alloc_ui64 (values[i].origin ? values[i].origin : timenow));
+    }
     switch (tc.type)
     {
       case IOT_DATA_BINARY:
