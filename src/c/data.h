@@ -37,7 +37,8 @@ edgex_event_cooked *edgex_data_process_event
   const char *device_name,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
-  bool doTransforms
+  bool doTransforms,
+  bool reducedEvents
 );
 
 void edgex_data_client_add_event (edgex_bus_t *bus, edgex_event_cooked *eventval, devsdk_metrics_t *metrics);
