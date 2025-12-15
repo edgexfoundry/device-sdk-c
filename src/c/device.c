@@ -407,7 +407,7 @@ static edgex_event_cooked *edgex_device_runget2
     if (svc->userfns.gethandler (svc->userdata, dev->devimpl, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
     {
       devsdk_error err = EDGEX_OK;
-      result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+      result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform, svc->reduced_events);
 
       if (result)
       {
@@ -706,7 +706,7 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
     if (svc->userfns.gethandler (svc->userdata, dev->devimpl, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
     {
       devsdk_error err = EDGEX_OK;
-      result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+      result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform, svc->reduced_events);
       if (result)
       {
         if (svc->config.device.updatelastconnected)

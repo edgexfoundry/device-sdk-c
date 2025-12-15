@@ -73,6 +73,7 @@ struct devsdk_service_t
   bool overwritedevices;
   bool overwriteprofiles;
   bool secureMode;
+  bool reduced_events;
 
   edgex_devmap_t *devices;
   edgex_watchlist_t *watchlist;
