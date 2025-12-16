@@ -36,9 +36,14 @@ void *devsdk_registry_keeper_alloc(devsdk_service_t *service)
     return rv;
 }
 
+static bool stop_delayed_bus_connect_thread = false;
+
 static void edgex_keeper_client_free (void *impl)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
+
+  stop_delayed_bus_connect_thread = true;
+
   if (keeper)
   {
     free (keeper->host);
@@ -53,8 +58,12 @@ static void *delayed_message_bus_connect(void *impl)
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
 
   iot_log_debug (keeper->lc, "Message bus wait thread starting");
-  while (true)
+  while (!stop_delayed_bus_connect_thread)
   {
+    if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
+    {
+      break;
+    }
     if (keeper->service && keeper->service->msgbus)
     {
       char *tree = malloc (strlen (keeper->topic_root) + 3);
@@ -64,15 +73,11 @@ static void *delayed_message_bus_connect(void *impl)
         tree [strlen (tree) - 1] = '\0';
       }
       strcat (tree, "/#");
-      iot_log_info (keeper->lc, "Subscribing to Keeper notifications on message bus at %s", tree);
+      iot_log_info (keeper->lc, "Subscribing to Keeper config changes on topic %s", tree);
       edgex_bus_register_handler (keeper->service->msgbus, tree, impl, edgex_keeper_client_notify);
       edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT ALL_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
       edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT DEV_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
       free(tree);
-      break;
-    }
-    if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
-    {
       break;
     }
     sleep (1);
@@ -133,6 +138,7 @@ static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_thre
     // don't have its config yet, because we might be reading config from Keeper.
     // So start a background thread to wait until the message bus is available,
     // then subscribe for notification of changes.
+    stop_delayed_bus_connect_thread = false;
     iot_threadpool_add_work(pool, delayed_message_bus_connect, keeper, -1);
 
     return true;
