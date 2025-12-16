@@ -36,13 +36,9 @@ void *devsdk_registry_keeper_alloc(devsdk_service_t *service)
     return rv;
 }
 
-static bool stop_delayed_bus_connect_thread = false;
-
 static void edgex_keeper_client_free (void *impl)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
-
-  stop_delayed_bus_connect_thread = true;
 
   if (keeper)
   {
@@ -56,14 +52,29 @@ static void edgex_keeper_client_free (void *impl)
 static void *delayed_message_bus_connect(void *impl)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
-
-  iot_log_debug (keeper->lc, "Message bus wait thread starting");
-  while (!stop_delayed_bus_connect_thread)
+  /* If the service stops before we connect, the 'impl' structure might be freed, 
+     so stash a copy of 'stopconfig' so we know if we need to exit.
+     'stopconfig' is allocated before our init, and freed after the iot_threadpool 
+     is waited on, so this is safe.
+  */
+  atomic_bool *stopconfig = NULL;
+  if (keeper && keeper->service && keeper->service->stopconfig)
   {
-    if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
-    {
-      break;
-    }
+    stopconfig = keeper->service->stopconfig;
+  }
+  else if (keeper && keeper->lc)
+  {
+    iot_log_error (keeper->lc, "Internal error: Keeper delayed bus connect called too early, we will not listen for config changes");
+    return NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+  
+  iot_log_info (keeper->lc, "Keeper message bus wait thread starting");
+  while (!(*stopconfig))
+  {
     if (keeper->service && keeper->service->msgbus)
     {
       char *tree = malloc (strlen (keeper->topic_root) + 3);
@@ -138,7 +149,6 @@ static bool edgex_keeper_client_init (void *impl, iot_logger_t *logger, iot_thre
     // don't have its config yet, because we might be reading config from Keeper.
     // So start a background thread to wait until the message bus is available,
     // then subscribe for notification of changes.
-    stop_delayed_bus_connect_thread = false;
     iot_threadpool_add_work(pool, delayed_message_bus_connect, keeper, -1);
 
     return true;
