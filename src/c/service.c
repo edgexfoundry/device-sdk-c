@@ -980,6 +980,9 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     return;
   }
 
+  svc->stopconfig = malloc (sizeof (atomic_bool));
+  atomic_init (svc->stopconfig, false);
+  
   if (svc->regURL)
   {
     if (*svc->regURL == '\0')
@@ -1026,8 +1029,6 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
 
     iot_log_info (svc->logger, "Found registry service at %s", svc->regURL);
-    svc->stopconfig = malloc (sizeof (atomic_bool));
-    atomic_init (svc->stopconfig, false);
 
     if (svc->overwriteconfig)
     {

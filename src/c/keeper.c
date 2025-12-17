@@ -39,6 +39,7 @@ void *devsdk_registry_keeper_alloc(devsdk_service_t *service)
 static void edgex_keeper_client_free (void *impl)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
+
   if (keeper)
   {
     free (keeper->host);
@@ -51,9 +52,28 @@ static void edgex_keeper_client_free (void *impl)
 static void *delayed_message_bus_connect(void *impl)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
-
-  iot_log_debug (keeper->lc, "Message bus wait thread starting");
-  while (true)
+  /* If the service stops before we connect, the 'impl' structure might be freed, 
+     so stash a copy of 'stopconfig' so we know if we need to exit.
+     'stopconfig' is allocated before our init, and freed after the iot_threadpool 
+     is waited on, so this is safe.
+  */
+  atomic_bool *stopconfig = NULL;
+  if (keeper && keeper->service && keeper->service->stopconfig)
+  {
+    stopconfig = keeper->service->stopconfig;
+  }
+  else if (keeper && keeper->lc)
+  {
+    iot_log_error (keeper->lc, "Internal error: Keeper delayed bus connect called too early, we will not listen for config changes");
+    return NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+  
+  iot_log_info (keeper->lc, "Keeper message bus wait thread starting");
+  while (!(*stopconfig))
   {
     if (keeper->service && keeper->service->msgbus)
     {
@@ -64,15 +84,11 @@ static void *delayed_message_bus_connect(void *impl)
         tree [strlen (tree) - 1] = '\0';
       }
       strcat (tree, "/#");
-      iot_log_info (keeper->lc, "Subscribing to Keeper notifications on message bus at %s", tree);
+      iot_log_info (keeper->lc, "Subscribing to Keeper config changes on topic %s", tree);
       edgex_bus_register_handler (keeper->service->msgbus, tree, impl, edgex_keeper_client_notify);
       edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT ALL_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
       edgex_bus_register_handler (keeper->service->msgbus, _COMMON_CONFIG_TOPIC_ROOT DEV_SVCS_NODE "/#", impl, edgex_keeper_client_notify);
       free(tree);
-      break;
-    }
-    if (keeper->service && keeper->service->stopconfig && ((*keeper->service->stopconfig)))
-    {
       break;
     }
     sleep (1);
