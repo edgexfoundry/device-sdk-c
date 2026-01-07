@@ -13,7 +13,7 @@
 #include <pthread.h>
 
 typedef void (*edgex_bus_freefn) (void *ctx);
-typedef void (*edgex_bus_postfn) (void *ctx, const char *path, const iot_data_t *envelope);
+typedef void (*edgex_bus_postfn) (void *ctx, const char *path, const iot_data_t *envelope, bool use_cbor);
 typedef void (*edgex_bus_subsfn) (void *ctx, const char *path);
 
 struct edgex_bus_t
@@ -27,9 +27,10 @@ struct edgex_bus_t
   char *svcname;
   pthread_mutex_t mtx;
   bool msgb64payload;
+  bool cbor;
 };
 
 void edgex_bus_init (edgex_bus_t *bus, const char *svcname, const iot_data_t *cfg);
-void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *envelope);
+void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *envelope, uint32_t len);
 
 #endif

@@ -365,7 +365,7 @@ extern void devsdk_publish_system_event (devsdk_service_t *svc, const char *acti
   strcpy (t, "device/");
   strcat (t, action);
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_SYSTEM_EVENT, t);
-  edgex_bus_post (svc->msgbus, topic, event);
+  edgex_bus_post (svc->msgbus, topic, event, false);
   free (t);
   free (topic);
 }
@@ -386,7 +386,7 @@ extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * 
   iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_SYSTEM_EVENT, "device/discovery");
-  edgex_bus_post (svc->msgbus, topic, event);
+  edgex_bus_post (svc->msgbus, topic, event, false);
   free (topic);
 
   iot_data_free (event);
@@ -410,7 +410,7 @@ static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uin
   iot_data_string_map_add (metric, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_METRIC, mname);
-  edgex_bus_post (svc->msgbus, topic, metric);
+  edgex_bus_post (svc->msgbus, topic, metric, false);
   free (topic);
 
   iot_data_free (metric);

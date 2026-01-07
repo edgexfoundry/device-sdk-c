@@ -26,7 +26,7 @@ typedef struct keeper_impl_t
     void *updatectx;
 } keeper_impl_t;
 
-static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply);
+static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor);
 
 void *devsdk_registry_keeper_alloc(devsdk_service_t *service)
 {
@@ -428,7 +428,7 @@ static void process_notification(keeper_impl_t *keeper, const iot_data_t *reques
   }
 }
 
-static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+static int32_t edgex_keeper_client_notify(void *impl, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   keeper_impl_t *keeper = (keeper_impl_t *)impl;
   if ((!keeper) || (!request) || (iot_data_type(request) != IOT_DATA_MAP))

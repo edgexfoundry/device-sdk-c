@@ -197,7 +197,7 @@ void edgex_data_client_add_event (edgex_bus_t *client, edgex_event_cooked *ev, d
 {
   char *topic = edgex_bus_mktopic (client, EDGEX_DEV_TOPIC_EVENT, ev->path);
   edc_update_metrics (metrics, ev);
-  edgex_bus_post (client, topic, ev->value);
+  edgex_bus_post (client, topic, ev->value, (ev->encoding == CBOR));
   free (topic);
 }
 
@@ -236,7 +236,7 @@ void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *reply)
       iot_data_t *cbor = iot_data_to_cbor (e->value);
       reply->data.size = iot_data_array_size (cbor);
       reply->data.bytes = malloc (reply->data.size);
-      memcpy (reply->data.bytes, iot_data_address (e->value), reply->data.size);
+      memcpy (reply->data.bytes, iot_data_address (cbor), reply->data.size);
       reply->content_type = CONTENT_CBOR;
       iot_data_free (cbor);
       break;

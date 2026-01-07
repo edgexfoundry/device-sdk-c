@@ -34,7 +34,7 @@
 
 typedef struct edgex_bus_t edgex_bus_t;
 
-typedef int32_t (*edgex_handler_fn) (void *ctx, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply);
+typedef int32_t (*edgex_handler_fn) (void *ctx, const iot_data_t *request, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor);
 
 void edgex_bus_config_defaults (iot_data_t *allconf, const char *svcname);
 JSON_Value *edgex_bus_config_json (const iot_data_t *allconf);
@@ -44,7 +44,7 @@ edgex_bus_t *edgex_bus_create_mqtt
 
 void edgex_bus_register_handler (edgex_bus_t *bus, const char *path, void *ctx, edgex_handler_fn handler);
 char *edgex_bus_mktopic (edgex_bus_t *bus, const char *type, const char *param);
-void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *payload);
+void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *payload, bool event_is_cbor);
 int edgex_bus_rmi (edgex_bus_t *bus, const char *path, const char *svcname, const iot_data_t *request, iot_data_t **reply);
 
 void edgex_bus_free (edgex_bus_t *bus);
