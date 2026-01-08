@@ -113,10 +113,7 @@ static char *edgex_data_to_b64 (const iot_data_t *src, bool use_cbor)
   size_t encsz = iot_b64_encodesize (sz);
   char *result = malloc (encsz);
   iot_b64_encode (data, sz, result, encsz);
-  if (cbor)
-  {
-    iot_data_free (cbor);
-  }
+  iot_data_free (cbor);
   free (data);
   return result;
 }

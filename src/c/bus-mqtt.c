@@ -115,10 +115,7 @@ static void edgex_bus_mqtt_post (void *ctx, const char *topic, const iot_data_t 
   {
     iot_log_error (cinfo->lc, "mqtt: failed to post event, error %d", result);
   }
-  if (cbor)
-  {
-    iot_data_free (cbor);
-  }
+  iot_data_free (cbor);
   free(data);
 }
 
