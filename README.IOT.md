@@ -16,7 +16,7 @@ apt-get install lsb-release apt-transport-https curl gnupg
 curl -fsSL https://iotech.jfrog.io/artifactory/api/gpg/key/public | gpg --dearmor -o /usr/share/keyrings/iotech.gpg
 echo "deb [signed-by=/usr/share/keyrings/iotech.gpg] https://iotech.jfrog.io/iotech/debian-release $(lsb_release -cs) main" | tee -a /etc/apt/sources.list.d/iotech.list
 apt-get update
-apt-get install iotech-iot-1.5-dev
+apt-get install iotech-iot-1.6-dev
 ```
 
 For earlier versions:
@@ -26,7 +26,7 @@ apt-get install lsb-release apt-transport-https curl gnupg
 curl -fsSL https://iotech.jfrog.io/artifactory/api/gpg/key/public | apt-key add -
 echo "deb https://iotech.jfrog.io/iotech/debian-release $(lsb_release -cs) main" | tee -a /etc/apt/sources.list.d/iotech.list
 apt-get update
-apt-get install iotech-iot-1.5-dev
+apt-get install iotech-iot-1.6-dev
 ```
 
 ### Alpine
@@ -35,7 +35,7 @@ apt-get install iotech-iot-1.5-dev
 wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
 echo "https://iotech.jfrog.io/artifactory/alpine-release/v3.16/main" >> /etc/apk/repositories
 apk update
-apk add iotech-iot-1.5-dev
+apk add iotech-iot-1.6-dev
 ```
 
 Note: If not using Alpine 3.16, replace v3.16 in the above commands with the correct version.
