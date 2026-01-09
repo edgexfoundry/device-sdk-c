@@ -92,18 +92,33 @@ static void edgex_bus_endpoint_free (void *p)
   free (ep);
 }
 
-static char *edgex_data_to_b64 (const iot_data_t *src)
+static char *edgex_data_to_b64 (const iot_data_t *src, bool use_cbor)
 {
-  char *json = iot_data_to_json (src);
-  size_t sz = strlen (json); // ignore the last null character, which causes an unmarshal error in core-data
+  char *data = NULL;
+  uint32_t sz = 0;
+  iot_data_t *cbor = NULL;
+  if (use_cbor)
+  {
+    cbor = iot_data_to_cbor (src);
+    if (cbor)
+    {
+      data = iot_data_binary_take(cbor, &sz);
+    }
+  }
+  else
+  {
+    data = iot_data_to_json (src);
+    sz = strlen (data); // ignore the last null character, which causes an unmarshal error in core-data
+  }
   size_t encsz = iot_b64_encodesize (sz);
   char *result = malloc (encsz);
-  iot_b64_encode (json, sz, result, encsz);
-  free (json);
+  iot_b64_encode (data, sz, result, encsz);
+  iot_data_free (cbor);
+  free (data);
   return result;
 }
 
-void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *payload)
+void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *payload, bool event_is_cbor)
 {
   iot_data_t *envelope = iot_data_alloc_map (IOT_DATA_STRING);
   if (edgex_device_get_crlid ())
@@ -112,17 +127,26 @@ void edgex_bus_post (edgex_bus_t *bus, const char *path, const iot_data_t *paylo
   }
   iot_data_string_map_add (envelope, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (envelope, "errorCode", iot_data_alloc_ui32 (0));
-  iot_data_string_map_add (envelope, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
-  if (bus->msgb64payload)
+  if (event_is_cbor || bus->cbor)
   {
-    iot_data_string_map_add (envelope, "payload", iot_data_alloc_string (edgex_data_to_b64 (payload), IOT_DATA_TAKE));
+    iot_data_string_map_add (envelope, "contentType", iot_data_alloc_string ("application/cbor", IOT_DATA_REF));
+  }
+  else
+  {
+    iot_data_string_map_add (envelope, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
+  }
+  // Like Go SDK's behavior: if envelope is CBOR, payload will not be base64-encoded, either way.
+  // If envelope is JSON and the event is a binary reading, payload will be base64-encoded CBOR, either way.
+  if ((!bus->cbor) && (bus->msgb64payload || event_is_cbor))
+  {
+    iot_data_string_map_add (envelope, "payload", iot_data_alloc_string (edgex_data_to_b64 (payload, event_is_cbor), IOT_DATA_TAKE));
   }
   else
   {
     iot_data_string_map_add (envelope, "payload", iot_data_add_ref (payload));
   }
 
-  bus->postfn (bus->ctx, path, envelope);
+  bus->postfn (bus->ctx, path, envelope, bus->cbor);
   iot_data_free (envelope);
 }
 
@@ -134,7 +158,7 @@ int edgex_bus_rmi (edgex_bus_t *bus, const char *path, const char *svcname, cons
   return -1;
 }
 
-void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *envelope)
+void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *envelope, uint32_t len)
 {
   void *ctx = NULL;
   iot_data_t *pathparams = iot_data_alloc_map (IOT_DATA_STRING);
@@ -146,17 +170,51 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
     const iot_data_t *crl = NULL;
     iot_data_t *req = NULL;
     iot_data_t *reply = NULL;
-    iot_data_t *envdata = iot_data_from_json (envelope);
-    if (bus->msgb64payload)
+    iot_data_t *envdata = NULL;
+    bool envelope_is_json = false;
+    bool payload_is_cbor = false;
+    if (bus->cbor)
+    {
+      envdata = iot_data_from_cbor ((const uint8_t *)envelope, len);
+    }
+    else
+    {
+      envelope_is_json = true;
+      if (envelope[len - 1] != '\0')
+      {
+        char *nullterm = strndup (envelope, len);
+        envdata = iot_data_from_json (nullterm);
+        free (nullterm);
+      }
+      else
+      {
+        envdata = iot_data_from_json (envelope);
+      }
+    }
+    const char *contentType = iot_data_string_map_get_string (envdata, "contentType");
+    if (strcmp (contentType, "application/cbor") == 0)
+    {
+      payload_is_cbor = true;
+    }
+
+    if ((bus->msgb64payload) || (envelope_is_json && payload_is_cbor))
     {
       const char *payload = iot_data_string_map_get_string (envdata, "payload");
-      if (payload) {
+      if (payload) 
+      {
         size_t sz = iot_b64_maxdecodesize(payload);
-        char *json = malloc(sz + 1);
-        iot_b64_decode(payload, json, &sz);
-        json[sz] = '\0';
-        req = iot_data_from_json(json);
-        free(json);
+        char *data = malloc(sz + 1);
+        iot_b64_decode(payload, data, &sz);
+        data[sz] = '\0';
+        if (payload_is_cbor)
+        {
+          req = iot_data_from_cbor ((const uint8_t *)data, sz);
+        }
+        else
+        {
+          req = iot_data_from_json (data);
+        }
+        free(data);
       }
     }
     else
@@ -174,9 +232,8 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
     {
       edgex_device_alloc_crlid (iot_data_string (crl));
     }
-
-    status = h (ctx, req, pathparams, iot_data_string_map_get (envdata, "queryParams"), &reply);
-
+    bool event_is_cbor = false;
+    status = h (ctx, req, pathparams, iot_data_string_map_get (envdata, "queryParams"), &reply, &event_is_cbor);
     if (reply)
     {
       char *rpath;
@@ -184,11 +241,17 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
       const iot_data_t *id;
       iot_data_t *renv = iot_data_alloc_map (IOT_DATA_STRING);
       iot_data_string_map_add (renv, "errorCode", iot_data_alloc_i32 (status));
-      iot_data_string_map_add (renv, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
-      // XXX and if it's CBOR? - metadata on the reply should say so
-      if (bus->msgb64payload)
+      if (bus->cbor || event_is_cbor)
       {
-        iot_data_string_map_add (renv, "payload", iot_data_alloc_string (edgex_data_to_b64 (reply), IOT_DATA_TAKE));
+        iot_data_string_map_add (renv, "contentType", iot_data_alloc_string ("application/cbor", IOT_DATA_REF));
+      }
+      else
+      {
+        iot_data_string_map_add (renv, "contentType", iot_data_alloc_string ("application/json", IOT_DATA_REF));
+      }
+      if ((!bus->cbor) && (bus->msgb64payload || event_is_cbor))
+      {
+        iot_data_string_map_add (renv, "payload", iot_data_alloc_string (edgex_data_to_b64 (reply, event_is_cbor), IOT_DATA_TAKE));
       }
       else
       {
@@ -198,11 +261,22 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
       iot_data_string_map_add (renv, "correlationID", iot_data_add_ref (crl));
       iot_data_string_map_add (renv, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
       id = iot_data_string_map_get (envdata, "requestID");
-      idstr = iot_data_string (id);
-      // iot_data_string_map_add (renv, "requestID", iot_data_add_ref (id));
-      rpath = edgex_bus_mktopic (bus, EDGEX_DEV_TOPIC_RESPONSE, idstr);
-      bus->postfn (bus->ctx, rpath, renv);
-      free (rpath);
+      if (!id)
+      {
+        id = iot_data_string_map_get (envdata, "requestId");
+      }
+      if (id)
+      {
+        idstr = iot_data_string (id);
+        // iot_data_string_map_add (renv, "requestID", iot_data_add_ref (id));
+        rpath = edgex_bus_mktopic (bus, EDGEX_DEV_TOPIC_RESPONSE, idstr);
+        bus->postfn (bus->ctx, rpath, renv, bus->cbor);
+        free (rpath);
+      }
+      else
+      {
+        iot_log_error(iot_logger_default (), "edgex_bus_handle_request: no request ID in envelope, cannot send reply");
+      }
       iot_data_free (renv);
     }
     if (crl)
@@ -214,6 +288,7 @@ void edgex_bus_handle_request (edgex_bus_t *bus, const char *path, const char *e
   }
   iot_data_free (pathparams);
 }
+
 
 char *edgex_bus_mktopic (edgex_bus_t *bus, const char *type, const char *param)
 {
@@ -247,6 +322,12 @@ void edgex_bus_init (edgex_bus_t *bus, const char *svcname, const iot_data_t *cf
   if (msgb64payload && strcmp (msgb64payload, "true") == 0)
   {
     bus->msgb64payload = true;
+  }
+  bus->cbor = false;
+  const char *msgcbor = getenv("EDGEX_MSG_CBOR_ENCODE");
+  if (msgcbor && strcmp (msgcbor, "true") == 0)
+  {
+    bus->cbor = true;
   }
 }
 

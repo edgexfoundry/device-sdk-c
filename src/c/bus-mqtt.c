@@ -83,15 +83,27 @@ static void edgex_bus_mqtt_subscribe (void *ctx, const char *topic)
   }
 }
 
-static void edgex_bus_mqtt_post (void *ctx, const char *topic, const iot_data_t *envelope)
+static void edgex_bus_mqtt_post (void *ctx, const char *topic, const iot_data_t *envelope, bool use_cbor)
 {
   edgex_bus_mqtt_t *cinfo = (edgex_bus_mqtt_t *)ctx;
   int result;
   MQTTAsync_message pubmsg = MQTTAsync_message_initializer;
   MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
-  char *json = iot_data_to_json (envelope);
-  pubmsg.payload = json;
-  pubmsg.payloadlen = strlen (json);
+  char *data = NULL;
+  uint32_t datasz = 0;
+  iot_data_t *cbor = NULL;
+  if (use_cbor)
+  {
+    cbor = iot_data_to_cbor (envelope);
+    data = iot_data_binary_take(cbor, &datasz);
+  }
+  else
+  {
+    data = iot_data_to_json (envelope);
+    datasz = strlen (data);
+  }
+  pubmsg.payload = data;
+  pubmsg.payloadlen = datasz;
   pubmsg.qos = cinfo->qos;
   pubmsg.retained = cinfo->retained;
   opts.context = cinfo;
@@ -103,7 +115,8 @@ static void edgex_bus_mqtt_post (void *ctx, const char *topic, const iot_data_t 
   {
     iot_log_error (cinfo->lc, "mqtt: failed to post event, error %d", result);
   }
-  free (json);
+  iot_data_free (cbor);
+  free(data);
 }
 
 static void edgex_bus_mqtt_onconnect(void *context, MQTTAsync_successData *response)
@@ -133,26 +146,17 @@ static int edgex_bus_mqtt_msgarrvd (void *context, char *topicName, int topicLen
 {
   edgex_bus_t *bus = (edgex_bus_t *)context;
   char *topic = topicName;
-  char *msg = message->payload;
 
   if (topicLen != 0) // Indicates topic string not terminated
   {
     topic = strndup (topicName, topicLen);
   }
-  if (msg[message->payloadlen - 1] != '\0')
-  {
-    msg = strndup (message->payload, message->payloadlen);
-  }
 
-  edgex_bus_handle_request (bus, topic, msg);
+  edgex_bus_handle_request (bus, topic, message->payload, message->payloadlen);
 
   if (topic != topicName)
   {
     free(topic);
-  }
-  if (msg != message->payload)
-  {
-    free(msg);
   }
   MQTTAsync_freeMessage (&message);
   MQTTAsync_free (topicName);
