@@ -131,7 +131,7 @@ static void *ae_runner (void *p)
             resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
           }
           edgex_event_cooked *event =
-            edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform, ai->svc->reduced_events);
+            edgex_data_process_event (dev, ai->resource, results, tags, ai->svc->config.device.datatransform, ai->svc->reduced_events);
           if (event)
           {
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)
@@ -186,6 +186,7 @@ static void *ae_runner (void *p)
       free (errstr);
     }
     devsdk_commandresult_free (results, ai->resource->nreqs);
+    iot_data_free(tags);
     edgex_device_free_crlid ();
     edgex_device_release (ai->svc, dev);
   }

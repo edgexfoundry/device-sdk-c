@@ -140,7 +140,7 @@ edgex_event_cooked *edgex_data_process_event
       char *id = edgex_device_genuuid ();
       iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
       iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
-      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device->name, IOT_DATA_REF));
     }
     if ((!reducedEvents) || (commandinfo->nreqs > 1) || 
         (strcmp (commandinfo->reqs[i].resource->name, commandinfo->name) != 0))
@@ -197,6 +197,8 @@ edgex_event_cooked *edgex_data_process_event
 
   if (iot_data_map_size(event_tags)) {
     iot_data_string_map_add (evmap, "tags", event_tags);
+  } else {
+    iot_data_free(event_tags);
   }
 
   iot_data_t *reqmap = iot_data_alloc_map (IOT_DATA_STRING);
