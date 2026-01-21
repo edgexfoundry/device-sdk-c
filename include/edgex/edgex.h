@@ -115,6 +115,7 @@ typedef struct edgex_device_autoevents
   char *resource;
   char *interval;
   bool onChange;
+  double onChangeThreshold;
   struct edgex_autoimpl *impl;
   struct edgex_device_autoevents *next;
 } edgex_device_autoevents;

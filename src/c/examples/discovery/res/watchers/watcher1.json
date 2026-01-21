@@ -1,0 +1,25 @@
+{
+    "apiVersion": "v3",
+    "name": "watcher1",
+    "identifiers": {
+        "MAC": "00-05-1B-A1-99-[0-9A-Fa-f][0-9A-Fa-f]"
+    },
+    "blockingIdentifiers": {
+        "MAC": [
+            "00-05-1B-A1-99-99"
+        ]
+    },
+    "serviceName": "device-template",
+    "adminState": "UNLOCKED",
+    "discoveredDevice": {
+        "profileName": "TemplateSensor",
+        "serviceName": "device-template",
+        "adminState": "UNLOCKED",
+        "properties": {
+            "DeviceNameTemplate": {
+                "valueReplace": true,
+                "template": "device-name-{{MAC}}"
+            }
+        }
+    }
+}

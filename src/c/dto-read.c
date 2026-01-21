@@ -56,6 +56,7 @@ static edgex_device_autoevents *edgex_autoevent_read (const iot_data_t *obj)
   edgex_device_autoevents *result = calloc (1, sizeof (edgex_device_autoevents));
   result->resource = get_string (obj, "sourceName");
   result->onChange = iot_data_string_map_get_bool (obj, "onChange", false);
+  iot_data_string_map_get_number (obj, "onChangeThreshold", IOT_DATA_FLOAT64, &result->onChangeThreshold);
   result->interval = get_string  (obj, "interval");
   return result;
 }

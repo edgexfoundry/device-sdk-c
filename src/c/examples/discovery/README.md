@@ -43,13 +43,7 @@ curl -X POST 0:59999/api/v3/discovery
 ```
 
 Initially, none of the discovered devices will be added to EdgeX, but by
-using appropriate Provision Watchers they can be accepted. To upload the
-supplied Provision Watchers to core-metadata:
-
-```
-curl -X POST -d@watcher1.json 0:59881/api/v3/provisionwatcher
-curl -X POST -d@watcher2.json 0:59881/api/v3/provisionwatcher
-```
+using appropriate Provision Watchers they can be accepted.  The structure of an example provision watcher can be found in res/watchers.  The SDK will parse all watcher objects inside of the directory defined by the `Device/ProvisionWatcherDir` configuration value and automatically upload them to core-metadata.  If a provision watcher already exists and is registered in core-metadata, it is skipped.
 
 The Provision Watchers each match one of the discovered devices. They work by
 specifying acceptance criteria (`identifiers`) that match potentially many

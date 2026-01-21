@@ -70,7 +70,10 @@ struct devsdk_service_t
   devsdk_metrics_t metrics;
   iot_schedule_t *metricschedule;
   bool overwriteconfig;
+  bool overwritedevices;
+  bool overwriteprofiles;
   bool secureMode;
+  bool reduced_events;
 
   edgex_devmap_t *devices;
   edgex_watchlist_t *watchlist;

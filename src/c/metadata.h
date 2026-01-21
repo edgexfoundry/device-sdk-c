@@ -43,6 +43,14 @@ char * edgex_metadata_client_create_deviceprofile_file
   const char * filename,
   devsdk_error *err
 );
+char * edgex_metadata_client_update_deviceprofile_file
+(
+  iot_logger_t *lc,
+  edgex_service_endpoints * endpoints,
+  edgex_secret_provider_t * secretprovider,
+  const char * filename,
+  devsdk_error *err
+);
 edgex_deviceservice * edgex_metadata_client_get_deviceservice
 (
   iot_logger_t *lc,
@@ -95,6 +103,7 @@ char * edgex_metadata_client_add_device
 
 void edgex_metadata_client_add_device_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, JSON_Object *jobj, devsdk_error *err);
 void edgex_metadata_client_add_profile_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, JSON_Object *jobj, devsdk_error *err);
+void edgex_metadata_client_put_profile_jobj (iot_logger_t *lc, edgex_service_endpoints *endpoints, edgex_secret_provider_t * secretprovider, JSON_Object *jobj, devsdk_error *err);
 
 void edgex_metadata_client_add_or_modify_device
 (
@@ -149,6 +158,16 @@ edgex_watcher *edgex_metadata_client_get_watchers
   edgex_secret_provider_t * secretprovider,
   const char * servicename,
   devsdk_error * err
+);
+
+void edgex_metadata_client_add_watcher_jobj
+(
+  iot_logger_t *lc,
+  edgex_service_endpoints *endpoints,
+  edgex_secret_provider_t *secretprovider,
+  const char *servicename,
+  JSON_Object *obj,
+  devsdk_error *err
 );
 
 #endif

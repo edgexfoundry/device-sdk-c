@@ -59,7 +59,17 @@ static void edgex_add_profile_json (devsdk_service_t *svc, const char *fname, de
       iot_log_debug (svc->logger, "Checking existence of DeviceProfile %s", name);
       if (edgex_deviceprofile_get_internal (svc, name, err))
       {
-        iot_log_info (svc->logger, "DeviceProfile %s already exists: skipped", name);
+        if (svc->overwriteprofiles)
+        {
+          iot_log_info (svc->logger, "DeviceProfile %s already exists: over-writing", name);
+          JSON_Value *copy = json_value_deep_copy (jval);
+          JSON_Object *profobj = json_value_get_object (copy);
+          edgex_metadata_client_put_profile_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, profobj, err);
+        }
+        else
+        {
+          iot_log_info (svc->logger, "DeviceProfile %s already exists: skipped", name);
+        }
       }
       else
       {
@@ -180,19 +190,30 @@ void edgex_add_profile (devsdk_service_t *svc, const char *fname, devsdk_error *
   if (profname)
   {
     iot_log_debug (lc, "Checking existence of DeviceProfile %s", profname);
-    if (edgex_deviceprofile_get_internal (svc, profname, err))
+    if (edgex_deviceprofile_get_internal (svc, profname, err) && !svc->overwriteprofiles)
     {
       iot_log_info (lc, "DeviceProfile %s already exists: skipped", profname);
     }
     else
     {
-      iot_log_info (lc, "Uploading deviceprofile from %s", fname);
-      free (edgex_metadata_client_create_deviceprofile_file (lc, endpoints, svc->secretstore, fname, err));
-      if (err->code)
+      if (edgex_deviceprofile_get_internal (svc, profname, err) && svc->overwriteprofiles)
       {
-        iot_log_error (lc, "Error uploading device profile");
+        iot_log_info (lc, "DeviceProfile %s already exists: over-writing", profname);
+        free (edgex_metadata_client_update_deviceprofile_file (lc, endpoints, svc->secretstore, fname, err));
+        if (err->code)
+        {
+          iot_log_error (lc, "Problem updating existing device profile");
+        }
+      } else
+      {
+        iot_log_info (lc, "Uploading deviceprofile from %s", fname);
+        free (edgex_metadata_client_create_deviceprofile_file (lc, endpoints, svc->secretstore, fname, err));
+        if (err->code)
+        {
+          iot_log_error (lc, "Error uploading device profile");
+        }
       }
-      else
+      if (err->code==0)
       {
         iot_log_debug (lc, "Device profile upload successful, will now retrieve it");
         dp = edgex_deviceprofile_get_internal (svc, profname, err);

@@ -8,7 +8,10 @@
 
 #include "watchers.h"
 #include "edgex-rest.h"
-
+#include "service.h"
+#include "errorlist.h"
+#include "metadata.h"
+#include "filesys.h"
 #include <regex.h>
 
 typedef struct edgex_watchlist_t
@@ -179,6 +182,24 @@ static bool matchpw (const edgex_watcher *pw, const iot_data_t *ids)
   return true;
 }
 
+static bool edgex_watcher_exists (const edgex_watchlist_t *wl, const char *name)
+{
+  bool exists = false;
+  pthread_rwlock_rdlock ((pthread_rwlock_t *)&wl->lock);
+  
+  for (const edgex_watcher *w = wl->list; w; w = w->next)
+  {
+    if (strcmp (w->name, name) == 0)
+    {
+      exists = true;
+      break;
+    }
+  }
+  
+  pthread_rwlock_unlock ((pthread_rwlock_t *)&wl->lock);
+  return exists;
+}
+
 edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const iot_data_t *ids)
 {
   pthread_rwlock_rdlock ((pthread_rwlock_t *)&wl->lock);
@@ -198,4 +219,56 @@ edgex_watcher *edgex_watchlist_match (const edgex_watchlist_t *wl, const iot_dat
 
   pthread_rwlock_unlock ((pthread_rwlock_t *)&wl->lock);
   return result;
+}
+
+static void edgex_add_watcher_json (devsdk_service_t *svc, const char *fname, devsdk_error *err)
+{
+
+  JSON_Value *jval = json_parse_file (fname);
+  if (jval)
+  {
+    JSON_Object *jobj = json_value_get_object (jval);
+    const char *name = json_object_get_string (jobj, "name");
+    if (name)
+    {
+      iot_log_debug(svc->logger, "Checking existence of ProvisionWatcher %s", name);
+      if (edgex_watcher_exists (svc->watchlist, name))
+      {
+        iot_log_info(svc->logger, "ProvisionWatcher %s already exists: skipped", name);
+      } 
+      else 
+      {
+        JSON_Value *copy = json_value_deep_copy(jval);
+        JSON_Object *watchobj = json_value_get_object(copy);
+        edgex_metadata_client_add_watcher_jobj(svc->logger, &svc->config.endpoints, svc->secretstore, svc->name, watchobj, err);
+      }
+    }
+    else
+    {
+      iot_log_warn (svc->logger, "Provision watcher upload: Missing provisionwatcher name in %s", fname);
+    }
+    
+    json_value_free (jval);
+  }
+  else
+  {
+    iot_log_error (svc->logger, "File %s does not parse as JSON", fname);
+    *err = EDGEX_CONF_PARSE_ERROR;
+  }
+}
+
+void edgex_device_watchers_upload (devsdk_service_t *svc, devsdk_error *err)
+{
+  *err = EDGEX_OK;
+  
+  iot_log_info (svc->logger, "Processing Provision Watchers from %s", svc->config.device.provisionwatchersdir);
+
+  devsdk_strings *filenames = devsdk_scandir (svc->logger, svc->config.device.provisionwatchersdir, "json");
+  
+  for (devsdk_strings *f = filenames; f; f = f->next)
+  {
+    edgex_add_watcher_json (svc, f->str, err);
+  }
+  
+  devsdk_strings_free (filenames);
 }

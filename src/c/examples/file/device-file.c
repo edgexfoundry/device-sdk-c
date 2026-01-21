@@ -75,7 +75,19 @@ static bool file_get_handler
   iot_data_t **exception
 )
 {
-  return false;
+  const char *fname = device->address;
+  uint32_t size = 0;
+  uint8_t *data = file_readfile (fname, &size);
+  if (data)
+  {
+    readings[0].value = iot_data_alloc_binary (data, size, IOT_DATA_TAKE);
+  }
+  else
+  {
+    return false;
+  }
+
+  return true;
 }
 
 static bool file_put_handler
