@@ -72,15 +72,16 @@ Event:
   deviceName: String (name of the Device)
   profileName: String (name of the Profile)
   sourceName: String (name of the deviceResource or deviceCommand)
-  tags: Array of Strings (may be added to at any stage)
+  tags: Map of Strings (may be added to at any stage)
   readings: Array of Readings
 */
 
 edgex_event_cooked *edgex_data_process_event
 (
-  const char *device_name,
+  const edgex_device *device,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
+  iot_data_t *tags,
   bool doTransforms,
   bool reducedEvents
 )
@@ -120,10 +121,10 @@ edgex_event_cooked *edgex_data_process_event
   result = malloc (sizeof (edgex_event_cooked));
   result->nrdgs = commandinfo->nreqs;
 
-  result->path = malloc (strlen (commandinfo->profile->name) + strlen (device_name) + strlen (commandinfo->name) + 3);
+  result->path = malloc (strlen (commandinfo->profile->name) + strlen (device->name) + strlen (commandinfo->name) + 3);
   strcpy (result->path, commandinfo->profile->name);
   strcat (result->path, "/");
-  strcat (result->path, device_name);
+  strcat (result->path, device->name);
   strcat (result->path, "/");
   strcat (result->path, commandinfo->name);
 
@@ -139,7 +140,7 @@ edgex_event_cooked *edgex_data_process_event
       char *id = edgex_device_genuuid ();
       iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
       iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
-      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device->name, IOT_DATA_REF));
     }
     if ((!reducedEvents) || (commandinfo->nreqs > 1) || 
         (strcmp (commandinfo->reqs[i].resource->name, commandinfo->name) != 0))
@@ -171,16 +172,34 @@ edgex_event_cooked *edgex_data_process_event
       default:
         iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_to_json (values[i].value), IOT_DATA_TAKE));
     }
+
+    if (commandinfo->reqs[i].resource->tags)
+    {
+      iot_data_string_map_add (rmap, "tags", iot_data_copy(commandinfo->reqs[i].resource->tags));
+    }
+
     iot_data_vector_add (rvec, i, rmap);
   }
+
+  iot_data_t *event_tags = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_map_merge(event_tags, tags);
+  iot_data_map_merge(event_tags,commandinfo->tags);
+  iot_data_map_merge(event_tags,device->tags);
+
   iot_data_t *evmap = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (evmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "id", iot_data_alloc_string (eventId, IOT_DATA_TAKE));
-  iot_data_string_map_add (evmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+  iot_data_string_map_add (evmap, "deviceName", iot_data_alloc_string (device->name, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "sourceName", iot_data_alloc_string (commandinfo->name, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "origin", iot_data_alloc_ui64 (timenow));
   iot_data_string_map_add (evmap, "readings", rvec);
+
+  if (iot_data_map_size(event_tags)) {
+    iot_data_string_map_add (evmap, "tags", event_tags);
+  } else {
+    iot_data_free(event_tags);
+  }
 
   iot_data_t *reqmap = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (reqmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));

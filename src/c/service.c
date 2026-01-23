@@ -1156,7 +1156,8 @@ void devsdk_post_readings
   devsdk_service_t *svc,
   const char *devname,
   const char *resname,
-  devsdk_commandresult *values
+  devsdk_commandresult *values,
+  iot_data_t *tags
 )
 {
   if (svc->adminstate == LOCKED)
@@ -1178,7 +1179,7 @@ void devsdk_post_readings
   if (command)
   {
     edgex_event_cooked *event = edgex_data_process_event
-      (devname, command, values, svc->config.device.datatransform, svc->reduced_events);
+      (dev, command, values, tags, svc->config.device.datatransform, svc->reduced_events);
 
     if (event)
     {
