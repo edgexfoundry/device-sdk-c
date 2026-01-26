@@ -286,7 +286,7 @@ static edgex_deviceresource *edgex_deviceresource_dup (const edgex_deviceresourc
     edgex_deviceresource *elem = malloc (sizeof (edgex_deviceresource));
     elem->name = strdup (e->name);
     elem->description = strdup (e->description);
-    elem->tag = strdup (e->tag);
+    elem->tags = iot_data_copy (e->tags);
     elem->properties = propertyvalue_dup (e->properties);
     elem->attributes = iot_data_copy (e->attributes);
     elem->parsed_attrs = NULL;
@@ -305,9 +305,9 @@ static void deviceresource_free (devsdk_service_t *svc, edgex_deviceresource *e)
     edgex_deviceresource *current = e;
     free (e->name);
     free (e->description);
-    free (e->tag);
     propertyvalue_free (e->properties);
     iot_data_free (e->attributes);
+    iot_data_free (e->tags);
     if (e->parsed_attrs)
     {
       svc->userfns.free_res (svc->userdata, e->parsed_attrs);
@@ -358,6 +358,7 @@ static edgex_devicecommand *devicecommand_dup (const edgex_devicecommand *pr)
     elem->name = strdup (pr->name);
     elem->readable = pr->readable;
     elem->writable = pr->writable;
+    elem->tags = iot_data_copy(elem->tags);
     elem->resourceOperations = resourceoperation_dup (pr->resourceOperations);
     elem->next = NULL;
     *current = elem;
@@ -373,6 +374,7 @@ static void devicecommand_free (edgex_devicecommand *e)
   {
     edgex_devicecommand *current = e;
     free (e->name);
+    iot_data_free(e->tags);
     resourceoperation_free (e->resourceOperations);
     e = e->next;
     free (current);
@@ -392,6 +394,7 @@ static void cmdinfo_free (edgex_cmdinfo *inf)
     free (inf->pvals);
     free (inf->maps);
     free (inf->dfls);
+    iot_data_free (inf->tags);
     free (inf);
     inf = next;
   }
@@ -402,6 +405,7 @@ static edgex_device_autoevents *autoevent_read (const JSON_Object *obj)
   edgex_device_autoevents *result = malloc (sizeof (edgex_device_autoevents));
   result->resource = get_string (obj, "sourceName");
   result->onChange = get_boolean (obj, "onChange", false);
+  result->onChangeThreshold = json_object_get_number (obj, "onChangeThreshold");
   result->interval = get_string  (obj, "interval");
   result->impl = NULL;
   result->next = NULL;
@@ -420,6 +424,7 @@ static JSON_Value *autoevents_write (const edgex_device_autoevents *e)
     json_object_set_string (pobj, "sourceName", ae->resource);
     json_object_set_string (pobj, "interval", ae->interval);
     json_object_set_boolean (pobj, "onChange", ae->onChange);
+    json_object_set_number (pobj, "onChangeThreshold", ae->onChangeThreshold);
     json_array_append_value (arr, pval);
   }
   return result;
@@ -436,6 +441,7 @@ static edgex_device_autoevents *autoevents_dup
     elem->resource = strdup (e->resource);
     elem->interval = strdup (e->interval);
     elem->onChange = e->onChange;
+    elem->onChangeThreshold = e->onChangeThreshold;
     elem->impl = NULL;
     elem->next = NULL;
     *current = elem;
@@ -695,6 +701,10 @@ static edgex_device *device_read (const JSON_Object *obj)
   result->labels = array_to_strings (json_object_get_array (obj, "labels"));
   result->operatingState = edgex_operatingstate_fromstring
     (json_object_get_string (obj, "operatingState"));
+
+  JSON_Value *tags_val = json_object_get_value (obj, "tags");
+  result->tags = string_map_read (tags_val);
+
   result->autos = NULL;
   JSON_Array *array = json_object_get_array (obj, "autoEvents");
   size_t count = json_array_get_count (array);
@@ -725,6 +735,7 @@ static JSON_Value *device_write (const edgex_device *e)
   json_object_set_value (obj, "autoevents", autoevents_write (e->autos));
   json_object_set_string (obj, "adminState", edgex_adminstate_tostring (e->adminState));
   json_object_set_string (obj, "operatingState", edgex_operatingstate_tostring (e->operatingState));
+  json_object_set_value(obj, "tags", string_map_write(e->tags));
   json_object_set_string (obj, "name", e->name);
   if (e->parent) // omit-if-empty
   {
@@ -745,6 +756,7 @@ result->parent = e->parent ? strdup(e->parent) : NULL;
   result->description = strdup (e->description);
   result->labels = devsdk_strings_dup (e->labels);
   result->protocols = devsdk_protocols_dup (e->protocols);
+  result->tags = iot_data_copy(e->tags);
   result->autos = autoevents_dup (e->autos);
   result->adminState = e->adminState;
   result->operatingState = e->operatingState;
@@ -775,6 +787,7 @@ devsdk_device_resources *edgex_profile_toresources (const edgex_deviceprofile *p
     devsdk_device_resources *entry = malloc (sizeof (devsdk_device_resources));
     entry->resname = strdup (r->name);
     entry->attributes = iot_data_copy (r->attributes);
+    entry->tags = iot_data_copy (r->tags);
     entry->type = r->properties->type;
     entry->readable = r->properties->readable;
     entry->writable = r->properties->writable;
@@ -803,6 +816,7 @@ void edgex_device_free (devsdk_service_t *svc, edgex_device *e)
   {
     edgex_device *current = e;
     devsdk_protocols_free (e->protocols);
+    iot_data_free(e->tags);
     edgex_device_autoevents_free (e->autos);
     free (e->description);
     devsdk_strings_free (e->labels);

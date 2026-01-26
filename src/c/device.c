@@ -136,6 +136,10 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
   result->profile = prof;
   result->isget = forGet;
   result->nreqs = n;
+  result->tags = NULL;
+  if (cmd->tags) {
+    result->tags = iot_data_add_ref(cmd->tags);
+  }
   result->reqs = calloc (n, sizeof (devsdk_commandrequest));
   result->pvals = calloc (n, sizeof (edgex_propertyvalue *));
   result->maps = calloc (n, sizeof (iot_data_t *));
@@ -147,6 +151,7 @@ static edgex_cmdinfo *infoForRes (devsdk_service_t *svc, edgex_deviceprofile *pr
       findDevResource (prof->device_resources, ro->deviceResource);
     result->reqs[n].resource->name = devres->name;
     result->reqs[n].resource->attrs = devres->parsed_attrs;
+    result->reqs[n].resource->tags = devres->tags;
     result->reqs[n].resource->type = devres->properties->type;
     if (devres->properties->mask.enabled)
     {
@@ -196,6 +201,11 @@ static edgex_cmdinfo *infoForDevRes (devsdk_service_t *svc, edgex_deviceprofile 
   result->reqs[0].resource = malloc (sizeof (devsdk_resource_t));
   result->reqs[0].resource->name = devres->name;
   result->reqs[0].resource->attrs = devres->parsed_attrs;
+  result->tags = NULL;
+  result->reqs[0].resource->tags = NULL;
+  if (devres->tags) {
+    result->reqs[0].resource->tags = devres->tags;
+  }
   result->reqs[0].resource->type = devres->properties->type;
   if (devres->properties->mask.enabled)
   {
@@ -397,6 +407,7 @@ static edgex_event_cooked *edgex_device_runget2
   edgex_event_cooked *result = NULL;
   iot_data_t *e = NULL;
   devsdk_commandresult *results = calloc (cmdinfo->nreqs, sizeof (devsdk_commandresult));
+  iot_data_t *tags = NULL;
 
   if (dev->devimpl->address == NULL)
   {
@@ -404,10 +415,10 @@ static edgex_event_cooked *edgex_device_runget2
   }
   if (dev->devimpl->address)
   {
-    if (svc->userfns.gethandler (svc->userdata, dev->devimpl, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
+    if (svc->userfns.gethandler (svc->userdata, dev->devimpl, cmdinfo->nreqs, cmdinfo->reqs, results, &tags, params, &e))
     {
       devsdk_error err = EDGEX_OK;
-      result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+      result = edgex_data_process_event (dev, cmdinfo, results, tags, svc->config.device.datatransform, svc->reduced_events);
 
       if (result)
       {
@@ -445,6 +456,7 @@ static edgex_event_cooked *edgex_device_runget2
     free(exstr);
   }
   iot_data_free (e);
+  iot_data_free (tags);
   devsdk_commandresult_free (results, cmdinfo->nreqs);
 
   return result;
@@ -696,6 +708,7 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
   edgex_event_cooked *result = NULL;
   iot_data_t *e = NULL;
   devsdk_commandresult *results = calloc (cmdinfo->nreqs, sizeof (devsdk_commandresult));
+  iot_data_t *tags = NULL;
 
   if (dev->devimpl->address == NULL)
   {
@@ -703,10 +716,10 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
   }
   if (dev->devimpl->address)
   {
-    if (svc->userfns.gethandler (svc->userdata, dev->devimpl, cmdinfo->nreqs, cmdinfo->reqs, results, params, &e))
+    if (svc->userfns.gethandler (svc->userdata, dev->devimpl, cmdinfo->nreqs, cmdinfo->reqs, results, &tags, params, &e))
     {
       devsdk_error err = EDGEX_OK;
-      result = edgex_data_process_event (dev->name, cmdinfo, results, svc->config.device.datatransform);
+      result = edgex_data_process_event (dev, cmdinfo, results, tags, svc->config.device.datatransform, svc->reduced_events);
       if (result)
       {
         if (svc->config.device.updatelastconnected)
@@ -743,12 +756,13 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
     free (exstr);
   }
   iot_data_free (e);
+  iot_data_free (tags);
   devsdk_commandresult_free (results, cmdinfo->nreqs);
 
   return result;
 }
 
-static int32_t edgex_device_v3impl (devsdk_service_t *svc, edgex_device *dev, const char *cmdname, bool isGet, const iot_data_t *req, const iot_data_t *params, iot_data_t **reply)
+static int32_t edgex_device_v3impl (devsdk_service_t *svc, edgex_device *dev, const char *cmdname, bool isGet, const iot_data_t *req, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   int32_t result = 0;
   const edgex_cmdinfo *cmd = edgex_deviceprofile_findcommand (svc, cmdname, dev->profile, isGet);
@@ -792,6 +806,10 @@ static int32_t edgex_device_v3impl (devsdk_service_t *svc, edgex_device *dev, co
     edgex_device_release (svc, dev);
     if (event)
     {
+      if (event_is_cbor)
+      {
+        *event_is_cbor = (event->encoding == CBOR);
+      }
       bool pushv = params ? iot_data_string_map_get_bool (params, DS_PUSH, false) : false;
       bool retv = params ? iot_data_string_map_get_bool (params, DS_RETURN, true) : true;
       if (pushv)
@@ -821,7 +839,7 @@ static int32_t edgex_device_v3impl (devsdk_service_t *svc, edgex_device *dev, co
   return result;
 }
 
-int32_t edgex_device_handler_devicev3 (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_device_handler_devicev3 (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   edgex_device *device;
@@ -855,7 +873,7 @@ int32_t edgex_device_handler_devicev3 (void *ctx, const iot_data_t *req, const i
       *reply = edgex_v3_error_response (svc->logger, "device: only get and set operations allowed");
       return MHD_HTTP_METHOD_NOT_ALLOWED;
     }
-    return edgex_device_v3impl (svc, device, cmd, isGet, req, params, reply);
+    return edgex_device_v3impl (svc, device, cmd, isGet, req, params, reply, event_is_cbor);
   }
   else
   {

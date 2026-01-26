@@ -48,7 +48,6 @@ static char *edgex_value_tostring (const iot_data_t *value)
 /* Event data structure:
 
 Reading:
-  apiVersion: "v2"
   id: uuid (sdk to generate)
   origin: Timestamp (filled in by the implementation or the SDK)
   deviceName: String (name of the Device)
@@ -73,16 +72,18 @@ Event:
   deviceName: String (name of the Device)
   profileName: String (name of the Profile)
   sourceName: String (name of the deviceResource or deviceCommand)
-  tags: Array of Strings (may be added to at any stage)
+  tags: Map of Strings (may be added to at any stage)
   readings: Array of Readings
 */
 
 edgex_event_cooked *edgex_data_process_event
 (
-  const char *device_name,
+  const edgex_device *device,
   const edgex_cmdinfo *commandinfo,
   devsdk_commandresult *values,
-  bool doTransforms
+  iot_data_t *tags,
+  bool doTransforms,
+  bool reducedEvents
 )
 {
   char *eventId;
@@ -120,10 +121,10 @@ edgex_event_cooked *edgex_data_process_event
   result = malloc (sizeof (edgex_event_cooked));
   result->nrdgs = commandinfo->nreqs;
 
-  result->path = malloc (strlen (commandinfo->profile->name) + strlen (device_name) + strlen (commandinfo->name) + 3);
+  result->path = malloc (strlen (commandinfo->profile->name) + strlen (device->name) + strlen (commandinfo->name) + 3);
   strcpy (result->path, commandinfo->profile->name);
   strcat (result->path, "/");
-  strcat (result->path, device_name);
+  strcat (result->path, device->name);
   strcat (result->path, "/");
   strcat (result->path, commandinfo->name);
 
@@ -131,17 +132,28 @@ edgex_event_cooked *edgex_data_process_event
   for (uint32_t i = 0; i < commandinfo->nreqs; i++)
   {
     iot_data_t *rmap = iot_data_alloc_map (IOT_DATA_STRING);
-    char *id = edgex_device_genuuid ();
     iot_typecode_t tc;
     iot_data_typecode (values[i].value, &tc);
 
-    iot_data_string_map_add (rmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
-    iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
+    if (!reducedEvents)
+    {
+      char *id = edgex_device_genuuid ();
+      iot_data_string_map_add (rmap, "id", iot_data_alloc_string (id, IOT_DATA_TAKE));
+      iot_data_string_map_add (rmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
+      iot_data_string_map_add (rmap, "deviceName", iot_data_alloc_string (device->name, IOT_DATA_REF));
+    }
+    if ((!reducedEvents) || (commandinfo->nreqs > 1) || 
+        (strcmp (commandinfo->reqs[i].resource->name, commandinfo->name) != 0))
+    {
+      iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
+    }
     iot_data_string_map_add (rmap, "valueType", iot_data_alloc_string (edgex_typecode_tostring (tc), IOT_DATA_REF));
-    iot_data_string_map_add (rmap, "origin", iot_data_alloc_ui64 (values[i].origin ? values[i].origin : timenow));
+    // Would check that reading and event origins are different.
+    // But event origin will be set to "timenow" below, so we check for that instead.
+    if ((!reducedEvents) || ((values[i].origin != 0) && (values[i].origin != timenow)))
+    {
+      iot_data_string_map_add (rmap, "origin", iot_data_alloc_ui64 (values[i].origin ? values[i].origin : timenow));
+    }
     switch (tc.type)
     {
       case IOT_DATA_BINARY:
@@ -160,16 +172,34 @@ edgex_event_cooked *edgex_data_process_event
       default:
         iot_data_string_map_add (rmap, "value", iot_data_alloc_string (iot_data_to_json (values[i].value), IOT_DATA_TAKE));
     }
+
+    if (commandinfo->reqs[i].resource->tags)
+    {
+      iot_data_string_map_add (rmap, "tags", iot_data_copy(commandinfo->reqs[i].resource->tags));
+    }
+
     iot_data_vector_add (rvec, i, rmap);
   }
+
+  iot_data_t *event_tags = iot_data_alloc_map (IOT_DATA_STRING);
+  iot_data_map_merge(event_tags, tags);
+  iot_data_map_merge(event_tags,commandinfo->tags);
+  iot_data_map_merge(event_tags,device->tags);
+
   iot_data_t *evmap = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (evmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "id", iot_data_alloc_string (eventId, IOT_DATA_TAKE));
-  iot_data_string_map_add (evmap, "deviceName", iot_data_alloc_string (device_name, IOT_DATA_REF));
+  iot_data_string_map_add (evmap, "deviceName", iot_data_alloc_string (device->name, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "profileName", iot_data_alloc_string (commandinfo->profile->name, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "sourceName", iot_data_alloc_string (commandinfo->name, IOT_DATA_REF));
   iot_data_string_map_add (evmap, "origin", iot_data_alloc_ui64 (timenow));
   iot_data_string_map_add (evmap, "readings", rvec);
+
+  if (iot_data_map_size(event_tags)) {
+    iot_data_string_map_add (evmap, "tags", event_tags);
+  } else {
+    iot_data_free(event_tags);
+  }
 
   iot_data_t *reqmap = iot_data_alloc_map (IOT_DATA_STRING);
   iot_data_string_map_add (reqmap, "apiVersion", iot_data_alloc_string (EDGEX_API_VERSION, IOT_DATA_REF));
@@ -186,7 +216,7 @@ void edgex_data_client_add_event (edgex_bus_t *client, edgex_event_cooked *ev, d
 {
   char *topic = edgex_bus_mktopic (client, EDGEX_DEV_TOPIC_EVENT, ev->path);
   edc_update_metrics (metrics, ev);
-  edgex_bus_post (client, topic, ev->value);
+  edgex_bus_post (client, topic, ev->value, (ev->encoding == CBOR));
   free (topic);
 }
 
@@ -225,7 +255,7 @@ void edgex_event_cooked_write (edgex_event_cooked *e, devsdk_http_reply *reply)
       iot_data_t *cbor = iot_data_to_cbor (e->value);
       reply->data.size = iot_data_array_size (cbor);
       reply->data.bytes = malloc (reply->data.size);
-      memcpy (reply->data.bytes, iot_data_address (e->value), reply->data.size);
+      memcpy (reply->data.bytes, iot_data_address (cbor), reply->data.size);
       reply->content_type = CONTENT_CBOR;
       iot_data_free (cbor);
       break;

@@ -12,9 +12,10 @@
 #include "profiles.h"
 #include "dto-read.h"
 #include "edgex-rest.h"
+#include "autoevent.h"
 #include <microhttpd.h>
 
-int32_t edgex_callback_add_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_add_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   devsdk_error e;
@@ -41,7 +42,7 @@ int32_t edgex_callback_add_device (void *ctx, const iot_data_t *req, const iot_d
   return 0;
 }
 
-int32_t edgex_callback_delete_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_delete_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   bool found = false;
@@ -72,7 +73,7 @@ int32_t edgex_callback_delete_device (void *ctx, const iot_data_t *req, const io
   return 0;
 }
 
-int32_t edgex_callback_update_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_update_device (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   devsdk_error e;
@@ -89,12 +90,20 @@ int32_t edgex_callback_update_device (void *ctx, const iot_data_t *req, const io
   {
     svc->userfns.device_updated (svc->userdata, d->name, (const devsdk_protocols *)d->protocols, d->adminState);
   }
+
+  bool has_autoevents = (d->autos != NULL);
+  if(has_autoevents){
+    edgex_device *updated_dev = edgex_devmap_device_byname(svc->devices, d->name);
+    edgex_device_autoevent_stop(updated_dev);
+    edgex_device_autoevent_start(svc, updated_dev);
+    edgex_device_release(svc, updated_dev);
+  }
   edgex_device_free (svc, d);
 
   return 0;
 }
 
-int32_t edgex_callback_update_deviceservice (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_update_deviceservice (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
@@ -112,7 +121,7 @@ int32_t edgex_callback_update_deviceservice (void *ctx, const iot_data_t *req, c
   return 0;
 }
 
-int32_t edgex_callback_add_pw (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_add_pw (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
@@ -126,7 +135,7 @@ int32_t edgex_callback_add_pw (void *ctx, const iot_data_t *req, const iot_data_
   return 0;
 }
 
-int32_t edgex_callback_update_pw (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_update_pw (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
@@ -137,7 +146,7 @@ int32_t edgex_callback_update_pw (void *ctx, const iot_data_t *req, const iot_da
   return 0;
 }
 
-int32_t edgex_callback_delete_pw (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_callback_delete_pw (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 
@@ -152,7 +161,7 @@ int32_t edgex_callback_delete_pw (void *ctx, const iot_data_t *req, const iot_da
   return 0;
 }
 
-extern int32_t edgex_callback_update_profile (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+extern int32_t edgex_callback_update_profile (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
 

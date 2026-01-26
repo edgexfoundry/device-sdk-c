@@ -2,6 +2,7 @@
   "name": "Device1",
   "profileName": "TemplateSensor",
   "description": "An Example Template Device",
+  "tags": {"deviceTag1": "someDeviceTag1"},
   "protocols":
   {
      "Other": { "Address": "someSensorEndpoint" }

@@ -70,6 +70,8 @@ struct devsdk_service_t
   devsdk_metrics_t metrics;
   iot_schedule_t *metricschedule;
   bool overwriteconfig;
+  bool overwritedevices;
+  bool overwriteprofiles;
   bool secureMode;
   bool devmode;
   char *local_ip;
@@ -77,6 +79,7 @@ struct devsdk_service_t
   char *local_host;
   char *remote_host;
   char *bind_host;
+  bool reduced_events;
 
   edgex_devmap_t *devices;
   edgex_watchlist_t *watchlist;

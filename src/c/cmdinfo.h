@@ -21,6 +21,7 @@ typedef struct edgex_cmdinfo
   devsdk_commandrequest *reqs;
   edgex_propertyvalue **pvals;
   iot_data_t **maps;
+  iot_data_t *tags;
   char **dfls;
   struct edgex_cmdinfo *next;
 } edgex_cmdinfo;

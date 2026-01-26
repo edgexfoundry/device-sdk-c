@@ -163,8 +163,12 @@ void devsdk_usage ()
           "                             \tURL Format: {type}.{protocol}://{host}:{port} ex: keeper.http://localhost:59890\n");
   printf ("  -cc, --commonConfig        \tTakes the location where the common configuration is loaded from when not using the Configuration Provider\n");
   printf ("  -o,  --overwrite            \tOverwrite configuration in provider with local configuration.\n"
-          "                             \t*** Use with cation *** Use will clobber existing settings in provider,\n"
+          "                             \t*** Use with caution *** Use will clobber existing settings in provider,\n"
           "                             \tproblematic if those settings were edited by hand intentionally\n");
+  printf ("  -od, --overwriteDevices    \tOverwrite service devices in core metadata with local configuration.\n"
+          "                             \t*** Use with caution *** Use will clobber existing devices with matching names in provider.\n");
+  printf ("  -op, --overwriteProfiles   \tOverwrite service profiles in core metadata with local configuration.\n"
+          "                             \t*** Use with caution *** Use will clobber existing profiles with matching names in provider.\n");
   printf ("  -cf, --configFile          \tIndicates name of the local configuration file. Defaults to configuration.yaml\n");
   printf ("  -p,  --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -cd, --configDir=<dir>     \tSpecify local configuration directory\n");
@@ -290,6 +294,9 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       testBool (arg, val, "-o", "--overwrite", &svc->overwriteconfig, &result) ||
       testBool (arg, val, "-r", "--registry", &usereg, &result) ||
       testBool (arg, val, "-d", "--dev", &devmode, &result) //dev mode
+      testBool (arg, val, "-od", "--overwriteDevices", &svc->overwritedevices, &result) ||
+      testBool (arg, val, "-op", "--overwriteProfiles", &svc->overwriteprofiles, &result) ||
+      testBool (arg, val, "-r", "--registry", &usereg, &result)
     )
     {
       consumeArgs (&argc, argv, n, 1);
@@ -420,6 +427,11 @@ devsdk_service_t *devsdk_service_new
     return NULL;
   }
 
+  // Set to false in case checkEnvBool leaves it alone (the variable is not set,
+  // or its value is neither "true" nor "false").
+  result->reduced_events = false;
+  checkEnvBool (&result->reduced_events, "EDGEX_OPTIMIZE_EVENT_PAYLOAD");
+
   if (result->name)
   {
     const char *n = result->name;
@@ -499,7 +511,7 @@ extern void devsdk_publish_system_event (devsdk_service_t *svc, const char *acti
   strcpy (t, "device/");
   strcat (t, action);
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_SYSTEM_EVENT, t);
-  edgex_bus_post (svc->msgbus, topic, event);
+  edgex_bus_post (svc->msgbus, topic, event, false);
   free (t);
   free (topic);
 }
@@ -520,7 +532,7 @@ extern void devsdk_publish_discovery_event (devsdk_service_t *svc, const char * 
   iot_data_string_map_add (event, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_SYSTEM_EVENT, "device/discovery");
-  edgex_bus_post (svc->msgbus, topic, event);
+  edgex_bus_post (svc->msgbus, topic, event, false);
   free (topic);
 
   iot_data_free (event);
@@ -544,7 +556,7 @@ static void devsdk_publish_metric (devsdk_service_t *svc, const char *mname, uin
   iot_data_string_map_add (metric, "timestamp", iot_data_alloc_ui64 (iot_time_nsecs ()));
 
   char *topic = edgex_bus_mktopic (svc->msgbus, EDGEX_DEV_TOPIC_METRIC, mname);
-  edgex_bus_post (svc->msgbus, topic, metric);
+  edgex_bus_post (svc->msgbus, topic, metric, false);
   free (topic);
 
   iot_data_free (metric);
@@ -643,28 +655,39 @@ static void edgex_device_device_upload_obj (devsdk_service_t *svc, JSON_Object *
   const char *dname = json_object_get_string (jobj, "name");
   if (dname)
   {
-    if (!edgex_devmap_device_exists (svc->devices, dname))
+    iot_log_info (svc->logger, "From res/device, checking device %s ...", dname);
+    if (json_object_get_string (jobj, "profileName"))
     {
-      if (json_object_get_string (jobj, "profileName"))
+      if (edgex_devmap_device_exists (svc->devices, dname) && !svc->overwritedevices)
       {
+        iot_log_info (svc->logger, "Device %s already exists: skipped", dname);
+      }
+      else
+      {
+        if ((edgex_devmap_device_exists (svc->devices, dname) && svc->overwritedevices))
+        {
+          iot_log_info (svc->logger, "Device %s already exists, deleting and re-adding", dname);
+          edgex_metadata_client_delete_device_byname(svc->logger,&svc->config.endpoints,svc->secretstore,dname,err);
+          if (err->code!=0) {
+            iot_log_warn (svc->logger, "Device re-upload: failed to delete exising device");
+            return;
+          }
+        }
+        // device never existed, or has been deleted, the new definition can be uploaded
         JSON_Value *jval = json_value_deep_copy (json_object_get_wrapping_value (jobj));
         JSON_Object *deviceobj = json_value_get_object (jval);
         json_object_set_string (deviceobj, "serviceName", svc->name);
         edgex_metadata_client_add_device_jobj (svc->logger, &svc->config.endpoints, svc->secretstore, deviceobj, err);
-      }
-      else
-      {
-        iot_log_warn (svc->logger, "Device upload: Missing device profileName definition");
+        if (err->code==0)
+        {
+          iot_log_info (svc->logger, "Device %s uploaded", dname);
+        }
       }
     }
     else
     {
-      iot_log_info (svc->logger, "Device %s already exists: skipped", dname);
+      iot_log_warn (svc->logger, "Device upload: Missing device profileName definition");
     }
-  }
-  else
-  {
-    iot_log_warn (svc->logger, "Device upload: Missing device name definition");
   }
 }
 
@@ -1103,6 +1126,9 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     return;
   }
 
+  svc->stopconfig = malloc (sizeof (atomic_bool));
+  atomic_init (svc->stopconfig, false);
+  
   if (svc->regURL)
   {
     if (*svc->regURL == '\0')
@@ -1149,8 +1175,6 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
 
     iot_log_info (svc->logger, "Found registry service at %s", svc->regURL);
-    svc->stopconfig = malloc (sizeof (atomic_bool));
-    atomic_init (svc->stopconfig, false);
 
     if (svc->overwriteconfig)
     {
@@ -1360,7 +1384,8 @@ void devsdk_post_readings
   devsdk_service_t *svc,
   const char *devname,
   const char *resname,
-  devsdk_commandresult *values
+  devsdk_commandresult *values,
+  iot_data_t *tags
 )
 {
   if (svc->adminstate == LOCKED)
@@ -1382,7 +1407,7 @@ void devsdk_post_readings
   if (command)
   {
     edgex_event_cooked *event = edgex_data_process_event
-      (devname, command, values, svc->config.device.datatransform);
+      (dev, command, values, tags, svc->config.device.datatransform, svc->reduced_events);
 
     if (event)
     {

@@ -64,9 +64,9 @@ typedef struct edgex_deviceresource
 {
   char *description;
   char *name;
-  char *tag;
   edgex_propertyvalue *properties;
   iot_data_t *attributes;
+  iot_data_t *tags;
   devsdk_resource_attr_t parsed_attrs;
   struct edgex_deviceresource *next;
 } edgex_deviceresource;
@@ -77,6 +77,7 @@ typedef struct edgex_devicecommand
   edgex_resourceoperation *resourceOperations;
   bool readable;
   bool writable;
+  iot_data_t *tags;
   struct edgex_devicecommand *next;
 } edgex_devicecommand;
 
@@ -114,6 +115,7 @@ typedef struct edgex_device_autoevents
   char *resource;
   char *interval;
   bool onChange;
+  double onChangeThreshold;
   struct edgex_autoimpl *impl;
   struct edgex_device_autoevents *next;
 } edgex_device_autoevents;
@@ -126,6 +128,7 @@ typedef struct edgex_device
   uint64_t created;
   char *description;
   devsdk_strings *labels;
+  iot_data_t *tags;
   char *name;
   char *parent;
   edgex_device_operatingstate operatingState;

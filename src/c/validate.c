@@ -32,7 +32,7 @@ static devsdk_protocols *protocols_convert (const iot_data_t *obj)
   return result;
 }
 
-int32_t edgex_device_handler_validate_addr_v3 (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply)
+int32_t edgex_device_handler_validate_addr_v3 (void *ctx, const iot_data_t *req, const iot_data_t *pathparams, const iot_data_t *params, iot_data_t **reply, bool *event_is_cbor)
 {
   devsdk_service_t *svc = (devsdk_service_t *) ctx;
   int32_t result = 0;

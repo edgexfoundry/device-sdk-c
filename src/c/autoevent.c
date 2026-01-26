@@ -18,6 +18,7 @@
 #include "data.h"
 #include "opstate.h"
 
+#include <math.h>
 #include <microhttpd.h>
 
 typedef struct edgex_autoimpl
@@ -30,6 +31,7 @@ typedef struct edgex_autoimpl
   devsdk_protocols *protocols;
   void *handle;
   bool onChange;
+  double onChangeThreshold;
 } edgex_autoimpl;
 
 static void edgex_autoimpl_release (void *p)
@@ -40,6 +42,51 @@ static void edgex_autoimpl_release (void *p)
   devsdk_commandresult_free (ai->last, ai->resource->nreqs);
   free (ai);
 }
+
+//helper function to compare values with threshold
+static bool values_exceed_threshold (const devsdk_commandresult *newvals, const devsdk_commandresult *oldvals, int nvals, double threshold, iot_logger_t *logger)
+{
+  iot_log_debug (logger, "Comparing values against threshold: %f", threshold);
+  if(!newvals || !oldvals)
+  {
+    iot_log_debug (logger, "No threshold set or new/old values are null, publishing event.");
+    return true;
+  }
+  bool publish = false;
+  for (int i = 0; i < nvals; i++)
+  {
+    if(newvals[i].value != NULL && oldvals[i].value != NULL){
+      iot_data_t *curr_val_cast = iot_data_transform(newvals[i].value, IOT_DATA_FLOAT64);
+      iot_data_t *prev_val_cast = iot_data_transform(oldvals[i].value, IOT_DATA_FLOAT64);
+      if(curr_val_cast != NULL || prev_val_cast != NULL)
+      {
+        double curr_val = iot_data_f64(curr_val_cast);
+        double prev_val = iot_data_f64(prev_val_cast);
+        iot_log_debug (logger, "Values of index %d: current=%f, previous=%f", i, curr_val, prev_val);
+        if (fabs(curr_val - prev_val) > threshold)
+        {
+          iot_log_debug (logger, "Value change %f exceeds threshold %f publishing event.", fabs(curr_val - prev_val), threshold);
+          publish = true;
+        }
+      }else{
+        if(!iot_data_equal(newvals[i].value, oldvals[i].value))
+        {
+          iot_log_debug (logger, "Non-numeric value changed, publishing event.");
+          publish = true;
+        }
+      }
+      iot_data_free (curr_val_cast);
+      iot_data_free (prev_val_cast);
+      if(publish)
+      {
+        return true;
+      }
+    }
+  }
+  iot_log_debug (logger, "No values exceeded threshold, not publishing event.");
+  return publish;
+}
+  
 
 static void *ae_runner (void *p)
 {
@@ -56,6 +103,7 @@ static void *ae_runner (void *p)
     edgex_device_alloc_crlid (NULL);
     iot_log_info (ai->svc->logger, "AutoEvent: %s/%s", ai->device, ai->resource->name);
     devsdk_commandresult *results = calloc (ai->resource->nreqs, sizeof (devsdk_commandresult));
+    iot_data_t *tags = NULL;
     iot_data_t *exc = NULL;
     if (dev->devimpl->address == NULL)
     {
@@ -63,10 +111,19 @@ static void *ae_runner (void *p)
     }
     if (dev->devimpl->address)
     {
-      if (ai->svc->userfns.gethandler (ai->svc->userdata, dev->devimpl, ai->resource->nreqs, ai->resource->reqs, results, NULL, &exc))
+      if (ai->svc->userfns.gethandler (ai->svc->userdata, dev->devimpl, ai->resource->nreqs, ai->resource->reqs, results, &tags, NULL, &exc))
       {
         devsdk_commandresult *resdup = NULL;
-        if (!(ai->onChange && ai->last && devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs)))
+        bool should_publish = true;
+        if(ai->onChange && ai->last){
+          if(ai->onChangeThreshold > 0.00){
+            should_publish = values_exceed_threshold(results, ai->last, ai->resource->nreqs, ai->onChangeThreshold, ai->svc->logger);
+          }else{
+            //if no threshold, use existing comparison behavior
+            should_publish = !devsdk_commandresult_equal (results, ai->last, ai->resource->nreqs);
+          }
+        }
+        if(should_publish)
         {
           devsdk_error err = EDGEX_OK;
           if (ai->onChange)
@@ -74,7 +131,7 @@ static void *ae_runner (void *p)
             resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
           }
           edgex_event_cooked *event =
-            edgex_data_process_event (dev->name, ai->resource, results, ai->svc->config.device.datatransform);
+            edgex_data_process_event (dev, ai->resource, results, tags, ai->svc->config.device.datatransform, ai->svc->reduced_events);
           if (event)
           {
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)
@@ -129,6 +186,7 @@ static void *ae_runner (void *p)
       free (errstr);
     }
     devsdk_commandresult_free (results, ai->resource->nreqs);
+    iot_data_free(tags);
     edgex_device_free_crlid ();
     edgex_device_release (ai->svc, dev);
   }
@@ -150,7 +208,7 @@ static void *starter (void *p)
   ai->handle = ai->svc->userfns.ae_starter
   (
     ai->svc->userdata, ai->device, ai->protocols, ai->resource->name,
-    ai->resource->nreqs, ai->resource->reqs, ai->interval, ai->onChange
+    ai->resource->nreqs, ai->resource->reqs, ai->interval, ai->onChange, ai->onChangeThreshold
   );
   return NULL;
 }
@@ -192,6 +250,7 @@ void edgex_device_autoevent_start (devsdk_service_t *svc, edgex_device *dev)
       ae->impl->protocols = devsdk_protocols_dup ((const devsdk_protocols *)dev->protocols);
       ae->impl->handle = NULL;
       ae->impl->onChange = ae->onChange;
+      ae->impl->onChangeThreshold = ae->onChangeThreshold;
     }
     if (ae->impl->svc->userfns.ae_starter)
     {
