@@ -292,8 +292,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     else if
     (
       testBool (arg, val, "-o", "--overwrite", &svc->overwriteconfig, &result) ||
-      testBool (arg, val, "-r", "--registry", &usereg, &result) ||
-      testBool (arg, val, "-d", "--dev", &devmode, &result) //dev mode
+      testBool (arg, val, "-d", "--dev", &devmode, &result) ||
       testBool (arg, val, "-od", "--overwriteDevices", &svc->overwritedevices, &result) ||
       testBool (arg, val, "-op", "--overwriteProfiles", &svc->overwriteprofiles, &result) ||
       testBool (arg, val, "-r", "--registry", &usereg, &result)
