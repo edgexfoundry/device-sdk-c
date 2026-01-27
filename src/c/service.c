@@ -1244,13 +1244,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
     iot_data_string_map_add(configmap, "Clients/core-metadata/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_COPY));
     
-    const char *current_messagebus_host = iot_data_string_map_get_string(configmap, "MessageBus/Host");
-    if(current_messagebus_host){
-      iot_data_string_map_add(configmap, "MessageBus/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_REF));
-    }else{
-      iot_data_string_map_add(configmap, "MessageBus/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_REF));
-    }
-
+    iot_data_string_map_add(configmap, "MessageBus/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_REF));
     iot_data_string_map_add(configmap, "MessageBus/Port", iot_data_alloc_ui16(1883));//assume default mqtt port if not set
     iot_data_string_map_add(configmap, "MessageBus/Protocol", iot_data_alloc_string("tcp", IOT_DATA_COPY));
     iot_data_string_map_add(configmap, "MessageBus/Type", iot_data_alloc_string("mqtt", IOT_DATA_COPY));
