@@ -35,6 +35,10 @@
 #include <string.h>
 #include <errno.h>
 #include <dirent.h>
+//socket/IP headers
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <microhttpd.h>
 
@@ -43,6 +47,115 @@
 #define POOL_THREADS 8
 #define PING_RETRIES 10
 #define ERRBUFSZ 1024
+
+//helper func to parse remote service hosts
+static bool parseRemoteServiceHosts(devsdk_service_t *svc, const char *hoststr)
+{
+  if(!hoststr || strlen(hoststr)==0)
+  {
+    return false;
+  }
+  
+  //make copy since strtok_r modifies string
+  char *hosts = strdup(hoststr);
+  char *token;
+  char *saveptr;
+  int count = 0;
+
+  iot_log_info(svc->logger, "Parsing remote service hosts: %s", hoststr);
+
+  token = strtok_r(hosts, ",", &saveptr);
+  while (token && count < 3)
+  {
+    //remove whitespace
+    while(*token == ' '){
+      token++;
+    }
+    char *end = token + strlen(token) - 1;
+    while(end > token && *end == ' ') {
+      *end = '\0';
+      end--;
+    }
+
+    switch(count)
+    {
+      case 0:
+        svc->local_host = strdup(token);
+        iot_log_info(svc->logger, "Local service host: %s", svc->local_host);
+        break;
+      case 1:
+        svc->remote_host = strdup(token);
+        iot_log_info(svc->logger, "Remote service host: %s", svc->remote_host);
+        break;
+      case 2:
+        svc->bind_host = strdup(token);
+        iot_log_info(svc->logger, "Web server bind host: %s", svc->bind_host);
+        break;
+    }
+    count++;
+    token = strtok_r(NULL, ",", &saveptr);
+  }
+
+  free(hosts);
+
+  if(count != 3){
+    iot_log_error(svc->logger, "remoteServiceHosts requires exactly 3 comma-separated host names, got %d", count);
+    return false;
+  }
+
+  svc->remote_mode = true;
+  iot_log_info(svc->logger, "Service running in remote mode");
+  return true;
+}
+
+//helper func to get local ip
+static char *get_local_ip(iot_logger_t *logger)
+{
+  int sock;
+  struct sockaddr_in dest_addr, local_addr;
+  socklen_t addr_len = sizeof(local_addr);
+  char *ip_str = NULL;
+
+  //create udp socket
+  sock = socket(AF_INET, SOCK_DGRAM, 0);
+  if(sock<0){
+    iot_log_error(logger, "Failed to create socket for IP detection");
+    return strdup("localhost");
+  }
+
+  //set up destination (Go uses 8.8.8.8:80) (google public)
+  memset(&dest_addr, 0, sizeof(dest_addr));
+  dest_addr.sin_family = AF_INET;
+  dest_addr.sin_port = htons(53);//maybe 80
+  inet_pton(AF_INET, "8.8.8.8", &dest_addr.sin_addr);
+
+  //connect the socket and determine local interface
+  if(connect(sock, (struct sockaddr*)&dest_addr, sizeof(dest_addr))<0){
+    iot_log_error(logger, "Failed to connect socket for IP detection");
+    close(sock);
+    return strdup("localhost");
+  }
+
+  //get local address
+  if(getsockname(sock, (struct sockaddr*)&local_addr, &addr_len)<0){
+    iot_log_error(logger, "Failed to get socket name IP detection");
+    close(sock);
+    return strdup("localhost");
+  }
+
+  close(sock);
+
+  //convert address to string
+  ip_str = malloc(INET_ADDRSTRLEN);
+  if(inet_ntop(AF_INET, &local_addr.sin_addr, ip_str, INET_ADDRSTRLEN)==NULL){
+    iot_log_error(logger, "Failed to convert IP address to string");
+    free(ip_str);
+    return strdup("localhost");
+  }
+
+  iot_log_info(logger, "Local IP address is: %s", ip_str);
+  return ip_str;
+}
 
 void devsdk_usage ()
 {
@@ -60,6 +173,15 @@ void devsdk_usage ()
   printf ("  -p,  --profile=<name>       \tIndicate configuration profile other than default.\n");
   printf ("  -cd, --configDir=<dir>     \tSpecify local configuration directory\n");
   printf ("  -r,  --registry             \tIndicates service should use Registry.\n");
+  //remote service hosts
+  printf ("  -rsh, --remoteServiceHosts=<host names> \n"
+          "                             \tIndicates that the service is running remote from the core EdgeX services and\n"
+          "                             \tto use the listed host names to connect remotely. <host names> contains 3 comma separated host names separated by ','.\n"
+          "                             \t1st is the local system host name, 2nd is the remote system host name and 3rd is the WebServer bind host name\n"
+          "                             \texample: -rsh=192.0.1.20,192.0.1.5,localhost\n");
+  //dev mode
+  printf ("-d, --dev                    \tIndicates service to run in developer mode which causes Host configuration values to be overridden.\n"
+          "                             \twith `localhost`. This is so that it will run with other services running in Docker (aka hybrid mode)\n");
   printf ("  -i,  --instance=<name>      \tSpecify device service instance name (if specified this is appended to the device service name).\n");
 }
 
@@ -136,6 +258,8 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   const char *val;
   int argc = *argc_p;
   bool usereg = false;
+  bool devmode = false; //dev mode flag
+  const char *remotehosts = NULL; //remote hosts
 
   int n = 1;
   while (result && n < argc)
@@ -159,7 +283,8 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       testArg (arg, val, "-i", "--instance", (const char **)&svc->name, &result) ||
       testArg (arg, val, "-p", "--profile", &svc->profile, &result) ||
       testArg (arg, val, "-cd", "--configDir", &svc->confdir, &result) ||
-      testArg (arg, val, "-cf", "--configFile", &svc->conffile, &result)
+      testArg (arg, val, "-cf", "--configFile", &svc->conffile, &result) ||
+      testArg (arg, val, "-rsh", "--remoteServiceHosts", &remotehosts, &result)
     )
     {
       consumeArgs (&argc, argv, n, eq ? 1 : 2);
@@ -167,6 +292,7 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
     else if
     (
       testBool (arg, val, "-o", "--overwrite", &svc->overwriteconfig, &result) ||
+      testBool (arg, val, "-d", "--dev", &devmode, &result) ||
       testBool (arg, val, "-od", "--overwriteDevices", &svc->overwritedevices, &result) ||
       testBool (arg, val, "-op", "--overwriteProfiles", &svc->overwriteprofiles, &result) ||
       testBool (arg, val, "-r", "--registry", &usereg, &result)
@@ -192,6 +318,8 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
   checkEnv (&svc->conffile, "EDGEX_CONFIG_FILE");
   checkEnv ((const char **)&svc->name, "EDGEX_INSTANCE_NAME");
   checkEnvBool (&usereg, "EDGEX_USE_REGISTRY");
+  checkEnvBool (&devmode, "EDGEX_DEV_MODE"); //dev mode
+  checkEnv (&remotehosts, "EDGEX_REMOTE_SERVICE_HOSTS");
 
   if (usereg)
   {
@@ -200,6 +328,23 @@ static bool processCmdLine (int *argc_p, char **argv, devsdk_service_t *svc)
       svc->regURL = "";
     }
   }
+
+  //dev mode ovverride?
+  if(devmode)
+  {
+    iot_log_info(svc->logger, "Running in developer mode - detecting local IP");
+    svc->devmode = true;
+    svc->local_ip = get_local_ip(svc->logger);
+  }
+
+  if(remotehosts){
+    if(!parseRemoteServiceHosts(svc, remotehosts))//does a parsing function exist already?
+    {
+      iot_log_error(svc->logger, "Invalid remoteServiceHosts format, Expected hosts: local,remote,bind");
+      result = false;
+    }
+  }
+
   return result;
 }
 
@@ -923,7 +1068,7 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
 
   iot_threadpool_start (svc->thpool);
 
-  config_file = edgex_device_loadConfig (svc->logger, svc->confpath, err);
+  config_file = edgex_device_loadConfig (svc->logger, svc->confpath, err);//start of config file load
   if (err->code)
   {
     iot_log_error (svc->logger, "Unable to load config file: %s", err->reason);
@@ -953,8 +1098,8 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
   }
 
   private_config_map = edgex_private_config_defaults(driverdfls);
-  edgex_device_overrideConfig_map (common_config_map, config_file);
-  edgex_device_overrideConfig_map (private_config_map, config_file);
+  edgex_device_overrideConfig_map (common_config_map, config_file);//potential location of override(find and replace)
+  edgex_device_overrideConfig_map (private_config_map, config_file);//potential location of override
   edgex_device_overrideConfig_env (svc->logger, common_config_map);
   edgex_device_overrideConfig_env (svc->logger, private_config_map);
 
@@ -1070,6 +1215,63 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
   }
 
+  //potentially check for devmode and add new function here
+  if(svc->devmode && svc->local_ip)
+  {
+    //override service.host in configmap
+    iot_data_string_map_add(configmap, "Service/Host", iot_data_alloc_string(svc->local_ip, IOT_DATA_COPY));
+
+    //override Clients.core-metadata.host
+    iot_data_string_map_add(configmap, "Clients/core-metadata/Host", iot_data_alloc_string("localhost", IOT_DATA_REF));
+    iot_data_string_map_add(configmap, "Clients/core-metadata/Port", iot_data_alloc_ui16(59881));//must set port if host didnt exist (assuming 59881)
+
+    iot_data_string_map_add(configmap, "MessageBus/Host", iot_data_alloc_string("localhost", IOT_DATA_REF));
+  }
+  //end dev mode overrride
+
+  //apply remote service host overrides
+  if(svc->remote_host){
+    //override Service/Host with local_host
+    iot_data_string_map_add(configmap, "Service/Host", iot_data_alloc_string(svc->local_host, IOT_DATA_COPY));
+
+    //override Service/ServerBindAddr with bind_host
+    iot_data_string_map_add(configmap, "Service/ServerBindAddr", iot_data_alloc_string(svc->bind_host, IOT_DATA_COPY));
+
+    //override Clients/core=metadata/Host with remote_host
+    const char *current_metadata_host = iot_data_string_map_get_string(configmap, "Clients/core-metadata/Host");
+    if(!current_metadata_host){
+      iot_data_string_map_add(configmap, "Clients/core-metadata/Port", iot_data_alloc_ui16(59881));//must set port if host didnt exist (assuming 59881)
+    }
+    iot_data_string_map_add(configmap, "Clients/core-metadata/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_COPY));
+    
+    iot_data_string_map_add(configmap, "MessageBus/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_REF));
+    iot_data_string_map_add(configmap, "MessageBus/Port", iot_data_alloc_ui16(1883));//assume default mqtt port if not set
+    iot_data_string_map_add(configmap, "MessageBus/Protocol", iot_data_alloc_string("tcp", IOT_DATA_COPY));
+    iot_data_string_map_add(configmap, "MessageBus/Type", iot_data_alloc_string("mqtt", IOT_DATA_COPY));
+    iot_data_string_map_add(configmap, "MessageBus/AuthMode", iot_data_alloc_string("none", IOT_DATA_COPY));
+    //client ID
+    char clientid[128];
+    snprintf(clientid, sizeof(clientid), "%s-remote", svc->name);
+    iot_data_string_map_add(configmap, "MessageBus/Optional/ClientId", iot_data_alloc_string(clientid, IOT_DATA_COPY));
+    //topic prefix
+    const char *topic_prefix = iot_data_string_map_get_string(configmap, "MessageBus/Optional/Topic");
+    if(!topic_prefix){
+      iot_data_string_map_add(configmap, "MessageBus/Optional/Topic", iot_data_alloc_string("edgex", IOT_DATA_COPY));
+    }
+    iot_data_string_map_add(private_config_map, "Service/Host", iot_data_alloc_string(svc->local_host, IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "Service/ServerBindAddr", iot_data_alloc_string(svc->bind_host, IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "Clients/core-metadata/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "Clients/core-metadata/Port", iot_data_alloc_ui16(59881));
+    iot_data_string_map_add(private_config_map, "MessageBus/Host", iot_data_alloc_string(svc->remote_host, IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "MessageBus/Port", iot_data_alloc_ui16(1883));
+    iot_data_string_map_add(private_config_map, "MessageBus/Protocol", iot_data_alloc_string("tcp", IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "MessageBus/Type", iot_data_alloc_string("mqtt", IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "MessageBus/AuthMode", iot_data_alloc_string("none", IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "MessageBus/Optional/ClientId", iot_data_alloc_string(clientid, IOT_DATA_COPY));
+    iot_data_string_map_add(private_config_map, "MessageBus/Optional/Topic", iot_data_alloc_string("edgex", IOT_DATA_COPY));
+    //may need to set other private config values here
+  }
+
   edgex_device_populateConfig (svc, configmap);
 
   if (uploadConfig)
@@ -1084,13 +1286,32 @@ void devsdk_service_start (devsdk_service_t *svc, iot_data_t *driverdfls, devsdk
     }
   }
 
-  if (svc->registry)
+  if (svc->registry && !svc->remote_mode)
   {
     devsdk_registry_query_service (svc->registry, "core-metadata", &svc->config.endpoints.metadata.host, &svc->config.endpoints.metadata.port, &deadline, err);
     if (err->code)
     {
       iot_data_free (config_file);
       *svc->stopconfig = true;
+      return;
+    }
+  }
+  else if(svc->registry && svc->remote_mode)
+  {
+    iot_log_info (svc->logger, "Remote mode is enabled, skipping core-metadata lookup from registry.");
+
+    const char *metadata_host = iot_data_string_map_get_string(configmap, "Clients/core-metadata/Host");
+    const iot_data_t *port_data = iot_data_string_map_get (configmap, "Clients/core-metadata/Port");
+
+    if(metadata_host && port_data)
+    {
+      svc->config.endpoints.metadata.host = strdup (metadata_host);
+      svc->config.endpoints.metadata.port = iot_data_ui16 (port_data);
+    }
+    else
+    {
+      iot_log_error (svc->logger, "In remote mode but core-metadata host/port not found in configuration.");
+      *err = EDGEX_BAD_CONFIG;
       return;
     }
   }
@@ -1270,6 +1491,10 @@ void devsdk_service_free (devsdk_service_t *svc)
     free (svc->stopconfig);
     free (svc->confpath);
     free (svc->name);
+    free (svc->local_ip);
+    free (svc->local_host);
+    free (svc->bind_host);
+    free (svc->remote_host);
     free (svc);
   }
 }

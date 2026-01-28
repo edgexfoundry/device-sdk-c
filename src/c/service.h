@@ -73,6 +73,12 @@ struct devsdk_service_t
   bool overwritedevices;
   bool overwriteprofiles;
   bool secureMode;
+  bool devmode;
+  char *local_ip;
+  bool remote_mode;
+  char *local_host;
+  char *remote_host;
+  char *bind_host;
   bool reduced_events;
 
   edgex_devmap_t *devices;
