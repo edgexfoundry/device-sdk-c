@@ -131,7 +131,10 @@ typedef void (*devsdk_free_resource_attr) (void *impl, devsdk_resource_attr_t re
  * @param readings An array in which to return the requested readings.
  * @param tags An optional map for tags associated with the event. May be NULL.
  * @param options Options which were set for this request. May be NULL
- * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
+ * @param exception Set this to give more information if the operation fails. This may be a plain
+ *        IOT_DATA_STRING, or a string-keyed IOT_DATA_MAP containing an optional integer "code"
+ *        (IOT_DATA_INT64) used as the HTTP status code for the reply (defaults to 500), and an
+ *        optional string "message".
  * @return true if the operation was successful, false otherwise.
  */
 
@@ -155,7 +158,10 @@ typedef bool (*devsdk_handle_get)
  * @param requests An array specifying the resources to which to write.
  * @param values An array specifying the values to be written.
  * @param options Options which were set for this request.
- * @param exception Set this to an IOT_DATA_STRING to give more information if the operation fails.
+ * @param exception Set this to give more information if the operation fails. This may be a plain
+ *        IOT_DATA_STRING, or a string-keyed IOT_DATA_MAP containing an optional integer "code"
+ *        (IOT_DATA_INT64) used as the HTTP status code for the reply (defaults to 500), and an
+ *        optional string "message".
  * @return true if the operation was successful, false otherwise.
  */
 
