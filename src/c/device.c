@@ -308,10 +308,10 @@ static int edgex_device_exception (const iot_data_t *exception, int dfl, char **
   {
     if (iot_data_is_of_type (exception, IOT_DATA_MAP))
     {
-      const iot_data_t *c = iot_data_string_map_get (exception, "code");
-      if (c && iot_data_is_of_type (c, IOT_DATA_INT64))
+      int c = 0;
+      if (iot_data_string_map_get_int (exception, "code", &c) && c >= 100 && c <= 599)
       {
-        code = (int) iot_data_i64 (c);
+        code = c;
       }
       const char *ms = iot_data_string_map_get_string (exception, "message");
       m = ms ? strdup (ms) : iot_data_to_json (exception);
