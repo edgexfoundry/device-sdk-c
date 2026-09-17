@@ -492,7 +492,13 @@ edgex_rest_server *edgex_rest_server_create
   (iot_logger_t *lc, const char *bindaddr, uint16_t port, uint64_t maxsize, devsdk_error *err)
 {
   edgex_rest_server *svr;
-  uint16_t flags = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG;
+  /*
+   * Always create a dual-stack (IPv4 + IPv6) listener. The bind address is
+   * resolved to an IPv6 (or IPv4-mapped) form below so that the socket family
+   * matches MHD_USE_DUAL_STACK whether the configured Host is an IPv4 literal,
+   * an IPv6 literal, or a name such as "localhost" (which may resolve to ::1).
+   */
+  uint16_t flags = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | MHD_USE_DUAL_STACK;
 
   svr = calloc (1, sizeof (edgex_rest_server));
   svr->lc = lc;
@@ -504,19 +510,20 @@ edgex_rest_server *edgex_rest_server_create
 
   if (strcmp (bindaddr, "0.0.0.0"))
   {
+    struct addrinfo hints;
     struct addrinfo *res;
     char svc[6];
     char resaddr[INET6_ADDRSTRLEN];
     sprintf (svc, "%" PRIu16, port);
-    if (getaddrinfo (bindaddr, svc, NULL, &res) == 0)
+    memset (&hints, 0, sizeof (hints));
+    /* Force an IPv6 (or IPv4-mapped) result so the bind address matches the dual-stack socket */
+    hints.ai_family = AF_INET6;
+    hints.ai_flags = AI_V4MAPPED | AI_ALL;
+    if (getaddrinfo (bindaddr, svc, &hints, &res) == 0)
     {
       iot_log_info (lc, "Starting HTTP server on interface %s, port %d", bindaddr, port);
       edgex_rest_sa_out (resaddr, res->ai_addr);
       iot_log_debug (lc, "Resolved interface is %s", resaddr);
-      if (res->ai_family == AF_INET6)
-      {
-        flags |= MHD_USE_IPv6;
-      }
       svr->daemon = MHD_start_daemon (flags, port, 0, 0, http_handler, svr, MHD_OPTION_EXTERNAL_LOGGER, edgex_rest_server_log, lc, MHD_OPTION_SOCK_ADDR, res->ai_addr, MHD_OPTION_END);
       freeaddrinfo (res);
     }
