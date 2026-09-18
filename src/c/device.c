@@ -292,6 +292,39 @@ const edgex_cmdinfo *edgex_deviceprofile_findcommand
   return result;
 }
 
+/*
+ * A device driver's GET/PUT handler reports failure detail via its 'exception' output.
+ * Historically this is a plain IOT_DATA_STRING. It may instead be a string-keyed IOT_DATA_MAP
+ * carrying an optional integer "code" (IOT_DATA_INT64), used as the HTTP status for the reply
+ * so a driver can return e.g. a 4xx instead of the default 500, and an optional string "message".
+ * Returns the status code (falling back to 'dfl') and, via 'msg', a newly-allocated message
+ * string which the caller must free.
+ */
+static int edgex_device_exception (const iot_data_t *exception, int dfl, char **msg)
+{
+  int code = dfl;
+  char *m = NULL;
+  if (exception)
+  {
+    if (iot_data_is_of_type (exception, IOT_DATA_MAP))
+    {
+      int c = 0;
+      if (iot_data_string_map_get_int (exception, "code", &c) && c >= 100 && c <= 599)
+      {
+        code = c;
+      }
+      const char *ms = iot_data_string_map_get_string (exception, "message");
+      m = ms ? strdup (ms) : iot_data_to_json (exception);
+    }
+    else
+    {
+      m = iot_data_to_json (exception);
+    }
+  }
+  *msg = m;
+  return code;
+}
+
 static void edgex_device_runput2
   (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const iot_data_t *params, const edgex_reqdata_t *rdata, devsdk_http_reply *reply)
 {
@@ -369,9 +402,10 @@ static void edgex_device_runput2
       }
       else
       {
-        char *exstr = e ? iot_data_to_json (e) : NULL;
+        char *exstr = NULL;
+        int code = edgex_device_exception (e, MHD_HTTP_INTERNAL_SERVER_ERROR, &exstr);
         edgex_error_response
-                (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on PUT: %s", dev->name, e ? exstr : "(unknown)");
+                (svc->logger, reply, code, "Driver for %s failed on PUT: %s", dev->name, exstr ? exstr : "(unknown)");
         free (exstr);
       }
     }
@@ -441,9 +475,10 @@ static edgex_event_cooked *edgex_device_runget2
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : NULL;
+      char *exstr = NULL;
+      int code = edgex_device_exception (e, MHD_HTTP_INTERNAL_SERVER_ERROR, &exstr);
       edgex_error_response
-              (svc->logger, reply, MHD_HTTP_INTERNAL_SERVER_ERROR, "Driver for %s failed on GET: ", dev->name, e ? exstr : "(unknown)");
+              (svc->logger, reply, code, "Driver for %s failed on GET: %s", dev->name, exstr ? exstr : "(unknown)");
       free(exstr);
     }
     atomic_fetch_add (&svc->metrics.rcexe, 1);
@@ -670,10 +705,10 @@ static int32_t edgex_device_runput3
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : NULL;
+      char *exstr = NULL;
+      result = edgex_device_exception (e, MHD_HTTP_INTERNAL_SERVER_ERROR, &exstr);
       *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on PUT: %s", dev->name, exstr ? exstr : "(unknown)");
       free (exstr);
-      result = MHD_HTTP_INTERNAL_SERVER_ERROR;
       devsdk_device_request_failed (svc, dev);
     }
   }
@@ -694,7 +729,7 @@ static int32_t edgex_device_runput3
   return result;
 }
 
-static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const iot_data_t *params, iot_data_t **reply)
+static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_device *dev, const edgex_cmdinfo *cmdinfo, const iot_data_t *params, iot_data_t **reply, int32_t *rcode)
 {
   for (int i = 0; i < cmdinfo->nreqs; i++)
   {
@@ -742,7 +777,8 @@ static edgex_event_cooked *edgex_device_runget3 (devsdk_service_t *svc, edgex_de
     }
     else
     {
-      char *exstr = e ? iot_data_to_json (e) : NULL;
+      char *exstr = NULL;
+      *rcode = edgex_device_exception (e, MHD_HTTP_INTERNAL_SERVER_ERROR, &exstr);
       *reply = edgex_v3_error_response (svc->logger, "Driver for %s failed on GET: %s", dev->name, exstr ? exstr : "(unknown)");
       free (exstr);
       devsdk_device_request_failed (svc, dev);
@@ -802,7 +838,8 @@ extern int32_t edgex_device_v3impl (devsdk_service_t *svc, edgex_device *dev, co
 
   if (isGet)
   {
-    edgex_event_cooked *event = edgex_device_runget3 (svc, dev, cmd, params, reply);
+    int32_t rcode = 1;
+    edgex_event_cooked *event = edgex_device_runget3 (svc, dev, cmd, params, reply, &rcode);
     edgex_device_release (svc, dev);
     if (event)
     {
@@ -828,7 +865,7 @@ extern int32_t edgex_device_v3impl (devsdk_service_t *svc, edgex_device *dev, co
     }
     else
     {
-      result = 1;
+      result = rcode;
     }
   }
   else
