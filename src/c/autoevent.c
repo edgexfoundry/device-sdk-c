@@ -58,7 +58,7 @@ static bool values_exceed_threshold (const devsdk_commandresult *newvals, const 
     if(newvals[i].value != NULL && oldvals[i].value != NULL){
       iot_data_t *curr_val_cast = iot_data_transform(newvals[i].value, IOT_DATA_FLOAT64);
       iot_data_t *prev_val_cast = iot_data_transform(oldvals[i].value, IOT_DATA_FLOAT64);
-      if(curr_val_cast != NULL || prev_val_cast != NULL)
+      if(curr_val_cast != NULL && prev_val_cast != NULL)
       {
         double curr_val = iot_data_f64(curr_val_cast);
         double prev_val = iot_data_f64(prev_val_cast);
