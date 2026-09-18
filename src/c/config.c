@@ -62,6 +62,8 @@ iot_data_t *edgex_common_config_defaults (const char *svcname)
   iot_data_string_map_add (result, "Device/Discovery/Interval", iot_data_alloc_ui32 (0));
   iot_data_string_map_add (result, "Device/MaxCmdOps", iot_data_alloc_ui32 (0));
 
+  iot_data_string_map_add (result, DYN_PREFIX "Reading/ReadingUnits", iot_data_alloc_bool (false));
+
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Interval", iot_data_alloc_string ("30s", IOT_DATA_REF));
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/EventsSent", iot_data_alloc_bool (false));
   iot_data_string_map_add (result, DYN_PREFIX "Telemetry/Metrics/ReadingsSent", iot_data_alloc_bool (false));
@@ -516,6 +518,7 @@ static void edgex_device_populateCommonConfigFromMap (edgex_device_config *confi
   config->device.provisionwatchersdir = iot_data_string_map_get_string (map, "Device/ProvisionWatchersDir");
   config->device.allowed_fails = iot_data_ui32 (iot_data_string_map_get (map, "Device/AllowedFails"));
   config->device.dev_downtime = iot_data_ui64 (iot_data_string_map_get (map, "Device/DeviceDownTimeout"));
+  config->device.reading_units = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Reading/ReadingUnits"));
 
   config->metrics.interval = iot_data_string_map_get_string (map, DYN_PREFIX "Telemetry/Interval");
   config->metrics.flags = iot_data_bool (iot_data_string_map_get (map, DYN_PREFIX "Telemetry/Metrics/EventsSent")) ? EX_METRIC_EVSENT : 0;
@@ -617,8 +620,14 @@ void edgex_device_updateConf (void *p, const devsdk_nvpairs *config)
 
   iot_log_info (svc->logger, "Reconfiguring");
 
+  if (devsdk_nvpairs_value (config, DYN_PREFIX "Reading/ReadingUnits") == NULL)
+  {
+    iot_data_string_map_add (svc->config.sdkconf, DYN_PREFIX "Reading/ReadingUnits", iot_data_alloc_bool (false));
+  }
+
   edgex_device_overrideConfig_nvpairs (svc->config.sdkconf, config);
   edgex_device_populateConfigFromMap (&svc->config, svc->config.sdkconf);
+  svc->config.device.reading_units = iot_data_bool (iot_data_string_map_get (svc->config.sdkconf, DYN_PREFIX "Reading/ReadingUnits"));
 
   const char *lname = devsdk_nvpairs_value (config, DYN_PREFIX "LogLevel");
   if (lname)
@@ -747,6 +756,11 @@ static JSON_Value *edgex_device_config_toJson (devsdk_service_t *svc)
   json_object_set_uint (dobj, "EventQLength", svc->config.device.eventqlen);
   json_object_set_uint (dobj, "AllowedFails", svc->config.device.allowed_fails);
   json_object_set_uint (dobj, "DeviceDownTimeout", svc->config.device.dev_downtime);
+
+  JSON_Value *rval = json_value_init_object ();
+  JSON_Object *robj = json_value_get_object (rval);
+  json_object_set_boolean (robj, "ReadingUnits", svc->config.device.reading_units);
+  json_object_set_value (wobj, "Reading", rval);
 
   JSON_Value *lval = json_value_init_array ();
   JSON_Array *larr = json_value_get_array (lval);

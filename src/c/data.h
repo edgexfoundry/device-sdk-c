@@ -39,7 +39,8 @@ edgex_event_cooked *edgex_data_process_event
   devsdk_commandresult *values,
   iot_data_t *tags,
   bool doTransforms,
-  bool reducedEvents
+  bool reducedEvents,
+  bool includeUnits
 );
 
 void edgex_data_client_add_event (edgex_bus_t *bus, edgex_event_cooked *eventval, devsdk_metrics_t *metrics);
