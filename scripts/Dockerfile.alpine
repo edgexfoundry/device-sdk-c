@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG BASE=alpine:3.22
+ARG BASE=alpine:3.23.2
 FROM ${BASE}
 LABEL maintainer="IOTech <support@iotechsys.com>"
 RUN wget https://iotech.jfrog.io/artifactory/api/security/keypair/public/repositories/alpine-release -O /etc/apk/keys/alpine.dev.rsa.pub
