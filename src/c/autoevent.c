@@ -131,7 +131,7 @@ static void *ae_runner (void *p)
             resdup = devsdk_commandresult_dup (results, ai->resource->nreqs);
           }
           edgex_event_cooked *event =
-            edgex_data_process_event (dev, ai->resource, results, tags, ai->svc->config.device.datatransform, ai->svc->reduced_events);
+            edgex_data_process_event (dev, ai->resource, results, tags, ai->svc->config.device.datatransform, ai->svc->reduced_events, ai->svc->config.device.reading_units);
           if (event)
           {
             if (ai->svc->config.device.maxeventsize && edgex_event_cooked_size (event) > ai->svc->config.device.maxeventsize * 1024)

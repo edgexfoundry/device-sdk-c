@@ -54,6 +54,7 @@ Reading:
   resourceName: String (name of the DeviceResource)
   profileName: String (name of the Device Profile)
   valueType: String
+  units: String (optional, present when ReadingUnits is enabled and configured)
 
 plus
 
@@ -83,7 +84,8 @@ edgex_event_cooked *edgex_data_process_event
   devsdk_commandresult *values,
   iot_data_t *tags,
   bool doTransforms,
-  bool reducedEvents
+  bool reducedEvents,
+  bool includeUnits
 )
 {
   char *eventId;
@@ -148,6 +150,11 @@ edgex_event_cooked *edgex_data_process_event
       iot_data_string_map_add (rmap, "resourceName", iot_data_alloc_string (commandinfo->reqs[i].resource->name, IOT_DATA_REF));
     }
     iot_data_string_map_add (rmap, "valueType", iot_data_alloc_string (edgex_typecode_tostring (tc), IOT_DATA_REF));
+    // Add units field if ReadingUnits is enabled and the device resource has units configured
+    if (includeUnits && commandinfo->pvals[i]->units && *commandinfo->pvals[i]->units)
+    {
+      iot_data_string_map_add (rmap, "units", iot_data_alloc_string (commandinfo->pvals[i]->units, IOT_DATA_REF));
+    }
     // Would check that reading and event origins are different.
     // But event origin will be set to "timenow" below, so we check for that instead.
     if ((!reducedEvents) || ((values[i].origin != 0) && (values[i].origin != timenow)))

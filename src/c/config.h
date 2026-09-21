@@ -55,6 +55,7 @@ typedef struct edgex_device_deviceinfo
 {
   atomic_bool datatransform;
   atomic_bool discovery_enabled;
+  atomic_bool reading_units;
   _Atomic(uint32_t) discovery_interval;
   _Atomic(uint32_t) maxcmdops;
   _Atomic(uint32_t) maxeventsize;
