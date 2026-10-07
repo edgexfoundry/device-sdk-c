@@ -1,5 +1,7 @@
 Writable:
   LogLevel: DEBUG
+  Reading:
+    ReadingUnits: true
 
 Service:
   Host: localhost
